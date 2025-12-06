@@ -23,20 +23,45 @@ const AuthOverlay: React.FC = () => {
         const value = e.target.value;
         setSchoolName(value);
         setAvailableYears([]); // Reset available years when school name changes
+        setSchoolSuggestions([]); // Reset suggestions
+        setShowSuggestions(false);
 
         if (value.length >= 3) {
-            const result = await searchSchools(value);
-            if (result) {
-                // We found a match!
-                // The result contains the sanitized school name and available years.
-                // But we want to show the user that we found something.
-                // Since we don't have the original display name, we might just show "Found: [SanitizedName]" or similar?
-                // Or better, if we found a match, we just set the available years silently?
-                // The user said: "when a user starts typing... we start matching... if a school name is found, we populate the academic year combobox"
-                // So if we find a match for the *sanitized* version of what they typed, we get the years.
-                setAvailableYears(result.years);
+            const results = await searchSchools(value);
+            if (results && results.length > 0) {
+                // We found matches!
+                // If there's only one match and it matches exactly what was typed (sanitized), maybe auto-select?
+                // But safer to show suggestions.
+                const suggestions = results.map(r => r.schoolName);
+                setSchoolSuggestions(suggestions);
+                setShowSuggestions(true);
+
+                // Store the full results to lookup years later
+                // We can use a ref or just re-search, or store in state.
+                // Let's store in a temporary state or map.
+                // Actually, let's just use the first result's years if there's only one match?
+                // No, user might be typing a common prefix.
+
+                // Let's store the results in a state to access years when a suggestion is clicked.
+                setSearchResults(results);
             }
         }
+    };
+
+    const [searchResults, setSearchResults] = useState<{ schoolName: string, years: string[] }[]>([]);
+
+    const handleSuggestionClick = (suggestion: string) => {
+        setSchoolName(suggestion); // This sets the sanitized name? Or should we keep user input?
+        // The suggestion is the sanitized name from the DB.
+        // If we set it, the input value becomes the sanitized name.
+        // This might be okay, or we might want to keep the display name if we had it.
+        // Since we don't store display names, sanitized name is the best we have.
+
+        const match = searchResults.find(r => r.schoolName === suggestion);
+        if (match) {
+            setAvailableYears(match.years);
+        }
+        setShowSuggestions(false);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -131,7 +156,7 @@ const AuthOverlay: React.FC = () => {
                             </div>
                         )}
 
-                        <div>
+                        <div className="relative">
                             <label className="block text-sm font-medium text-gray-700 mb-1">School Name</label>
                             <input
                                 type="text"
@@ -141,6 +166,19 @@ const AuthOverlay: React.FC = () => {
                                 placeholder="e.g. St. Mary's School"
                                 required
                             />
+                            {showSuggestions && schoolSuggestions.length > 0 && (
+                                <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto mt-1">
+                                    {schoolSuggestions.map((suggestion, index) => (
+                                        <li
+                                            key={index}
+                                            className="px-4 py-2 hover:bg-blue-100 cursor-pointer text-sm text-gray-700"
+                                            onClick={() => handleSuggestionClick(suggestion)}
+                                        >
+                                            {suggestion}
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
                             {availableYears.length > 0 && (
                                 <p className="text-xs text-green-600 mt-1">
                                     Found existing school records. Select a year below or type a new one.

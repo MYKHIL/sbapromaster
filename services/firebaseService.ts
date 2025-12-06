@@ -71,7 +71,7 @@ export const createDocumentId = (schoolName: string, academicYear: string, acade
 // Helper to search for schools and get available years
 import { collection, getDocs } from "firebase/firestore";
 
-export const searchSchools = async (partialName: string): Promise<{ schoolName: string, years: string[] } | null> => {
+export const searchSchools = async (partialName: string): Promise<{ schoolName: string, years: string[] }[] | null> => {
     if (!partialName || partialName.length < 3) return null;
 
     const sanitizedInput = sanitizeSchoolName(partialName);
@@ -88,36 +88,34 @@ export const searchSchools = async (partialName: string): Promise<{ schoolName: 
     });
 
     if (matches.length > 0) {
-        // Extract the school name part (everything before the first underscore)
-        // The ID format is: SchoolName_Year_Term
-        const firstMatchId = matches[0];
-        const firstUnderscoreIndex = firstMatchId.indexOf('_');
-        if (firstUnderscoreIndex === -1) return null;
+        // Group matches by school name
+        const schoolsMap = new Map<string, Set<string>>();
 
-        const matchedSchoolNamePart = firstMatchId.substring(0, firstUnderscoreIndex);
-
-        // Now find all years for this school
-        const yearsSet = new Set<string>();
         matches.forEach(id => {
-            if (id.startsWith(matchedSchoolNamePart + '_')) {
+            const firstUnderscoreIndex = id.indexOf('_');
+            if (firstUnderscoreIndex !== -1) {
+                const schoolNamePart = id.substring(0, firstUnderscoreIndex);
                 const parts = id.split('_');
                 // Format: School_Year_Term
                 // parts[0] = School
                 // parts[1] = Year (sanitized)
-                // parts[2] = Term (sanitized)
 
                 if (parts.length >= 2) {
-                    // We want to return the year. Ideally we return the sanitized year found in the ID.
-                    // The UI can then display it.
-                    yearsSet.add(parts[1]);
+                    if (!schoolsMap.has(schoolNamePart)) {
+                        schoolsMap.set(schoolNamePart, new Set());
+                    }
+                    schoolsMap.get(schoolNamePart)?.add(parts[1]);
                 }
             }
         });
 
-        return {
-            schoolName: matchedSchoolNamePart,
+        // Convert map to array of objects
+        const results = Array.from(schoolsMap.entries()).map(([schoolName, yearsSet]) => ({
+            schoolName,
             years: Array.from(yearsSet)
-        };
+        }));
+
+        return results;
     }
 
     return null;
