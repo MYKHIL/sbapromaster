@@ -86,7 +86,7 @@ const AuthOverlay: React.FC = () => {
         setLoading(false);
 
         if (result.status === 'success') {
-            setSchoolId(combinedId); // Store the combined ID for future saves
+            setSchoolId(result.docId); // Store the actual ID found (might differ in case from combinedId)
             loadImportedData(result.data);
             setIsLoggedIn(true);
         } else if (result.status === 'access_denied' || result.status === 'created_pending_access') {

@@ -34,7 +34,7 @@ export type AppDataType = {
 };
 
 export type LoginResult =
-    | { status: 'success'; data: AppDataType }
+    | { status: 'success'; data: AppDataType; docId: string }
     | { status: 'access_denied' }
     | { status: 'wrong_password' }
     | { status: 'created_pending_access' }
@@ -42,17 +42,22 @@ export type LoginResult =
     | { status: 'error'; message: string };
 
 // Helper to sanitize school name for use as Firestore document ID
+// Helper to sanitize school name for use as Firestore document ID
 // 1. Remove all spaces but maintain special characters (except '_', which is replaced with '-')
+// 2. Remove slashes '/'
+// 3. Convert to lowercase for case-insensitive matching
 export const sanitizeSchoolName = (schoolName: string): string => {
-    // Replace underscores with hyphens first, then remove spaces
-    return schoolName.trim().replace(/_/g, '-').replace(/\s+/g, '');
+    // Replace underscores with hyphens first, remove slashes, then remove spaces, then lowercase
+    return schoolName.trim().replace(/_/g, '-').replace(/\//g, '').replace(/\s+/g, '').toLowerCase();
 };
 
 // Helper to sanitize academic year
 // 1. Remove all spaces
 // 2. Replace underscores with hyphens
+// 3. Remove slashes '/'
+// 4. Convert to lowercase
 export const sanitizeAcademicYear = (year: string): string => {
-    return year.trim().replace(/_/g, '-').replace(/\s+/g, '');
+    return year.trim().replace(/_/g, '-').replace(/\//g, '').replace(/\s+/g, '').toLowerCase();
 };
 
 // Helper to sanitize academic term
@@ -82,7 +87,10 @@ export const searchSchools = async (partialName: string): Promise<{ schoolName: 
     const matches: string[] = [];
 
     querySnapshot.forEach((doc) => {
-        if (doc.id.startsWith(sanitizedInput)) {
+        // Since IDs are now lowercased by createDocumentId, we can just check startsWith
+        // But for backward compatibility or if sanitizedInput is just a prefix, this works.
+        // sanitizedInput is already lowercased by sanitizeSchoolName.
+        if (doc.id.toLowerCase().startsWith(sanitizedInput)) {
             matches.push(doc.id);
         }
     });
@@ -101,6 +109,11 @@ export const searchSchools = async (partialName: string): Promise<{ schoolName: 
                 // parts[1] = Year (sanitized)
 
                 if (parts.length >= 2) {
+                    // We want to display the "original" looking name if possible, but we only have the ID.
+                    // Ideally we would store the display name in the document, but for now we just use the ID part.
+                    // Since we can't easily reverse the sanitization (spaces lost), we just use the ID part.
+                    // However, to make it look slightly better, we could capitalize the first letter?
+                    // For now, let's just use the ID part as is (which is lowercase).
                     if (!schoolsMap.has(schoolNamePart)) {
                         schoolsMap.set(schoolNamePart, new Set());
                     }
@@ -124,15 +137,32 @@ export const searchSchools = async (partialName: string): Promise<{ schoolName: 
 // Helper to login or register a school
 export const loginOrRegisterSchool = async (docId: string, password: string, initialData: AppDataType, createIfMissing: boolean = false): Promise<LoginResult> => {
     try {
-        // docId is already constructed by the caller using createDocumentId
-        const docRef = doc(db, "schools", docId);
-        const docSnap = await getDoc(docRef);
+        // docId is already constructed by the caller using createDocumentId (and is lowercase)
+        let targetDocId = docId;
+        let docRef = doc(db, "schools", targetDocId);
+        let docSnap = await getDoc(docRef);
+
+        // If direct match fails, try to find a case-insensitive match
+        if (!docSnap.exists()) {
+            const schoolsRef = collection(db, "schools");
+            // This pulls all docs, which is heavy but necessary for client-side case-insensitive ID matching
+            // given Firestore's limitations and the current architecture.
+            const querySnapshot = await getDocs(schoolsRef);
+
+            const match = querySnapshot.docs.find(d => d.id.toLowerCase() === docId.toLowerCase());
+
+            if (match) {
+                targetDocId = match.id;
+                docRef = doc(db, "schools", targetDocId);
+                docSnap = match; // Use the found snapshot
+            }
+        }
 
         if (docSnap.exists()) {
             const data = docSnap.data() as AppDataType;
             if (data.password === password) {
                 if (data.Access === true) {
-                    return { status: 'success', data };
+                    return { status: 'success', data, docId: targetDocId };
                 } else {
                     return { status: 'access_denied' };
                 }
@@ -143,12 +173,14 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
             if (!createIfMissing) {
                 return { status: 'not_found' };
             }
-            // Create new school
+            // Create new school with the sanitized (lowercase) ID
             const newData: AppDataType = {
                 ...initialData,
                 password: password,
                 Access: false // Default to false
             };
+            // Reset docRef to the original sanitized ID for creation
+            docRef = doc(db, "schools", docId);
             await setDoc(docRef, newData);
             return { status: 'created_pending_access' };
         }

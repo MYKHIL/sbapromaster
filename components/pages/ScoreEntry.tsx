@@ -90,6 +90,14 @@ const ScoreEntry: React.FC = () => {
         }
     }, [filteredStudents.length, selectedStudentIndex]);
 
+    const unfilledCount = useMemo(() => {
+        if (!filteredStudents || !selectedSubjectId || !selectedAssessmentId) return 0;
+        return filteredStudents.filter(s => {
+            const scores = getStudentScores(s.id, selectedSubjectId, selectedAssessmentId);
+            return !scores || scores.length === 0 || scores[0] === '';
+        }).length;
+    }, [filteredStudents, selectedSubjectId, selectedAssessmentId, getStudentScores]);
+
 
     const handleNextStudent = () => {
         if (selectedStudentIndex < filteredStudents.length - 1) {
@@ -296,7 +304,15 @@ const ScoreEntry: React.FC = () => {
                                         </div>
 
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Assessment</label>
+                                            <div className="flex justify-between items-center mb-1">
+                                                <label className="block text-sm font-medium text-gray-700">Assessment</label>
+                                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${unfilledCount > 0
+                                                        ? 'bg-red-100 text-red-700'
+                                                        : 'bg-green-100 text-green-700'
+                                                    }`}>
+                                                    {unfilledCount} Unfilled
+                                                </span>
+                                            </div>
                                             <select
                                                 value={selectedAssessmentId}
                                                 onChange={(e) => setSelectedAssessmentId(Number(e.target.value))}
@@ -364,7 +380,7 @@ const ScoreEntry: React.FC = () => {
                         </div>
                     )}
                 </div>
-            </div>
+            </div >
 
             {totalWeight !== 100 && (
                 <div className="p-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 rounded-md">
@@ -411,20 +427,22 @@ const ScoreEntry: React.FC = () => {
                 </div>
             </div>
 
-            {isModalOpen && modalData && (
-                <ScoreManagementModal
-                    isOpen={isModalOpen}
-                    onClose={handleCloseModal}
-                    studentName={modalData.student.name}
-                    assessment={modalData.assessment}
-                    scores={getStudentScores(modalData.student.id, selectedSubjectId, modalData.assessment.id)}
-                    onAddScore={handleAddScore}
-                    onDeleteScore={handleDeleteScore}
-                    onUpdateScore={handleUpdateScore}
-                    isExam={modalData.isExam}
-                />
-            )}
-        </div>
+            {
+                isModalOpen && modalData && (
+                    <ScoreManagementModal
+                        isOpen={isModalOpen}
+                        onClose={handleCloseModal}
+                        studentName={modalData.student.name}
+                        assessment={modalData.assessment}
+                        scores={getStudentScores(modalData.student.id, selectedSubjectId, modalData.assessment.id)}
+                        onAddScore={handleAddScore}
+                        onDeleteScore={handleDeleteScore}
+                        onUpdateScore={handleUpdateScore}
+                        isExam={modalData.isExam}
+                    />
+                )
+            }
+        </div >
     );
 };
 
