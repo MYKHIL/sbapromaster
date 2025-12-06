@@ -6,6 +6,8 @@ import { INITIAL_SETTINGS, INITIAL_STUDENTS, INITIAL_SUBJECTS, INITIAL_CLASSES, 
 const AuthOverlay: React.FC = () => {
     const { loadImportedData, setSchoolId } = useData();
     const [schoolName, setSchoolName] = useState('');
+    const [academicYear, setAcademicYear] = useState('');
+    const [academicTerm, setAcademicTerm] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -14,8 +16,8 @@ const AuthOverlay: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!schoolName || !password) {
-            setError("Please enter both School Name and Password.");
+        if (!schoolName || !academicYear || !academicTerm || !password) {
+            setError("Please fill in all fields.");
             return;
         }
 
@@ -23,8 +25,16 @@ const AuthOverlay: React.FC = () => {
         setError(null);
         setAccessDenied(false);
 
+        // Combine school name, academic year, and term to create unique document ID
+        const combinedId = `${schoolName}_${academicYear}_${academicTerm}`;
+
         const initialData: AppDataType = {
-            settings: INITIAL_SETTINGS,
+            settings: {
+                ...INITIAL_SETTINGS,
+                schoolName: schoolName,
+                academicYear: academicYear,
+                academicTerm: academicTerm
+            },
             students: INITIAL_STUDENTS,
             subjects: INITIAL_SUBJECTS,
             classes: INITIAL_CLASSES,
@@ -36,18 +46,18 @@ const AuthOverlay: React.FC = () => {
             // password and Access are handled by the service
         };
 
-        const result = await loginOrRegisterSchool(schoolName, password, initialData);
+        const result = await loginOrRegisterSchool(combinedId, password, initialData);
 
         setLoading(false);
 
         if (result.status === 'success') {
-            setSchoolId(schoolName); // Store the school ID for future saves
+            setSchoolId(combinedId); // Store the combined ID for future saves
             loadImportedData(result.data);
             setIsLoggedIn(true);
         } else if (result.status === 'access_denied' || result.status === 'created_pending_access') {
             setAccessDenied(true);
         } else if (result.status === 'wrong_password') {
-            setError("Incorrect password for this school.");
+            setError("Incorrect password for this school/term combination.");
         } else if (result.status === 'error') {
             setError(result.message || "An error occurred.");
         }
@@ -87,7 +97,7 @@ const AuthOverlay: React.FC = () => {
                         </div>
                     </div>
                 ) : (
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <form onSubmit={handleSubmit} className="space-y-4">
                         {error && (
                             <div className="bg-red-50 border-l-4 border-red-500 p-4 text-sm text-red-700">
                                 {error}
@@ -101,9 +111,38 @@ const AuthOverlay: React.FC = () => {
                                 value={schoolName}
                                 onChange={(e) => setSchoolName(e.target.value)}
                                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                                placeholder="Enter your school name"
+                                placeholder="e.g. St. Mary's School"
                                 required
                             />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Academic Year</label>
+                                <input
+                                    type="text"
+                                    value={academicYear}
+                                    onChange={(e) => setAcademicYear(e.target.value)}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                                    placeholder="e.g. 2023/2024"
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Academic Term</label>
+                                <select
+                                    value={academicTerm}
+                                    onChange={(e) => setAcademicTerm(e.target.value)}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                                    required
+                                >
+                                    <option value="">Select Term</option>
+                                    <option value="First Term">First Term</option>
+                                    <option value="Second Term">Second Term</option>
+                                    <option value="Third Term">Third Term</option>
+                                </select>
+                            </div>
                         </div>
 
                         <div>
