@@ -24,26 +24,29 @@ const PageWrapper: React.FC<{ name: Page; currentPage: Page; children: React.Rea
 
 // Renders the currently active page, causing it to remount on change.
 const ActivePage: React.FC<{ page: Page }> = ({ page }) => {
-    switch (page) {
-        case 'Dashboard': return <Dashboard />;
-        case 'School Setup': return <Settings />;
-        case 'Teachers': return <Teachers />;
-        case 'Subjects': return <Subjects />;
-        case 'Students': return <Students />;
-        case 'Grading System': return <GradingSystem />;
-        case 'Assessment Types': return <AssessmentTypes />;
-        case 'Score Entry': return <ScoreEntry />;
-        case 'Report Viewer': return <ReportViewer />;
-        // Data Management is handled separately to preserve its state
-        default: return null;
-    }
+  switch (page) {
+    case 'Dashboard': return <Dashboard />;
+    case 'School Setup': return <Settings />;
+    case 'Teachers': return <Teachers />;
+    case 'Subjects': return <Subjects />;
+    case 'Students': return <Students />;
+    case 'Grading System': return <GradingSystem />;
+    case 'Assessment Types': return <AssessmentTypes />;
+    case 'Score Entry': return <ScoreEntry />;
+    case 'Report Viewer': return <ReportViewer />;
+    // Data Management is handled separately to preserve its state
+    default: return null;
+  }
 };
+
+import AuthOverlay from './components/AuthOverlay';
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>('Dashboard');
 
   return (
     <DataProvider>
+      <AuthOverlay />
       <div className="flex h-screen bg-gray-50 font-sans text-gray-800">
         <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
         <main className="flex-1 p-4 md:p-6 lg:p-10 overflow-auto">

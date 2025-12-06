@@ -1,4 +1,5 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
+import { saveUserDatabase, AppDataType } from '../services/firebaseService';
 import useLocalStorage from '../hooks/useLocalStorage';
 import type { Student, Subject, Class, Grade, Assessment, Score, SchoolSettings, ReportSpecificData, ClassSpecificData } from '../types';
 import {
@@ -14,17 +15,13 @@ import {
 } from '../constants';
 
 // FIX: Add a type for the full application data, to be used for data import.
-type AppDataType = {
-    settings: SchoolSettings;
-    students: Student[];
-    subjects: Subject[];
-    classes: Class[];
-    grades: Grade[];
-    assessments: Assessment[];
-    scores: Score[];
-    reportData: ReportSpecificData[];
-    classData: ClassSpecificData[];
-};
+// AppDataType is now imported from firebaseService to avoid duplication and circular deps if possible, 
+// but since it was defined here first, I should probably keep it here or use the one from firebaseService.
+// The previous edit showed AppDataType being defined here.
+// I will remove the local definition if I import it, OR I will just use the local one and cast it.
+// To be safe and avoid conflicts, I'll remove the local AppDataType definition and use the imported one.
+// Wait, I imported AppDataType from firebaseService in the previous chunk.
+// So I should remove the local definition.
 
 interface DataContextType {
     // State
@@ -72,6 +69,9 @@ interface DataContextType {
     updateClassData: (classId: number, data: Partial<ClassSpecificData>) => void;
     // FIX: Add function to load imported data.
     loadImportedData: (data: Partial<AppDataType>) => void;
+    saveToCloud: () => Promise<void>;
+    schoolId: string | null;
+    setSchoolId: (id: string | null) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -86,6 +86,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [scores, setScores] = useLocalStorage<Score[]>('sba-scores', INITIAL_SCORES);
     const [reportData, setReportData] = useLocalStorage<ReportSpecificData[]>('sba-report-data', INITIAL_REPORT_DATA);
     const [classData, setClassData] = useLocalStorage<ClassSpecificData[]>('sba-class-data', INITIAL_CLASS_DATA);
+    const [schoolId, setSchoolId] = useState<string | null>(null);
 
     // FIX: Implement function to overwrite all data from an imported file.
     const loadImportedData = (data: Partial<AppDataType>) => {
@@ -115,6 +116,42 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setClassData(importedClassData || INITIAL_CLASS_DATA);
     };
 
+    const saveToCloud = async () => {
+        if (!schoolId) {
+            console.warn("Cannot save to cloud: No school ID (not logged in).");
+            return;
+        }
+        const currentData: AppDataType = {
+            settings,
+            students,
+            subjects,
+            classes,
+            grades,
+            assessments,
+            scores,
+            reportData,
+            classData
+        };
+        try {
+            await saveUserDatabase(schoolId, currentData);
+            console.log("Data saved to cloud successfully.");
+        } catch (error) {
+            console.error("Failed to save data to cloud:", error);
+            // We don't throw here to avoid disrupting the user if background sync fails
+        }
+    };
+
+    // Background sync effect (Debounced Auto-Save)
+    useEffect(() => {
+        if (!schoolId) return;
+
+        const handler = setTimeout(() => {
+            saveToCloud();
+        }, 3000); // Auto-save 3 seconds after the last change
+
+        return () => clearTimeout(handler);
+    }, [schoolId, settings, students, subjects, classes, grades, assessments, scores, reportData, classData]);
+
     const createCrud = <T extends { id: number }>(
         items: T[],
         setItems: React.Dispatch<React.SetStateAction<T[]>>
@@ -134,7 +171,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const subjectCrud = createCrud(subjects, setSubjects);
     const classCrud = createCrud(classes, setClasses);
     const gradeCrud = createCrud(grades, setGrades);
-    
+
     // Custom Assessment CRUD to handle exam ordering
     const addAssessment = (assessment: Omit<Assessment, 'id'>) => {
         const newAssessment = { ...assessment, id: Date.now() };
@@ -154,7 +191,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const deleteAssessment = (id: number) => {
         setAssessments(prev => prev.filter(item => item.id !== id));
     };
-    
+
     const updateStudentScores = (studentId: number, subjectId: number, assessmentId: number, newScores: string[]) => {
         const scoreId = `${studentId}-${subjectId}`;
         setScores(prevScores => {
@@ -202,7 +239,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setReportData(prev => {
             const existingIndex = prev.findIndex(d => d.studentId === studentId);
             if (existingIndex > -1) {
-                return prev.map((item, index) => 
+                return prev.map((item, index) =>
                     index === existingIndex ? { ...item, ...data, studentId } : item
                 );
             } else {
@@ -220,7 +257,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
         });
     };
-    
+
     const getClassData = (classId: number): ClassSpecificData | undefined => {
         return classData.find(d => d.classId === classId);
     };
@@ -229,7 +266,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setClassData(prev => {
             const existingIndex = prev.findIndex(d => d.classId === classId);
             if (existingIndex > -1) {
-                return prev.map((item, index) => 
+                return prev.map((item, index) =>
                     index === existingIndex ? { ...item, ...data, classId } : item
                 );
             } else {
@@ -276,6 +313,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         getClassData,
         updateClassData,
         loadImportedData,
+        saveToCloud,
+        schoolId,
+        setSchoolId,
     };
 
     return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

@@ -9,13 +9,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@google/genai": "^1.21.0",
+    "firebase": "^12.6.0",
+    "html2canvas": "1.4.1",
+    "jspdf": "2.5.1",
+    "jszip": "3.10.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "@google/genai": "^1.21.0",
-    "sql.js": "1.10.3",
-    "jszip": "3.10.1",
-    "jspdf": "2.5.1",
-    "html2canvas": "1.4.1"
+    "sql.js": "1.10.3"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
