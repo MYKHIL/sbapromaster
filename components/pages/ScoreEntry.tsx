@@ -14,6 +14,80 @@ const ScoreEntry: React.FC = () => {
         return saved ? Number(saved) : (subjects[0]?.id || 0);
     });
 
+    // Mobile View State
+    const [selectedStudentIndex, setSelectedStudentIndex] = useState(0);
+    const [selectedAssessmentId, setSelectedAssessmentId] = useState<number>(assessments[0]?.id || 0);
+    const [mobileScoreError, setMobileScoreError] = useState<string>('');
+    const [useMobileView, setUseMobileView] = useState(true);
+
+    // Ensure selectedAssessmentId is valid when assessments change
+    React.useEffect(() => {
+        if (assessments.length > 0 && !assessments.find(a => a.id === selectedAssessmentId)) {
+            setSelectedAssessmentId(assessments[0].id);
+        }
+    }, [assessments, selectedAssessmentId]);
+
+    const handleNextStudent = () => {
+        if (selectedStudentIndex < filteredStudents.length - 1) {
+            setSelectedStudentIndex(prev => prev + 1);
+            setMobileScoreError('');
+        }
+    };
+
+    const handlePrevStudent = () => {
+        if (selectedStudentIndex > 0) {
+            setSelectedStudentIndex(prev => prev - 1);
+            setMobileScoreError('');
+        }
+    };
+
+    const handleMobileScoreUpdate = (value: string) => {
+        const student = filteredStudents[selectedStudentIndex];
+        if (!student) return;
+
+        const assessment = assessments.find(a => a.id === selectedAssessmentId);
+        if (!assessment) return;
+
+        const rawScoreInput = value.trim();
+        const isExam = assessment.name.toLowerCase().includes('exam');
+        const maxScore = isExam ? 100 : assessment.weight;
+        const basis = isExam ? 100 : assessment.weight;
+
+        setMobileScoreError('');
+
+        if (!rawScoreInput) {
+            updateStudentScores(student.id, selectedSubjectId, assessment.id, []);
+            return;
+        }
+
+        let convertedScore: number;
+        if (rawScoreInput.includes('/')) {
+            const parts = rawScoreInput.split('/');
+            if (parts.length !== 2) { setMobileScoreError("Use 'x' or 'x/y'"); return; }
+            const [x, y] = parts.map(Number);
+            if (isNaN(x) || isNaN(y)) { setMobileScoreError("Numbers only"); return; }
+            if (y === 0) { setMobileScoreError("Base cannot be 0"); return; }
+            convertedScore = (x / y) * maxScore;
+        } else {
+            const z = Number(rawScoreInput);
+            if (isNaN(z)) { setMobileScoreError("Score must be a number"); return; }
+            convertedScore = z;
+        }
+
+        if (convertedScore > maxScore) { setMobileScoreError(`Max is ${maxScore}`); return; }
+        if (convertedScore < 0) { setMobileScoreError("Cannot be negative"); return; }
+
+        const finalScore = `${Number(convertedScore.toFixed(1))}/${basis}`;
+        updateStudentScores(student.id, selectedSubjectId, assessment.id, [finalScore]);
+    };
+
+    const getMobileCurrentScore = () => {
+        const student = filteredStudents[selectedStudentIndex];
+        if (!student) return '';
+        const scores = getStudentScores(student.id, selectedSubjectId, selectedAssessmentId);
+        return scores[0] || '';
+    };
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalData, setModalData] = useState<{ student: Student; assessment: Assessment, isExam: boolean } | null>(null);
 
@@ -99,6 +173,18 @@ const ScoreEntry: React.FC = () => {
                             {subjects.map(s => <option key={s.id} value={s.id}>{s.subject}</option>)}
                         </select>
                     </div>
+                    {/* Mobile View Toggle */}
+                    <div className="lg:hidden flex items-end pb-2">
+                        <label className="flex items-center space-x-2 cursor-pointer select-none">
+                            <input
+                                type="checkbox"
+                                checked={useMobileView}
+                                onChange={(e) => setUseMobileView(e.target.checked)}
+                                className="form-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500 border-gray-300"
+                            />
+                            <span className="text-sm font-medium text-gray-700">Compact View</span>
+                        </label>
+                    </div>
                 </div>
             </div>
 
@@ -109,7 +195,86 @@ const ScoreEntry: React.FC = () => {
                 </div>
             )}
 
-            <div className="bg-white rounded-xl shadow-md border border-gray-200">
+            {/* Mobile View: Single Student Entry */}
+            <div className={`lg:hidden space-y-6 bg-white p-6 rounded-xl shadow-md border border-gray-200 ${useMobileView ? 'block' : 'hidden'}`}>
+                {filteredStudents.length > 0 ? (
+                    <>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Student</label>
+                                <select
+                                    value={selectedStudentIndex}
+                                    onChange={(e) => setSelectedStudentIndex(Number(e.target.value))}
+                                    className={selectStyles}
+                                >
+                                    {filteredStudents.map((student, index) => (
+                                        <option key={student.id} value={index}>{student.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Assessment</label>
+                                <select
+                                    value={selectedAssessmentId}
+                                    onChange={(e) => setSelectedAssessmentId(Number(e.target.value))}
+                                    className={selectStyles}
+                                >
+                                    {assessments.map(assessment => (
+                                        <option key={assessment.id} value={assessment.id}>
+                                            {assessment.name} ({assessment.name.toLowerCase().includes('exam') ? 100 : assessment.weight}%)
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Score</label>
+                                <div className="flex flex-col">
+                                    <input
+                                        type="text"
+                                        value={getMobileCurrentScore()}
+                                        onChange={(e) => handleMobileScoreUpdate(e.target.value)}
+                                        placeholder={assessments.find(a => a.id === selectedAssessmentId)?.name.toLowerCase().includes('exam') ? 'e.g., 85' : '-'}
+                                        className="w-full p-3 text-center text-2xl font-mono bg-gray-50 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                    />
+                                    {mobileScoreError && <p className="text-red-500 text-sm mt-1">{mobileScoreError}</p>}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-between pt-4 border-t border-gray-100">
+                            <button
+                                onClick={handlePrevStudent}
+                                disabled={selectedStudentIndex === 0}
+                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                                Previous
+                            </button>
+                            <button
+                                onClick={handleNextStudent}
+                                disabled={selectedStudentIndex === filteredStudents.length - 1}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+                            >
+                                Next
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                                </svg>
+                            </button>
+                        </div>
+                    </>
+                ) : (
+                    <div className="text-center py-8 text-gray-500">
+                        No students in the selected class.
+                    </div>
+                )}
+            </div>
+
+            {/* Desktop View: Grid Table */}
+            <div className={`bg-white rounded-xl shadow-md border border-gray-200 ${useMobileView ? 'hidden lg:block' : 'block'}`}>
                 <div className="overflow-x-auto">
                     <table className="min-w-full text-left">
                         <thead className="bg-gray-50">
