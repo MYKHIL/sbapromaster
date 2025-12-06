@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, onSnapshot } from "firebase/firestore";
 import type { SchoolSettings, Student, Subject, Class, Grade, Assessment, Score, ReportSpecificData, ClassSpecificData } from '../types';
 
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -69,7 +69,6 @@ export const createDocumentId = (schoolName: string, academicYear: string, acade
 };
 
 // Helper to search for schools and get available years
-import { collection, getDocs } from "firebase/firestore";
 
 export const searchSchools = async (partialName: string): Promise<{ schoolName: string, years: string[] }[] | null> => {
     if (!partialName || partialName.length < 3) return null;
@@ -169,7 +168,6 @@ export const saveUserDatabase = async (docId: string, data: Partial<AppDataType>
 };
 
 // Helper to subscribe to real-time updates
-import { onSnapshot } from "firebase/firestore";
 
 export const subscribeToSchoolData = (docId: string, callback: (data: AppDataType) => void) => {
     const docRef = doc(db, "schools", docId);
