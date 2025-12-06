@@ -306,11 +306,15 @@ const ScoreEntry: React.FC = () => {
                                         <div>
                                             <div className="flex justify-between items-center mb-1">
                                                 <label className="block text-sm font-medium text-gray-700">Assessment</label>
-                                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${unfilledCount > 0
+                                                <span
+                                                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${unfilledCount > 0
                                                         ? 'bg-red-100 text-red-700'
                                                         : 'bg-green-100 text-green-700'
-                                                    }`}>
-                                                    {unfilledCount} Unfilled
+                                                        }`}
+                                                >
+                                                    {unfilledCount > 0
+                                                        ? `${unfilledCount} student${unfilledCount === 1 ? '' : 's'} not scored for this assessment type`
+                                                        : 'All students scored for this assessment type'}
                                                 </span>
                                             </div>
                                             <select
