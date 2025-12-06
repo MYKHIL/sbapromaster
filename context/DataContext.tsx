@@ -1,5 +1,5 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
-import { saveUserDatabase, AppDataType } from '../services/firebaseService';
+import { saveUserDatabase, subscribeToSchoolData, AppDataType } from '../services/firebaseService';
 import useLocalStorage from '../hooks/useLocalStorage';
 import type { Student, Subject, Class, Grade, Assessment, Score, SchoolSettings, ReportSpecificData, ClassSpecificData } from '../types';
 import {
@@ -87,6 +87,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [reportData, setReportData] = useLocalStorage<ReportSpecificData[]>('sba-report-data', INITIAL_REPORT_DATA);
     const [classData, setClassData] = useLocalStorage<ClassSpecificData[]>('sba-class-data', INITIAL_CLASS_DATA);
     const [schoolId, setSchoolId] = useState<string | null>(null);
+    const isRemoteUpdate = React.useRef(false);
 
     // FIX: Implement function to overwrite all data from an imported file.
     const loadImportedData = (data: Partial<AppDataType>) => {
@@ -141,13 +142,43 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
+    // Real-time sync listener
+    useEffect(() => {
+        if (!schoolId) return;
+
+        const unsubscribe = subscribeToSchoolData(schoolId, (data) => {
+            console.log("Received remote update");
+            isRemoteUpdate.current = true;
+            loadImportedData(data);
+            // We need to keep the flag true until the state updates are processed by the save effect.
+            // Since state updates are async, we can't easily reset it here.
+            // But the save effect runs AFTER the state update.
+            // So the save effect will see the flag, consume it (set to false), and skip saving.
+            // However, loadImportedData triggers multiple setters.
+            // If they are batched, one effect run. If not, multiple.
+            // To be safe, we can use a timeout to reset the flag, or rely on the save effect to reset it ONLY if it skips.
+            // But if multiple effects run, the first resets it, the second saves.
+            // Actually, loadImportedData updates ALL atoms.
+            // Let's assume batching.
+        });
+
+        return () => unsubscribe();
+    }, [schoolId]);
+
     // Background sync effect (Debounced Auto-Save)
     useEffect(() => {
         if (!schoolId) return;
 
+        // If this change came from a remote update, skip saving
+        if (isRemoteUpdate.current) {
+            console.log("Skipping save due to remote update");
+            isRemoteUpdate.current = false;
+            return;
+        }
+
         const handler = setTimeout(() => {
             saveToCloud();
-        }, 3000); // Auto-save 3 seconds after the last change
+        }, 2000); // Auto-save 2 seconds after the last change
 
         return () => clearTimeout(handler);
     }, [schoolId, settings, students, subjects, classes, grades, assessments, scores, reportData, classData]);

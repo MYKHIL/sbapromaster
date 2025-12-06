@@ -92,3 +92,19 @@ export const saveUserDatabase = async (schoolName: string, data: Partial<AppData
     // Best approach: merge: true
     await setDoc(docRef, data, { merge: true });
 };
+
+// Helper to subscribe to real-time updates
+import { onSnapshot } from "firebase/firestore";
+
+export const subscribeToSchoolData = (schoolName: string, callback: (data: AppDataType) => void) => {
+    const docId = sanitizeSchoolName(schoolName);
+    const docRef = doc(db, "schools", docId);
+
+    return onSnapshot(docRef, (doc) => {
+        if (doc.exists()) {
+            callback(doc.data() as AppDataType);
+        }
+    }, (error) => {
+        console.error("Real-time sync error:", error);
+    });
+};
