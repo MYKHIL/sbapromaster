@@ -198,7 +198,7 @@ const ReportViewer: React.FC = () => {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-gray-800">Report Viewer</h1>
 
-      <div className="bg-gray-100 py-4">
+      <div className="bg-gray-100 py-4 sticky top-20 lg:top-0 z-20 shadow-md transition-all duration-300">
         <div className="bg-white p-4 rounded-xl shadow-md border border-gray-200 flex flex-col sm:flex-row flex-wrap items-center gap-4">
           <div className="w-full sm:w-auto sm:flex-1">
             <label className="block text-sm font-medium text-gray-800 mb-1">Select Class</label>

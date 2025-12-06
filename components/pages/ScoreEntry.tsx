@@ -66,7 +66,7 @@ const ScoreEntry: React.FC = () => {
         <div className="space-y-6">
             <h1 className="text-3xl font-bold text-gray-800">Score Entry</h1>
 
-            <div className="bg-gray-100 py-4">
+            <div className="bg-gray-100 py-4 sticky top-20 lg:top-0 z-20 shadow-md transition-all duration-300">
                 <div className="flex flex-col sm:flex-row gap-4 p-4 bg-white rounded-xl shadow-md border border-gray-200">
                     <div className="flex-1">
                         <label htmlFor="class-select" className="block text-sm font-medium text-gray-700 mb-1">Select Class</label>
