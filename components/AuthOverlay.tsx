@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { loginOrRegisterSchool, AppDataType } from '../services/firebaseService';
+import { loginOrRegisterSchool, AppDataType, createDocumentId, searchSchools } from '../services/firebaseService';
 import { useData } from '../context/DataContext';
 import { INITIAL_SETTINGS, INITIAL_STUDENTS, INITIAL_SUBJECTS, INITIAL_CLASSES, INITIAL_GRADES, INITIAL_ASSESSMENTS, INITIAL_SCORES, INITIAL_REPORT_DATA, INITIAL_CLASS_DATA } from '../constants';
 
@@ -14,6 +14,31 @@ const AuthOverlay: React.FC = () => {
     const [accessDenied, setAccessDenied] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
 
+    // Search suggestions state
+    const [schoolSuggestions, setSchoolSuggestions] = useState<string[]>([]);
+    const [availableYears, setAvailableYears] = useState<string[]>([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+
+    const handleSchoolNameChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setSchoolName(value);
+        setAvailableYears([]); // Reset available years when school name changes
+
+        if (value.length >= 3) {
+            const result = await searchSchools(value);
+            if (result) {
+                // We found a match!
+                // The result contains the sanitized school name and available years.
+                // But we want to show the user that we found something.
+                // Since we don't have the original display name, we might just show "Found: [SanitizedName]" or similar?
+                // Or better, if we found a match, we just set the available years silently?
+                // The user said: "when a user starts typing... we start matching... if a school name is found, we populate the academic year combobox"
+                // So if we find a match for the *sanitized* version of what they typed, we get the years.
+                setAvailableYears(result.years);
+            }
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!schoolName || !academicYear || !academicTerm || !password) {
@@ -25,8 +50,10 @@ const AuthOverlay: React.FC = () => {
         setError(null);
         setAccessDenied(false);
 
+        setAccessDenied(false);
+
         // Combine school name, academic year, and term to create unique document ID
-        const combinedId = `${schoolName}_${academicYear}_${academicTerm}`;
+        const combinedId = createDocumentId(schoolName, academicYear, academicTerm);
 
         const initialData: AppDataType = {
             settings: {
@@ -109,24 +136,37 @@ const AuthOverlay: React.FC = () => {
                             <input
                                 type="text"
                                 value={schoolName}
-                                onChange={(e) => setSchoolName(e.target.value)}
+                                onChange={handleSchoolNameChange}
                                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                                 placeholder="e.g. St. Mary's School"
                                 required
                             />
+                            {availableYears.length > 0 && (
+                                <p className="text-xs text-green-600 mt-1">
+                                    Found existing school records. Select a year below or type a new one.
+                                </p>
+                            )}
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Academic Year</label>
-                                <input
-                                    type="text"
-                                    value={academicYear}
-                                    onChange={(e) => setAcademicYear(e.target.value)}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                                    placeholder="e.g. 2023/2024"
-                                    required
-                                />
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        value={academicYear}
+                                        onChange={(e) => setAcademicYear(e.target.value)}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                                        placeholder="e.g. 2023/2024"
+                                        required
+                                        list="available-years"
+                                    />
+                                    <datalist id="available-years">
+                                        {availableYears.map((year) => (
+                                            <option key={year} value={year} />
+                                        ))}
+                                    </datalist>
+                                </div>
                             </div>
 
                             <div>
