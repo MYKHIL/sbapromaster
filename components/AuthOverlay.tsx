@@ -60,8 +60,12 @@ const AuthOverlay: React.FC = () => {
         setError(null);
         setAccessDenied(false);
 
+        // Explicitly remove slashes as requested by user to prevent Firestore path errors
+        const sanitizedSchoolName = schoolName.replace(/\//g, '');
+        const sanitizedAcademicYear = academicYear.replace(/\//g, '');
+
         // Combine school name, academic year, and term to create unique document ID
-        const combinedId = createDocumentId(schoolName, academicYear, academicTerm);
+        const combinedId = createDocumentId(sanitizedSchoolName, sanitizedAcademicYear, academicTerm);
 
         const initialData: AppDataType = {
             settings: {
@@ -104,8 +108,12 @@ const AuthOverlay: React.FC = () => {
         setShowRegisterConfirm(false);
         setLoading(true);
 
+        // Explicitly remove slashes as requested by user
+        const sanitizedSchoolName = schoolName.replace(/\//g, '');
+        const sanitizedAcademicYear = academicYear.replace(/\//g, '');
+
         // Re-construct ID and Data (same as handleSubmit)
-        const combinedId = createDocumentId(schoolName, academicYear, academicTerm);
+        const combinedId = createDocumentId(sanitizedSchoolName, sanitizedAcademicYear, academicTerm);
         const initialData: AppDataType = {
             settings: {
                 ...INITIAL_SETTINGS,
