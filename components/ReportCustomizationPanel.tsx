@@ -79,9 +79,9 @@ const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ stu
             ref={panelRef}
             className={`
                 bg-white/80 backdrop-blur-sm border-gray-200 z-20 transition-transform duration-500 ease-in-out
-                lg:fixed lg:top-28 lg:right-0 lg:w-96 lg:p-6 lg:rounded-l-xl lg:shadow-2xl lg:border-l lg:border-y lg:border-r-0
+                lg:fixed lg:top-28 lg:right-6 lg:w-96 lg:p-6 lg:rounded-xl lg:shadow-2xl lg:border lg:transform-none lg:left-auto lg:bottom-auto
                 fixed bottom-0 inset-x-0 w-full p-4 rounded-t-2xl shadow-2xl border-t
-                ${isCollapsed ? 'lg:translate-x-full translate-y-[calc(100%-4rem)]' : 'lg:translate-x-0 translate-y-0'}
+                ${isCollapsed ? 'lg:translate-x-[calc(100%-2.5rem)] translate-y-[calc(100%-4rem)]' : 'lg:translate-x-0 translate-y-0'}
             `}
             onMouseEnter={() => window.innerWidth >= 1024 && setIsCollapsed(false)}
             onMouseLeave={() => window.innerWidth >= 1024 && setIsCollapsed(true)}
