@@ -41,26 +41,35 @@ export type LoginResult =
     | { status: 'error'; message: string };
 
 // Helper to sanitize school name for use as Firestore document ID
-// Replaces spaces and special characters with underscores
-// Helper to sanitize school name for use as Firestore document ID
-// 1. Remove all spaces but maintain special characters (except '_', which is removed)
-// 2. Join year and term with '_'
+// 1. Remove all spaces but maintain special characters (except '_', which is replaced with '-')
 export const sanitizeSchoolName = (schoolName: string): string => {
-    // Remove spaces and underscores
-    return schoolName.trim().replace(/[\s_]/g, '');
+    // Replace underscores with hyphens first, then remove spaces
+    return schoolName.trim().replace(/_/g, '-').replace(/\s+/g, '');
+};
+
+// Helper to sanitize academic year
+// 1. Remove all spaces
+// 2. Replace underscores with hyphens
+export const sanitizeAcademicYear = (year: string): string => {
+    return year.trim().replace(/_/g, '-').replace(/\s+/g, '');
+};
+
+// Helper to sanitize academic term
+// 1. Replace all spaces with hyphens
+export const sanitizeAcademicTerm = (term: string): string => {
+    return term.trim().replace(/\s+/g, '-');
 };
 
 // Helper to create the full document ID
 export const createDocumentId = (schoolName: string, academicYear: string, academicTerm: string): string => {
     const sanitizedSchool = sanitizeSchoolName(schoolName);
-    // Replace spaces in term with underscores
-    const sanitizedTerm = academicTerm.trim().replace(/\s+/g, '_');
-    const sanitizedYear = academicYear.trim().replace(/\s+/g, '_'); // Just in case year has spaces
+    const sanitizedYear = sanitizeAcademicYear(academicYear);
+    const sanitizedTerm = sanitizeAcademicTerm(academicTerm);
     return `${sanitizedSchool}_${sanitizedYear}_${sanitizedTerm}`;
 };
 
 // Helper to search for schools and get available years
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 
 export const searchSchools = async (partialName: string): Promise<{ schoolName: string, years: string[] } | null> => {
     if (!partialName || partialName.length < 3) return null;
@@ -68,18 +77,7 @@ export const searchSchools = async (partialName: string): Promise<{ schoolName: 
     const sanitizedInput = sanitizeSchoolName(partialName);
     const schoolsRef = collection(db, "schools");
 
-    // We can't do a direct "starts with" query on the document ID easily because IDs are keys.
-    // However, we can fetch all IDs (or a reasonable subset if we had a separate index, but here we might have to scan or rely on client-side filtering if the list is small, 
-    // OR we assume we can just try to construct the ID).
-    // Given the requirement "start matching each character... following how we sanitize them",
-    // we effectively need to scan the collection's document IDs.
-    // Firestore doesn't support regex search on document IDs directly in a scalable way without a separate index field.
-    // BUT, for this specific request, we can fetch all documents (if not too many) or use a "name" field if we had one.
-    // Since we only have the document ID structure, we might need to list all documents and filter client-side.
-    // WARNING: Listing all documents is not scalable for production with thousands of schools.
-    // For now, assuming a smaller dataset or that we should add a 'searchName' field.
-    // Let's try to fetch all and filter.
-
+    // Fetch all documents to filter client-side (assuming dataset size allows)
     const querySnapshot = await getDocs(schoolsRef);
     const matches: string[] = [];
 
@@ -92,17 +90,9 @@ export const searchSchools = async (partialName: string): Promise<{ schoolName: 
     if (matches.length > 0) {
         // Extract the school name part (everything before the first underscore)
         // The ID format is: SchoolName_Year_Term
-        // But wait, the school name itself might contain special characters, but NO underscores (we removed them).
-        // So the first underscore is indeed the separator.
-
-        // We need to find the "best" match or just the first one?
-        // "if a school name is found, we populate the academic year combobox"
-        // We should group by school name.
-
-        // Let's take the first match's school name part.
         const firstMatchId = matches[0];
         const firstUnderscoreIndex = firstMatchId.indexOf('_');
-        if (firstUnderscoreIndex === -1) return null; // Should not happen with our format
+        if (firstUnderscoreIndex === -1) return null;
 
         const matchedSchoolNamePart = firstMatchId.substring(0, firstUnderscoreIndex);
 
@@ -112,19 +102,20 @@ export const searchSchools = async (partialName: string): Promise<{ schoolName: 
             if (id.startsWith(matchedSchoolNamePart + '_')) {
                 const parts = id.split('_');
                 // Format: School_Year_Term
-                // But Year might be "2025and2026" (no underscores in year ideally, but user said "AyirebiD/A_2025and2026_First_Term")
-                // So the parts are: [School, Year, TermPart1, TermPart2...]
-                // Actually, "First_Term" has an underscore.
-                // So splitting by underscore gives: [School, Year, First, Term]
-                // The year is the second part (index 1).
+                // parts[0] = School
+                // parts[1] = Year (sanitized)
+                // parts[2] = Term (sanitized)
+
                 if (parts.length >= 2) {
+                    // We want to return the year. Ideally we return the sanitized year found in the ID.
+                    // The UI can then display it.
                     yearsSet.add(parts[1]);
                 }
             }
         });
 
         return {
-            schoolName: matchedSchoolNamePart, // This is the sanitized name. We don't have the original display name unless we store it.
+            schoolName: matchedSchoolNamePart,
             years: Array.from(yearsSet)
         };
     }
@@ -133,9 +124,9 @@ export const searchSchools = async (partialName: string): Promise<{ schoolName: 
 };
 
 // Helper to login or register a school
-export const loginOrRegisterSchool = async (schoolName: string, password: string, initialData: AppDataType): Promise<LoginResult> => {
+export const loginOrRegisterSchool = async (docId: string, password: string, initialData: AppDataType): Promise<LoginResult> => {
     try {
-        const docId = sanitizeSchoolName(schoolName); // Sanitize school name for use as document ID
+        // docId is already constructed by the caller using createDocumentId
         const docRef = doc(db, "schools", docId);
         const docSnap = await getDoc(docRef);
 
