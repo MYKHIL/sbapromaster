@@ -42,7 +42,6 @@ export type LoginResult =
     | { status: 'error'; message: string };
 
 // Helper to sanitize school name for use as Firestore document ID
-// Helper to sanitize school name for use as Firestore document ID
 // 1. Remove all spaces but maintain special characters (except '_', which is replaced with '-')
 // 2. Remove slashes '/'
 // 3. Convert to lowercase for case-insensitive matching
@@ -75,7 +74,6 @@ export const createDocumentId = (schoolName: string, academicYear: string, acade
 };
 
 // Helper to search for schools and get available years
-
 export const searchSchools = async (partialName: string): Promise<{ schoolName: string, years: string[] }[] | null> => {
     if (!partialName || partialName.length < 3) return null;
 
@@ -204,7 +202,6 @@ export const saveUserDatabase = async (docId: string, data: Partial<AppDataType>
 };
 
 // Helper to subscribe to real-time updates
-
 export const subscribeToSchoolData = (docId: string, callback: (data: AppDataType) => void) => {
     const docRef = doc(db, "schools", docId);
 
