@@ -1,8 +1,8 @@
 import { GoogleGenAI, Modality } from "@google/genai";
 
 // Ensure the API key is handled according to the guidelines.
-// It is assumed that process.env.API_KEY is available in the execution environment.
-const API_KEY = process.env.API_KEY;
+// Using Vite's import.meta.env for browser compatibility
+const API_KEY = import.meta.env.VITE_API_KEY;
 
 if (!API_KEY) {
   console.warn("Gemini API key not found. AI features will be disabled.");
@@ -19,10 +19,10 @@ export const generateTeacherRemark = async (studentName: string, performanceSumm
 
   try {
     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
+      model: 'gemini-2.5-flash',
+      contents: prompt,
     });
-    
+
     return response.text.trim();
   } catch (error) {
     console.error("Error generating remark with Gemini API:", error);
@@ -34,7 +34,7 @@ export const enhanceImage = async (base64ImageData: string): Promise<string> => 
   if (!ai) {
     throw new Error("AI service is not available.");
   }
-  
+
   const mimeTypeMatch = base64ImageData.match(/^data:(image\/\w+);base64,/);
   if (!mimeTypeMatch) {
     throw new Error("Invalid base64 image data format. Please upload a valid image.");
