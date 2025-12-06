@@ -97,6 +97,11 @@ def main():
         print(f"1. The repository '{repo_name}' does not exist on your GitHub account ({username or 'unknown'}).")
         print("   -> Go to https://github.com/new and create it.")
         print("2. You do not have permission or are not logged in.")
+        
+        # Get current git email for debugging
+        git_email = subprocess.run("git config user.email", shell=True, text=True, capture_output=True).stdout.strip()
+        print(f"   (Git is currently configured with email: {git_email or 'Not configured'})")
+        
         print("   -> Try running 'git push -u origin main' manually to see the error.")
 
 if __name__ == "__main__":
