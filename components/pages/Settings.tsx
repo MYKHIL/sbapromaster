@@ -33,6 +33,10 @@ const Settings: React.FC = () => {
     setSettings(prev => ({ ...prev, [field]: imageData }));
   };
 
+  const handleClearImage = (field: 'logo' | 'headmasterSignature') => {
+    setSettings(prev => ({ ...prev, [field]: '' }));
+  };
+
   const handleEnhance = async (
     field: 'logo' | 'headmasterSignature',
     setIsEnhancing: React.Dispatch<React.SetStateAction<boolean>>
@@ -127,6 +131,18 @@ const Settings: React.FC = () => {
               <div className="space-y-2 w-full">
                 <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'logo')} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
                 <CameraCapture onCapture={(img) => handleCameraCapture(img, 'logo')} label="Take Logo Photo" />
+                {settings.logo && (
+                  <button
+                    type="button"
+                    onClick={() => handleClearImage('logo')}
+                    className="flex items-center px-3 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors text-sm font-medium w-full justify-center"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Clear Logo
+                  </button>
+                )}
               </div>
             </div>
             {AI_FEATURES_ENABLED && (
@@ -144,6 +160,18 @@ const Settings: React.FC = () => {
               <div className="space-y-2 w-full">
                 <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'headmasterSignature')} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
                 <CameraCapture onCapture={(img) => handleCameraCapture(img, 'headmasterSignature')} label="Take Signature Photo" />
+                {settings.headmasterSignature && (
+                  <button
+                    type="button"
+                    onClick={() => handleClearImage('headmasterSignature')}
+                    className="flex items-center px-3 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors text-sm font-medium w-full justify-center"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Clear Signature
+                  </button>
+                )}
               </div>
             </div>
             {AI_FEATURES_ENABLED && (

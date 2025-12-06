@@ -22,6 +22,13 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, label = "Take 
         };
     }, [stream]);
 
+    // Re-attach stream to video element when retaking photo
+    useEffect(() => {
+        if (!capturedImage && stream && videoRef.current) {
+            videoRef.current.srcObject = stream;
+        }
+    }, [capturedImage, stream]);
+
     const startCamera = async (mode: 'user' | 'environment' = 'environment') => {
         // Stop existing stream if any
         if (stream) {
