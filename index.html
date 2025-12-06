@@ -60,6 +60,8 @@
 
       // Ignore resize observer errors which are common and harmless
       if (message.includes('ResizeObserver loop')) return;
+      // Ignore generic Script errors (often cross-origin) and Unknown errors with no source
+      if (message === 'Script error.' || (message === 'Unknown error' && source.includes('Unknown source'))) return;
 
       var errorDiv = document.getElementById('global-error-display');
       if (!errorDiv) {
