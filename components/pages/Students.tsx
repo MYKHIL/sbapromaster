@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import CameraCapture from '../CameraCapture';
 import { useData } from '../../context/DataContext';
 import type { Student } from '../../types';
 import ConfirmationModal from '../ConfirmationModal';
@@ -46,7 +47,7 @@ const Students: React.FC = () => {
     const filteredStudents = useMemo(() => {
         const query = searchQuery.toLowerCase();
         if (!query) return students;
-        return students.filter(student => 
+        return students.filter(student =>
             student.name.toLowerCase().includes(query) ||
             student.indexNumber.toLowerCase().includes(query) ||
             student.class.toLowerCase().includes(query)
@@ -61,6 +62,10 @@ const Students: React.FC = () => {
             };
             reader.readAsDataURL(e.target.files[0]);
         }
+    };
+
+    const handleCameraCapture = (imageData: string) => {
+        setCurrentStudent(prev => prev ? { ...prev, picture: imageData } : null);
     };
 
     const handleEnhanceImage = async () => {
@@ -198,13 +203,13 @@ const Students: React.FC = () => {
                                             </button>
                                             <button onClick={() => handleDeleteClick(student.id)} className="text-red-600 hover:text-red-800" title="Delete">
                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                                 </svg>
                                             </button>
                                         </td>
                                     </tr>
                                 ))
-                             ) : (
+                            ) : (
                                 <tr>
                                     <td colSpan={6} className="text-center p-8 text-gray-500">
                                         No students found matching your search.
@@ -218,7 +223,7 @@ const Students: React.FC = () => {
 
             {/* Mobile Card View */}
             <div className="lg:hidden space-y-4">
-                 {filteredStudents.length > 0 ? (
+                {filteredStudents.length > 0 ? (
                     filteredStudents.map(student => (
                         <div key={student.id} className="bg-white p-4 rounded-xl shadow-md border border-gray-200">
                             <div className="flex items-start justify-between">
@@ -249,21 +254,24 @@ const Students: React.FC = () => {
             </div>
 
             {isModalOpen && currentStudent && (
-                 <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
                     <div className="bg-white p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-lg m-4 overflow-y-auto max-h-[90vh]">
                         <h2 className="text-2xl font-bold mb-6 text-gray-800">{'id' in currentStudent ? 'Edit Student' : 'Add New Student'}</h2>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Student Photo</label>
                                 <div className="mt-1 flex items-center space-x-4">
-                                    <img src={currentStudent.picture || USER_PLACEHOLDER} alt="Preview" className="h-20 w-20 rounded-full object-cover bg-gray-200"/>
-                                    <input type="file" accept="image/*" onChange={handleFileChange} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
+                                    <img src={currentStudent.picture || USER_PLACEHOLDER} alt="Preview" className="h-20 w-20 rounded-full object-cover bg-gray-200" />
+                                    <div className="space-y-2 w-full">
+                                        <input type="file" accept="image/*" onChange={handleFileChange} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                                        <CameraCapture onCapture={handleCameraCapture} label="Take Photo" />
+                                    </div>
                                 </div>
                                 {AI_FEATURES_ENABLED && (
                                     <div className="mt-2">
-                                        <button 
+                                        <button
                                             type="button"
-                                            onClick={handleEnhanceImage} 
+                                            onClick={handleEnhanceImage}
                                             disabled={!currentStudent.picture || isEnhancing}
                                             className="flex items-center text-sm bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full font-semibold hover:bg-indigo-200 disabled:bg-gray-200 disabled:text-gray-500 transition-colors"
                                         >
@@ -282,11 +290,11 @@ const Students: React.FC = () => {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Name</label>
-                                <input type="text" name="name" value={currentStudent.name} onChange={handleChange} required className={inputStyles}/>
+                                <input type="text" name="name" value={currentStudent.name} onChange={handleChange} required className={inputStyles} />
                             </div>
-                             <div>
+                            <div>
                                 <label className="block text-sm font-medium text-gray-700">Index Number</label>
-                                <input type="text" name="indexNumber" value={currentStudent.indexNumber} onChange={handleChange} required className={inputStyles}/>
+                                <input type="text" name="indexNumber" value={currentStudent.indexNumber} onChange={handleChange} required className={inputStyles} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Class</label>
@@ -306,9 +314,9 @@ const Students: React.FC = () => {
                                 <label className="block text-sm font-medium text-gray-700">Date of Birth</label>
                                 <input type="date" name="dateOfBirth" value={currentStudent.dateOfBirth} onChange={handleChange} className={inputStyles} />
                             </div>
-                             <div>
+                            <div>
                                 <label className="block text-sm font-medium text-gray-700">Age</label>
-                                <input type="text" name="age" value={currentStudent.age} readOnly placeholder="Calculated from D.O.B." className={inputStyles + " bg-gray-100 cursor-not-allowed"}/>
+                                <input type="text" name="age" value={currentStudent.age} readOnly placeholder="Calculated from D.O.B." className={inputStyles + " bg-gray-100 cursor-not-allowed"} />
                             </div>
                             <div className="flex justify-end pt-4 space-x-2">
                                 <button type="button" onClick={handleCloseModal} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancel</button>
@@ -316,7 +324,7 @@ const Students: React.FC = () => {
                             </div>
                         </form>
                     </div>
-                 </div>
+                </div>
             )}
             <ConfirmationModal
                 isOpen={isConfirmOpen}

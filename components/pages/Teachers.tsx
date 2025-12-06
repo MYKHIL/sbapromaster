@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import CameraCapture from '../CameraCapture';
 import { useData } from '../../context/DataContext';
 import type { Class } from '../../types';
 import ConfirmationModal from '../ConfirmationModal';
@@ -24,11 +25,11 @@ const Teachers: React.FC = () => {
 
     const inputStyles = "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500";
     const searchInputStyles = "w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
-    
+
     const filteredClasses = useMemo(() => {
         const query = searchQuery.toLowerCase();
         if (!query) return classes;
-        return classes.filter(cls => 
+        return classes.filter(cls =>
             cls.name.toLowerCase().includes(query) ||
             cls.teacherName.toLowerCase().includes(query)
         );
@@ -78,6 +79,10 @@ const Teachers: React.FC = () => {
         }
     };
 
+    const handleCameraCapture = (imageData: string) => {
+        setCurrentClassData(prev => prev ? { ...prev, teacherSignature: imageData } : null);
+    };
+
     const handleEnhanceImage = async () => {
         if (!currentClassData?.teacherSignature) {
             alert("Please upload a signature first.");
@@ -110,7 +115,7 @@ const Teachers: React.FC = () => {
     return (
         <div className="space-y-6">
             <h1 className="text-3xl font-bold text-gray-800">Manage Teachers &amp; Classes</h1>
-            
+
             <div className="bg-gray-100 py-4">
                 <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                     <div className="relative w-full md:w-1/3">
@@ -172,17 +177,17 @@ const Teachers: React.FC = () => {
                     </table>
                 </div>
             </div>
-            
+
             {/* Mobile Card View */}
             <div className="lg:hidden space-y-4">
-                 {filteredClasses.length > 0 ? (
+                {filteredClasses.length > 0 ? (
                     filteredClasses.map(cls => (
                         <div key={cls.id} className="bg-white p-4 rounded-xl shadow-md border border-gray-200 flex justify-between items-center">
                             <div>
                                 <p className="font-bold text-gray-800">{cls.teacherName}</p>
                                 <p className="text-sm text-gray-600">Class Teacher for: {cls.name}</p>
                             </div>
-                             <div className="flex space-x-2 flex-shrink-0">
+                            <div className="flex space-x-2 flex-shrink-0">
                                 <button onClick={() => handleEdit(cls)} className="text-blue-600 p-2 rounded-full hover:bg-blue-100" title="Edit">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
                                 </button>
@@ -193,36 +198,39 @@ const Teachers: React.FC = () => {
                         </div>
                     ))
                 ) : (
-                     <div className="text-center p-8 text-gray-500 bg-white rounded-xl shadow-md border border-gray-200">
+                    <div className="text-center p-8 text-gray-500 bg-white rounded-xl shadow-md border border-gray-200">
                         No data found matching your search.
                     </div>
                 )}
             </div>
 
             {isModalOpen && currentClassData && (
-                 <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
                     <div className="bg-white p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-lg m-4">
                         <h2 className="text-2xl font-bold mb-6 text-gray-800">{'id' in currentClassData ? 'Edit Teacher/Class' : 'Add New Teacher/Class'}</h2>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Class Name</label>
-                                <input type="text" name="name" value={currentClassData.name} onChange={handleChange} required className={inputStyles}/>
+                                <input type="text" name="name" value={currentClassData.name} onChange={handleChange} required className={inputStyles} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Teacher's Name</label>
-                                <input type="text" name="teacherName" value={currentClassData.teacherName} onChange={handleChange} required className={inputStyles}/>
+                                <input type="text" name="teacherName" value={currentClassData.teacherName} onChange={handleChange} required className={inputStyles} />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Teacher's Signature</label>
                                 <div className="mt-1 flex items-center space-x-4">
                                     <img src={currentClassData.teacherSignature || SIGNATURE_PLACEHOLDER} alt="Signature Preview" className="h-12 w-36 object-contain border p-1 rounded-md bg-gray-50" />
-                                    <input type="file" accept="image/*" onChange={handleFileChange} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
+                                    <div className="space-y-2 w-full">
+                                        <input type="file" accept="image/*" onChange={handleFileChange} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                                        <CameraCapture onCapture={handleCameraCapture} label="Take Signature Photo" />
+                                    </div>
                                 </div>
                                 {AI_FEATURES_ENABLED && (
                                     <div className="mt-2">
-                                        <button 
+                                        <button
                                             type="button"
-                                            onClick={handleEnhanceImage} 
+                                            onClick={handleEnhanceImage}
                                             disabled={!currentClassData.teacherSignature || isEnhancing}
                                             className="flex items-center text-sm bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full font-semibold hover:bg-indigo-200 disabled:bg-gray-200 disabled:text-gray-500 transition-colors"
                                         >
@@ -245,7 +253,7 @@ const Teachers: React.FC = () => {
                             </div>
                         </form>
                     </div>
-                 </div>
+                </div>
             )}
             <ConfirmationModal
                 isOpen={isConfirmOpen}

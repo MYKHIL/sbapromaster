@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import CameraCapture from '../CameraCapture';
 import { useData } from '../../context/DataContext';
 import { enhanceImage } from '../../services/geminiService';
 import { AI_FEATURES_ENABLED } from '../../constants';
@@ -17,48 +18,52 @@ const Settings: React.FC = () => {
     const { name, value } = e.target;
     setSettings(prev => ({ ...prev, [name]: value }));
   };
-  
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: 'logo' | 'headmasterSignature') => {
-      if (e.target.files && e.target.files[0]) {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-              setSettings(prev => ({ ...prev, [field]: event.target?.result as string }));
-          };
-          reader.readAsDataURL(e.target.files[0]);
-      }
+    if (e.target.files && e.target.files[0]) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setSettings(prev => ({ ...prev, [field]: event.target?.result as string }));
+      };
+      reader.readAsDataURL(e.target.files[0]);
+    }
+  };
+
+  const handleCameraCapture = (imageData: string, field: 'logo' | 'headmasterSignature') => {
+    setSettings(prev => ({ ...prev, [field]: imageData }));
   };
 
   const handleEnhance = async (
-      field: 'logo' | 'headmasterSignature', 
-      setIsEnhancing: React.Dispatch<React.SetStateAction<boolean>>
+    field: 'logo' | 'headmasterSignature',
+    setIsEnhancing: React.Dispatch<React.SetStateAction<boolean>>
   ) => {
-      const currentImage = settings[field];
-      if (!currentImage) {
-          alert("Please upload an image first.");
-          return;
-      }
-      setIsEnhancing(true);
-      try {
-          const enhancedImage = await enhanceImage(currentImage);
-          setSettings(prev => ({ ...prev, [field]: enhancedImage }));
-      } catch (error) {
-          console.error(error);
-          alert((error as Error).message);
-      } finally {
-          setIsEnhancing(false);
-      }
+    const currentImage = settings[field];
+    if (!currentImage) {
+      alert("Please upload an image first.");
+      return;
+    }
+    setIsEnhancing(true);
+    try {
+      const enhancedImage = await enhanceImage(currentImage);
+      setSettings(prev => ({ ...prev, [field]: enhancedImage }));
+    } catch (error) {
+      console.error(error);
+      alert((error as Error).message);
+    } finally {
+      setIsEnhancing(false);
+    }
   };
 
-  const EnhanceButton: React.FC<{isEnhancing: boolean}> = ({ isEnhancing }) => (
+  const EnhanceButton: React.FC<{ isEnhancing: boolean }> = ({ isEnhancing }) => (
     <>
       {isEnhancing ? (
-          <>
-              <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Enhancing...
-          </>
+        <>
+          <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Enhancing...
+        </>
       ) : '✨ Enhance Image'}
     </>
   );
@@ -66,7 +71,7 @@ const Settings: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <h1 className="text-3xl font-bold text-gray-800">School Setup</h1>
-      
+
       <div className="bg-white p-8 rounded-xl shadow-md border border-gray-200 space-y-6">
         <h2 className="text-xl font-bold text-gray-700 border-b pb-2">School Information</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -86,63 +91,69 @@ const Settings: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Academic Year</label>
-                <input type="text" name="academicYear" value={settings.academicYear} onChange={handleChange} className={inputStyles} />
-            </div>
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Academic Term</label>
-                <input type="text" name="academicTerm" value={settings.academicTerm} onChange={handleChange} className={inputStyles} />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Academic Year</label>
+            <input type="text" name="academicYear" value={settings.academicYear} onChange={handleChange} className={inputStyles} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Academic Term</label>
+            <input type="text" name="academicTerm" value={settings.academicTerm} onChange={handleChange} className={inputStyles} />
+          </div>
         </div>
 
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Vacation Date</label>
-                <input type="date" name="vacationDate" value={settings.vacationDate} onChange={handleChange} className={inputStyles} />
-            </div>
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Reopening Date</label>
-                <input type="date" name="reopeningDate" value={settings.reopeningDate} onChange={handleChange} className={inputStyles} />
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Vacation Date</label>
+            <input type="date" name="vacationDate" value={settings.vacationDate} onChange={handleChange} className={inputStyles} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Reopening Date</label>
+            <input type="date" name="reopeningDate" value={settings.reopeningDate} onChange={handleChange} className={inputStyles} />
+          </div>
         </div>
 
         <hr />
-        
+
         <h2 className="text-xl font-bold text-gray-700 border-b pb-2">Branding &amp; Signatures</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Headmaster's Name</label>
-                <input type="text" name="headmasterName" value={settings.headmasterName || ''} onChange={handleChange} className={inputStyles} />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Headmaster's Name</label>
+            <input type="text" name="headmasterName" value={settings.headmasterName || ''} onChange={handleChange} className={inputStyles} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">School Logo</label>
+            <div className="flex items-center space-x-4">
+              <img src={settings.logo || LOGO_PLACEHOLDER} alt="Logo Preview" className="h-32 w-32 object-contain border p-2 rounded-lg bg-gray-50" />
+              <div className="space-y-2 w-full">
+                <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'logo')} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                <CameraCapture onCapture={(img) => handleCameraCapture(img, 'logo')} label="Take Logo Photo" />
+              </div>
             </div>
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">School Logo</label>
-                <div className="flex items-center space-x-4">
-                    <img src={settings.logo || LOGO_PLACEHOLDER} alt="Logo Preview" className="h-32 w-32 object-contain border p-2 rounded-lg bg-gray-50" />
-                    <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'logo')} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
-                </div>
-                {AI_FEATURES_ENABLED && (
-                  <div className="mt-2">
-                      <button type="button" onClick={() => handleEnhance('logo', setIsEnhancingLogo)} disabled={!settings.logo || isEnhancingLogo} className="flex items-center text-sm bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full font-semibold hover:bg-indigo-200 disabled:bg-gray-200 disabled:text-gray-500 transition-colors">
-                        <EnhanceButton isEnhancing={isEnhancingLogo} />
-                      </button>
-                  </div>
-                )}
+            {AI_FEATURES_ENABLED && (
+              <div className="mt-2">
+                <button type="button" onClick={() => handleEnhance('logo', setIsEnhancingLogo)} disabled={!settings.logo || isEnhancingLogo} className="flex items-center text-sm bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full font-semibold hover:bg-indigo-200 disabled:bg-gray-200 disabled:text-gray-500 transition-colors">
+                  <EnhanceButton isEnhancing={isEnhancingLogo} />
+                </button>
+              </div>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Headmaster's Signature</label>
+            <div className="flex items-center space-x-4">
+              <img src={settings.headmasterSignature || SIGNATURE_PLACEHOLDER} alt="Signature Preview" className="h-12 w-36 object-contain border p-1 rounded-md bg-gray-50" />
+              <div className="space-y-2 w-full">
+                <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'headmasterSignature')} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                <CameraCapture onCapture={(img) => handleCameraCapture(img, 'headmasterSignature')} label="Take Signature Photo" />
+              </div>
             </div>
-             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Headmaster's Signature</label>
-                <div className="flex items-center space-x-4">
-                    <img src={settings.headmasterSignature || SIGNATURE_PLACEHOLDER} alt="Signature Preview" className="h-12 w-36 object-contain border p-1 rounded-md bg-gray-50" />
-                    <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'headmasterSignature')} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
-                </div>
-                {AI_FEATURES_ENABLED && (
-                  <div className="mt-2">
-                      <button type="button" onClick={() => handleEnhance('headmasterSignature', setIsEnhancingSignature)} disabled={!settings.headmasterSignature || isEnhancingSignature} className="flex items-center text-sm bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full font-semibold hover:bg-indigo-200 disabled:bg-gray-200 disabled:text-gray-500 transition-colors">
-                        <EnhanceButton isEnhancing={isEnhancingSignature} />
-                      </button>
-                  </div>
-                )}
-            </div>
+            {AI_FEATURES_ENABLED && (
+              <div className="mt-2">
+                <button type="button" onClick={() => handleEnhance('headmasterSignature', setIsEnhancingSignature)} disabled={!settings.headmasterSignature || isEnhancingSignature} className="flex items-center text-sm bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full font-semibold hover:bg-indigo-200 disabled:bg-gray-200 disabled:text-gray-500 transition-colors">
+                  <EnhanceButton isEnhancing={isEnhancingSignature} />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
