@@ -30,8 +30,32 @@ const ScoreEntry: React.FC = () => {
         }
     });
 
+    const filteredStudents = useMemo(() => {
+        if (!students) return [];
+        if (!selectedClass) return students;
+        return students.filter(student => student.class === selectedClass);
+    }, [students, selectedClass]);
+
     // Mobile View State
     const [selectedStudentIndex, setSelectedStudentIndex] = useState(0);
+
+    // Initialize selectedStudentIndex from localStorage
+    useEffect(() => {
+        const savedStudentId = localStorage.getItem('scoreEntry_mobile_selectedStudentId');
+        if (savedStudentId && filteredStudents.length > 0) {
+            const index = filteredStudents.findIndex(s => s.id === Number(savedStudentId));
+            if (index !== -1) {
+                setSelectedStudentIndex(index);
+            }
+        }
+    }, [filteredStudents.length]); // Only run when students list changes (e.g. initial load or class change)
+
+    // Save selectedStudentIndex to localStorage whenever it changes
+    useEffect(() => {
+        if (filteredStudents[selectedStudentIndex]) {
+            localStorage.setItem('scoreEntry_mobile_selectedStudentId', String(filteredStudents[selectedStudentIndex].id));
+        }
+    }, [selectedStudentIndex, filteredStudents]);
 
     // Safe initialization for selectedAssessmentId
     const [selectedAssessmentId, setSelectedAssessmentId] = useState<number>(() => {
@@ -40,6 +64,20 @@ const ScoreEntry: React.FC = () => {
 
     const [mobileScoreError, setMobileScoreError] = useState<string>('');
     const [useMobileView, setUseMobileView] = useState(true);
+
+    // Local state for score input to prevent immediate formatting while typing
+    const [tempScore, setTempScore] = useState('');
+
+    // Sync tempScore with actual store value when student or assessment changes
+    useEffect(() => {
+        const student = filteredStudents[selectedStudentIndex];
+        if (student) {
+            const scores = getStudentScores(student.id, selectedSubjectId, selectedAssessmentId);
+            setTempScore(scores[0] || '');
+        } else {
+            setTempScore('');
+        }
+    }, [selectedStudentIndex, selectedAssessmentId, selectedSubjectId, filteredStudents, getStudentScores]);
 
     // Ensure selectedAssessmentId is valid when assessments change
     useEffect(() => {
@@ -51,13 +89,9 @@ const ScoreEntry: React.FC = () => {
         }
     }, [assessments, selectedAssessmentId]);
 
-    const filteredStudents = useMemo(() => {
-        if (!students) return [];
-        if (!selectedClass) return students;
-        return students.filter(student => student.class === selectedClass);
-    }, [students, selectedClass]);
-
     const handleNextStudent = () => {
+        // Commit current score before moving
+        commitScore();
         if (selectedStudentIndex < filteredStudents.length - 1) {
             setSelectedStudentIndex(prev => prev + 1);
             setMobileScoreError('');
@@ -65,6 +99,8 @@ const ScoreEntry: React.FC = () => {
     };
 
     const handlePrevStudent = () => {
+        // Commit current score before moving
+        commitScore();
         if (selectedStudentIndex > 0) {
             setSelectedStudentIndex(prev => prev - 1);
             setMobileScoreError('');
@@ -80,14 +116,14 @@ const ScoreEntry: React.FC = () => {
         }
     }, [selectedStudentIndex, useMobileView]);
 
-    const handleMobileScoreUpdate = (value: string) => {
+    const commitScore = () => {
         const student = filteredStudents[selectedStudentIndex];
         if (!student) return;
 
         const assessment = assessments.find(a => a.id === selectedAssessmentId);
         if (!assessment) return;
 
-        const rawScoreInput = value.trim();
+        const rawScoreInput = tempScore.trim();
         const isExam = assessment.name.toLowerCase().includes('exam');
         const maxScore = isExam ? 100 : assessment.weight;
         const basis = isExam ? 100 : assessment.weight;
@@ -98,6 +134,9 @@ const ScoreEntry: React.FC = () => {
             updateStudentScores(student.id, selectedSubjectId, assessment.id, []);
             return;
         }
+
+        // If it's already in the correct format x/y, we might not need to re-process, 
+        // but re-validating is safer.
 
         let convertedScore: number;
         if (rawScoreInput.includes('/')) {
@@ -117,14 +156,12 @@ const ScoreEntry: React.FC = () => {
         if (convertedScore < 0) { setMobileScoreError("Cannot be negative"); return; }
 
         const finalScore = `${Number(convertedScore.toFixed(1))}/${basis}`;
-        updateStudentScores(student.id, selectedSubjectId, assessment.id, [finalScore]);
-    };
 
-    const getMobileCurrentScore = () => {
-        const student = filteredStudents[selectedStudentIndex];
-        if (!student) return '';
-        const scores = getStudentScores(student.id, selectedSubjectId, selectedAssessmentId);
-        return scores[0] || '';
+        // Update store
+        updateStudentScores(student.id, selectedSubjectId, assessment.id, [finalScore]);
+
+        // Update local state to match formatted score (optional, but good for feedback)
+        setTempScore(finalScore);
     };
 
     const getPlaceholder = () => {
@@ -269,9 +306,11 @@ const ScoreEntry: React.FC = () => {
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Score</label>
                                         <div className="flex flex-col">
                                             <input
+                                                ref={scoreInputRef}
                                                 type="text"
-                                                value={getMobileCurrentScore()}
-                                                onChange={(e) => handleMobileScoreUpdate(e.target.value)}
+                                                value={tempScore}
+                                                onChange={(e) => setTempScore(e.target.value)}
+                                                onBlur={commitScore}
                                                 placeholder={getPlaceholder()}
                                                 className="w-full p-3 text-center text-2xl font-mono bg-gray-50 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                             />
