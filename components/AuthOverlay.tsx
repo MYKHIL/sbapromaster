@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ConfirmationModal from './ConfirmationModal';
 import { loginOrRegisterSchool, AppDataType, createDocumentId, searchSchools } from '../services/firebaseService';
 import { useData } from '../context/DataContext';
 import { INITIAL_SETTINGS, INITIAL_STUDENTS, INITIAL_SUBJECTS, INITIAL_CLASSES, INITIAL_GRADES, INITIAL_ASSESSMENTS, INITIAL_SCORES, INITIAL_REPORT_DATA, INITIAL_CLASS_DATA } from '../constants';
@@ -13,11 +14,13 @@ const AuthOverlay: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [accessDenied, setAccessDenied] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [showRegisterConfirm, setShowRegisterConfirm] = useState(false);
 
     // Search suggestions state
     const [schoolSuggestions, setSchoolSuggestions] = useState<string[]>([]);
     const [availableYears, setAvailableYears] = useState<string[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
+    const [searchResults, setSearchResults] = useState<{ schoolName: string, years: string[] }[]>([]);
 
     const handleSchoolNameChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
@@ -29,34 +32,16 @@ const AuthOverlay: React.FC = () => {
         if (value.length >= 3) {
             const results = await searchSchools(value);
             if (results && results.length > 0) {
-                // We found matches!
-                // If there's only one match and it matches exactly what was typed (sanitized), maybe auto-select?
-                // But safer to show suggestions.
                 const suggestions = results.map(r => r.schoolName);
                 setSchoolSuggestions(suggestions);
                 setShowSuggestions(true);
-
-                // Store the full results to lookup years later
-                // We can use a ref or just re-search, or store in state.
-                // Let's store in a temporary state or map.
-                // Actually, let's just use the first result's years if there's only one match?
-                // No, user might be typing a common prefix.
-
-                // Let's store the results in a state to access years when a suggestion is clicked.
                 setSearchResults(results);
             }
         }
     };
 
-    const [searchResults, setSearchResults] = useState<{ schoolName: string, years: string[] }[]>([]);
-
     const handleSuggestionClick = (suggestion: string) => {
-        setSchoolName(suggestion); // This sets the sanitized name? Or should we keep user input?
-        // The suggestion is the sanitized name from the DB.
-        // If we set it, the input value becomes the sanitized name.
-        // This might be okay, or we might want to keep the display name if we had it.
-        // Since we don't store display names, sanitized name is the best we have.
-
+        setSchoolName(suggestion);
         const match = searchResults.find(r => r.schoolName === suggestion);
         if (match) {
             setAvailableYears(match.years);
@@ -73,8 +58,6 @@ const AuthOverlay: React.FC = () => {
 
         setLoading(true);
         setError(null);
-        setAccessDenied(false);
-
         setAccessDenied(false);
 
         // Combine school name, academic year, and term to create unique document ID
@@ -95,10 +78,10 @@ const AuthOverlay: React.FC = () => {
             scores: INITIAL_SCORES,
             reportData: INITIAL_REPORT_DATA,
             classData: INITIAL_CLASS_DATA,
-            // password and Access are handled by the service
         };
 
-        const result = await loginOrRegisterSchool(combinedId, password, initialData);
+        // Try to login first (don't create if missing)
+        const result = await loginOrRegisterSchool(combinedId, password, initialData, false);
 
         setLoading(false);
 
@@ -110,6 +93,43 @@ const AuthOverlay: React.FC = () => {
             setAccessDenied(true);
         } else if (result.status === 'wrong_password') {
             setError("Incorrect password for this school/term combination.");
+        } else if (result.status === 'not_found') {
+            setShowRegisterConfirm(true);
+        } else if (result.status === 'error') {
+            setError(result.message || "An error occurred.");
+        }
+    };
+
+    const handleRegisterConfirm = async () => {
+        setShowRegisterConfirm(false);
+        setLoading(true);
+
+        // Re-construct ID and Data (same as handleSubmit)
+        const combinedId = createDocumentId(schoolName, academicYear, academicTerm);
+        const initialData: AppDataType = {
+            settings: {
+                ...INITIAL_SETTINGS,
+                schoolName: schoolName,
+                academicYear: academicYear,
+                academicTerm: academicTerm
+            },
+            students: INITIAL_STUDENTS,
+            subjects: INITIAL_SUBJECTS,
+            classes: INITIAL_CLASSES,
+            grades: INITIAL_GRADES,
+            assessments: INITIAL_ASSESSMENTS,
+            scores: INITIAL_SCORES,
+            reportData: INITIAL_REPORT_DATA,
+            classData: INITIAL_CLASS_DATA,
+        };
+
+        // Force create
+        const result = await loginOrRegisterSchool(combinedId, password, initialData, true);
+
+        setLoading(false);
+
+        if (result.status === 'created_pending_access') {
+            setAccessDenied(true);
         } else if (result.status === 'error') {
             setError(result.message || "An error occurred.");
         }
@@ -137,7 +157,7 @@ const AuthOverlay: React.FC = () => {
                             </div>
                             <div className="ml-3">
                                 <p className="text-sm text-yellow-700">
-                                    Access Denied. Please contact the administrator on <span className="font-bold">0542410613</span> for access.
+                                    Access Denied. Please contact the administrator on <a href="tel:0542410613" className="font-bold underline hover:text-yellow-800">0542410613</a> for access.
                                 </p>
                                 <button
                                     onClick={() => setAccessDenied(false)}
@@ -255,6 +275,22 @@ const AuthOverlay: React.FC = () => {
                     </form>
                 )}
             </div>
+
+            <ConfirmationModal
+                isOpen={showRegisterConfirm}
+                onClose={() => setShowRegisterConfirm(false)}
+                onConfirm={handleRegisterConfirm}
+                title="No Existing Database Found"
+                message={
+                    <span>
+                        No existing database found for these credentials. Would you like to register? <br /> <br />
+                        <span className="font-bold underline bg-yellow-200 px-1 rounded">Note:</span> <br />
+                        You will need to contact the administrator on <a href="tel:0542410613" className="font-bold underline text-blue-600 hover:text-blue-800">0542410613</a> for access.
+                    </span>
+                }
+                variant="info"
+                confirmText="Register"
+            />
         </div>
     );
 };

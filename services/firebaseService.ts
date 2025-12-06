@@ -38,6 +38,7 @@ export type LoginResult =
     | { status: 'access_denied' }
     | { status: 'wrong_password' }
     | { status: 'created_pending_access' }
+    | { status: 'not_found' }
     | { status: 'error'; message: string };
 
 // Helper to sanitize school name for use as Firestore document ID
@@ -121,7 +122,7 @@ export const searchSchools = async (partialName: string): Promise<{ schoolName: 
 };
 
 // Helper to login or register a school
-export const loginOrRegisterSchool = async (docId: string, password: string, initialData: AppDataType): Promise<LoginResult> => {
+export const loginOrRegisterSchool = async (docId: string, password: string, initialData: AppDataType, createIfMissing: boolean = false): Promise<LoginResult> => {
     try {
         // docId is already constructed by the caller using createDocumentId
         const docRef = doc(db, "schools", docId);
@@ -139,6 +140,9 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
                 return { status: 'wrong_password' };
             }
         } else {
+            if (!createIfMissing) {
+                return { status: 'not_found' };
+            }
             // Create new school
             const newData: AppDataType = {
                 ...initialData,
