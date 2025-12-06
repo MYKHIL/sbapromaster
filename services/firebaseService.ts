@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import type { SchoolSettings, Student, Subject, Class, Grade, Assessment, Score, ReportSpecificData, ClassSpecificData } from '../types';
 
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -91,4 +91,16 @@ export const saveUserDatabase = async (schoolName: string, data: Partial<AppData
     // Actually, if we pass the full AppDataType from DataContext, we need to make sure we don't accidentally overwrite password/Access with undefined if they are missing.
     // Best approach: merge: true
     await setDoc(docRef, data, { merge: true });
+};
+
+// Helper to subscribe to real-time updates
+export const subscribeToSchoolData = (schoolName: string, callback: (data: AppDataType) => void) => {
+    const docId = sanitizeSchoolName(schoolName);
+    const docRef = doc(db, "schools", docId);
+
+    return onSnapshot(docRef, (doc) => {
+        if (doc.exists()) {
+            callback(doc.data() as AppDataType);
+        }
+    });
 };

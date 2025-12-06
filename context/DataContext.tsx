@@ -1,5 +1,5 @@
-import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
-import { saveUserDatabase, AppDataType } from '../services/firebaseService';
+import React, { createContext, useContext, ReactNode, useState, useEffect, useRef } from 'react';
+import { saveUserDatabase, subscribeToSchoolData, AppDataType } from '../services/firebaseService';
 import useLocalStorage from '../hooks/useLocalStorage';
 import type { Student, Subject, Class, Grade, Assessment, Score, SchoolSettings, ReportSpecificData, ClassSpecificData } from '../types';
 import {
@@ -87,6 +87,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [reportData, setReportData] = useLocalStorage<ReportSpecificData[]>('sba-report-data', INITIAL_REPORT_DATA);
     const [classData, setClassData] = useLocalStorage<ClassSpecificData[]>('sba-class-data', INITIAL_CLASS_DATA);
     const [schoolId, setSchoolId] = useState<string | null>(null);
+    const isRemoteUpdate = useRef(false); // Flag to prevent infinite loops
 
     // FIX: Implement function to overwrite all data from an imported file.
     const loadImportedData = (data: Partial<AppDataType>) => {
@@ -141,13 +142,30 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
-    // Background sync effect (Debounced Auto-Save)
+    // Real-time subscription effect
     useEffect(() => {
         if (!schoolId) return;
 
+        const unsubscribe = subscribeToSchoolData(schoolId, (data) => {
+            console.log("Received real-time update from cloud");
+            isRemoteUpdate.current = true; // Set flag to indicate this is a remote update
+            loadImportedData(data);
+            // Reset flag after a short delay to allow state updates to settle
+            setTimeout(() => {
+                isRemoteUpdate.current = false;
+            }, 100);
+        });
+
+        return () => unsubscribe();
+    }, [schoolId]);
+
+    // Auto-save effect (triggered by local changes)
+    useEffect(() => {
+        if (!schoolId || isRemoteUpdate.current) return;
+
         const handler = setTimeout(() => {
             saveToCloud();
-        }, 3000); // Auto-save 3 seconds after the last change
+        }, 1000); // Auto-save 1 second after last local change
 
         return () => clearTimeout(handler);
     }, [schoolId, settings, students, subjects, classes, grades, assessments, scores, reportData, classData]);
