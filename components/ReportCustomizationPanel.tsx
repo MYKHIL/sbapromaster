@@ -5,13 +5,13 @@ import type { Student, ReportSpecificData } from '../types';
 import { AI_FEATURES_ENABLED } from '../constants';
 
 interface ReportCustomizationPanelProps {
-  student: Student;
-  performanceSummary: string;
+    student: Student;
+    performanceSummary: string;
 }
 
 const AIGenerateButton: React.FC<{ isGenerating: boolean; onClick: () => void; }> = ({ isGenerating, onClick }) => (
-    <button 
-        onClick={onClick} 
+    <button
+        onClick={onClick}
         disabled={isGenerating}
         className="text-xs flex items-center bg-purple-100 text-purple-800 px-2 py-1 rounded-full font-semibold hover:bg-purple-200 disabled:bg-gray-200 disabled:text-gray-500 transition-colors"
     >
@@ -44,7 +44,7 @@ const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ stu
         if (existingData) {
             setData(existingData);
         } else {
-             setData({ attendance: '', conduct: '', interest: '', attitude: '', teacherRemark: '' });
+            setData({ attendance: '', conduct: '', interest: '', attitude: '', teacherRemark: '' });
         }
         setIsCollapsed(false); // Expand panel when student changes
     }, [student.id, getReportData]);
@@ -56,15 +56,15 @@ const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ stu
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
-        setData(prev => ({...prev, [name]: value}));
+        setData(prev => ({ ...prev, [name]: value }));
     };
 
     const handleGenerateRemark = async () => {
         setIsGeneratingTeacherRemark(true);
         const prompt = `Generate a brief, encouraging, and constructive class teacher's remark for a student named ${student.name}. The student's performance is as follows: ${performanceSummary}. The remark should be about 15-25 words.`;
-        
+
         const remark = await generateTeacherRemark(student.name, performanceSummary, prompt);
-        
+
         const fieldName = 'teacherRemark';
         setData(prev => ({ ...prev, [fieldName]: remark }));
         updateReportData(student.id, { [fieldName]: remark });
@@ -79,9 +79,9 @@ const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ stu
             ref={panelRef}
             className={`
                 bg-white/80 backdrop-blur-sm border-gray-200 z-20 transition-transform duration-500 ease-in-out
-                lg:fixed lg:top-28 lg:right-6 lg:w-96 lg:p-6 lg:rounded-xl lg:shadow-2xl lg:border lg:transform-none
+                lg:fixed lg:top-28 lg:right-0 lg:w-96 lg:p-6 lg:rounded-l-xl lg:shadow-2xl lg:border-l lg:border-y lg:border-r-0
                 fixed bottom-0 inset-x-0 w-full p-4 rounded-t-2xl shadow-2xl border-t
-                ${isCollapsed ? 'lg:translate-x-[calc(100%-2.5rem)] translate-y-[calc(100%-4rem)]' : 'lg:translate-x-0 translate-y-0'}
+                ${isCollapsed ? 'lg:translate-x-full translate-y-[calc(100%-4rem)]' : 'lg:translate-x-0 translate-y-0'}
             `}
             onMouseEnter={() => window.innerWidth >= 1024 && setIsCollapsed(false)}
             onMouseLeave={() => window.innerWidth >= 1024 && setIsCollapsed(true)}
@@ -89,16 +89,15 @@ const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ stu
             {/* Desktop Collapse Handle */}
             <button
                 onClick={() => setIsCollapsed(false)}
-                className={`hidden lg:flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full w-10 h-24 bg-white/80 backdrop-blur-sm border-l border-t border-b border-gray-200 rounded-l-lg items-center justify-center text-gray-600 hover:bg-white transition-opacity duration-300 ${
-                    isCollapsed ? 'opacity-100' : 'opacity-0 pointer-events-none'
-                }`}
+                className={`hidden lg:flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full w-10 h-24 bg-white/80 backdrop-blur-sm border-l border-t border-b border-gray-200 rounded-l-lg items-center justify-center text-gray-600 hover:bg-white transition-opacity duration-300 ${isCollapsed ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                    }`}
                 aria-label="Expand panel"
             >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg>
             </button>
 
-             {/* Mobile Collapse Handle */}
-             <div className="lg:hidden w-full flex justify-center pb-2" onClick={() => setIsCollapsed(!isCollapsed)}>
+            {/* Mobile Collapse Handle */}
+            <div className="lg:hidden w-full flex justify-center pb-2" onClick={() => setIsCollapsed(!isCollapsed)}>
                 <div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
             </div>
 
@@ -107,19 +106,19 @@ const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ stu
                 <div className="space-y-4 max-h-[calc(100vh-16rem)] lg:max-h-[calc(100vh-12rem)] overflow-y-auto pr-2 no-scrollbar">
                     <div>
                         <label className="block text-sm font-medium text-gray-700">Days Attended</label>
-                        <input type="text" name="attendance" value={data.attendance || ''} onChange={handleChange} onBlur={handleBlur} className={inputStyles} placeholder="e.g. 60"/>
+                        <input type="text" name="attendance" value={data.attendance || ''} onChange={handleChange} onBlur={handleBlur} className={inputStyles} placeholder="e.g. 60" />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700">Conduct</label>
-                        <input type="text" name="conduct" value={data.conduct || ''} onChange={handleChange} onBlur={handleBlur} className={inputStyles} placeholder="e.g. Respectful and hardworking"/>
+                        <input type="text" name="conduct" value={data.conduct || ''} onChange={handleChange} onBlur={handleBlur} className={inputStyles} placeholder="e.g. Respectful and hardworking" />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700">Interest</label>
-                        <input type="text" name="interest" value={data.interest || ''} onChange={handleChange} onBlur={handleBlur} className={inputStyles} placeholder="e.g. Reading, Sports"/>
+                        <input type="text" name="interest" value={data.interest || ''} onChange={handleChange} onBlur={handleBlur} className={inputStyles} placeholder="e.g. Reading, Sports" />
                     </div>
-                     <div>
+                    <div>
                         <label className="block text-sm font-medium text-gray-700">Attitude</label>
-                        <input type="text" name="attitude" value={data.attitude || ''} onChange={handleChange} onBlur={handleBlur} className={inputStyles} placeholder="e.g. Shows positive attitude to learning"/>
+                        <input type="text" name="attitude" value={data.attitude || ''} onChange={handleChange} onBlur={handleBlur} className={inputStyles} placeholder="e.g. Shows positive attitude to learning" />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1 flex justify-between items-center">
