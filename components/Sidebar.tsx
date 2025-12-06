@@ -16,11 +16,10 @@ const NavItem: React.FC<{
   const isActive = currentPage === pageName;
   return (
     <li
-      className={`flex items-center p-3 my-1 rounded-lg cursor-pointer transition-all duration-200 ${
-        isActive
+      className={`flex items-center p-3 my-1 rounded-lg cursor-pointer transition-all duration-200 ${isActive
           ? 'bg-blue-600 text-white shadow-lg'
           : 'text-gray-600 hover:bg-blue-100 hover:text-blue-700'
-      }`}
+        }`}
       onClick={() => setCurrentPage(pageName)}
     >
       {icon}
@@ -33,7 +32,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage }) => {
   const [isHoverExpanded, setIsHoverExpanded] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const iconClass = "h-6 w-6 flex-shrink-0";
-  
+
   const isExpanded = isHoverExpanded || isMobileMenuOpen;
 
   const handlePageChange = (page: Page) => {
@@ -57,36 +56,53 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage }) => {
   return (
     <>
       {/* Mobile Hamburger Menu Button */}
-      <button 
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-full shadow-md"
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        aria-label="Open menu"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
-      </button>
+      {/* Mobile Hamburger Menu Button */}
+      {!isMobileMenuOpen && (
+        <button
+          className="lg:hidden fixed top-4 left-4 z-50 flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-all duration-300 hover:scale-105 active:scale-95"
+          onClick={() => setIsMobileMenuOpen(true)}
+          aria-label="Open menu"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+          <span className="font-bold text-sm tracking-wide">MENU</span>
+        </button>
+      )}
 
       {/* Overlay for mobile */}
       {isMobileMenuOpen && (
-        <div 
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30" 
+        <div
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
           onClick={() => setIsMobileMenuOpen(false)}
         ></div>
       )}
 
-      <aside 
+      <aside
         className={`bg-white shadow-md p-4 flex flex-col transition-all duration-300 ease-in-out z-40
           lg:relative lg:w-20 lg:hover:w-64
           fixed inset-y-0 left-0 transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 w-64`}
         onMouseEnter={() => setIsHoverExpanded(true)}
         onMouseLeave={() => setIsHoverExpanded(false)}
       >
-        <div className="flex items-center mb-8 overflow-hidden flex-shrink-0">
-          <div className="bg-blue-600 p-2 rounded-lg flex-shrink-0">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="white" className="w-8 h-8">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0l-2.072-2.072a50.57 50.57 0 01-2.254-2.254" />
-            </svg>
+        <div className="flex items-center justify-between mb-8 flex-shrink-0">
+          <div className="flex items-center overflow-hidden">
+            <div className="bg-blue-600 p-2 rounded-lg flex-shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="white" className="w-8 h-8">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0l-2.072-2.072a50.57 50.57 0 01-2.254-2.254" />
+              </svg>
+            </div>
+            <h1 className={`text-xl font-bold text-gray-800 ml-3 whitespace-nowrap transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>SBA Pro Master</h1>
           </div>
-          <h1 className={`text-xl font-bold text-gray-800 ml-3 whitespace-nowrap transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>SBA Pro Master</h1>
+
+          {/* Close Button for Mobile */}
+          <button
+            className="lg:hidden p-2 text-gray-500 hover:text-gray-700 focus:outline-none transition-colors"
+            onClick={() => setIsMobileMenuOpen(false)}
+            aria-label="Close menu"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
         <nav className="overflow-y-auto overflow-x-hidden flex-grow">
           <ul>

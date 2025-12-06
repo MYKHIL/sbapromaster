@@ -49,7 +49,7 @@ const App: React.FC = () => {
       <AuthOverlay />
       <div className="flex h-screen bg-gray-50 font-sans text-gray-800">
         <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
-        <main className="flex-1 p-4 md:p-6 lg:p-10 overflow-auto">
+        <main className="flex-1 p-4 pt-20 md:p-6 md:pt-20 lg:p-10 overflow-auto">
           {/* Data Management is always rendered but its visibility is toggled to preserve state. */}
           <PageWrapper name="Data Management" currentPage={currentPage}>
             <DataManagement />

@@ -6,8 +6,13 @@ import type { Student, Assessment } from '../../types';
 
 const ScoreEntry: React.FC = () => {
     const { students, subjects, assessments, classes, getStudentScores, updateStudentScores } = useData();
-    const [selectedClass, setSelectedClass] = useState<string>(classes[0]?.name || '');
-    const [selectedSubjectId, setSelectedSubjectId] = useState<number>(subjects[0]?.id || 0);
+    const [selectedClass, setSelectedClass] = useState<string>(() => {
+        return localStorage.getItem('scoreEntry_selectedClass') || classes[0]?.name || '';
+    });
+    const [selectedSubjectId, setSelectedSubjectId] = useState<number>(() => {
+        const saved = localStorage.getItem('scoreEntry_selectedSubjectId');
+        return saved ? Number(saved) : (subjects[0]?.id || 0);
+    });
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalData, setModalData] = useState<{ student: Student; assessment: Assessment, isExam: boolean } | null>(null);
@@ -21,7 +26,7 @@ const ScoreEntry: React.FC = () => {
         setModalData({ student, assessment, isExam: assessment.name.toLowerCase().includes('exam') });
         setIsModalOpen(true);
     };
-    
+
     const handleCloseModal = () => {
         setIsModalOpen(false);
         setModalData(null);
@@ -68,7 +73,11 @@ const ScoreEntry: React.FC = () => {
                         <select
                             id="class-select"
                             value={selectedClass}
-                            onChange={(e) => setSelectedClass(e.target.value)}
+                            onChange={(e) => {
+                                const newValue = e.target.value;
+                                setSelectedClass(newValue);
+                                localStorage.setItem('scoreEntry_selectedClass', newValue);
+                            }}
                             className={selectStyles}
                         >
                             <option value="">-- All Classes --</option>
@@ -80,15 +89,19 @@ const ScoreEntry: React.FC = () => {
                         <select
                             id="subject-select"
                             value={selectedSubjectId}
-                            onChange={(e) => setSelectedSubjectId(Number(e.target.value))}
+                            onChange={(e) => {
+                                const newValue = Number(e.target.value);
+                                setSelectedSubjectId(newValue);
+                                localStorage.setItem('scoreEntry_selectedSubjectId', String(newValue));
+                            }}
                             className={selectStyles}
                         >
-                             {subjects.map(s => <option key={s.id} value={s.id}>{s.subject}</option>)}
+                            {subjects.map(s => <option key={s.id} value={s.id}>{s.subject}</option>)}
                         </select>
                     </div>
                 </div>
             </div>
-            
+
             {totalWeight !== 100 && (
                 <div className="p-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 rounded-md">
                     <p className="font-bold">Warning</p>
@@ -104,7 +117,7 @@ const ScoreEntry: React.FC = () => {
                                 <th className="p-4 font-semibold text-gray-600 w-1/4">Student Name</th>
                                 {assessments.map(assessment => (
                                     <th key={assessment.id} className="p-4 font-semibold text-gray-600 text-center">
-                                        {assessment.name} <br/> <span className="font-normal text-sm">({assessment.name.toLowerCase().includes('exam') ? 100 : assessment.weight}%)</span>
+                                        {assessment.name} <br /> <span className="font-normal text-sm">({assessment.name.toLowerCase().includes('exam') ? 100 : assessment.weight}%)</span>
                                     </th>
                                 ))}
                                 <th className="p-4 font-semibold text-gray-600 text-center">Total (100%)</th>
