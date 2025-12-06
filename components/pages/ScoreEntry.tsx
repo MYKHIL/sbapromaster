@@ -235,7 +235,7 @@ const ScoreEntry: React.FC = () => {
                                         type="text"
                                         value={getMobileCurrentScore()}
                                         onChange={(e) => handleMobileScoreUpdate(e.target.value)}
-                                        placeholder={assessments.find(a => a.id === selectedAssessmentId)?.name.toLowerCase().includes('exam') ? 'e.g., 85' : '-'}
+                                        placeholder={assessments.find(a => a.id === selectedAssessmentId)?.name?.toLowerCase().includes('exam') ? 'e.g., 85' : '-'}
                                         className="w-full p-3 text-center text-2xl font-mono bg-gray-50 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                     />
                                     {mobileScoreError && <p className="text-red-500 text-sm mt-1">{mobileScoreError}</p>}
