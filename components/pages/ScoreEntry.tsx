@@ -71,6 +71,15 @@ const ScoreEntry: React.FC = () => {
         }
     };
 
+    const scoreInputRef = React.useRef<HTMLInputElement>(null);
+
+    // Auto-focus score input when student changes in mobile view
+    useEffect(() => {
+        if (useMobileView && scoreInputRef.current) {
+            scoreInputRef.current.focus();
+        }
+    }, [selectedStudentIndex, useMobileView]);
+
     const handleMobileScoreUpdate = (value: string) => {
         const student = filteredStudents[selectedStudentIndex];
         if (!student) return;
