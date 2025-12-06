@@ -88,6 +88,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [classData, setClassData] = useLocalStorage<ClassSpecificData[]>('sba-class-data', INITIAL_CLASS_DATA);
     const [schoolId, setSchoolId] = useState<string | null>(null);
     const isRemoteUpdate = React.useRef(false);
+    const lastLocalUpdate = React.useRef(Date.now());
 
     // FIX: Implement function to overwrite all data from an imported file.
     const loadImportedData = (data: Partial<AppDataType>) => {
@@ -147,19 +148,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (!schoolId) return;
 
         const unsubscribe = subscribeToSchoolData(schoolId, (data) => {
+            // Intelligent Sync:
+            // If the user has interacted locally within the last 10 seconds,
+            // we ignore the remote update to prevent overwriting their active work.
+            // This also effectively ignores the "echo" from our own saves.
+            const timeSinceLastLocalUpdate = Date.now() - lastLocalUpdate.current;
+            if (timeSinceLastLocalUpdate < 10000) {
+                console.log(`Skipping remote update due to local activity (${timeSinceLastLocalUpdate}ms ago).`);
+                return;
+            }
+
             console.log("Received remote update");
             isRemoteUpdate.current = true;
             loadImportedData(data);
-            // We need to keep the flag true until the state updates are processed by the save effect.
-            // Since state updates are async, we can't easily reset it here.
-            // But the save effect runs AFTER the state update.
-            // So the save effect will see the flag, consume it (set to false), and skip saving.
-            // However, loadImportedData triggers multiple setters.
-            // If they are batched, one effect run. If not, multiple.
-            // To be safe, we can use a timeout to reset the flag, or rely on the save effect to reset it ONLY if it skips.
-            // But if multiple effects run, the first resets it, the second saves.
-            // Actually, loadImportedData updates ALL atoms.
-            // Let's assume batching.
         });
 
         return () => unsubscribe();
@@ -175,6 +176,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             isRemoteUpdate.current = false;
             return;
         }
+
+        // It's a local update, mark the timestamp
+        lastLocalUpdate.current = Date.now();
 
         const handler = setTimeout(() => {
             saveToCloud();
