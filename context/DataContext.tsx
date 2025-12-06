@@ -1,0 +1,290 @@
+import React, { createContext, useContext, ReactNode } from 'react';
+import useLocalStorage from '../hooks/useLocalStorage';
+import type { Student, Subject, Class, Grade, Assessment, Score, SchoolSettings, ReportSpecificData, ClassSpecificData } from '../types';
+import {
+    INITIAL_SETTINGS,
+    INITIAL_STUDENTS,
+    INITIAL_SUBJECTS,
+    INITIAL_CLASSES,
+    INITIAL_GRADES,
+    INITIAL_ASSESSMENTS,
+    INITIAL_SCORES,
+    INITIAL_REPORT_DATA,
+    INITIAL_CLASS_DATA,
+} from '../constants';
+
+// FIX: Add a type for the full application data, to be used for data import.
+type AppDataType = {
+    settings: SchoolSettings;
+    students: Student[];
+    subjects: Subject[];
+    classes: Class[];
+    grades: Grade[];
+    assessments: Assessment[];
+    scores: Score[];
+    reportData: ReportSpecificData[];
+    classData: ClassSpecificData[];
+};
+
+interface DataContextType {
+    // State
+    settings: SchoolSettings;
+    students: Student[];
+    subjects: Subject[];
+    classes: Class[];
+    grades: Grade[];
+    assessments: Assessment[];
+    scores: Score[];
+    reportData: ReportSpecificData[];
+    classData: ClassSpecificData[];
+
+    // Setters
+    setSettings: React.Dispatch<React.SetStateAction<SchoolSettings>>;
+    setAssessments: React.Dispatch<React.SetStateAction<Assessment[]>>; // For reordering
+    // Student CRUD
+    addStudent: (student: Omit<Student, 'id'>) => void;
+    updateStudent: (student: Student) => void;
+    deleteStudent: (id: number) => void;
+    // Subject CRUD
+    addSubject: (subject: Omit<Subject, 'id'>) => void;
+    updateSubject: (subject: Subject) => void;
+    deleteSubject: (id: number) => void;
+    // Class CRUD
+    addClass: (cls: Omit<Class, 'id'>) => void;
+    updateClass: (cls: Class) => void;
+    deleteClass: (id: number) => void;
+    // Grade CRUD
+    addGrade: (grade: Omit<Grade, 'id'>) => void;
+    updateGrade: (grade: Grade) => void;
+    deleteGrade: (id: number) => void;
+    // Assessment CRUD
+    addAssessment: (assessment: Omit<Assessment, 'id'>) => void;
+    updateAssessment: (assessment: Assessment) => void;
+    deleteAssessment: (id: number) => void;
+    // Score CRUD
+    updateStudentScores: (studentId: number, subjectId: number, assessmentId: number, newScores: string[]) => void;
+    getStudentScores: (studentId: number, subjectId: number, assessmentId: number) => string[];
+    // Report Data
+    getReportData: (studentId: number) => ReportSpecificData | undefined;
+    updateReportData: (studentId: number, data: Partial<Omit<ReportSpecificData, 'totalSchoolDays'>>) => void;
+    // Class Data
+    getClassData: (classId: number) => ClassSpecificData | undefined;
+    updateClassData: (classId: number, data: Partial<ClassSpecificData>) => void;
+    // FIX: Add function to load imported data.
+    loadImportedData: (data: Partial<AppDataType>) => void;
+}
+
+const DataContext = createContext<DataContextType | undefined>(undefined);
+
+export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+    const [settings, setSettings] = useLocalStorage<SchoolSettings>('sba-settings', INITIAL_SETTINGS);
+    const [students, setStudents] = useLocalStorage<Student[]>('sba-students', INITIAL_STUDENTS);
+    const [subjects, setSubjects] = useLocalStorage<Subject[]>('sba-subjects', INITIAL_SUBJECTS);
+    const [classes, setClasses] = useLocalStorage<Class[]>('sba-classes', INITIAL_CLASSES);
+    const [grades, setGrades] = useLocalStorage<Grade[]>('sba-grades', INITIAL_GRADES);
+    const [assessments, setAssessments] = useLocalStorage<Assessment[]>('sba-assessments', INITIAL_ASSESSMENTS);
+    const [scores, setScores] = useLocalStorage<Score[]>('sba-scores', INITIAL_SCORES);
+    const [reportData, setReportData] = useLocalStorage<ReportSpecificData[]>('sba-report-data', INITIAL_REPORT_DATA);
+    const [classData, setClassData] = useLocalStorage<ClassSpecificData[]>('sba-class-data', INITIAL_CLASS_DATA);
+
+    // FIX: Implement function to overwrite all data from an imported file.
+    const loadImportedData = (data: Partial<AppDataType>) => {
+        // This function overwrites existing data with data from an imported file.
+        // If a key is missing in the imported data, it resets to the initial default state
+        // to ensure a clean slate, matching user expectations of a full data replacement.
+        const {
+            settings: importedSettings,
+            students: importedStudents,
+            subjects: importedSubjects,
+            classes: importedClasses,
+            grades: importedGrades,
+            assessments: importedAssessments,
+            scores: importedScores,
+            reportData: importedReportData,
+            classData: importedClassData,
+        } = data;
+
+        setSettings(importedSettings || INITIAL_SETTINGS);
+        setStudents(importedStudents || INITIAL_STUDENTS);
+        setSubjects(importedSubjects || INITIAL_SUBJECTS);
+        setClasses(importedClasses || INITIAL_CLASSES);
+        setGrades(importedGrades || INITIAL_GRADES);
+        setAssessments(importedAssessments || INITIAL_ASSESSMENTS);
+        setScores(importedScores || INITIAL_SCORES);
+        setReportData(importedReportData || INITIAL_REPORT_DATA);
+        setClassData(importedClassData || INITIAL_CLASS_DATA);
+    };
+
+    const createCrud = <T extends { id: number }>(
+        items: T[],
+        setItems: React.Dispatch<React.SetStateAction<T[]>>
+    ) => ({
+        add: (item: Omit<T, 'id'>) => {
+            setItems(prev => [...prev, { ...item, id: Date.now() } as T]);
+        },
+        update: (updatedItem: T) => {
+            setItems(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item));
+        },
+        delete: (id: number) => {
+            setItems(prev => prev.filter(item => item.id !== id));
+        },
+    });
+
+    const studentCrud = createCrud(students, setStudents);
+    const subjectCrud = createCrud(subjects, setSubjects);
+    const classCrud = createCrud(classes, setClasses);
+    const gradeCrud = createCrud(grades, setGrades);
+    
+    // Custom Assessment CRUD to handle exam ordering
+    const addAssessment = (assessment: Omit<Assessment, 'id'>) => {
+        const newAssessment = { ...assessment, id: Date.now() };
+        setAssessments(prev => {
+            const examIndex = prev.findIndex(a => a.name.toLowerCase().includes('exam'));
+            if (examIndex !== -1) {
+                const newAssessments = [...prev];
+                newAssessments.splice(examIndex, 0, newAssessment); // Insert before the exam
+                return newAssessments;
+            }
+            return [...prev, newAssessment]; // Otherwise, append
+        });
+    };
+    const updateAssessment = (updatedAssessment: Assessment) => {
+        setAssessments(prev => prev.map(item => item.id === updatedAssessment.id ? updatedAssessment : item));
+    };
+    const deleteAssessment = (id: number) => {
+        setAssessments(prev => prev.filter(item => item.id !== id));
+    };
+    
+    const updateStudentScores = (studentId: number, subjectId: number, assessmentId: number, newScores: string[]) => {
+        const scoreId = `${studentId}-${subjectId}`;
+        setScores(prevScores => {
+            const existingScoreIndex = prevScores.findIndex(s => s.id === scoreId);
+            if (existingScoreIndex > -1) {
+                // Update existing score object
+                return prevScores.map((score, index) => {
+                    if (index === existingScoreIndex) {
+                        return {
+                            ...score,
+                            assessmentScores: {
+                                ...score.assessmentScores,
+                                [assessmentId]: newScores,
+                            },
+                        };
+                    }
+                    return score;
+                });
+            } else {
+                // Add new score object
+                const newScoreEntry: Score = {
+                    id: scoreId,
+                    studentId,
+                    subjectId,
+                    assessmentScores: {
+                        [assessmentId]: newScores,
+                    },
+                };
+                return [...prevScores, newScoreEntry];
+            }
+        });
+    };
+
+    const getStudentScores = (studentId: number, subjectId: number, assessmentId: number): string[] => {
+        const scoreId = `${studentId}-${subjectId}`;
+        const score = scores.find(s => s.id === scoreId);
+        return score?.assessmentScores?.[assessmentId] || [];
+    };
+
+    const getReportData = (studentId: number): ReportSpecificData | undefined => {
+        return reportData.find(d => d.studentId === studentId);
+    };
+
+    const updateReportData = (studentId: number, data: Partial<Omit<ReportSpecificData, 'totalSchoolDays'>>) => {
+        setReportData(prev => {
+            const existingIndex = prev.findIndex(d => d.studentId === studentId);
+            if (existingIndex > -1) {
+                return prev.map((item, index) => 
+                    index === existingIndex ? { ...item, ...data, studentId } : item
+                );
+            } else {
+                // FIX: Removed 'headmasterRemark' as it does not exist on the ReportSpecificData type.
+                const newEntry: ReportSpecificData = {
+                    studentId,
+                    attendance: '',
+                    conduct: '',
+                    interest: '',
+                    attitude: '',
+                    teacherRemark: '',
+                    ...data,
+                };
+                return [...prev, newEntry];
+            }
+        });
+    };
+    
+    const getClassData = (classId: number): ClassSpecificData | undefined => {
+        return classData.find(d => d.classId === classId);
+    };
+
+    const updateClassData = (classId: number, data: Partial<ClassSpecificData>) => {
+        setClassData(prev => {
+            const existingIndex = prev.findIndex(d => d.classId === classId);
+            if (existingIndex > -1) {
+                return prev.map((item, index) => 
+                    index === existingIndex ? { ...item, ...data, classId } : item
+                );
+            } else {
+                const newEntry: ClassSpecificData = {
+                    classId,
+                    totalSchoolDays: '',
+                    ...data,
+                };
+                return [...prev, newEntry];
+            }
+        });
+    };
+
+    const value: DataContextType = {
+        settings, setSettings,
+        students,
+        subjects,
+        classes,
+        grades,
+        assessments,
+        scores,
+        reportData,
+        classData,
+        setAssessments,
+        addStudent: studentCrud.add,
+        updateStudent: studentCrud.update,
+        deleteStudent: studentCrud.delete,
+        addSubject: subjectCrud.add,
+        updateSubject: subjectCrud.update,
+        deleteSubject: subjectCrud.delete,
+        addClass: classCrud.add,
+        updateClass: classCrud.update,
+        deleteClass: classCrud.delete,
+        addGrade: gradeCrud.add,
+        updateGrade: gradeCrud.update,
+        deleteGrade: gradeCrud.delete,
+        addAssessment,
+        updateAssessment,
+        deleteAssessment,
+        updateStudentScores,
+        getStudentScores,
+        getReportData,
+        updateReportData,
+        getClassData,
+        updateClassData,
+        loadImportedData,
+    };
+
+    return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
+};
+
+export const useData = () => {
+    const context = useContext(DataContext);
+    if (context === undefined) {
+        throw new Error('useData must be used within a DataProvider');
+    }
+    return context;
+};
