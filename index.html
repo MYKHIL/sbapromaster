@@ -52,7 +52,34 @@
   </style>
 
 
+  <script>
+    window.addEventListener('error', function (e) {
+      var message = e.message || 'Unknown error';
+      var source = e.filename || 'Unknown source';
+      var lineno = e.lineno || 0;
 
+      // Ignore resize observer errors which are common and harmless
+      if (message.includes('ResizeObserver loop')) return;
+
+      var errorDiv = document.getElementById('global-error-display');
+      if (!errorDiv) {
+        errorDiv = document.createElement('div');
+        errorDiv.id = 'global-error-display';
+        errorDiv.style.position = 'fixed';
+        errorDiv.style.top = '0';
+        errorDiv.style.left = '0';
+        errorDiv.style.width = '100%';
+        errorDiv.style.backgroundColor = '#ffcccc';
+        errorDiv.style.color = '#cc0000';
+        errorDiv.style.padding = '20px';
+        errorDiv.style.zIndex = '99999';
+        errorDiv.style.fontFamily = 'monospace';
+        errorDiv.style.whiteSpace = 'pre-wrap';
+        document.body.appendChild(errorDiv);
+      }
+      errorDiv.innerHTML += 'Error: ' + message + '\nSource: ' + source + ':' + lineno + '\n\n';
+    }, true); // Capture phase to catch resource load errors
+  </script>
 </head>
 
 <body class="bg-gray-100">
