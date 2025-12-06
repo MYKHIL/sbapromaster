@@ -1,6 +1,7 @@
 import subprocess
 import os
 import sys
+import re
 
 def run_command(command, error_message=None):
     try:
@@ -49,6 +50,11 @@ def main():
         choice = input("Do you want to use this remote? (y/n): ").lower()
         if choice != 'y':
             current_remote = ""
+        else:
+            # Extract username from current_remote for display purposes
+            match = re.search(r'github\.com[:/]([^/]+)/', current_remote)
+            if match:
+                username = match.group(1)
     
     if not current_remote:
         username = input("\nEnter your GitHub username: ").strip()
@@ -88,7 +94,7 @@ def main():
         print("PUSH FAILED.")
         print("-----------------------------------")
         print("Common reasons:")
-        print("1. The repository 'sbapromaster' does not exist on your GitHub account.")
+        print(f"1. The repository '{repo_name}' does not exist on your GitHub account ({username or 'unknown'}).")
         print("   -> Go to https://github.com/new and create it.")
         print("2. You do not have permission or are not logged in.")
         print("   -> Try running 'git push -u origin main' manually to see the error.")
