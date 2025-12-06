@@ -1,31 +1,61 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useData } from '../../context/DataContext';
 import InlineScoreInput from '../InlineScoreInput';
 import ScoreManagementModal from '../ScoreManagementModal';
 import type { Student, Assessment } from '../../types';
 
 const ScoreEntry: React.FC = () => {
-    const { students, subjects, assessments, classes, getStudentScores, updateStudentScores } = useData();
+    // Destructure with default empty arrays to prevent undefined errors
+    const { students = [], subjects = [], assessments = [], classes = [], getStudentScores, updateStudentScores } = useData();
+
+    // Safe initialization for selectedClass
     const [selectedClass, setSelectedClass] = useState<string>(() => {
-        return localStorage.getItem('scoreEntry_selectedClass') || classes[0]?.name || '';
+        try {
+            const saved = localStorage.getItem('scoreEntry_selectedClass');
+            if (saved) return saved;
+            return classes.length > 0 ? classes[0].name : '';
+        } catch (e) {
+            return '';
+        }
     });
+
+    // Safe initialization for selectedSubjectId
     const [selectedSubjectId, setSelectedSubjectId] = useState<number>(() => {
-        const saved = localStorage.getItem('scoreEntry_selectedSubjectId');
-        return saved ? Number(saved) : (subjects[0]?.id || 0);
+        try {
+            const saved = localStorage.getItem('scoreEntry_selectedSubjectId');
+            if (saved) return Number(saved);
+            return subjects.length > 0 ? subjects[0].id : 0;
+        } catch (e) {
+            return 0;
+        }
     });
 
     // Mobile View State
     const [selectedStudentIndex, setSelectedStudentIndex] = useState(0);
-    const [selectedAssessmentId, setSelectedAssessmentId] = useState<number>(assessments[0]?.id || 0);
+
+    // Safe initialization for selectedAssessmentId
+    const [selectedAssessmentId, setSelectedAssessmentId] = useState<number>(() => {
+        return assessments.length > 0 ? assessments[0].id : 0;
+    });
+
     const [mobileScoreError, setMobileScoreError] = useState<string>('');
     const [useMobileView, setUseMobileView] = useState(true);
 
     // Ensure selectedAssessmentId is valid when assessments change
-    React.useEffect(() => {
-        if (assessments.length > 0 && !assessments.find(a => a.id === selectedAssessmentId)) {
-            setSelectedAssessmentId(assessments[0].id);
+    useEffect(() => {
+        if (assessments.length > 0) {
+            const exists = assessments.find(a => a.id === selectedAssessmentId);
+            if (!exists) {
+                setSelectedAssessmentId(assessments[0].id);
+            }
         }
     }, [assessments, selectedAssessmentId]);
+
+    const filteredStudents = useMemo(() => {
+        if (!students) return [];
+        if (!selectedClass) return students;
+        return students.filter(student => student.class === selectedClass);
+    }, [students, selectedClass]);
 
     const handleNextStudent = () => {
         if (selectedStudentIndex < filteredStudents.length - 1) {
@@ -88,13 +118,14 @@ const ScoreEntry: React.FC = () => {
         return scores[0] || '';
     };
 
+    const getPlaceholder = () => {
+        const assessment = assessments.find(a => a.id === selectedAssessmentId);
+        if (!assessment) return '-';
+        return assessment.name.toLowerCase().includes('exam') ? 'e.g., 85' : '-';
+    };
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalData, setModalData] = useState<{ student: Student; assessment: Assessment, isExam: boolean } | null>(null);
-
-    const filteredStudents = useMemo(() => {
-        if (!selectedClass) return students;
-        return students.filter(student => student.class === selectedClass);
-    }, [students, selectedClass]);
 
     const handleOpenModal = (student: Student, assessment: Assessment) => {
         setModalData({ student, assessment, isExam: assessment.name.toLowerCase().includes('exam') });
@@ -192,7 +223,7 @@ const ScoreEntry: React.FC = () => {
 
                     {/* Mobile Compact View Controls */}
                     {useMobileView && (
-                        <div className="lg:hidden space-y-4 border-t border-gray-100 pt-4 mt-2 animate-fade-in-scale">
+                        <div className="lg:hidden space-y-4 border-t border-gray-100 pt-4 mt-2">
                             {filteredStudents.length > 0 ? (
                                 <>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -232,7 +263,7 @@ const ScoreEntry: React.FC = () => {
                                                 type="text"
                                                 value={getMobileCurrentScore()}
                                                 onChange={(e) => handleMobileScoreUpdate(e.target.value)}
-                                                placeholder={assessments.find(a => a.id === selectedAssessmentId)?.name?.toLowerCase().includes('exam') ? 'e.g., 85' : '-'}
+                                                placeholder={getPlaceholder()}
                                                 className="w-full p-3 text-center text-2xl font-mono bg-gray-50 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                             />
                                             {mobileScoreError && <p className="text-red-500 text-sm mt-1">{mobileScoreError}</p>}
