@@ -48,8 +48,21 @@ const ScoreEntry: React.FC = () => {
 
     // Safe initialization for selectedAssessmentId
     const [selectedAssessmentId, setSelectedAssessmentId] = useState<number>(() => {
-        return assessments.length > 0 ? assessments[0].id : 0;
+        try {
+            const saved = localStorage.getItem('scoreEntry_selectedAssessmentId');
+            if (saved) return Number(saved);
+            return assessments.length > 0 ? assessments[0].id : 0;
+        } catch (e) {
+            return assessments.length > 0 ? assessments[0].id : 0;
+        }
     });
+
+    // PERSISTENCE: Save assessment selection on change
+    useEffect(() => {
+        if (selectedAssessmentId) {
+            localStorage.setItem('scoreEntry_selectedAssessmentId', String(selectedAssessmentId));
+        }
+    }, [selectedAssessmentId]);
 
     const [mobileScoreError, setMobileScoreError] = useState<string>('');
     const [useMobileView, setUseMobileView] = useState(true);
