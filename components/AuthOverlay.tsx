@@ -258,7 +258,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
     if (authStage === 'user-selection' && schoolData) {
         return (
             <UserSelection
-                users={users.length > 0 ? users : (schoolData.users || [])}
+                users={(users && users.length > 0) ? users : (schoolData?.users || [])}
                 onLogin={handleUserLogin}
                 onSetPassword={handleUserSetPassword}
             />
