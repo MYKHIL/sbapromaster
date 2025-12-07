@@ -16,3 +16,23 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* Read-only mode styles */
+.read-only-mode {
+  position: relative;
+}
+
+.read-only-mode input:not([type="checkbox"]):not([type="radio"]),
+.read-only-mode textarea,
+.read-only-mode select {
+  background-color: #f3f4f6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.read-only-mode button[type="submit"],
+.read-only-mode button.add-button,
+.read-only-mode button.edit-button,
+.read-only-mode button.delete-button {
+  display: none;
+}

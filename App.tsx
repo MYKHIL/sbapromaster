@@ -11,7 +11,9 @@ import GradingSystem from './components/pages/GradingSystem';
 import AssessmentTypes from './components/pages/AssessmentTypes';
 import DataManagement from './components/pages/DataManagement';
 import { DataProvider } from './context/DataContext';
+import { UserProvider } from './context/UserContext';
 import type { Page } from './types';
+import UserBadge from './components/UserBadge';
 
 // This helper is now only used for pages that need to persist state.
 const PageWrapper: React.FC<{ name: Page; currentPage: Page; children: React.ReactNode }> = ({ name, currentPage, children }) => {
@@ -45,21 +47,25 @@ const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>('Dashboard');
 
   return (
-    <DataProvider>
-      <AuthOverlay />
-      <div className="flex h-screen bg-gray-50 font-sans text-gray-800">
-        <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
-        <main className="flex-1 p-4 pt-20 md:p-6 md:pt-20 lg:p-10 overflow-auto">
-          {/* Data Management is always rendered but its visibility is toggled to preserve state. */}
-          <PageWrapper name="Data Management" currentPage={currentPage}>
-            <DataManagement />
-          </PageWrapper>
+    <UserProvider>
+      <DataProvider>
+        <AuthOverlay>
+          <UserBadge />
+          <div className="flex h-screen overflow-hidden bg-gray-50">
+            <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
+            <main className="flex-1 p-4 pt-20 md:p-6 md:pt-20 lg:p-10 overflow-auto">
+              {/* Data Management is always rendered but its visibility is toggled to preserve state. */}
+              <PageWrapper name="Data Management" currentPage={currentPage}>
+                <DataManagement />
+              </PageWrapper>
 
-          {/* All other pages are rendered conditionally, causing them to remount on navigation. */}
-          {currentPage !== 'Data Management' && <ActivePage page={currentPage} />}
-        </main>
-      </div>
-    </DataProvider>
+              {/* All other pages are rendered conditionally, causing them to remount on navigation. */}
+              {currentPage !== 'Data Management' && <ActivePage page={currentPage} />}
+            </main>
+          </div>
+        </AuthOverlay>
+      </DataProvider>
+    </UserProvider>
   );
 };
 

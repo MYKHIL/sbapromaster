@@ -1,19 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ConfirmationModal from './ConfirmationModal';
-import { loginOrRegisterSchool, AppDataType, createDocumentId, searchSchools } from '../services/firebaseService';
+import AdminSetup from './AdminSetup';
+import UserSelection from './UserSelection';
+import { loginOrRegisterSchool, AppDataType, createDocumentId, searchSchools, updateUsers, updateDeviceCredentials } from '../services/firebaseService';
 import { useData } from '../context/DataContext';
+import { useUser } from '../context/UserContext';
+import { saveDeviceCredential, getDeviceCredential } from '../services/authService';
 import { INITIAL_SETTINGS, INITIAL_STUDENTS, INITIAL_SUBJECTS, INITIAL_CLASSES, INITIAL_GRADES, INITIAL_ASSESSMENTS, INITIAL_SCORES, INITIAL_REPORT_DATA, INITIAL_CLASS_DATA } from '../constants';
+import type { User, DeviceCredential } from '../types';
 
-const AuthOverlay: React.FC = () => {
+type AuthStage = 'school-login' | 'admin-setup' | 'user-selection' | 'authenticated';
+
+interface AuthOverlayProps {
+    children?: React.ReactNode;
+}
+
+const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
     const { loadImportedData, setSchoolId } = useData();
+    const { setUsers, login, setPassword: setUserPassword, checkAutoLogin } = useUser();
+
+    // School login state
     const [schoolName, setSchoolName] = useState('');
     const [academicYear, setAcademicYear] = useState('');
     const [academicTerm, setAcademicTerm] = useState('');
-    const [password, setPassword] = useState('');
+    const [schoolPassword, setSchoolPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [accessDenied, setAccessDenied] = useState(false);
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [showRegisterConfirm, setShowRegisterConfirm] = useState(false);
 
     // Search suggestions state
@@ -22,11 +35,16 @@ const AuthOverlay: React.FC = () => {
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [searchResults, setSearchResults] = useState<{ schoolName: string, years: string[] }[]>([]);
 
+    // Authentication flow state
+    const [authStage, setAuthStage] = useState<AuthStage>('school-login');
+    const [currentSchoolId, setCurrentSchoolId] = useState<string | null>(null);
+    const [schoolData, setSchoolData] = useState<AppDataType | null>(null);
+
     const handleSchoolNameChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         setSchoolName(value);
-        setAvailableYears([]); // Reset available years when school name changes
-        setSchoolSuggestions([]); // Reset suggestions
+        setAvailableYears([]);
+        setSchoolSuggestions([]);
         setShowSuggestions(false);
 
         if (value.length >= 3) {
@@ -49,9 +67,9 @@ const AuthOverlay: React.FC = () => {
         setShowSuggestions(false);
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSchoolLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!schoolName || !academicYear || !academicTerm || !password) {
+        if (!schoolName || !academicYear || !academicTerm || !schoolPassword) {
             setError("Please fill in all fields.");
             return;
         }
@@ -60,11 +78,8 @@ const AuthOverlay: React.FC = () => {
         setError(null);
         setAccessDenied(false);
 
-        // Explicitly remove slashes as requested by user to prevent Firestore path errors
         const sanitizedSchoolName = schoolName.replace(/\//g, '');
         const sanitizedAcademicYear = academicYear.replace(/\//g, '');
-
-        // Combine school name, academic year, and term to create unique document ID
         const combinedId = createDocumentId(sanitizedSchoolName, sanitizedAcademicYear, academicTerm);
 
         const initialData: AppDataType = {
@@ -82,17 +97,38 @@ const AuthOverlay: React.FC = () => {
             scores: INITIAL_SCORES,
             reportData: INITIAL_REPORT_DATA,
             classData: INITIAL_CLASS_DATA,
+            users: [],
+            deviceCredentials: [],
         };
 
-        // Try to login first (don't create if missing)
-        const result = await loginOrRegisterSchool(combinedId, password, initialData, false);
-
+        const result = await loginOrRegisterSchool(combinedId, schoolPassword, initialData, false);
         setLoading(false);
 
         if (result.status === 'success') {
-            setSchoolId(result.docId); // Store the actual ID found (might differ in case from combinedId)
+            const docId = result.docId;
+            setSchoolId(docId);
+            setCurrentSchoolId(docId);
             loadImportedData(result.data);
-            setIsLoggedIn(true);
+            setSchoolData(result.data);
+
+            // Check if users exist
+            const users = result.data.users || [];
+            setUsers(users);
+
+            if (users.length === 0) {
+                // No users, show admin setup
+                setAuthStage('admin-setup');
+            } else {
+                // Users exist, check for auto-login
+                const autoLoginUser = await checkAutoLogin(docId, users);
+                if (autoLoginUser) {
+                    // Auto-login successful
+                    setAuthStage('authenticated');
+                } else {
+                    // Show user selection
+                    setAuthStage('user-selection');
+                }
+            }
         } else if (result.status === 'access_denied' || result.status === 'created_pending_access') {
             setAccessDenied(true);
         } else if (result.status === 'wrong_password') {
@@ -108,12 +144,10 @@ const AuthOverlay: React.FC = () => {
         setShowRegisterConfirm(false);
         setLoading(true);
 
-        // Explicitly remove slashes as requested by user
         const sanitizedSchoolName = schoolName.replace(/\//g, '');
         const sanitizedAcademicYear = academicYear.replace(/\//g, '');
-
-        // Re-construct ID and Data (same as handleSubmit)
         const combinedId = createDocumentId(sanitizedSchoolName, sanitizedAcademicYear, academicTerm);
+
         const initialData: AppDataType = {
             settings: {
                 ...INITIAL_SETTINGS,
@@ -129,11 +163,11 @@ const AuthOverlay: React.FC = () => {
             scores: INITIAL_SCORES,
             reportData: INITIAL_REPORT_DATA,
             classData: INITIAL_CLASS_DATA,
+            users: [],
+            deviceCredentials: [],
         };
 
-        // Force create
-        const result = await loginOrRegisterSchool(combinedId, password, initialData, true);
-
+        const result = await loginOrRegisterSchool(combinedId, schoolPassword, initialData, true);
         setLoading(false);
 
         if (result.status === 'created_pending_access') {
@@ -143,10 +177,88 @@ const AuthOverlay: React.FC = () => {
         }
     };
 
-    if (isLoggedIn) {
-        return null;
+    const handleAdminSetupComplete = async (users: User[], adminPassword?: string) => {
+        if (!currentSchoolId || !schoolData) return;
+
+        try {
+            // Update users in Firebase
+            await updateUsers(currentSchoolId, users);
+
+            // Update local state
+            setUsers(users);
+
+            // Auto-login the admin user
+            if (adminPassword && users.length > 0) {
+                const adminUser = users[0];
+                const success = await login(adminUser.id, adminPassword);
+
+                if (success) {
+                    // Save device credential
+                    saveDeviceCredential(currentSchoolId, adminUser.id);
+                    setAuthStage('authenticated');
+                }
+            }
+        } catch (err) {
+            console.error('Failed to complete admin setup:', err);
+            setError('Failed to save users. Please try again.');
+        }
+    };
+
+    const handleUserLogin = async (userId: number, password: string): Promise<boolean> => {
+        const success = await login(userId, password);
+
+        if (success && currentSchoolId) {
+            // Save device credential
+            saveDeviceCredential(currentSchoolId, userId);
+            setAuthStage('authenticated');
+            return true;
+        }
+
+        return false;
+    };
+
+    const handleUserSetPassword = async (userId: number, password: string): Promise<void> => {
+        if (!currentSchoolId) return;
+
+        await setUserPassword(userId, password);
+
+        // Update in Firebase
+        const users = schoolData?.users || [];
+        const updatedUsers = users.map(u =>
+            u.id === userId ? { ...u, passwordHash: password } : u
+        );
+        await updateUsers(currentSchoolId, updatedUsers);
+
+        // Save device credential
+        saveDeviceCredential(currentSchoolId, userId);
+        setAuthStage('authenticated');
+    };
+
+    if (authStage === 'authenticated') {
+        return <>{children}</>;
     }
 
+    if (authStage === 'admin-setup') {
+        return (
+            <AdminSetup
+                mode="setup"
+                users={[]}
+                onComplete={handleAdminSetupComplete}
+            />
+        );
+    }
+
+    if (authStage === 'user-selection' && schoolData) {
+        return (
+            <UserSelection
+                users={schoolData.users || []}
+                onLogin={handleUserLogin}
+                onSetPassword={handleUserSetPassword}
+            />
+        );
+    }
+
+    // School login screen
     return (
         <div className="fixed inset-0 bg-gray-900 bg-opacity-95 z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full">
@@ -177,7 +289,7 @@ const AuthOverlay: React.FC = () => {
                         </div>
                     </div>
                 ) : (
-                    <form onSubmit={handleSubmit} className="space-y-4">
+                    <form onSubmit={handleSchoolLogin} className="space-y-4">
                         {error && (
                             <div className="bg-red-50 border-l-4 border-red-500 p-4 text-sm text-red-700">
                                 {error}
@@ -255,8 +367,8 @@ const AuthOverlay: React.FC = () => {
                             <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
                             <input
                                 type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
+                                value={schoolPassword}
+                                onChange={(e) => setSchoolPassword(e.target.value)}
                                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                                 placeholder="Enter password"
                                 required

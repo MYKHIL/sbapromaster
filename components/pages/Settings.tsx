@@ -3,6 +3,7 @@ import CameraCapture from '../CameraCapture';
 import { useData } from '../../context/DataContext';
 import { enhanceImage } from '../../services/geminiService';
 import { AI_FEATURES_ENABLED } from '../../constants';
+import ReadOnlyWrapper from '../ReadOnlyWrapper';
 
 const LOGO_PLACEHOLDER = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgdmlld0JveD0iMCAwIDEyOCAxMjgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiByeD0iOCIgZmlsbD0iI0YzRjRGNyIvPgo8cGF0aCBkPSJNNjQgMzBMMzQgNTBWOTRIOTRWNTBMNjQgMzBaIiBzdHJva2U9IiNEMUQ1REIiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+CjxwYXRoIGQ9Ik03OCA5OFY2OEM3OCA2NC42ODYzIDc1LjMxMzcgNjIgNzIgNjJINTZDNTAuNjg2MyA2MiA1MCA2NC42ODYzIDUwIDY4Vjk4IiBzdHJva2U9IiNEMUQ1REIiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjx0ZXh0IHg9IjY0IiB5PSIxMTQiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEwIiBmaWxsPSIjOUNBM0FGIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5VcGxvYWQgU2Nob29sIExvZ288L3RleHQ+Cjwvc3ZnPg==';
 const SIGNATURE_PLACEHOLDER = 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTUwIDUwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0yIDI1LjVDMiAyNS41IDE1LjUgMTUuNSAyOS41IDI4QzQzLjUgNDAuNSA1MyAyNS41IDY2LjUgMjAuNUM4MCAxNS41IDg4LjUgMjkgMTAwIDI5QzExMS41IDI5IDEyMyAxNS41IDEzNyAyOS41IiBzdHJva2U9IiM5Y2EzYWYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+';
@@ -73,118 +74,120 @@ const Settings: React.FC = () => {
   );
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      <h1 className="text-3xl font-bold text-gray-800">School Setup</h1>
+    <ReadOnlyWrapper allowedRoles={['Admin']}>
+      <div className="max-w-4xl mx-auto space-y-8">
+        <h1 className="text-3xl font-bold text-gray-800">School Setup</h1>
 
-      <div className="bg-white p-8 rounded-xl shadow-md border border-gray-200 space-y-6">
-        <h2 className="text-xl font-bold text-gray-700 border-b pb-2">School Information</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">School Name</label>
-            <input type="text" name="schoolName" value={settings.schoolName} onChange={handleChange} className={inputStyles} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">District</label>
-            <input type="text" name="district" value={settings.district} onChange={handleChange} className={inputStyles} />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-          <textarea name="address" value={settings.address} onChange={handleChange} className={inputStyles} rows={3} />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Academic Year</label>
-            <input type="text" name="academicYear" value={settings.academicYear} onChange={handleChange} className={inputStyles} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Academic Term</label>
-            <input type="text" name="academicTerm" value={settings.academicTerm} onChange={handleChange} className={inputStyles} />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Vacation Date</label>
-            <input type="date" name="vacationDate" value={settings.vacationDate} onChange={handleChange} className={inputStyles} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Reopening Date</label>
-            <input type="date" name="reopeningDate" value={settings.reopeningDate} onChange={handleChange} className={inputStyles} />
-          </div>
-        </div>
-
-        <hr />
-
-        <h2 className="text-xl font-bold text-gray-700 border-b pb-2">Branding &amp; Signatures</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Headmaster's Name</label>
-            <input type="text" name="headmasterName" value={settings.headmasterName || ''} onChange={handleChange} className={inputStyles} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">School Logo</label>
-            <div className="flex items-center space-x-4">
-              <img src={settings.logo || LOGO_PLACEHOLDER} alt="Logo Preview" className="h-32 w-32 object-contain border p-2 rounded-lg bg-gray-50" />
-              <div className="space-y-2 w-full">
-                <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'logo')} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
-                <CameraCapture onCapture={(img) => handleCameraCapture(img, 'logo')} label="Take Logo Photo" />
-                {settings.logo && (
-                  <button
-                    type="button"
-                    onClick={() => handleClearImage('logo')}
-                    className="flex items-center px-3 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors text-sm font-medium w-full justify-center"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    Clear Logo
-                  </button>
-                )}
-              </div>
+        <div className="bg-white p-8 rounded-xl shadow-md border border-gray-200 space-y-6">
+          <h2 className="text-xl font-bold text-gray-700 border-b pb-2">School Information</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">School Name</label>
+              <input type="text" name="schoolName" value={settings.schoolName} onChange={handleChange} className={inputStyles} />
             </div>
-            {AI_FEATURES_ENABLED && (
-              <div className="mt-2">
-                <button type="button" onClick={() => handleEnhance('logo', setIsEnhancingLogo)} disabled={!settings.logo || isEnhancingLogo} className="flex items-center text-sm bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full font-semibold hover:bg-indigo-200 disabled:bg-gray-200 disabled:text-gray-500 transition-colors">
-                  <EnhanceButton isEnhancing={isEnhancingLogo} />
-                </button>
-              </div>
-            )}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Headmaster's Signature</label>
-            <div className="flex items-center space-x-4">
-              <img src={settings.headmasterSignature || SIGNATURE_PLACEHOLDER} alt="Signature Preview" className="h-12 w-36 object-contain border p-1 rounded-md bg-gray-50" />
-              <div className="space-y-2 w-full">
-                <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'headmasterSignature')} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
-                <CameraCapture onCapture={(img) => handleCameraCapture(img, 'headmasterSignature')} label="Take Signature Photo" />
-                {settings.headmasterSignature && (
-                  <button
-                    type="button"
-                    onClick={() => handleClearImage('headmasterSignature')}
-                    className="flex items-center px-3 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors text-sm font-medium w-full justify-center"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    Clear Signature
-                  </button>
-                )}
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">District</label>
+              <input type="text" name="district" value={settings.district} onChange={handleChange} className={inputStyles} />
             </div>
-            {AI_FEATURES_ENABLED && (
-              <div className="mt-2">
-                <button type="button" onClick={() => handleEnhance('headmasterSignature', setIsEnhancingSignature)} disabled={!settings.headmasterSignature || isEnhancingSignature} className="flex items-center text-sm bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full font-semibold hover:bg-indigo-200 disabled:bg-gray-200 disabled:text-gray-500 transition-colors">
-                  <EnhanceButton isEnhancing={isEnhancingSignature} />
-                </button>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+            <textarea name="address" value={settings.address} onChange={handleChange} className={inputStyles} rows={3} />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Academic Year</label>
+              <input type="text" name="academicYear" value={settings.academicYear} onChange={handleChange} className={inputStyles} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Academic Term</label>
+              <input type="text" name="academicTerm" value={settings.academicTerm} onChange={handleChange} className={inputStyles} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Vacation Date</label>
+              <input type="date" name="vacationDate" value={settings.vacationDate} onChange={handleChange} className={inputStyles} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Reopening Date</label>
+              <input type="date" name="reopeningDate" value={settings.reopeningDate} onChange={handleChange} className={inputStyles} />
+            </div>
+          </div>
+
+          <hr />
+
+          <h2 className="text-xl font-bold text-gray-700 border-b pb-2">Branding &amp; Signatures</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Headmaster's Name</label>
+              <input type="text" name="headmasterName" value={settings.headmasterName || ''} onChange={handleChange} className={inputStyles} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">School Logo</label>
+              <div className="flex items-center space-x-4">
+                <img src={settings.logo || LOGO_PLACEHOLDER} alt="Logo Preview" className="h-32 w-32 object-contain border p-2 rounded-lg bg-gray-50" />
+                <div className="space-y-2 w-full">
+                  <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'logo')} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                  <CameraCapture onCapture={(img) => handleCameraCapture(img, 'logo')} label="Take Logo Photo" />
+                  {settings.logo && (
+                    <button
+                      type="button"
+                      onClick={() => handleClearImage('logo')}
+                      className="delete-button flex items-center px-3 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors text-sm font-medium w-full justify-center"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Clear Logo
+                    </button>
+                  )}
+                </div>
               </div>
-            )}
+              {AI_FEATURES_ENABLED && (
+                <div className="mt-2">
+                  <button type="button" onClick={() => handleEnhance('logo', setIsEnhancingLogo)} disabled={!settings.logo || isEnhancingLogo} className="flex items-center text-sm bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full font-semibold hover:bg-indigo-200 disabled:bg-gray-200 disabled:text-gray-500 transition-colors">
+                    <EnhanceButton isEnhancing={isEnhancingLogo} />
+                  </button>
+                </div>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Headmaster's Signature</label>
+              <div className="flex items-center space-x-4">
+                <img src={settings.headmasterSignature || SIGNATURE_PLACEHOLDER} alt="Signature Preview" className="h-12 w-36 object-contain border p-1 rounded-md bg-gray-50" />
+                <div className="space-y-2 w-full">
+                  <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'headmasterSignature')} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                  <CameraCapture onCapture={(img) => handleCameraCapture(img, 'headmasterSignature')} label="Take Signature Photo" />
+                  {settings.headmasterSignature && (
+                    <button
+                      type="button"
+                      onClick={() => handleClearImage('headmasterSignature')}
+                      className="delete-button flex items-center px-3 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors text-sm font-medium w-full justify-center"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Clear Signature
+                    </button>
+                  )}
+                </div>
+              </div>
+              {AI_FEATURES_ENABLED && (
+                <div className="mt-2">
+                  <button type="button" onClick={() => handleEnhance('headmasterSignature', setIsEnhancingSignature)} disabled={!settings.headmasterSignature || isEnhancingSignature} className="flex items-center text-sm bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full font-semibold hover:bg-indigo-200 disabled:bg-gray-200 disabled:text-gray-500 transition-colors">
+                    <EnhanceButton isEnhancing={isEnhancingSignature} />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </ReadOnlyWrapper>
   );
 };
 

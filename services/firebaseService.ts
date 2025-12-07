@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, getDoc, setDoc, collection, getDocs, onSnapshot } from "firebase/firestore";
-import type { SchoolSettings, Student, Subject, Class, Grade, Assessment, Score, ReportSpecificData, ClassSpecificData } from '../types';
+import type { SchoolSettings, Student, Subject, Class, Grade, Assessment, Score, ReportSpecificData, ClassSpecificData, User, DeviceCredential } from '../types';
 
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
@@ -28,7 +28,10 @@ export type AppDataType = {
     scores: Score[];
     reportData: ReportSpecificData[];
     classData: ClassSpecificData[];
-    // New fields for custom auth
+    // Multi-user authentication fields
+    users?: User[];
+    deviceCredentials?: DeviceCredential[];
+    // School-level auth (legacy/initial setup)
     password?: string;
     Access?: boolean;
 };
@@ -212,4 +215,38 @@ export const subscribeToSchoolData = (docId: string, callback: (data: AppDataTyp
     }, (error) => {
         console.error("Real-time sync error:", error);
     });
+};
+
+// User Management Functions
+
+/**
+ * Update the users array in the school database
+ */
+export const updateUsers = async (docId: string, users: User[]) => {
+    const docRef = doc(db, "schools", docId);
+    await setDoc(docRef, { users }, { merge: true });
+};
+
+/**
+ * Get a specific user by ID
+ */
+export const getUserById = async (docId: string, userId: number): Promise<User | null> => {
+    const docRef = doc(db, "schools", docId);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+        const data = docSnap.data() as AppDataType;
+        const user = data.users?.find(u => u.id === userId);
+        return user || null;
+    }
+
+    return null;
+};
+
+/**
+ * Update device credentials in the database
+ */
+export const updateDeviceCredentials = async (docId: string, deviceCredentials: DeviceCredential[]) => {
+    const docRef = doc(db, "schools", docId);
+    await setDoc(docRef, { deviceCredentials }, { merge: true });
 };

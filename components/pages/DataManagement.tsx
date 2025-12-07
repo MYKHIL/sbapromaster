@@ -1,13 +1,18 @@
 import React, { useState, useRef } from 'react';
 import { useData } from '../../context/DataContext';
+import { useUser } from '../../context/UserContext';
+import { updateUsers } from '../../services/firebaseService';
 import { exportDatabase, importDatabase } from '../../services/databaseService';
 import { generateWpfProject } from '../../services/wpfProjectGenerator';
 import ConfirmationModal from '../ConfirmationModal';
+import AdminSetup from '../AdminSetup';
 import { DEV_TOOLS_ENABLED, WHATSAPP_DEVELOPER_NUMBER } from '../../constants';
+import type { User } from '../../types';
 
 const DataManagement: React.FC = () => {
     const dataContext = useData();
     const { settings, loadImportedData, saveToCloud, schoolId } = dataContext;
+    const { currentUser, users, setUsers } = useUser();
     const [processingAction, setProcessingAction] = useState<'import' | 'export' | 'generate_wpf' | 'share' | null>(null);
     const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' | 'info' | 'warning'; details?: string[]; detailsTitle?: string; } | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -28,6 +33,9 @@ const DataManagement: React.FC = () => {
 
     // State for cloud save confirmation
     const [isCloudSaveModalOpen, setIsCloudSaveModalOpen] = useState(false);
+
+    // State for user management
+    const [isUserManagementOpen, setIsUserManagementOpen] = useState(false);
 
 
     const buttonStyles = "flex items-center justify-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-wait";
@@ -185,6 +193,24 @@ const DataManagement: React.FC = () => {
 
     const handleCancelCloudSave = () => {
         setIsCloudSaveModalOpen(false);
+    };
+
+    const handleUserManagementSave = async (updatedUsers: User[]) => {
+        if (!schoolId) {
+            setFeedback({ message: 'Cannot save users: No active school session', type: 'error' });
+            return;
+        }
+
+        setFeedback({ message: 'Saving user management changes...', type: 'info' });
+        try {
+            await updateUsers(schoolId, updatedUsers);
+            setUsers(updatedUsers);
+            setIsUserManagementOpen(false);
+            setFeedback({ message: 'User management changes saved successfully!', type: 'success' });
+        } catch (error) {
+            console.error('Failed to save users:', error);
+            setFeedback({ message: 'Failed to save user changes', type: 'error' });
+        }
     };
 
     const generateWpfPrompt = () => {
@@ -511,6 +537,27 @@ const DataManagement: React.FC = () => {
                 </div>
             </div>
 
+            {currentUser && currentUser.role === 'Admin' && (
+                <div className="bg-white p-8 rounded-xl shadow-md border border-gray-200 space-y-6">
+                    <h2 className="text-xl font-bold text-gray-700 border-b pb-2">User Management</h2>
+                    <p className="text-gray-600">
+                        Manage user accounts, roles, and permissions for your school.
+                    </p>
+
+                    <div className="pt-4">
+                        <button
+                            onClick={() => setIsUserManagementOpen(true)}
+                            className="flex items-center justify-center bg-purple-600 text-white px-6 py-3 rounded-lg shadow hover:bg-purple-700 transition-colors"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                            </svg>
+                            Manage Users
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {DEV_TOOLS_ENABLED && (
                 <div className="bg-white p-8 rounded-xl shadow-md border border-gray-200 space-y-6">
                     <h2 className="text-xl font-bold text-gray-700 border-b pb-2">Developer Tools</h2>
@@ -631,6 +678,15 @@ const DataManagement: React.FC = () => {
                         </div>
                     </div>
                 </div>
+            )}
+            {isUserManagementOpen && (
+                <AdminSetup
+                    mode="management"
+                    users={users}
+                    currentUser={currentUser}
+                    onComplete={handleUserManagementSave}
+                    onCancel={() => setIsUserManagementOpen(false)}
+                />
             )}
             <ReadyToShareModal />
         </div>

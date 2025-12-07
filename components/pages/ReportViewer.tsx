@@ -7,6 +7,7 @@ import { useReportCardData } from '../../hooks/useReportCardData';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { SHOW_PDF_DOWNLOAD_BUTTON } from '../../constants';
+import { useUser } from '../../context/UserContext';
 
 const PerformanceSummaryFetcher: React.FC<{ student: Student, children: (summary: string) => React.ReactNode }> = ({ student, children }) => {
   const { performanceSummary } = useReportCardData(student);
@@ -15,6 +16,7 @@ const PerformanceSummaryFetcher: React.FC<{ student: Student, children: (summary
 
 const ReportViewer: React.FC = () => {
   const { students, classes, getClassData, updateClassData } = useData();
+  const { currentUser, isAuthenticated } = useUser();
   const [selectedClassId, setSelectedClassId] = useState<number | ''>(() => {
     const saved = localStorage.getItem('reportViewer_selectedClassId');
     return saved ? Number(saved) : (classes[0]?.id || '');
@@ -28,10 +30,11 @@ const ReportViewer: React.FC = () => {
   const [generatedReports, setGeneratedReports] = useState<Student[]>([]);
   const [showPanel, setShowPanel] = useState(false);
   const [totalDays, setTotalDays] = useState('');
+  const [zoomLevel, setZoomLevel] = useState(1);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const reportContainerRef = useRef<HTMLDivElement>(null);
-  const reportScaleContainerRef = useRef<HTMLDivElement>(null);
+
 
 
   useEffect(() => {
@@ -49,6 +52,24 @@ const ReportViewer: React.FC = () => {
     if (!selectedClass) return [];
     return students.filter(s => s.class === selectedClass.name);
   }, [students, classes, selectedClassId]);
+
+  // Filter classes based on user permissions
+  const accessibleClasses = useMemo(() => {
+    if (!isAuthenticated || !currentUser) return classes;
+    if (currentUser.role === 'Admin' || currentUser.role === 'Teacher') return classes;
+    // Guests only see assigned classes
+    return classes.filter(c => currentUser.allowedClasses.includes(c.name));
+  }, [classes, currentUser, isAuthenticated]);
+
+  // Check if user can edit comments/data for a specific class
+  const canEditClass = (className: string) => {
+    if (!currentUser) return false;
+    if (currentUser.role === 'Admin') return true;
+    if (currentUser.role === 'Teacher') {
+      return currentUser.allowedClasses.includes(className);
+    }
+    return false; // Guests cannot edit
+  };
 
   useEffect(() => {
     if (!selectedClassId) {
@@ -72,31 +93,21 @@ const ReportViewer: React.FC = () => {
     }
   }, [selectedStudentId, selectedClassId, studentsInClass, students]);
 
-  // Effect to scale report card previews to fit the screen
+
+
+
+  // Initialize zoom based on screen width
   useEffect(() => {
-    const scaleReports = () => {
-      if (!reportContainerRef.current || !reportScaleContainerRef.current) return;
-      const containerWidth = reportScaleContainerRef.current.offsetWidth;
-      const reportWidth = 210; // A4 width in mm, which our styling is based on
-
-      // Convert mm to an approximate pixel value for scaling. A common screen DPI is 96, 1mm ~ 3.78px
-      const reportPixelWidth = reportWidth * 3.78;
-
-      if (containerWidth < reportPixelWidth) {
-        const scale = containerWidth / reportPixelWidth;
-        reportContainerRef.current.style.transform = `scale(${scale})`;
-        reportContainerRef.current.style.transformOrigin = 'top center';
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setZoomLevel(0.5);
       } else {
-        reportContainerRef.current.style.transform = 'scale(1)';
-        reportContainerRef.current.style.transformOrigin = 'top center';
+        setZoomLevel(1);
       }
     };
 
-    scaleReports();
-    window.addEventListener('resize', scaleReports);
-    return () => window.removeEventListener('resize', scaleReports);
-  }, [generatedReports]);
-
+    handleResize();
+  }, []);
 
   const handleClassChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const classId = e.target.value ? Number(e.target.value) : '';
@@ -125,7 +136,10 @@ const ReportViewer: React.FC = () => {
 
   const handleTotalDaysBlur = () => {
     if (selectedClassId) {
-      updateClassData(Number(selectedClassId), { totalSchoolDays: totalDays });
+      const selectedClass = classes.find(c => c.id === selectedClassId);
+      if (selectedClass && canEditClass(selectedClass.name)) {
+        updateClassData(Number(selectedClassId), { totalSchoolDays: totalDays });
+      }
     }
   };
 
@@ -196,11 +210,11 @@ const ReportViewer: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800">Report Viewer</h1>
+      <h1 className="text-3xl font-bold text-gray-800 px-4 lg:px-0">Report Viewer</h1>
 
-      <div className="bg-gray-100 py-4 sticky top-20 lg:top-0 z-20 shadow-md transition-all duration-300">
-        <div className="bg-white p-4 rounded-xl shadow-md border border-gray-200 flex flex-col sm:flex-row flex-wrap items-center gap-4">
-          <div className="w-full sm:w-auto sm:flex-1">
+      <div className="bg-gray-100 py-4 sticky top-20 lg:top-0 z-20 shadow-md transition-all duration-300 px-4 lg:px-0">
+        <div className="bg-white p-4 rounded-xl shadow-md border border-gray-200 flex flex-wrap items-center gap-3">
+          <div className="flex-1 min-w-[200px]">
             <label className="block text-sm font-medium text-gray-800 mb-1">Select Class</label>
             <select
               value={selectedClassId}
@@ -208,22 +222,22 @@ const ReportViewer: React.FC = () => {
               className="w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="" disabled>Select a class</option>
-              {classes.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+              {accessibleClasses.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
             </select>
           </div>
-          <div className="w-full sm:w-auto sm:flex-1">
+          <div className="flex-1 min-w-[150px]">
             <label className="block text-sm font-medium text-gray-800 mb-1">Total School Days</label>
             <input
               type="text"
               value={totalDays}
               onChange={e => setTotalDays(e.target.value)}
               onBlur={handleTotalDaysBlur}
-              disabled={!selectedClassId}
+              disabled={!selectedClassId || !canEditClass(classes.find(c => c.id === selectedClassId)?.name || '')}
               placeholder="e.g., 65"
               className="w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
             />
           </div>
-          <div className="w-full sm:w-auto sm:flex-1">
+          <div className="flex-1 min-w-[200px]">
             <label className="block text-sm font-medium text-gray-800 mb-1">Select Student</label>
             <select
               value={selectedStudentId}
@@ -247,8 +261,38 @@ const ReportViewer: React.FC = () => {
       )}
 
 
-      <div ref={reportScaleContainerRef} className="pt-8">
-        <div ref={reportContainerRef} className="space-y-12 mx-auto">
+      <div className="fixed bottom-6 left-6 z-30 flex items-center bg-white p-2 rounded-full shadow-lg border border-gray-200 space-x-2">
+        <button
+          onClick={() => setZoomLevel(prev => Math.max(0.25, prev - 0.1))}
+          className="p-2 hover:bg-gray-100 rounded-full text-gray-600 focus:outline-none"
+          title="Zoom Out"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+          </svg>
+        </button>
+        <span className="text-sm font-medium w-12 text-center">{Math.round(zoomLevel * 100)}%</span>
+        <button
+          onClick={() => setZoomLevel(prev => Math.min(2, prev + 0.1))}
+          className="p-2 hover:bg-gray-100 rounded-full text-gray-600 focus:outline-none"
+          title="Zoom In"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
+      </div>
+
+      <div className="pt-8 overflow-x-auto pb-20">
+        <div
+          ref={reportContainerRef}
+          className="space-y-12 w-full transition-transform duration-200 ease-in-out"
+          style={{
+            transform: `scale(${zoomLevel})`,
+            transformOrigin: 'top left', // Align to left
+            width: zoomLevel < 1 ? `${100 / zoomLevel}%` : '100%' // Compensate width when scaling
+          }}
+        >
           {generatedReports.length > 0 ? (
             generatedReports.map(student => (
               <div key={student.id} className="report-container">

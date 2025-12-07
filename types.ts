@@ -82,6 +82,24 @@ export interface ReportSpecificData {
 }
 
 export interface ClassSpecificData {
-    classId: number;
-    totalSchoolDays: string;
+  classId: number;
+  totalSchoolDays: string;
+}
+
+// Authentication & Authorization Types
+export type UserRole = 'Admin' | 'Teacher' | 'Guest';
+
+export interface User {
+  id: number;
+  name: string;
+  role: UserRole;
+  allowedClasses: string[]; // Class names the user has access to
+  allowedSubjects: string[]; // Subject names the user has access to
+  passwordHash: string; // Hashed password
+}
+
+export interface DeviceCredential {
+  deviceId: string; // Unique device fingerprint
+  userId: number; // User ID associated with this device
+  lastLogin: string; // ISO timestamp of last login
 }
