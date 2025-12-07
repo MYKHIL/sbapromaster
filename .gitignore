@@ -24,7 +24,7 @@ dist-ssr
 *.sw?
 
 # Exclude WPF project folder
-SBA Pro Master - WPF/
+
 
 # Exclude deployment script
 deploy.py

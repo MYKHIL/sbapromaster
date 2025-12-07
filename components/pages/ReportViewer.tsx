@@ -205,8 +205,9 @@ const ReportViewer: React.FC = () => {
           <h1 className="text-3xl font-bold text-gray-800">Report Cards</h1>
         </div>
 
-        <div className="bg-white p-4 rounded-xl shadow-md border border-gray-200 flex flex-col md:flex-row gap-4 justify-between items-end">
-          <div className="flex gap-4 w-full md:w-auto">
+        <div className="bg-white p-4 rounded-xl shadow-md border border-gray-200 flex flex-col gap-4">
+          {/* Row 1: Selectors */}
+          <div className="flex flex-col md:flex-row gap-4 w-full">
             <div className="w-full md:w-64">
               <label htmlFor="class-select" className="block text-sm font-medium text-gray-700 mb-1">Select Class</label>
               <select
@@ -220,36 +221,37 @@ const ReportViewer: React.FC = () => {
               </select>
             </div>
 
-            {selectedClassId && currentUser?.role !== 'Guest' && (
-              <div>
-                <label htmlFor="total-days" className="block text-sm font-medium text-gray-700 mb-1">Total School Days</label>
-                <input
-                  id="total-days"
-                  type="number"
-                  value={totalDays}
-                  onChange={(e) => setTotalDays(e.target.value)}
-                  onBlur={handleTotalDaysBlur}
-                  className="w-32 p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="e.g. 180"
-                  disabled={!canEditClass(classes.find(c => c.id === selectedClassId)?.name || '')}
-                />
-              </div>
-            )}
+            <div className="w-full md:w-64">
+              <label htmlFor="student-select" className="block text-sm font-medium text-gray-700 mb-1">Select Student</label>
+              <select
+                id="student-select"
+                value={selectedStudentId}
+                onChange={handleStudentChange}
+                disabled={!selectedClassId}
+                className="w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-400"
+              >
+                <option value="all">-- All Students --</option>
+                {studentsInClass.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
           </div>
 
-          <div className="w-full md:w-64">
-            <label htmlFor="student-select" className="block text-sm font-medium text-gray-700 mb-1">Select Student</label>
-            <select
-              id="student-select"
-              value={selectedStudentId}
-              onChange={handleStudentChange}
-              disabled={!selectedClassId}
-              className="w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-400"
-            >
-              <option value="all">-- All Students --</option>
-              {studentsInClass.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </div>
+          {/* Row 2: Total Days (if applicable) */}
+          {selectedClassId && currentUser?.role !== 'Guest' && (
+            <div className="w-full md:w-64">
+              <label htmlFor="total-days" className="block text-sm font-medium text-gray-700 mb-1">Total School Days</label>
+              <input
+                id="total-days"
+                type="number"
+                value={totalDays}
+                onChange={(e) => setTotalDays(e.target.value)}
+                onBlur={handleTotalDaysBlur}
+                className="w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                placeholder="e.g. 180"
+                disabled={!canEditClass(classes.find(c => c.id === selectedClassId)?.name || '')}
+              />
+            </div>
+          )}
         </div>
       </div>
 

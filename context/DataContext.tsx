@@ -37,6 +37,7 @@ interface DataContextType {
 
     // Setters
     setSettings: React.Dispatch<React.SetStateAction<SchoolSettings>>;
+    updateSettings: (updates: Partial<SchoolSettings>) => void;
     setAssessments: React.Dispatch<React.SetStateAction<Assessment[]>>; // For reordering
     // Student CRUD
     addStudent: (student: Omit<Student, 'id'>) => void;
@@ -315,8 +316,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
     };
 
+    const updateSettings = (updates: Partial<SchoolSettings>) => {
+        setSettings(prev => ({ ...prev, ...updates }));
+    };
+
     const value: DataContextType = {
-        settings, setSettings,
+        settings, setSettings, updateSettings,
         students,
         subjects,
         classes,
@@ -359,7 +364,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 export const useData = () => {
     const context = useContext(DataContext);
     if (context === undefined) {
-        throw new Error('useData must be used within a DataProvider');
+        throw new Error('useData must be used within a DataProvider. If you see this error during development, try refreshing the page to resolve hot module reload issues.');
     }
     return context;
 };
