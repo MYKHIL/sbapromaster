@@ -24,6 +24,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
     const [error, setError] = useState<string | null>(null);
     const [editingUserId, setEditingUserId] = useState<number | null>(null);
     const [deleteConfirmUserId, setDeleteConfirmUserId] = useState<number | null>(null);
+    const [resetConfirmUserId, setResetConfirmUserId] = useState<number | null>(null);
 
     const classNames = classes.map(c => c.name);
     const subjectNames = subjects.map(s => s.subject);
@@ -185,7 +186,32 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         }
     };
 
+    const executeResetPassword = () => {
+        if (resetConfirmUserId === null) return;
+
+        const updatedUsers = existingUsers.map(u =>
+            u.id === resetConfirmUserId ? { ...u, passwordHash: '' } : u
+        );
+
+        setExistingUsers(updatedUsers);
+
+        // Auto-save changes
+        if (onUpdate) {
+            onUpdate(updatedUsers);
+        } else {
+            onComplete(updatedUsers);
+        }
+
+        // If user reset their own password, logout immediately
+        if (currentUser && currentUser.id === resetConfirmUserId) {
+            logout();
+        }
+
+        setResetConfirmUserId(null);
+    };
+
     const handleSaveManagement = async () => {
+        // ... (existing implementation)
         // If we have users in the editing form, save them first
         if (users.length > 0) {
             const newUser = users[0];
@@ -274,6 +300,13 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                         </div>
                                     </div>
                                     <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setResetConfirmUserId(user.id)}
+                                            className="px-3 py-1 text-sm bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200 transition"
+                                            title="Reset Password"
+                                        >
+                                            Reset PWM
+                                        </button>
                                         <button
                                             onClick={() => handleEditUser(user)}
                                             className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition"
@@ -465,6 +498,20 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                     )}
                 </div>
             </div>
+
+            {/* Reset Password Confirmation Modal */}
+            <ConfirmationModal
+                isOpen={resetConfirmUserId !== null}
+                onClose={() => setResetConfirmUserId(null)}
+                onConfirm={executeResetPassword}
+                title="Reset User Password"
+                message={
+                    currentUser && currentUser.id === resetConfirmUserId
+                        ? `⚠️ WARNING: You are attempting to reset your own password. You will be logged out immediately and asked to set a new password. Continue?`
+                        : `Are you sure you want to reset the password for ${existingUsers.find(u => u.id === resetConfirmUserId)?.name}? They will be prompted to set a new password on their next login.`
+                }
+                variant="warning"
+            />
 
             {/* Delete Confirmation Modal */}
             <ConfirmationModal
