@@ -418,6 +418,7 @@ const ScoreEntry: React.FC = () => {
                         <table className="min-w-full text-left">
                             <thead className="bg-gray-50">
                                 <tr className="border-b">
+                                    <th className="p-4 font-semibold text-gray-600 w-12 text-center">#</th>
                                     <th className="p-4 font-semibold text-gray-600 w-1/4">Student Name</th>
                                     {assessments.map(assessment => (
                                         <th key={assessment.id} className="p-4 font-semibold text-gray-600 text-center">
@@ -429,9 +430,10 @@ const ScoreEntry: React.FC = () => {
                             </thead>
                             <tbody>
                                 {filteredStudents.length > 0 ? (
-                                    filteredStudents.map(student => (
+                                    filteredStudents.map((student, index) => (
                                         <InlineScoreInput
                                             key={student.id}
+                                            index={index + 1}
                                             student={student}
                                             subjectId={selectedSubjectId}
                                             assessments={assessments}
@@ -441,7 +443,7 @@ const ScoreEntry: React.FC = () => {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan={assessments.length + 2} className="text-center p-8 text-gray-500">
+                                        <td colSpan={assessments.length + 3} className="text-center p-8 text-gray-500">
                                             No students in the selected class.
                                         </td>
                                     </tr>

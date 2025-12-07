@@ -9,6 +9,7 @@ interface InlineScoreInputProps {
     assessments: Assessment[];
     onOpenModal: (student: Student, assessment: Assessment) => void;
     readOnly?: boolean;
+    index: number;
 }
 
 const calculateDisplayScore = (scores: string[], assessment: Assessment): number => {
@@ -41,7 +42,7 @@ const formatScore = (score: number): string => {
 };
 
 
-const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId, assessments, onOpenModal, readOnly }) => {
+const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId, assessments, onOpenModal, readOnly, index }) => {
     const { getStudentScores, updateStudentScores } = useData();
 
     const [inlineValues, setInlineValues] = useState<{ [key: number]: string }>({});
@@ -115,6 +116,7 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
 
     return (
         <tr className="border-b hover:bg-gray-50">
+            <td className="p-4 text-center text-gray-500 font-medium">{index}</td>
             <td className="p-4 font-medium text-gray-900">{student.name}</td>
             {assessments.map(assessment => {
                 const scores = getStudentScores(student.id, subjectId, assessment.id);
