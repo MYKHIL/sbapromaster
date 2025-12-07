@@ -5,7 +5,7 @@ import UserSelection from './UserSelection';
 import { loginOrRegisterSchool, AppDataType, createDocumentId, searchSchools, updateUsers, updateDeviceCredentials } from '../services/firebaseService';
 import { useData } from '../context/DataContext';
 import { useUser } from '../context/UserContext';
-import { saveDeviceCredential, getDeviceCredential } from '../services/authService';
+import { saveDeviceCredential, getDeviceCredential, hashPassword } from '../services/authService';
 import { INITIAL_SETTINGS, INITIAL_STUDENTS, INITIAL_SUBJECTS, INITIAL_CLASSES, INITIAL_GRADES, INITIAL_ASSESSMENTS, INITIAL_SCORES, INITIAL_REPORT_DATA, INITIAL_CLASS_DATA } from '../constants';
 import type { User, DeviceCredential } from '../types';
 
@@ -227,12 +227,17 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
     const handleUserSetPassword = async (userId: number, password: string): Promise<void> => {
         if (!currentSchoolId) return;
 
+        // Hash the password before saving
+        const hashedPassword = await hashPassword(password);
+
+        // Update generic user context
+        // UserContext.setPassword expects a plain password and hashes it internally
         await setUserPassword(userId, password);
 
         // Update in Firebase
         const users = schoolData?.users || [];
         const updatedUsers = users.map(u =>
-            u.id === userId ? { ...u, passwordHash: password } : u
+            u.id === userId ? { ...u, passwordHash: hashedPassword } : u
         );
         await updateUsers(currentSchoolId, updatedUsers);
 

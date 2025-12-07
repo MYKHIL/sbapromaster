@@ -3,6 +3,7 @@ import { useData } from '../../context/DataContext';
 import type { Assessment } from '../../types';
 import ReadOnlyWrapper from '../ReadOnlyWrapper';
 import ConfirmationModal from '../ConfirmationModal';
+import { useUser } from '../../context/UserContext';
 
 const EMPTY_ASSESSMENT_FORM: Omit<Assessment, 'id'> = {
     name: '',
@@ -18,6 +19,8 @@ const DragHandleIcon: React.FC = () => (
 
 const AssessmentTypes: React.FC = () => {
     const { assessments, setAssessments, addAssessment, updateAssessment, deleteAssessment } = useData();
+    const { currentUser } = useUser();
+    const isAdmin = currentUser?.role === 'Admin';
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentAssessment, setCurrentAssessment] = useState<Assessment | Omit<Assessment, 'id'> | null>(null);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -137,12 +140,14 @@ const AssessmentTypes: React.FC = () => {
 
                 <div className="bg-gray-100 py-4">
                     <div className="flex justify-end">
-                        <button onClick={handleAddNew} className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                            </svg>
-                            Add New Assessment
-                        </button>
+                        {isAdmin && (
+                            <button onClick={handleAddNew} className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                </svg>
+                                Add New Assessment
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -170,7 +175,7 @@ const AssessmentTypes: React.FC = () => {
                                     return (
                                         <tr
                                             key={assessment.id}
-                                            draggable
+                                            draggable={isAdmin}
                                             onDragStart={() => handleDragStart(assessment)}
                                             onDragEnter={() => handleDragEnter(assessment)}
                                             onDragEnd={handleDragEnd}
@@ -179,23 +184,29 @@ const AssessmentTypes: React.FC = () => {
                                             className={`border-b transition-colors ${isDragging ? 'opacity-30 bg-gray-200' : 'hover:bg-gray-50'} ${isDragTarget && !isDragging ? 'bg-blue-100' : ''}`}
                                         >
                                             <td className="p-4 font-medium text-gray-900 flex items-center">
-                                                <span className="cursor-move mr-3 text-gray-400 hover:text-gray-700" title="Drag to reorder">
-                                                    <DragHandleIcon />
-                                                </span>
+                                                {isAdmin && (
+                                                    <span className="cursor-move mr-3 text-gray-400 hover:text-gray-700" title="Drag to reorder">
+                                                        <DragHandleIcon />
+                                                    </span>
+                                                )}
                                                 {assessment.name}
                                             </td>
                                             <td className="p-4 text-gray-900">{assessment.weight}%</td>
                                             <td className="p-4 space-x-4 flex items-center">
-                                                <button onClick={() => handleEdit(assessment)} className="text-blue-600 hover:text-blue-800" title="Edit">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteClick(assessment.id)}
-                                                    className="text-red-600 hover:text-red-800"
-                                                    title="Delete"
-                                                >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                                </button>
+                                                {isAdmin && (
+                                                    <>
+                                                        <button onClick={() => handleEdit(assessment)} className="text-blue-600 hover:text-blue-800" title="Edit">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteClick(assessment.id)}
+                                                            className="text-red-600 hover:text-red-800"
+                                                            title="Delete"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                        </button>
+                                                    </>
+                                                )}
                                             </td>
                                         </tr>
                                     );
@@ -208,16 +219,20 @@ const AssessmentTypes: React.FC = () => {
                                         </td>
                                         <td className="p-4 text-gray-900">{examAssessment.weight}%</td>
                                         <td className="p-4 space-x-4 flex items-center">
-                                            <button onClick={() => handleEdit(examAssessment)} className="text-blue-600 hover:text-blue-800" title="Edit">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
-                                            </button>
-                                            <button
-                                                disabled
-                                                className="text-gray-400 cursor-not-allowed"
-                                                title="Assessments with 'Exam' in the name cannot be deleted or reordered."
-                                            >
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                            </button>
+                                            {isAdmin && (
+                                                <>
+                                                    <button onClick={() => handleEdit(examAssessment)} className="text-blue-600 hover:text-blue-800" title="Edit">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
+                                                    </button>
+                                                    <button
+                                                        disabled
+                                                        className="text-gray-400 cursor-not-allowed"
+                                                        title="Assessments with 'Exam' in the name cannot be deleted or reordered."
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                    </button>
+                                                </>
+                                            )}
                                         </td>
                                     </tr>
                                 )}
@@ -235,17 +250,21 @@ const AssessmentTypes: React.FC = () => {
                                 <p className="text-sm text-gray-600">Weight: {assessment.weight}%</p>
                             </div>
                             <div className="flex space-x-2 flex-shrink-0">
-                                <button onClick={() => handleEdit(assessment)} className="text-blue-600 p-2 rounded-full hover:bg-blue-100" title="Edit">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
-                                </button>
-                                <button
-                                    onClick={() => handleDeleteClick(assessment.id)}
-                                    disabled={isExam(assessment)}
-                                    className="p-2 rounded-full text-red-600 hover:bg-red-100 disabled:text-gray-400 disabled:hover:bg-transparent"
-                                    title={isExam(assessment) ? "Cannot delete exam assessment" : "Delete"}
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                </button>
+                                {isAdmin && (
+                                    <>
+                                        <button onClick={() => handleEdit(assessment)} className="text-blue-600 p-2 rounded-full hover:bg-blue-100" title="Edit">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteClick(assessment.id)}
+                                            disabled={isExam(assessment)}
+                                            className="p-2 rounded-full text-red-600 hover:bg-red-100 disabled:text-gray-400 disabled:hover:bg-transparent"
+                                            title={isExam(assessment) ? "Cannot delete exam assessment" : "Delete"}
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         </div>
                     ))}

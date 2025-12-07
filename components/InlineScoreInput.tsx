@@ -4,10 +4,11 @@ import type { Student, Assessment } from '../types';
 import { MULTI_SCORE_ENTRY_ENABLED } from '../constants';
 
 interface InlineScoreInputProps {
-  student: Student;
-  subjectId: number;
-  assessments: Assessment[];
-  onOpenModal: (student: Student, assessment: Assessment) => void;
+    student: Student;
+    subjectId: number;
+    assessments: Assessment[];
+    onOpenModal: (student: Student, assessment: Assessment) => void;
+    readOnly?: boolean;
 }
 
 const calculateDisplayScore = (scores: string[], assessment: Assessment): number => {
@@ -28,7 +29,7 @@ const calculateDisplayScore = (scores: string[], assessment: Assessment): number
             const [, max] = scoreStr.split('/').map(Number);
             return sum + (max || assessment.weight);
         }, 0);
-        
+
         if (totalMaxPossibleScore === 0) return 0;
         return (sumOfNumerators / totalMaxPossibleScore) * assessment.weight;
     }
@@ -40,7 +41,7 @@ const formatScore = (score: number): string => {
 };
 
 
-const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId, assessments, onOpenModal }) => {
+const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId, assessments, onOpenModal, readOnly }) => {
     const { getStudentScores, updateStudentScores } = useData();
 
     const [inlineValues, setInlineValues] = useState<{ [key: number]: string }>({});
@@ -55,7 +56,7 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
             }
         });
         setInlineValues(initialValues);
-        setErrors({}); 
+        setErrors({});
     }, [student, subjectId, assessments, getStudentScores]);
 
     const handleValueChange = (assessmentId: number, value: string) => {
@@ -90,7 +91,7 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
             if (isNaN(z)) { setErrors(prev => ({ ...prev, [assessmentId]: "Score must be a number" })); return; }
             convertedScore = z;
         }
-        
+
         if (convertedScore > maxScore) { setErrors(prev => ({ ...prev, [assessmentId]: `Max is ${maxScore}` })); return; }
         if (convertedScore < 0) { setErrors(prev => ({ ...prev, [assessmentId]: "Cannot be negative" })); return; }
 
@@ -102,7 +103,7 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
         const scores = getStudentScores(student.id, subjectId, assessment.id);
         const isExam = assessment.name.toLowerCase().includes('exam');
         const displayScore = calculateDisplayScore(scores, assessment);
-        
+
         if (isExam) {
             // Convert average (which is out of 100) back to its weighted value for the total
             return total + (displayScore / 100 * assessment.weight);
@@ -117,7 +118,7 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
             <td className="p-4 font-medium text-gray-900">{student.name}</td>
             {assessments.map(assessment => {
                 const scores = getStudentScores(student.id, subjectId, assessment.id);
-                
+
                 if (scores.length > 1) {
                     const displayScore = calculateDisplayScore(scores, assessment);
                     return (
@@ -153,8 +154,9 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
                                     placeholder={assessment.name.toLowerCase().includes('exam') ? 'e.g., 85' : '-'}
                                     className="w-24 p-1 text-center font-mono bg-white border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                     aria-label={`Score for ${student.name} in ${assessment.name}`}
+                                    disabled={readOnly}
                                 />
-                                {MULTI_SCORE_ENTRY_ENABLED && (
+                                {MULTI_SCORE_ENTRY_ENABLED && !readOnly && (
                                     <button
                                         onClick={() => onOpenModal(student, assessment)}
                                         className="p-1 text-gray-500 border border-gray-300 rounded-full hover:bg-blue-100 hover:text-blue-600 hover:border-blue-400 transition-colors"

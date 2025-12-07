@@ -10,10 +10,11 @@ interface AdminSetupProps {
     users: User[];
     currentUser?: User | null;
     onComplete: (users: User[], adminPassword?: string) => void;
+    onUpdate?: (users: User[]) => void;
     onCancel?: () => void;
 }
 
-const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, currentUser, onComplete, onCancel }) => {
+const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, currentUser, onComplete, onUpdate, onCancel }) => {
     const { classes, subjects } = useData();
     const { logout } = useUser();
     const [users, setUsers] = useState<Partial<User>[]>(mode === 'setup' ? [{ role: 'Admin' as UserRole, allowedClasses: [], allowedSubjects: [] }] : []);
@@ -139,6 +140,15 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         setEditingUserId(null);
         setUsers([]);
         setError(null);
+
+        // Auto-save changes in management mode
+        if (mode === 'management') {
+            if (onUpdate) {
+                onUpdate(updatedUsers);
+            } else {
+                onComplete(updatedUsers);
+            }
+        }
     };
 
     const handleDeleteUser = (userId: number) => {
@@ -153,19 +163,25 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
             return;
         }
 
-        setExistingUsers(existingUsers.filter(u => u.id !== userId));
+        const updatedUsers = existingUsers.filter(u => u.id !== userId);
+        setExistingUsers(updatedUsers);
         setDeleteConfirmUserId(null);
         setError(null);
 
-        // If user deleted themselves, logout
-        if (isDeletingSelf && mode === 'management') {
-            // Save changes first
-            const updatedUsers = existingUsers.filter(u => u.id !== userId);
-            onComplete(updatedUsers);
-            // Then logout
-            setTimeout(() => {
-                logout();
-            }, 500);
+        // Auto-save changes in management mode
+        if (mode === 'management') {
+            if (onUpdate) {
+                onUpdate(updatedUsers);
+            } else {
+                onComplete(updatedUsers);
+            }
+
+            // If user deleted themselves, logout after save
+            if (isDeletingSelf) {
+                setTimeout(() => {
+                    logout();
+                }, 500);
+            }
         }
     };
 
@@ -191,10 +207,18 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
             setExistingUsers(updatedUsers);
             setUsers([]);
             setError(null);
+
+            // Auto-save the new user
+            if (onUpdate) {
+                onUpdate(updatedUsers);
+            } else {
+                onComplete(updatedUsers);
+            }
             return;
         }
 
-        // Otherwise just save existing users
+        // If not adding/editing, manual save isn't needed if we auto-save everything.
+        // But let's keep it as a fallback if users somehow get here.
         onComplete(existingUsers);
     };
 
@@ -426,15 +450,19 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                             Cancel
                         </button>
                     )}
-                    <button
-                        onClick={mode === 'management' && editingUserId !== null ? handleUpdateExistingUser :
-                            mode === 'management' ? handleSaveManagement : handleSubmit}
-                        className="flex-1 py-3 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-                    >
-                        {mode === 'setup' ? 'Complete Setup' :
-                            editingUserId !== null ? 'Update User' :
-                                users.length > 0 ? 'Add User' : 'Save Changes'}
-                    </button>
+                    {/* Only show 'Update/Add' button if we are actively editing/adding a user.
+                        Hide the generic 'Save Changes' button in management mode as per request. */}
+                    {(mode === 'setup' || users.length > 0) && (
+                        <button
+                            onClick={mode === 'management' && editingUserId !== null ? handleUpdateExistingUser :
+                                mode === 'management' ? handleSaveManagement : handleSubmit}
+                            className="flex-1 py-3 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+                        >
+                            {mode === 'setup' ? 'Complete Setup' :
+                                editingUserId !== null ? 'Update User' :
+                                    users.length > 0 ? 'Add User' : 'Save Changes'}
+                        </button>
+                    )}
                 </div>
             </div>
 

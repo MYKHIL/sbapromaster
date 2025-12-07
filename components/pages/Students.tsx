@@ -7,6 +7,7 @@ import { enhanceImage } from '../../services/geminiService';
 import { AI_FEATURES_ENABLED } from '../../constants';
 import { useUser } from '../../context/UserContext';
 import ReadOnlyWrapper from '../ReadOnlyWrapper';
+import { getAvailableClasses, canManageStudentsInClass } from '../../utils/permissions';
 
 const EMPTY_STUDENT_FORM: Omit<Student, 'id'> = {
     name: '',
@@ -50,10 +51,13 @@ const Students: React.FC = () => {
     // Filter students based on user permissions
     const accessibleStudents = useMemo(() => {
         if (!isAuthenticated || !currentUser) return students;
-        if (currentUser.role === 'Admin') return students;
-        // Teachers and Guests only see students in their assigned classes
+        if (currentUser.role === 'Admin' || currentUser.role === 'Teacher') return students;
+        // Guest restricted to allowed classes
         return students.filter(s => currentUser.allowedClasses.includes(s.class));
     }, [students, currentUser, isAuthenticated]);
+
+    // Derived list of classes available for "Add Student" or filtering
+    const availableClasses = useMemo(() => getAvailableClasses(currentUser, classes), [currentUser, classes]);
 
     const filteredStudents = useMemo(() => {
         const query = searchQuery.toLowerCase();
@@ -106,11 +110,20 @@ const Students: React.FC = () => {
     };
 
     const handleEdit = (student: Student) => {
+        if (!canManageStudentsInClass(currentUser, student.class)) {
+            alert("You do not have permission to edit students in this class.");
+            return;
+        }
         setCurrentStudent(student);
         setIsModalOpen(true);
     };
 
     const handleDeleteClick = (id: number) => {
+        const student = students.find(s => s.id === id);
+        if (student && !canManageStudentsInClass(currentUser, student.class)) {
+            alert("You do not have permission to delete students from this class.");
+            return;
+        }
         setItemIdToDelete(id);
         setIsConfirmOpen(true);
     };
@@ -176,15 +189,16 @@ const Students: React.FC = () => {
                                 className={searchInputStyles}
                             />
                         </div>
-                        <button onClick={handleAddNew} className="add-button flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors w-full md:w-auto justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                            </svg>
-                            Add New Student
-                        </button>
+                        {(currentUser?.role === 'Admin' || (currentUser?.role === 'Teacher' && currentUser.allowedClasses.length > 0)) && (
+                            <button onClick={handleAddNew} className="add-button flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors w-full md:w-auto justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                </svg>
+                                Add New Student
+                            </button>
+                        )}
                     </div>
                 </div>
-
 
                 {/* Desktop Table View */}
                 <div className="hidden lg:block bg-white p-6 rounded-xl shadow-md border border-gray-200">
@@ -202,7 +216,9 @@ const Students: React.FC = () => {
                             </thead>
                             <tbody>
                                 {filteredStudents.length > 0 ? (
-                                    filteredStudents.map((student) => (
+                                    filteredStudents.map((student) => {
+                                        const canManage = canManageStudentsInClass(currentUser, student.class);
+                                        return (
                                         <tr key={student.id} className="border-b hover:bg-gray-50">
                                             <td className="p-2">
                                                 <img src={student.picture || USER_PLACEHOLDER} alt={student.name} className="h-10 w-10 rounded-full object-cover bg-gray-200" />
@@ -212,19 +228,24 @@ const Students: React.FC = () => {
                                             <td className="p-4 text-gray-900">{student.class}</td>
                                             <td className="p-4 text-gray-900">{student.gender}</td>
                                             <td className="p-4 space-x-4 flex items-center">
-                                                <button onClick={() => handleEdit(student)} className="text-blue-600 hover:text-blue-800" title="Edit">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" />
-                                                    </svg>
-                                                </button>
-                                                <button onClick={() => handleDeleteClick(student.id)} className="text-red-600 hover:text-red-800" title="Delete">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                    </svg>
-                                                </button>
+                                                {canManage && (
+                                                    <>
+                                                        <button onClick={() => handleEdit(student)} className="text-blue-600 hover:text-blue-800" title="Edit">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" />
+                                                            </svg>
+                                                        </button>
+                                                        <button onClick={() => handleDeleteClick(student.id)} className="text-red-600 hover:text-red-800" title="Delete">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                            </svg>
+                                                        </button>
+                                                    </>
+                                                )}
                                             </td>
                                         </tr>
-                                    ))
+                                        );
+                                    })
                                 ) : (
                                     <tr>
                                         <td colSpan={6} className="text-center p-8 text-gray-500">
@@ -240,7 +261,9 @@ const Students: React.FC = () => {
                 {/* Mobile Card View */}
                 <div className="lg:hidden space-y-4">
                     {filteredStudents.length > 0 ? (
-                        filteredStudents.map(student => (
+                        filteredStudents.map(student => {
+                            const canManage = canManageStudentsInClass(currentUser, student.class);
+                            return (
                             <div key={student.id} className="bg-white p-4 rounded-xl shadow-md border border-gray-200">
                                 <div className="flex items-start justify-between">
                                     <div className="flex items-center space-x-4">
@@ -251,17 +274,20 @@ const Students: React.FC = () => {
                                             <p className="text-sm text-gray-600">{student.class} &middot; {student.gender}</p>
                                         </div>
                                     </div>
-                                    <div className="flex space-x-2 flex-shrink-0">
-                                        <button onClick={() => handleEdit(student)} className="text-blue-600 p-2 rounded-full hover:bg-blue-100" title="Edit">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
-                                        </button>
-                                        <button onClick={() => handleDeleteClick(student.id)} className="text-red-600 p-2 rounded-full hover:bg-red-100" title="Delete">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                        </button>
-                                    </div>
+                                    {canManage && (
+                                        <div className="flex space-x-2 flex-shrink-0">
+                                            <button onClick={() => handleEdit(student)} className="text-blue-600 p-2 rounded-full hover:bg-blue-100" title="Edit">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
+                                            </button>
+                                            <button onClick={() => handleDeleteClick(student.id)} className="text-red-600 p-2 rounded-full hover:bg-red-100" title="Delete">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                        ))
+                            );
+                        })
                     ) : (
                         <div className="text-center p-8 text-gray-500 bg-white rounded-xl shadow-md border border-gray-200">
                             No students found matching your search.
@@ -278,82 +304,77 @@ const Students: React.FC = () => {
                                     <label className="block text-sm font-medium text-gray-700">Student Photo</label>
                                     <div className="mt-1 flex items-center space-x-4">
                                         <img src={currentStudent.picture || USER_PLACEHOLDER} alt="Preview" className="h-20 w-20 rounded-full object-cover bg-gray-200" />
-                                        <div className="space-y-2 w-full">
-                                            <input type="file" accept="image/*" onChange={handleFileChange} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
-                                            <CameraCapture onCapture={handleCameraCapture} label="Take Photo" />
+                                        <div className="space-y-2">
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={handleFileChange}
+                                                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                            />
+                                            <CameraCapture onCapture={handleCameraCapture} />
                                             {currentStudent.picture && (
-                                                <button
-                                                    type="button"
-                                                    onClick={handleClearImage}
-                                                    className="flex items-center px-3 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors text-sm font-medium w-full justify-center"
-                                                >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                    </svg>
-                                                    Clear Photo
+                                                <button type="button" onClick={handleClearImage} className="text-red-500 text-sm hover:underline">
+                                                    Remove Photo
                                                 </button>
                                             )}
                                         </div>
                                     </div>
                                     {AI_FEATURES_ENABLED && (
                                         <div className="mt-2">
-                                            <button
-                                                type="button"
-                                                onClick={handleEnhanceImage}
-                                                disabled={!currentStudent.picture || isEnhancing}
-                                                className="flex items-center text-sm bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full font-semibold hover:bg-indigo-200 disabled:bg-gray-200 disabled:text-gray-500 transition-colors"
-                                            >
-                                                {isEnhancing ? (
-                                                    <>
-                                                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                        </svg>
-                                                        Enhancing...
-                                                    </>
-                                                ) : '✨ Enhance Image'}
+                                            <button type="button" onClick={handleEnhanceImage} disabled={!currentStudent.picture || isEnhancing} className="flex items-center text-sm bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full font-semibold hover:bg-indigo-200 disabled:bg-gray-200 disabled:text-gray-500 transition-colors">
+                                                {isEnhancing ? 'Enhancing...' : '✨ Enhance Photo with AI'}
                                             </button>
                                         </div>
                                     )}
                                 </div>
+
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Name</label>
-                                    <input type="text" name="name" value={currentStudent.name} onChange={handleChange} required className={inputStyles} />
+                                    <input type="text" name="name" value={currentStudent.name} onChange={handleChange} className={inputStyles} placeholder="Full Name" required />
                                 </div>
+
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Index Number</label>
-                                    <input type="text" name="indexNumber" value={currentStudent.indexNumber} onChange={handleChange} required className={inputStyles} />
+                                    <input type="text" name="indexNumber" value={currentStudent.indexNumber} onChange={handleChange} className={inputStyles} placeholder="Index Number" required />
                                 </div>
+
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Class</label>
-                                    <select name="class" value={currentStudent.class} onChange={handleChange} required className={inputStyles}>
-                                        <option value="" disabled>-- Select a class --</option>
-                                        {classes.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                                    <select name="class" value={currentStudent.class} onChange={handleChange} className={inputStyles} required>
+                                        <option value="">Select Class</option>
+                                        {availableClasses.map((cls) => (
+                                            <option key={cls.id} value={cls.name}>{cls.name}</option>
+                                        ))}
                                     </select>
                                 </div>
+
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Gender</label>
-                                    <select name="gender" value={currentStudent.gender} onChange={handleChange} required className={inputStyles}>
-                                        <option>Male</option>
-                                        <option>Female</option>
+                                    <select name="gender" value={currentStudent.gender} onChange={handleChange} className={inputStyles}>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
                                     </select>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Date of Birth</label>
-                                    <input type="date" name="dateOfBirth" value={currentStudent.dateOfBirth} onChange={handleChange} className={inputStyles} />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">Date of Birth</label>
+                                        <input type="date" name="dateOfBirth" value={currentStudent.dateOfBirth} onChange={handleChange} className={inputStyles} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">Age</label>
+                                        <input type="text" name="age" value={currentStudent.age} readOnly className={`${inputStyles} bg-gray-50`} placeholder="Auto-calc" />
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Age</label>
-                                    <input type="text" name="age" value={currentStudent.age} readOnly placeholder="Calculated from D.O.B." className={inputStyles + " bg-gray-100 cursor-not-allowed"} />
-                                </div>
-                                <div className="flex justify-end pt-4 space-x-2">
-                                    <button type="button" onClick={handleCloseModal} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancel</button>
-                                    <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save</button>
+
+                                <div className="flex justify-end space-x-3 pt-4">
+                                    <button type="button" onClick={handleCloseModal} className="px-4 py-2 border rounded-md text-gray-700 hover:bg-gray-50">Cancel</button>
+                                    <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 shadow-md transform active:scale-95 transition-transform">Save</button>
                                 </div>
                             </form>
                         </div>
                     </div>
                 )}
+
                 <ConfirmationModal
                     isOpen={isConfirmOpen}
                     onClose={() => setIsConfirmOpen(false)}

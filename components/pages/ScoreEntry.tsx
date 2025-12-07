@@ -6,15 +6,23 @@ import InlineScoreInput from '../InlineScoreInput';
 import ScoreManagementModal from '../ScoreManagementModal';
 import type { Student, Assessment } from '../../types';
 
+import { getAvailableClasses, getAvailableSubjects } from '../../utils/permissions';
+
 const ScoreEntry: React.FC = () => {
     // Destructure with default empty arrays to prevent undefined errors
-    const { students = [], subjects = [], assessments = [], classes = [], getStudentScores, updateStudentScores } = useData();
+    const { students = [], subjects: allSubjects = [], assessments = [], classes: allClasses = [], getStudentScores, updateStudentScores } = useData();
+    const { currentUser } = useUser();
+    const isReadOnly = currentUser?.role === 'Guest';
+
+    // Filter available data based on permissions
+    const classes = useMemo(() => getAvailableClasses(currentUser, allClasses), [currentUser, allClasses]);
+    const subjects = useMemo(() => getAvailableSubjects(currentUser, allSubjects), [currentUser, allSubjects]);
 
     // Safe initialization for selectedClass
     const [selectedClass, setSelectedClass] = useState<string>(() => {
         try {
             const saved = localStorage.getItem('scoreEntry_selectedClass');
-            if (saved) return saved;
+            if (saved && classes.find(c => c.name === saved)) return saved;
             return classes.length > 0 ? classes[0].name : '';
         } catch (e) {
             return '';
@@ -25,7 +33,7 @@ const ScoreEntry: React.FC = () => {
     const [selectedSubjectId, setSelectedSubjectId] = useState<number>(() => {
         try {
             const saved = localStorage.getItem('scoreEntry_selectedSubjectId');
-            if (saved) return Number(saved);
+            if (saved && subjects.find(s => s.id === Number(saved))) return Number(saved);
             return subjects.length > 0 ? subjects[0].id : 0;
         } catch (e) {
             return 0;
@@ -81,9 +89,16 @@ const ScoreEntry: React.FC = () => {
 
     const filteredStudents = useMemo(() => {
         if (!students) return [];
-        if (!selectedClass) return students;
+        if (!selectedClass) {
+            // If "All Classes" is selected, filter by user permissions
+            if (currentUser?.role === 'Admin') return students;
+            if (currentUser?.allowedClasses) {
+                return students.filter(student => currentUser.allowedClasses.includes(student.class));
+            }
+            return []; // Should not happen if permissions are correct
+        }
         return students.filter(student => student.class === selectedClass);
-    }, [students, selectedClass]);
+    }, [students, selectedClass, currentUser]);
 
     // Reset student index if it goes out of bounds (e.g. class change)
     useEffect(() => {
@@ -350,7 +365,8 @@ const ScoreEntry: React.FC = () => {
                                                         }
                                                     }}
                                                     placeholder={getPlaceholder()}
-                                                    className="w-full p-3 text-center text-2xl font-mono bg-gray-50 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                                    className={`w-full p-3 text-center text-2xl font-mono bg-gray-50 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isReadOnly ? 'cursor-not-allowed text-gray-500' : ''}`}
+                                                    readOnly={isReadOnly}
                                                 />
                                                 {mobileScoreError && <p className="text-red-500 text-sm mt-1">{mobileScoreError}</p>}
                                             </div>
@@ -420,6 +436,7 @@ const ScoreEntry: React.FC = () => {
                                             subjectId={selectedSubjectId}
                                             assessments={assessments}
                                             onOpenModal={handleOpenModal}
+                                            readOnly={isReadOnly}
                                         />
                                     ))
                                 ) : (

@@ -6,6 +6,7 @@ import ConfirmationModal from '../ConfirmationModal';
 import { enhanceImage } from '../../services/geminiService';
 import { AI_FEATURES_ENABLED } from '../../constants';
 import ReadOnlyWrapper from '../ReadOnlyWrapper';
+import { useUser } from '../../context/UserContext';
 
 const EMPTY_TEACHER_FORM: Omit<Class, 'id'> = {
     name: '',
@@ -17,6 +18,8 @@ const SIGNATURE_PLACEHOLDER = 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDA
 
 const Teachers: React.FC = () => {
     const { classes, addClass, updateClass, deleteClass } = useData();
+    const { currentUser } = useUser();
+    const isAdmin = currentUser?.role === 'Admin';
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentClassData, setCurrentClassData] = useState<Class | Omit<Class, 'id'> | null>(null);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -136,12 +139,14 @@ const Teachers: React.FC = () => {
                                 className={searchInputStyles}
                             />
                         </div>
-                        <button onClick={handleAddNew} className="add-button flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors w-full md:w-auto justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                            </svg>
-                            Add New Teacher/Class
-                        </button>
+                        {isAdmin && (
+                            <button onClick={handleAddNew} className="add-button flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors w-full md:w-auto justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                </svg>
+                                Add New Teacher/Class
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -163,12 +168,16 @@ const Teachers: React.FC = () => {
                                             <td className="p-4 font-medium text-gray-900">{cls.name}</td>
                                             <td className="p-4 text-gray-900">{cls.teacherName}</td>
                                             <td className="p-4 space-x-4 flex items-center">
-                                                <button onClick={() => handleEdit(cls)} className="text-blue-600 hover:text-blue-800" title="Edit">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
-                                                </button>
-                                                <button onClick={() => handleDeleteClick(cls.id)} className="text-red-600 hover:text-red-800" title="Delete">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                                </button>
+                                                {isAdmin && (
+                                                    <>
+                                                        <button onClick={() => handleEdit(cls)} className="text-blue-600 hover:text-blue-800" title="Edit">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
+                                                        </button>
+                                                        <button onClick={() => handleDeleteClick(cls.id)} className="text-red-600 hover:text-red-800" title="Delete">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                        </button>
+                                                    </>
+                                                )}
                                             </td>
                                         </tr>
                                     ))
@@ -194,12 +203,16 @@ const Teachers: React.FC = () => {
                                     <p className="text-sm text-gray-600">Class Teacher for: {cls.name}</p>
                                 </div>
                                 <div className="flex space-x-2 flex-shrink-0">
-                                    <button onClick={() => handleEdit(cls)} className="text-blue-600 p-2 rounded-full hover:bg-blue-100" title="Edit">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
-                                    </button>
-                                    <button onClick={() => handleDeleteClick(cls.id)} className="text-red-600 p-2 rounded-full hover:bg-red-100" title="Delete">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                    </button>
+                                    {isAdmin && (
+                                        <>
+                                            <button onClick={() => handleEdit(cls)} className="text-blue-600 p-2 rounded-full hover:bg-blue-100" title="Edit">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
+                                            </button>
+                                            <button onClick={() => handleDeleteClick(cls.id)} className="text-red-600 p-2 rounded-full hover:bg-red-100" title="Delete">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         ))

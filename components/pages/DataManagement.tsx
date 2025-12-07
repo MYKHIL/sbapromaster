@@ -195,7 +195,7 @@ const DataManagement: React.FC = () => {
         setIsCloudSaveModalOpen(false);
     };
 
-    const handleUserManagementSave = async (updatedUsers: User[]) => {
+    const handleUserManagementSave = async (updatedUsers: User[], shouldClose: boolean = true) => {
         if (!schoolId) {
             setFeedback({ message: 'Cannot save users: No active school session', type: 'error' });
             return;
@@ -205,7 +205,9 @@ const DataManagement: React.FC = () => {
         try {
             await updateUsers(schoolId, updatedUsers);
             setUsers(updatedUsers);
-            setIsUserManagementOpen(false);
+            if (shouldClose) {
+                setIsUserManagementOpen(false);
+            }
             setFeedback({ message: 'User management changes saved successfully!', type: 'success' });
         } catch (error) {
             console.error('Failed to save users:', error);
@@ -684,7 +686,8 @@ const DataManagement: React.FC = () => {
                     mode="management"
                     users={users}
                     currentUser={currentUser}
-                    onComplete={handleUserManagementSave}
+                    onComplete={(users) => handleUserManagementSave(users, true)} // Complete/Close
+                    onUpdate={(users) => handleUserManagementSave(users, false)} // Update/Keep Open
                     onCancel={() => setIsUserManagementOpen(false)}
                 />
             )}
