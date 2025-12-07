@@ -15,8 +15,36 @@ def run_command(command, error_message=None):
             print(f"Command failed: {command}")
         return False
 
+def check_and_remove_git_lock():
+    """Check for Git lock file and prompt user to remove it if found."""
+    lock_file = ".git/index.lock"
+    if os.path.exists(lock_file):
+        print("\n⚠️  WARNING: Git lock file detected!")
+        print(f"Lock file location: {os.path.abspath(lock_file)}")
+        print("\nThis usually happens when a Git process was interrupted or crashed.")
+        print("Removing this lock file is safe if no other Git process is currently running.")
+        
+        response = input("\nDo you want to remove the lock file and proceed? (y/n): ").lower().strip()
+        
+        if response == 'y' or response == 'yes':
+            try:
+                os.remove(lock_file)
+                print("✓ Lock file removed successfully.")
+                return True
+            except Exception as e:
+                print(f"✗ Failed to remove lock file: {e}")
+                return False
+        else:
+            print("Deployment cancelled. Please ensure no Git processes are running and try again.")
+            return False
+    return True
+
 def main():
     print("--- SBA Pro Master GitHub Deploy Script ---")
+    
+    # Check for Git lock file before proceeding
+    if not check_and_remove_git_lock():
+        return
     
     # 1. Initialize Git if needed
     if not os.path.exists(".git"):
@@ -39,43 +67,32 @@ def main():
         print("No changes to commit.")
 
     # 4. Configure Remote
-    # Try to get current remote
-    current_remote = subprocess.run("git remote get-url origin", shell=True, text=True, capture_output=True).stdout.strip()
-    
+    # Hardcoded GitHub configuration
     repo_name = "sbapromaster"
-    username = ""
+    username = "MYKHIL"
+    git_email = "darkmic50@gmail.com"
     
-    if current_remote:
-        print(f"\nCurrent remote origin: {current_remote}")
-        choice = input("Do you want to use this remote? (y/n): ").lower()
-        if choice != 'y':
-            current_remote = ""
-        else:
-            # Extract username from current_remote for display purposes
-            match = re.search(r'github\.com[:/]([^/]+)/', current_remote)
-            if match:
-                username = match.group(1)
+    print(f"\nConfiguring Git with user: {username}")
+    print(f"Email: {git_email}")
     
-    if not current_remote:
-        username = input("\nEnter your GitHub username: ").strip()
-        if not username:
-            print("Username is required to configure remote.")
-            return
-        
-        remote_url = f"https://github.com/{username}/{repo_name}.git"
-        
-        # Check if remote exists
-        remotes = subprocess.run("git remote", shell=True, text=True, capture_output=True).stdout
-        if "origin" in remotes:
-            print(f"Updating remote 'origin' to {remote_url}")
-            run_command(f"git remote set-url origin {remote_url}")
-        else:
-            print(f"Adding remote 'origin': {remote_url}")
-            run_command(f"git remote add origin {remote_url}")
+    # Set Git user configuration
+    run_command(f'git config user.name "{username}"')
+    run_command(f'git config user.email "{git_email}"')
+    
+    remote_url = f"https://github.com/{username}/{repo_name}.git"
+    
+    # Check if remote exists
+    remotes = subprocess.run("git remote", shell=True, text=True, capture_output=True).stdout
+    if "origin" in remotes:
+        print(f"Updating remote 'origin' to {remote_url}")
+        run_command(f"git remote set-url origin {remote_url}")
+    else:
+        print(f"Adding remote 'origin': {remote_url}")
+        run_command(f"git remote add origin {remote_url}")
     
     # 5. Push
-    print("\nPushing to GitHub...")
-    print("Note: You may be asked to sign in to GitHub in a browser or enter credentials.")
+    print("\nPushing to GitHub automatically...")
+    print(f"Repository: {username}/{repo_name}")
     
     # Ensure main branch
     run_command("git branch -M main")
