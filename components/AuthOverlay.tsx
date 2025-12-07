@@ -17,7 +17,7 @@ interface AuthOverlayProps {
 
 const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
     const { loadImportedData, setSchoolId } = useData();
-    const { setUsers, login, setPassword: setUserPassword, checkAutoLogin, isAuthenticated } = useUser();
+    const { setUsers, users, login, setPassword: setUserPassword, checkAutoLogin, isAuthenticated } = useUser();
 
     // School login state
     const [schoolName, setSchoolName] = useState('');
@@ -258,7 +258,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
     if (authStage === 'user-selection' && schoolData) {
         return (
             <UserSelection
-                users={schoolData.users || []}
+                users={users.length > 0 ? users : (schoolData.users || [])}
                 onLogin={handleUserLogin}
                 onSetPassword={handleUserSetPassword}
             />
