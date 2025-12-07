@@ -17,7 +17,7 @@ interface AuthOverlayProps {
 
 const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
     const { loadImportedData, setSchoolId } = useData();
-    const { setUsers, login, setPassword: setUserPassword, checkAutoLogin } = useUser();
+    const { setUsers, login, setPassword: setUserPassword, checkAutoLogin, isAuthenticated } = useUser();
 
     // School login state
     const [schoolName, setSchoolName] = useState('');
@@ -39,6 +39,13 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
     const [authStage, setAuthStage] = useState<AuthStage>('school-login');
     const [currentSchoolId, setCurrentSchoolId] = useState<string | null>(null);
     const [schoolData, setSchoolData] = useState<AppDataType | null>(null);
+
+    // Monitor authentication state
+    useEffect(() => {
+        if (!isAuthenticated && currentSchoolId && authStage === 'authenticated') {
+            setAuthStage('user-selection');
+        }
+    }, [isAuthenticated, currentSchoolId, authStage]);
 
     const handleSchoolNameChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
