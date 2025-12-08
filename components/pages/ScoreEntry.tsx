@@ -339,7 +339,7 @@ const ScoreEntry: React.FC = () => {
                                                             }}
                                                             className="text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700 hover:bg-red-200 hover:text-red-800 transition-colors cursor-pointer"
                                                         >
-                                                            Click to see {unfilledCount} unscored student{unfilledCount === 1 ? '' : 's'}
+                                                            {unfilledCount} unscored • Tap to jump
                                                         </button>
                                                     ) : (
                                                         <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
