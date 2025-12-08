@@ -355,6 +355,8 @@ const ScoreEntry: React.FC = () => {
                                                 <input
                                                     ref={scoreInputRef}
                                                     type="text"
+                                                    inputMode="decimal"
+                                                    pattern="[0-9./]*"
                                                     value={localScore}
                                                     onChange={(e) => setLocalScore(e.target.value)}
                                                     onBlur={commitScore}
