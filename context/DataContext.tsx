@@ -145,6 +145,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return;
         }
 
+        // CRITICAL: Don't sync if user was active very recently (within last 500ms)
+        // This prevents syncing mid-keystroke or mid-interaction
+        const timeSinceLastUpdate = Date.now() - lastLocalUpdate.current;
+        if (timeSinceLastUpdate < 500) {
+            console.log(`User actively working (${timeSinceLastUpdate}ms ago), postponing sync`);
+            // Reschedule the sync for later
+            setTimeout(() => saveToCloud(), 1000);
+            return;
+        }
+
         // Capture CURRENT state at sync time (not stale state from when timeout started)
         const currentData: AppDataType = {
             settings,
@@ -223,7 +233,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const handler = setTimeout(() => {
             // saveToCloud will capture CURRENT state when it runs
             saveToCloud();
-        }, 2000); // Auto-save 2 seconds after the last change
+        }, 5000); // Auto-save 5 seconds after the last change (increased from 2s to reduce mid-entry syncs)
 
         return () => clearTimeout(handler);
     }, [schoolId, settings, students, subjects, classes, grades, assessments, scores, reportData, classData]);

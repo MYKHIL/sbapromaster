@@ -17,7 +17,7 @@ export const INITIAL_SETTINGS: SchoolSettings = {
   academicTerm: 'Third Term',
   vacationDate: '2024-08-15',
   reopeningDate: '2024-09-10',
-  headmasterName: 'Dr. Alan Turing',
+  headmasterName: 'Mr. Michael Darko',
   logo: '',
   headmasterSignature: '',
 };
