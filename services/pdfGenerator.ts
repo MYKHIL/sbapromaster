@@ -43,7 +43,7 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
     };
 
     // Helper to draw dotted underline field
-    const addUnderlinedField = (label: string, value: string, x: number, y: number, totalWidth: number, labelWidth: number, align: 'left' | 'center' = 'center', isBold: boolean = false, fontSize: number = 10) => {
+    const addUnderlinedField = (label: string, value: string, x: number, y: number, totalWidth: number, labelWidth: number, align: 'left' | 'center' = 'left', isBold: boolean = false, fontSize: number = 10) => {
         doc.setFont('times', 'bold');
         doc.setFontSize(10); // Standard label size
         doc.text(label + ':', x, y);
@@ -210,7 +210,7 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
         const itemsPerCol = Math.ceil(sortedGrades.length / numCols);
         const gradingKeyRowsHeight = itemsPerCol * 4;
         const gradingKeyHeaderHeight = 8;
-        const gradingKeyTotalHeight = gradingKeyHeaderHeight + gradingKeyRowsHeight + 4; // +4 for padding
+        const gradingKeyTotalHeight = gradingKeyHeaderHeight + gradingKeyRowsHeight; // no padding
 
         const remarksHeight = 35; // Approx
         const signaturesHeight = 35; // Approx
@@ -278,14 +278,14 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
             x = tableX;
             doc.rect(x, y, colWidths[0], rowHeight);
             doc.setFont('times', 'bold');
-            addFitText(res.subject, x + 2, y + (rowHeight / 2) + 1.5, colWidths[0] - 4, 9, 'left');
+            addFitText(res.subject, x + 2, y + (rowHeight / 2) + 1.5, colWidths[0] - 4, 11, 'left', true);
             doc.setFont('times', 'normal');
             x += colWidths[0];
 
             const drawCell = (txt: string, w: number, iBold = false) => {
                 doc.rect(x, y, w, rowHeight);
                 if (iBold) doc.setFont('times', 'bold');
-                addFitText(txt, x + w / 2, y + (rowHeight / 2) + 1.5, w - 2, 9, 'center', iBold);
+                addFitText(txt, x + w / 2, y + (rowHeight / 2) + 1.5, w - 2, 11, 'center', iBold);
                 if (iBold) doc.setFont('times', 'normal');
                 x += w;
             };
@@ -298,7 +298,7 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
 
             doc.rect(x, y, colWidths[6], rowHeight);
             doc.setFont('times', 'bold');
-            addFitText(res.remark, x + 2, y + (rowHeight / 2) + 1.5, colWidths[6] - 4, 8, 'left');
+            addFitText(res.remark, x + 2, y + (rowHeight / 2) + 1.5, colWidths[6] - 4, 11, 'left', true);
 
             y += rowHeight;
         });
