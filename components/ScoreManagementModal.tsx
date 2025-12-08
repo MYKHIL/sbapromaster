@@ -114,6 +114,8 @@ const ScoreManagementModal: React.FC<ScoreManagementModalProps> = ({ isOpen, onC
                                 <div className="flex justify-between items-center bg-gray-100 p-2 rounded-md">
                                     <input
                                         type="text"
+                                        inputMode="decimal"
+                                        pattern="[0-9./]*"
                                         defaultValue={score}
                                         onBlur={(e) => handleUpdateScore(index, e.target.value)}
                                         onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
@@ -137,6 +139,8 @@ const ScoreManagementModal: React.FC<ScoreManagementModalProps> = ({ isOpen, onC
                     <div className="flex items-center space-x-2 mt-1">
                         <input
                             type="text"
+                            inputMode="decimal"
+                            pattern="[0-9./]*"
                             value={newScore}
                             onChange={(e) => setNewScore(e.target.value)}
                             onKeyDown={(e) => { if (e.key === 'Enter') handleAddScore(); }}
