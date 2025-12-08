@@ -2,21 +2,26 @@ import React, { useState } from 'react';
 import type { Assessment } from '../types';
 
 interface ScoreManagementModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  studentName: string;
-  assessment: Assessment;
-  scores: string[];
-  onAddScore: (newScore: string) => void;
-  onDeleteScore: (index: number) => void;
-  onUpdateScore: (index: number, updatedScore: string) => void;
-  isExam: boolean;
+    isOpen: boolean;
+    onClose: () => void;
+    studentName: string;
+    assessment: Assessment;
+    scores: string[];
+    onAddScore: (newScore: string) => void;
+    onDeleteScore: (index: number) => void;
+    onUpdateScore: (index: number, updatedScore: string) => void;
+    isExam: boolean;
 }
 
 const ScoreManagementModal: React.FC<ScoreManagementModalProps> = ({ isOpen, onClose, studentName, assessment, scores, onAddScore, onDeleteScore, onUpdateScore, isExam }) => {
     const [newScore, setNewScore] = useState('');
     const [addError, setAddError] = useState('');
     const [editErrors, setEditErrors] = useState<Record<number, string | undefined>>({});
+
+    // Filter input to only allow numbers, forward slash, and decimal point
+    const validateInput = (value: string): string => {
+        return value.replace(/[^0-9/.]/g, '');
+    };
 
     const inputStyles = "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500";
 
@@ -50,7 +55,7 @@ const ScoreManagementModal: React.FC<ScoreManagementModalProps> = ({ isOpen, onC
             }
             convertedScore = z;
         }
-        
+
         if (convertedScore > maxScore) {
             return { error: `Score cannot be greater than the max of ${maxScore}.` };
         }
@@ -114,7 +119,10 @@ const ScoreManagementModal: React.FC<ScoreManagementModalProps> = ({ isOpen, onC
                                 <div className="flex justify-between items-center bg-gray-100 p-2 rounded-md">
                                     <input
                                         type="text"
+                                        inputMode="numeric"
+                                        pattern="[0-9./]*"
                                         defaultValue={score}
+                                        onChange={(e) => e.target.value = validateInput(e.target.value)}
                                         onBlur={(e) => handleUpdateScore(index, e.target.value)}
                                         onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
                                         className="font-mono text-gray-800 bg-transparent outline-none w-full px-1"
@@ -137,8 +145,10 @@ const ScoreManagementModal: React.FC<ScoreManagementModalProps> = ({ isOpen, onC
                     <div className="flex items-center space-x-2 mt-1">
                         <input
                             type="text"
+                            inputMode="numeric"
+                            pattern="[0-9./]*"
                             value={newScore}
-                            onChange={(e) => setNewScore(e.target.value)}
+                            onChange={(e) => setNewScore(validateInput(e.target.value))}
                             onKeyDown={(e) => { if (e.key === 'Enter') handleAddScore(); }}
                             className={inputStyles + ' flex-grow'}
                             placeholder={`Score out of ${isExam ? 100 : assessment.weight}`}
