@@ -155,7 +155,7 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
                             <div className="flex items-center space-x-1">
                                 <input
                                     type="text"
-                                    inputMode="numeric"
+                                    inputMode="decimal"
                                     pattern="[0-9./]*"
                                     value={inlineValues[assessment.id] || ''}
                                     onChange={(e) => handleValueChange(assessment.id, e.target.value)}

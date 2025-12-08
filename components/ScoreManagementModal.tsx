@@ -119,7 +119,7 @@ const ScoreManagementModal: React.FC<ScoreManagementModalProps> = ({ isOpen, onC
                                 <div className="flex justify-between items-center bg-gray-100 p-2 rounded-md">
                                     <input
                                         type="text"
-                                        inputMode="numeric"
+                                        inputMode="decimal"
                                         pattern="[0-9./]*"
                                         defaultValue={score}
                                         onChange={(e) => e.target.value = validateInput(e.target.value)}
@@ -145,7 +145,7 @@ const ScoreManagementModal: React.FC<ScoreManagementModalProps> = ({ isOpen, onC
                     <div className="flex items-center space-x-2 mt-1">
                         <input
                             type="text"
-                            inputMode="numeric"
+                            inputMode="decimal"
                             pattern="[0-9./]*"
                             value={newScore}
                             onChange={(e) => setNewScore(validateInput(e.target.value))}
