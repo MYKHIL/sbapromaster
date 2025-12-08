@@ -18,11 +18,6 @@ const ScoreManagementModal: React.FC<ScoreManagementModalProps> = ({ isOpen, onC
     const [addError, setAddError] = useState('');
     const [editErrors, setEditErrors] = useState<Record<number, string | undefined>>({});
 
-    // Filter input to only allow numbers, forward slash, and decimal point
-    const validateInput = (value: string): string => {
-        return value.replace(/[^0-9/.]/g, '');
-    };
-
     const inputStyles = "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500";
 
     const validateAndFormatScore = (rawScoreInput: string): { finalScore?: string; error?: string } => {
@@ -119,14 +114,8 @@ const ScoreManagementModal: React.FC<ScoreManagementModalProps> = ({ isOpen, onC
                                 <div className="flex justify-between items-center bg-gray-100 p-2 rounded-md">
                                     <input
                                         type="text"
-                                        inputMode="decimal"
-                                        pattern="[0-9./]*"
                                         defaultValue={score}
-                                        onBlur={(e) => {
-                                            const filtered = validateInput(e.target.value);
-                                            e.target.value = filtered;
-                                            handleUpdateScore(index, filtered);
-                                        }}
+                                        onBlur={(e) => handleUpdateScore(index, e.target.value)}
                                         onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
                                         className="font-mono text-gray-800 bg-transparent outline-none w-full px-1"
                                         aria-label={`Edit score ${index + 1}`}
@@ -148,10 +137,8 @@ const ScoreManagementModal: React.FC<ScoreManagementModalProps> = ({ isOpen, onC
                     <div className="flex items-center space-x-2 mt-1">
                         <input
                             type="text"
-                            inputMode="decimal"
-                            pattern="[0-9./]*"
                             value={newScore}
-                            onChange={(e) => setNewScore(validateInput(e.target.value))}
+                            onChange={(e) => setNewScore(e.target.value)}
                             onKeyDown={(e) => { if (e.key === 'Enter') handleAddScore(); }}
                             className={inputStyles + ' flex-grow'}
                             placeholder={`Score out of ${isExam ? 100 : assessment.weight}`}

@@ -60,14 +60,8 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
         setErrors({});
     }, [student, subjectId, assessments, getStudentScores]);
 
-    const validateInput = (value: string): string => {
-        // Only allow numbers, forward slash, and decimal point
-        return value.replace(/[^0-9/.]/g, '');
-    };
-
     const handleValueChange = (assessmentId: number, value: string) => {
-        const filteredValue = validateInput(value);
-        setInlineValues(prev => ({ ...prev, [assessmentId]: filteredValue }));
+        setInlineValues(prev => ({ ...prev, [assessmentId]: value }));
         if (errors[assessmentId]) {
             setErrors(prev => ({ ...prev, [assessmentId]: undefined }));
         }
@@ -155,8 +149,6 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
                             <div className="flex items-center space-x-1">
                                 <input
                                     type="text"
-                                    inputMode="decimal"
-                                    pattern="[0-9./]*"
                                     value={inlineValues[assessment.id] || ''}
                                     onChange={(e) => handleValueChange(assessment.id, e.target.value)}
                                     onBlur={() => handleSave(assessment.id)}

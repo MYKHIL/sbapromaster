@@ -5,9 +5,17 @@ import { useState, useEffect } from 'react';
  * Uses navigator.onLine API and online/offline events
  */
 export const useNetworkStatus = () => {
-    const [isOnline, setIsOnline] = useState(navigator.onLine);
+    const [isOnline, setIsOnline] = useState(() => {
+        // Check if window exists (client-side only)
+        if (typeof window !== 'undefined' && typeof navigator !== 'undefined') {
+            return navigator.onLine;
+        }
+        return true; // Assume online during SSR
+    });
 
     useEffect(() => {
+        if (typeof window === 'undefined') return;
+
         const handleOnline = () => {
             console.log('Network: Online');
             setIsOnline(true);
