@@ -345,25 +345,42 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setSettings(prev => ({ ...prev, ...updates }));
     };
 
+
     // Process offline queue when coming back online
     useEffect(() => {
         if (isOnline && queuedCount > 0 && schoolId) {
-            console.log('Network restored - processing offline queue');
+            console.log('Network restored - syncing current state and clearing queue');
             setIsSyncing(true);
 
-            offlineQueue.processQueue(async (data) => {
-                await saveUserDatabase(schoolId, data);
-            }).then(() => {
-                setQueuedCount(offlineQueue.getQueueSize());
-                setIsSyncing(false);
-                console.log('Offline queue processed successfully');
-            }).catch(error => {
-                console.error('Error processing offline queue:', error);
-                setQueuedCount(offlineQueue.getQueueSize());
-                setIsSyncing(false);
-            });
+            // Instead of processing old queued snapshots, sync the CURRENT state
+            // This prevents overwriting recent changes with stale data
+            const currentData: AppDataType = {
+                settings,
+                students,
+                subjects,
+                classes,
+                grades,
+                assessments,
+                scores,
+                reportData,
+                classData
+            };
+
+            saveUserDatabase(schoolId, currentData)
+                .then(() => {
+                    // Success - clear the entire queue since we just synced current state
+                    offlineQueue.clearQueue();
+                    setQueuedCount(0);
+                    setIsSyncing(false);
+                    console.log('Current state synced successfully, queue cleared');
+                })
+                .catch(error => {
+                    console.error('Error syncing current state:', error);
+                    // Keep queue as is, will retry on next online event
+                    setIsSyncing(false);
+                });
         }
-    }, [isOnline, schoolId]);
+    }, [isOnline, schoolId, settings, students, subjects, classes, grades, assessments, scores, reportData, classData]);
 
     const value: DataContextType = {
         settings, setSettings, updateSettings,
