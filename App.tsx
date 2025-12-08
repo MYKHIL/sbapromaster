@@ -15,6 +15,8 @@ import { UserProvider } from './context/UserContext';
 import type { Page } from './types';
 import UserBadge from './components/UserBadge';
 import MaintenancePage from './components/MaintenancePage';
+import { TeacherPageRedirect } from './components/TeacherPageRedirect';
+import { SyncOverlayConnected } from './components/SyncOverlayConnected';
 import { SITE_ACTIVE } from './constants';
 
 // This helper is now only used for pages that need to persist state.
@@ -46,7 +48,24 @@ const ActivePage: React.FC<{ page: Page }> = ({ page }) => {
 import AuthOverlay from './components/AuthOverlay';
 
 const App: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState<Page>('Dashboard');
+  const [currentPage, setCurrentPage] = useState<Page>(() => {
+    // Try to load last visited page from localStorage
+    try {
+      const savedPage = localStorage.getItem('lastVisitedPage');
+      if (savedPage) {
+        return savedPage as Page;
+      }
+    } catch (e) {
+      console.error('Failed to load last visited page:', e);
+    }
+    // Default to Dashboard if no saved page
+    return 'Dashboard';
+  });
+
+  // Persist current page to localStorage whenever it changes
+  React.useEffect(() => {
+    localStorage.setItem('lastVisitedPage', currentPage);
+  }, [currentPage]);
 
   // Show maintenance page if site is not active
   if (!SITE_ACTIVE) {
@@ -57,6 +76,8 @@ const App: React.FC = () => {
     <UserProvider>
       <DataProvider>
         <AuthOverlay>
+          <SyncOverlayConnected />
+          <TeacherPageRedirect currentPage={currentPage} setCurrentPage={setCurrentPage} />
           <UserBadge />
           <div className="flex h-screen overflow-hidden bg-gray-50">
             <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
