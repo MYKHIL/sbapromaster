@@ -122,8 +122,11 @@ const ScoreManagementModal: React.FC<ScoreManagementModalProps> = ({ isOpen, onC
                                         inputMode="decimal"
                                         pattern="[0-9./]*"
                                         defaultValue={score}
-                                        onChange={(e) => e.target.value = validateInput(e.target.value)}
-                                        onBlur={(e) => handleUpdateScore(index, e.target.value)}
+                                        onBlur={(e) => {
+                                            const filtered = validateInput(e.target.value);
+                                            e.target.value = filtered;
+                                            handleUpdateScore(index, filtered);
+                                        }}
                                         onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
                                         className="font-mono text-gray-800 bg-transparent outline-none w-full px-1"
                                         aria-label={`Edit score ${index + 1}`}
