@@ -4,7 +4,7 @@ import ReportCard from '../ReportCard';
 import ReportCustomizationPanel from '../ReportCustomizationPanel';
 import type { Student } from '../../types';
 import { useReportCardData } from '../../hooks/useReportCardData';
-import { generateReportsPDF } from '../../services/pdfGenerator';
+// import { generateReportsPDF } from '../../services/pdfGenerator'; // Moved to dynamic import
 import { SHOW_PDF_DOWNLOAD_BUTTON } from '../../constants';
 import { useUser } from '../../context/UserContext';
 import { getAvailableClasses } from '../../utils/permissions';
@@ -152,6 +152,9 @@ const ReportViewer: React.FC = () => {
     await new Promise(resolve => setTimeout(resolve, 100));
 
     try {
+      // Dynamically import the PDF generator to avoid loading jsPDF on initial load
+      // This prevents "Unknown error" crashes on startup if jsPDF fails to initialize
+      const { generateReportsPDF } = await import('../../services/pdfGenerator');
       await generateReportsPDF(generatedReports, data);
     } catch (e) {
       console.error("Failed to generate PDF", e);
