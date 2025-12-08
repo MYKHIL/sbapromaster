@@ -4,8 +4,7 @@ import ReportCard from '../ReportCard';
 import ReportCustomizationPanel from '../ReportCustomizationPanel';
 import type { Student } from '../../types';
 import { useReportCardData } from '../../hooks/useReportCardData';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import { generateReportsPDF } from '../../services/pdfGenerator';
 import { SHOW_PDF_DOWNLOAD_BUTTON } from '../../constants';
 import { useUser } from '../../context/UserContext';
 import { getAvailableClasses } from '../../utils/permissions';
@@ -16,7 +15,8 @@ const PerformanceSummaryFetcher: React.FC<{ student: Student, children: (summary
 }
 
 const ReportViewer: React.FC = () => {
-  const { students, classes, getClassData, updateClassData } = useData();
+  const data = useData();
+  const { students, classes, getClassData, updateClassData } = data;
   const { currentUser, isAuthenticated } = useUser();
   const [selectedClassId, setSelectedClassId] = useState<number | ''>(() => {
     const saved = localStorage.getItem('reportViewer_selectedClassId');
@@ -145,57 +145,20 @@ const ReportViewer: React.FC = () => {
   };
 
   const handleDownloadPdf = async () => {
-    if (!reportContainerRef.current) return;
+    if (generatedReports.length === 0) return;
     setIsGeneratingPdf(true);
 
-    const reportElements = reportContainerRef.current.querySelectorAll('.printable-report-card');
-    if (reportElements.length === 0) {
+    // Give UI time to update
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    try {
+      await generateReportsPDF(generatedReports, data);
+    } catch (e) {
+      console.error("Failed to generate PDF", e);
+      alert("An error occurred while generating the PDF details. Please check the console.");
+    } finally {
       setIsGeneratingPdf(false);
-      return;
     }
-
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4'
-    });
-
-    const A4_WIDTH = 210;
-    const A4_HEIGHT = 297;
-    const REPORT_WIDTH = 200;
-    const REPORT_HEIGHT = 287;
-    const MARGIN_X = (A4_WIDTH - REPORT_WIDTH) / 2;
-    const MARGIN_Y = (A4_HEIGHT - REPORT_HEIGHT) / 2;
-
-    const originalTransform = reportContainerRef.current.style.transform;
-    reportContainerRef.current.style.transform = 'scale(1)';
-
-    for (let i = 0; i < reportElements.length; i++) {
-      const reportElement = reportElements[i] as HTMLElement;
-      await new Promise(resolve => setTimeout(resolve, 50));
-
-      const canvas = await html2canvas(reportElement, {
-        scale: 3,
-        useCORS: true,
-        width: reportElement.offsetWidth,
-        height: reportElement.offsetHeight,
-        windowWidth: reportElement.scrollWidth,
-        windowHeight: reportElement.scrollHeight,
-      });
-
-      const imgData = canvas.toDataURL('image/png', 1.0);
-
-      if (i > 0) {
-        pdf.addPage();
-      }
-
-      pdf.addImage(imgData, 'PNG', MARGIN_X, MARGIN_Y, REPORT_WIDTH, REPORT_HEIGHT);
-    }
-
-    reportContainerRef.current.style.transform = originalTransform;
-
-    pdf.save('SBA_Pro_Master_Reports.pdf');
-    setIsGeneratingPdf(false);
   };
 
   return (

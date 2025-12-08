@@ -25,7 +25,7 @@ import {
 // Wait, I imported AppDataType from firebaseService in the previous chunk.
 // So I should remove the local definition.
 
-interface DataContextType {
+export interface DataContextType {
     // State
     settings: SchoolSettings;
     students: Student[];
