@@ -7,6 +7,7 @@ import { enhanceImage } from '../../services/geminiService';
 import { AI_FEATURES_ENABLED } from '../../constants';
 import ReadOnlyWrapper from '../ReadOnlyWrapper';
 import { useUser } from '../../context/UserContext';
+import { compressImage } from '../../utils/imageUtils';
 
 const EMPTY_TEACHER_FORM: Omit<Class, 'id'> = {
     name: '',
@@ -73,18 +74,31 @@ const Teachers: React.FC = () => {
         setCurrentClassData(prev => prev ? { ...prev, [name]: value } : null);
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const reader = new FileReader();
-            reader.onload = (event) => {
-                setCurrentClassData(prev => prev ? { ...prev, teacherSignature: event.target?.result as string } : null);
+            reader.onload = async (event) => {
+                const raw = event.target?.result as string;
+                try {
+                    const compressed = await compressImage(raw);
+                    setCurrentClassData(prev => prev ? { ...prev, teacherSignature: compressed } : null);
+                } catch {
+                    setCurrentClassData(prev => prev ? { ...prev, teacherSignature: raw } : null);
+                }
             };
             reader.readAsDataURL(e.target.files[0]);
         }
     };
 
-    const handleCameraCapture = (imageData: string) => {
-        setCurrentClassData(prev => prev ? { ...prev, teacherSignature: imageData } : null);
+    const handleCameraCapture = async (imageData: string) => {
+        try {
+            const compressed = await compressImage(imageData);
+            setCurrentClassData(prev => prev ? { ...prev, teacherSignature: compressed } : null);
+        } catch {
+            setCurrentClassData(prev => prev ? { ...prev, teacherSignature: imageData } : null);
+        }
     };
 
     const handleClearImage = () => {

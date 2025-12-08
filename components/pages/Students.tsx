@@ -8,6 +8,7 @@ import { AI_FEATURES_ENABLED } from '../../constants';
 import { useUser } from '../../context/UserContext';
 import ReadOnlyWrapper from '../ReadOnlyWrapper';
 import { getAvailableClasses, canManageStudentsInClass } from '../../utils/permissions';
+import { compressImage } from '../../utils/imageUtils';
 
 const EMPTY_STUDENT_FORM: Omit<Student, 'id'> = {
     name: '',
@@ -69,18 +70,31 @@ const Students: React.FC = () => {
         );
     }, [accessibleStudents, searchQuery]);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const reader = new FileReader();
-            reader.onload = (event) => {
-                setCurrentStudent(prev => prev ? { ...prev, picture: event.target?.result as string } : null);
+            reader.onload = async (event) => {
+                const raw = event.target?.result as string;
+                try {
+                    const compressed = await compressImage(raw);
+                    setCurrentStudent(prev => prev ? { ...prev, picture: compressed } : null);
+                } catch {
+                    setCurrentStudent(prev => prev ? { ...prev, picture: raw } : null);
+                }
             };
             reader.readAsDataURL(e.target.files[0]);
         }
     };
 
-    const handleCameraCapture = (imageData: string) => {
-        setCurrentStudent(prev => prev ? { ...prev, picture: imageData } : null);
+    const handleCameraCapture = async (imageData: string) => {
+        try {
+            const compressed = await compressImage(imageData);
+            setCurrentStudent(prev => prev ? { ...prev, picture: compressed } : null);
+        } catch {
+            setCurrentStudent(prev => prev ? { ...prev, picture: imageData } : null);
+        }
     };
 
     const handleClearImage = () => {
@@ -219,31 +233,31 @@ const Students: React.FC = () => {
                                     filteredStudents.map((student) => {
                                         const canManage = canManageStudentsInClass(currentUser, student.class);
                                         return (
-                                        <tr key={student.id} className="border-b hover:bg-gray-50">
-                                            <td className="p-2">
-                                                <img src={student.picture || USER_PLACEHOLDER} alt={student.name} className="h-10 w-10 rounded-full object-cover bg-gray-200" />
-                                            </td>
-                                            <td className="p-4 text-gray-900">{student.indexNumber}</td>
-                                            <td className="p-4 font-medium text-gray-900">{student.name}</td>
-                                            <td className="p-4 text-gray-900">{student.class}</td>
-                                            <td className="p-4 text-gray-900">{student.gender}</td>
-                                            <td className="p-4 space-x-4 flex items-center">
-                                                {canManage && (
-                                                    <>
-                                                        <button onClick={() => handleEdit(student)} className="text-blue-600 hover:text-blue-800" title="Edit">
-                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" />
-                                                            </svg>
-                                                        </button>
-                                                        <button onClick={() => handleDeleteClick(student.id)} className="text-red-600 hover:text-red-800" title="Delete">
-                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                            </svg>
-                                                        </button>
-                                                    </>
-                                                )}
-                                            </td>
-                                        </tr>
+                                            <tr key={student.id} className="border-b hover:bg-gray-50">
+                                                <td className="p-2">
+                                                    <img src={student.picture || USER_PLACEHOLDER} alt={student.name} className="h-10 w-10 rounded-full object-cover bg-gray-200" />
+                                                </td>
+                                                <td className="p-4 text-gray-900">{student.indexNumber}</td>
+                                                <td className="p-4 font-medium text-gray-900">{student.name}</td>
+                                                <td className="p-4 text-gray-900">{student.class}</td>
+                                                <td className="p-4 text-gray-900">{student.gender}</td>
+                                                <td className="p-4 space-x-4 flex items-center">
+                                                    {canManage && (
+                                                        <>
+                                                            <button onClick={() => handleEdit(student)} className="text-blue-600 hover:text-blue-800" title="Edit">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" />
+                                                                </svg>
+                                                            </button>
+                                                            <button onClick={() => handleDeleteClick(student.id)} className="text-red-600 hover:text-red-800" title="Delete">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                </svg>
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </td>
+                                            </tr>
                                         );
                                     })
                                 ) : (
@@ -264,28 +278,28 @@ const Students: React.FC = () => {
                         filteredStudents.map(student => {
                             const canManage = canManageStudentsInClass(currentUser, student.class);
                             return (
-                            <div key={student.id} className="bg-white p-4 rounded-xl shadow-md border border-gray-200">
-                                <div className="flex items-start justify-between">
-                                    <div className="flex items-center space-x-4">
-                                        <img src={student.picture || USER_PLACEHOLDER} alt={student.name} className="h-12 w-12 rounded-full object-cover bg-gray-200" />
-                                        <div>
-                                            <p className="font-bold text-gray-800">{student.name}</p>
-                                            <p className="text-sm text-gray-600">{student.indexNumber}</p>
-                                            <p className="text-sm text-gray-600">{student.class} &middot; {student.gender}</p>
+                                <div key={student.id} className="bg-white p-4 rounded-xl shadow-md border border-gray-200">
+                                    <div className="flex items-start justify-between">
+                                        <div className="flex items-center space-x-4">
+                                            <img src={student.picture || USER_PLACEHOLDER} alt={student.name} className="h-12 w-12 rounded-full object-cover bg-gray-200" />
+                                            <div>
+                                                <p className="font-bold text-gray-800">{student.name}</p>
+                                                <p className="text-sm text-gray-600">{student.indexNumber}</p>
+                                                <p className="text-sm text-gray-600">{student.class} &middot; {student.gender}</p>
+                                            </div>
                                         </div>
+                                        {canManage && (
+                                            <div className="flex space-x-2 flex-shrink-0">
+                                                <button onClick={() => handleEdit(student)} className="text-blue-600 p-2 rounded-full hover:bg-blue-100" title="Edit">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
+                                                </button>
+                                                <button onClick={() => handleDeleteClick(student.id)} className="text-red-600 p-2 rounded-full hover:bg-red-100" title="Delete">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
-                                    {canManage && (
-                                        <div className="flex space-x-2 flex-shrink-0">
-                                            <button onClick={() => handleEdit(student)} className="text-blue-600 p-2 rounded-full hover:bg-blue-100" title="Edit">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
-                                            </button>
-                                            <button onClick={() => handleDeleteClick(student.id)} className="text-red-600 p-2 rounded-full hover:bg-red-100" title="Delete">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                            </button>
-                                        </div>
-                                    )}
                                 </div>
-                            </div>
                             );
                         })
                     ) : (

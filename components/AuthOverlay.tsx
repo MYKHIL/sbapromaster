@@ -185,9 +185,14 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
     };
 
     const handleAdminSetupComplete = async (users: User[], adminPassword?: string) => {
-        if (!currentSchoolId || !schoolData) return;
+        if (!currentSchoolId || !schoolData) {
+            setError('Setup error: Missing school data. Please try logging in again.');
+            return;
+        }
 
         try {
+            setError(null); // Clear any previous errors
+
             // Update users in Firebase
             await updateUsers(currentSchoolId, users);
 
@@ -200,14 +205,26 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 const success = await login(adminUser.id, adminPassword);
 
                 if (success) {
-                    // Save device credential
+                    // Save device credential for auto-login next time
                     saveDeviceCredential(currentSchoolId, adminUser.id);
+
+                    // Successfully logged in - transition to authenticated state
                     setAuthStage('authenticated');
+                } else {
+                    // Login failed - this shouldn't happen since we just set the password
+                    setError('Setup completed but auto-login failed. Please select your user and login.');
+                    setAuthStage('user-selection');
                 }
+            } else {
+                // No password provided (shouldn't happen in setup mode)
+                setError('Setup completed. Please select your user and login.');
+                setAuthStage('user-selection');
             }
         } catch (err) {
             console.error('Failed to complete admin setup:', err);
-            setError('Failed to save users. Please try again.');
+            const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+            setError(`Failed to save users: ${errorMessage}. Please try again.`);
+            // Stay in admin-setup stage so user can see the error and retry
         }
     };
 
@@ -256,6 +273,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 mode="setup"
                 users={[]}
                 onComplete={handleAdminSetupComplete}
+                externalError={error}
             />
         );
     }

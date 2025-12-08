@@ -1,6 +1,8 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
 import { saveUserDatabase, subscribeToSchoolData, AppDataType } from '../services/firebaseService';
 import useLocalStorage from '../hooks/useLocalStorage';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { offlineQueue } from '../services/offlineQueue';
 import type { Student, Subject, Class, Grade, Assessment, Score, SchoolSettings, ReportSpecificData, ClassSpecificData } from '../types';
 import {
     INITIAL_SETTINGS,
@@ -73,6 +75,10 @@ interface DataContextType {
     saveToCloud: () => Promise<void>;
     schoolId: string | null;
     setSchoolId: (id: string | null) => void;
+    // Network status
+    isOnline: boolean;
+    isSyncing: boolean;
+    queuedCount: number;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -90,6 +96,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [schoolId, setSchoolId] = useState<string | null>(null);
     const isRemoteUpdate = React.useRef(false);
     const lastLocalUpdate = React.useRef(Date.now());
+
+    // Network and sync state
+    const isOnline = useNetworkStatus();
+    const [isSyncing, setIsSyncing] = useState(false);
+    const [queuedCount, setQueuedCount] = useState(offlineQueue.getQueueSize());
 
     // FIX: Implement function to overwrite all data from an imported file.
     const loadImportedData = (data: Partial<AppDataType>) => {
@@ -121,7 +132,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const saveToCloud = async () => {
         if (!schoolId) {
-            console.warn("Cannot save to cloud: No school ID (not logged in).");
+            console.log("No school ID, skipping cloud save.");
             return;
         }
         const currentData: AppDataType = {
@@ -135,12 +146,26 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             reportData,
             classData
         };
+
+        // Check network status
+        if (!isOnline) {
+            console.log("Offline - adding to queue");
+            offlineQueue.addToQueue(currentData);
+            setQueuedCount(offlineQueue.getQueueSize());
+            return;
+        }
+
         try {
+            setIsSyncing(true);
             await saveUserDatabase(schoolId, currentData);
             console.log("Data saved to cloud successfully.");
+            setIsSyncing(false);
         } catch (error) {
             console.error("Failed to save data to cloud:", error);
-            // We don't throw here to avoid disrupting the user if background sync fails
+            // Add to queue on failure
+            offlineQueue.addToQueue(currentData);
+            setQueuedCount(offlineQueue.getQueueSize());
+            setIsSyncing(false);
         }
     };
 
@@ -320,6 +345,26 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setSettings(prev => ({ ...prev, ...updates }));
     };
 
+    // Process offline queue when coming back online
+    useEffect(() => {
+        if (isOnline && queuedCount > 0 && schoolId) {
+            console.log('Network restored - processing offline queue');
+            setIsSyncing(true);
+
+            offlineQueue.processQueue(async (data) => {
+                await saveUserDatabase(schoolId, data);
+            }).then(() => {
+                setQueuedCount(offlineQueue.getQueueSize());
+                setIsSyncing(false);
+                console.log('Offline queue processed successfully');
+            }).catch(error => {
+                console.error('Error processing offline queue:', error);
+                setQueuedCount(offlineQueue.getQueueSize());
+                setIsSyncing(false);
+            });
+        }
+    }, [isOnline, schoolId]);
+
     const value: DataContextType = {
         settings, setSettings, updateSettings,
         students,
@@ -356,6 +401,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         saveToCloud,
         schoolId,
         setSchoolId,
+        // Network status
+        isOnline,
+        isSyncing,
+        queuedCount,
     };
 
     return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

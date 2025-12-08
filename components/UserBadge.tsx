@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { useUser } from '../context/UserContext';
+import { useData } from '../context/DataContext';
 import ConfirmationModal from './ConfirmationModal';
+import { NetworkIndicator } from './NetworkIndicator';
 
 const UserBadge: React.FC = () => {
     const { currentUser, logout } = useUser();
+    const { isOnline, isSyncing, queuedCount } = useData();
     const [showConfirm, setShowConfirm] = useState(false);
 
     if (!currentUser) return null;
@@ -49,6 +52,9 @@ const UserBadge: React.FC = () => {
                         <span className="text-sm font-semibold">{currentUser.name}</span>
                         <span className="text-xs opacity-75">{currentUser.role}</span>
                     </div>
+
+                    {/* Network Indicator */}
+                    <NetworkIndicator isOnline={isOnline} isSyncing={isSyncing} queuedCount={queuedCount} />
                 </div>
 
                 {/* Switch User Button */}

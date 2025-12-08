@@ -12,9 +12,10 @@ interface AdminSetupProps {
     onComplete: (users: User[], adminPassword?: string) => void;
     onUpdate?: (users: User[]) => void;
     onCancel?: () => void;
+    externalError?: string | null; // Error from parent component
 }
 
-const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, currentUser, onComplete, onUpdate, onCancel }) => {
+const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, currentUser, onComplete, onUpdate, onCancel, externalError }) => {
     const { classes, subjects } = useData();
     const { logout } = useUser();
     const [users, setUsers] = useState<Partial<User>[]>(mode === 'setup' ? [{ role: 'Admin' as UserRole, allowedClasses: [], allowedSubjects: [] }] : []);
@@ -94,21 +95,28 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
             }
         }
 
+        // Show loading feedback for setup mode
+        if (mode === 'setup') {
+            setError('⏳ Setting up users and logging you in...');
+        }
+
         // Create final user list with IDs and hashed passwords (if in setup mode)
+        // CRITICAL: All fields must be defined (not undefined) for Firestore
         const finalUsers: User[] = await Promise.all(
             users.map(async (u, index) => ({
                 id: mode === 'setup' ? Date.now() + index : (u.id || Date.now() + index),
-                name: u.name!,
-                role: u.role!,
+                name: u.name || '',  // Ensure string, not undefined
+                role: u.role || 'Teacher',  // Ensure role is defined
                 allowedClasses: u.role === 'Admin' ? classNames : (u.allowedClasses || []),
                 allowedSubjects: u.role === 'Admin' ? subjectNames : (u.allowedSubjects || []),
                 passwordHash: mode === 'setup' && index === 0
                     ? await hashPassword(adminPassword)
-                    : (u.passwordHash || ''),
+                    : (u.passwordHash || ''),  // Empty string instead of undefined
             }))
         );
 
-        onComplete(finalUsers, mode === 'setup' ? adminPassword : undefined);
+        // Call onComplete - parent will handle saving and auto-login
+        await onComplete(finalUsers, mode === 'setup' ? adminPassword : undefined);
     };
 
     const handleEditUser = (user: User) => {
@@ -268,9 +276,12 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                     )}
                 </div>
 
-                {error && (
-                    <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4 text-sm text-red-700">
-                        {error}
+                {(error || externalError) && (
+                    <div className={`border-l-4 p-4 mb-4 text-sm ${(error || externalError)?.startsWith('⏳')
+                        ? 'bg-blue-50 border-blue-500 text-blue-700'
+                        : 'bg-red-50 border-red-500 text-red-700'
+                        }`}>
+                        {externalError || error}
                     </div>
                 )}
 
