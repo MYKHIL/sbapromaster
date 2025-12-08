@@ -149,7 +149,6 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
                             <div className="flex items-center space-x-1">
                                 <input
                                     type="text"
-                                    inputMode="decimal"
                                     value={inlineValues[assessment.id] || ''}
                                     onChange={(e) => handleValueChange(assessment.id, e.target.value)}
                                     onBlur={() => handleSave(assessment.id)}
