@@ -47,21 +47,29 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
 
     const [inlineValues, setInlineValues] = useState<{ [key: number]: string }>({});
     const [errors, setErrors] = useState<{ [key: number]: string | undefined }>({});
+    const [modifiedFields, setModifiedFields] = useState<Set<number>>(new Set()); // Track which fields user has modified
 
     useEffect(() => {
         const initialValues: { [key: number]: string } = {};
         assessments.forEach(assessment => {
             const scores = getStudentScores(student.id, subjectId, assessment.id);
             if (scores.length <= 1) {
-                initialValues[assessment.id] = scores[0] || '';
+                // Only update if user hasn't modified this field
+                if (!modifiedFields.has(assessment.id)) {
+                    initialValues[assessment.id] = scores[0] || '';
+                } else {
+                    // Keep user's unsaved input
+                    initialValues[assessment.id] = inlineValues[assessment.id] || '';
+                }
             }
         });
         setInlineValues(initialValues);
         setErrors({});
-    }, [student, subjectId, assessments, getStudentScores]);
+    }, [student, subjectId, assessments]); // Removed getStudentScores to prevent reset during sync
 
     const handleValueChange = (assessmentId: number, value: string) => {
         setInlineValues(prev => ({ ...prev, [assessmentId]: value }));
+        setModifiedFields(prev => new Set(prev).add(assessmentId)); // Mark as modified
         if (errors[assessmentId]) {
             setErrors(prev => ({ ...prev, [assessmentId]: undefined }));
         }
@@ -76,6 +84,12 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
 
         if (!rawScoreInput) {
             updateStudentScores(student.id, subjectId, assessment.id, []);
+            // Clear modification flag after save
+            setModifiedFields(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(assessmentId);
+                return newSet;
+            });
             return;
         }
 
@@ -98,6 +112,13 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
 
         const finalScore = `${Number(convertedScore.toFixed(1))}/${basis}`;
         updateStudentScores(student.id, subjectId, assessment.id, [finalScore]);
+
+        // Clear modification flag after successful save
+        setModifiedFields(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(assessmentId);
+            return newSet;
+        });
     };
 
     const totalWeightedScoreForDisplay = assessments.reduce((total, assessment) => {

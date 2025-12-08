@@ -142,17 +142,27 @@ const ScoreEntry: React.FC = () => {
 
     // BUFFERED INPUT LOGIC
     const [localScore, setLocalScore] = useState('');
+    const [scoreModified, setScoreModified] = useState(false); // Track if user has modified the score
 
     // Sync local score when student/assessment changes
     useEffect(() => {
         const student = filteredStudents[selectedStudentIndex];
         if (student) {
             const scores = getStudentScores(student.id, selectedSubjectId, selectedAssessmentId);
-            setLocalScore(scores[0] || '');
+            // Only update if user hasn't modified the score
+            if (!scoreModified) {
+                setLocalScore(scores[0] || '');
+            }
+            // If score was modified but now matches saved value, clear the modification flag
+            else if (scores[0] === localScore) {
+                setScoreModified(false);
+            }
         } else {
-            setLocalScore('');
+            if (!scoreModified) {
+                setLocalScore('');
+            }
         }
-    }, [selectedStudentIndex, selectedSubjectId, selectedAssessmentId, filteredStudents, getStudentScores]);
+    }, [selectedStudentIndex, selectedSubjectId, selectedAssessmentId, filteredStudents]); // Removed getStudentScores
 
     const commitScore = () => {
         const student = filteredStudents[selectedStudentIndex];
@@ -170,6 +180,7 @@ const ScoreEntry: React.FC = () => {
 
         if (!rawScoreInput) {
             updateStudentScores(student.id, selectedSubjectId, assessment.id, []);
+            setScoreModified(false); // Clear modification flag
             return;
         }
 
@@ -191,11 +202,11 @@ const ScoreEntry: React.FC = () => {
         if (convertedScore < 0) { setMobileScoreError("Cannot be negative"); return; }
 
         const finalScore = `${Number(convertedScore.toFixed(1))}/${basis}`;
-        // Only update if different to avoid loops? No, store update is fine.
         updateStudentScores(student.id, selectedSubjectId, assessment.id, [finalScore]);
 
-        // Update local score to formatted version
+        // Update local score to formatted version and clear modification flag
         setLocalScore(finalScore);
+        setScoreModified(false);
     };
 
     const getPlaceholder = () => {
@@ -378,6 +389,7 @@ const ScoreEntry: React.FC = () => {
                                                         // Only allow numbers, forward slash (/), and dot (.)
                                                         const filtered = e.target.value.replace(/[^0-9/.]/g, '');
                                                         setLocalScore(filtered);
+                                                        setScoreModified(true); // Mark as modified when user types
                                                     }}
                                                     onBlur={commitScore}
                                                     onKeyDown={(e) => {
