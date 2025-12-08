@@ -374,7 +374,11 @@ const ScoreEntry: React.FC = () => {
                                                     inputMode="decimal"
                                                     pattern="[0-9./]*"
                                                     value={localScore}
-                                                    onChange={(e) => setLocalScore(e.target.value)}
+                                                    onChange={(e) => {
+                                                        // Only allow numbers, forward slash (/), and dot (.)
+                                                        const filtered = e.target.value.replace(/[^0-9/.]/g, '');
+                                                        setLocalScore(filtered);
+                                                    }}
                                                     onBlur={commitScore}
                                                     onKeyDown={(e) => {
                                                         if (e.key === 'Enter') {
