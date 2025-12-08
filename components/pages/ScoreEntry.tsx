@@ -324,16 +324,28 @@ const ScoreEntry: React.FC = () => {
                                             <div>
                                                 <div className="flex justify-between items-center mb-1">
                                                     <label className="block text-sm font-medium text-gray-700">Assessment</label>
-                                                    <span
-                                                        className={`text-xs px-2 py-0.5 rounded-full font-medium ${unfilledCount > 0
-                                                            ? 'bg-red-100 text-red-700'
-                                                            : 'bg-green-100 text-green-700'
-                                                            }`}
-                                                    >
-                                                        {unfilledCount > 0
-                                                            ? `${unfilledCount} student${unfilledCount === 1 ? '' : 's'} not scored for this assessment type`
-                                                            : 'All students scored for this assessment type'}
-                                                    </span>
+                                                    {unfilledCount > 0 ? (
+                                                        <button
+                                                            onClick={() => {
+                                                                // Find the first unscored student
+                                                                const firstUnscoredIndex = filteredStudents.findIndex(s => {
+                                                                    const scores = getStudentScores(s.id, selectedSubjectId, selectedAssessmentId);
+                                                                    return !scores || scores.length === 0 || scores[0] === '';
+                                                                });
+                                                                if (firstUnscoredIndex !== -1) {
+                                                                    setSelectedStudentIndex(firstUnscoredIndex);
+                                                                    setMobileScoreError('');
+                                                                }
+                                                            }}
+                                                            className="text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700 hover:bg-red-200 hover:text-red-800 transition-colors cursor-pointer"
+                                                        >
+                                                            Click to see {unfilledCount} unscored student{unfilledCount === 1 ? '' : 's'}
+                                                        </button>
+                                                    ) : (
+                                                        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                                                            All students scored
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <select
                                                     value={selectedAssessmentId}
