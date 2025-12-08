@@ -10,6 +10,7 @@ export const NetworkIndicator: React.FC<NetworkIndicatorProps> = ({ isOnline, is
     const getStatus = () => {
         if (isSyncing) return { icon: '⟳', color: '#6b7280', label: 'Syncing...', text: 'Syncing' };
         if (!isOnline) return { icon: '●', color: '#f59e0b', label: `Offline - ${queuedCount} queued`, text: 'Offline' };
+        if (queuedCount > 0) return { icon: '●', color: '#f59e0b', label: `${queuedCount} item(s) queued`, text: 'Queued' };
         return { icon: '●', color: '#10b981', label: 'Online & Synced', text: 'Synced' };
     };
 
@@ -38,7 +39,7 @@ export const NetworkIndicator: React.FC<NetworkIndicatorProps> = ({ isOnline, is
                 >
                     {status.icon}
                 </span>
-                {queuedCount > 0 && !isOnline && (
+                {queuedCount > 0 && (
                     <span style={{ fontSize: '13px', color: '#f59e0b', fontWeight: 500 }}>
                         {queuedCount}
                     </span>
@@ -56,3 +57,4 @@ export const NetworkIndicator: React.FC<NetworkIndicatorProps> = ({ isOnline, is
         </div>
     );
 };
+
