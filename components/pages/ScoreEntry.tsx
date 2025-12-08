@@ -4,13 +4,14 @@ import { useUser } from '../../context/UserContext';
 import ReadOnlyWrapper from '../ReadOnlyWrapper';
 import InlineScoreInput from '../InlineScoreInput';
 import ScoreManagementModal from '../ScoreManagementModal';
+import { NetworkIndicator } from '../NetworkIndicator';
 import type { Student, Assessment } from '../../types';
 
 import { getAvailableClasses, getAvailableSubjects } from '../../utils/permissions';
 
 const ScoreEntry: React.FC = () => {
     // Destructure with default empty arrays to prevent undefined errors
-    const { students = [], subjects: allSubjects = [], assessments = [], classes: allClasses = [], getStudentScores, updateStudentScores } = useData();
+    const { students = [], subjects: allSubjects = [], assessments = [], classes: allClasses = [], getStudentScores, updateStudentScores, isOnline, isSyncing, queuedCount } = useData();
     const { currentUser } = useUser();
     const isReadOnly = currentUser?.role === 'Guest';
 
@@ -362,7 +363,10 @@ const ScoreEntry: React.FC = () => {
                                         </div>
 
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Score</label>
+                                            <div className="flex items-center justify-between mb-1">
+                                                <label className="block text-sm font-medium text-gray-700">Score</label>
+                                                <NetworkIndicator isOnline={isOnline} isSyncing={isSyncing} queuedCount={queuedCount} />
+                                            </div>
                                             <div className="flex flex-col">
                                                 <input
                                                     ref={scoreInputRef}
