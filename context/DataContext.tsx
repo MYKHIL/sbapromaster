@@ -346,14 +346,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
 
+
     // Process offline queue when coming back online
     useEffect(() => {
         if (isOnline && queuedCount > 0 && schoolId) {
             console.log('Network restored - syncing current state and clearing queue');
             setIsSyncing(true);
 
-            // Instead of processing old queued snapshots, sync the CURRENT state
-            // This prevents overwriting recent changes with stale data
+            // Capture current data state at the moment network is restored
+            // Using the state values directly from closure
             const currentData: AppDataType = {
                 settings,
                 students,
@@ -380,7 +381,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     setIsSyncing(false);
                 });
         }
-    }, [isOnline, schoolId, settings, students, subjects, classes, grades, assessments, scores, reportData, classData]);
+    }, [isOnline, queuedCount, schoolId]); // Only trigger on network/queue/schoolId changes
 
     const value: DataContextType = {
         settings, setSettings, updateSettings,
