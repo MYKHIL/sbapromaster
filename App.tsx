@@ -14,6 +14,8 @@ import { DataProvider } from './context/DataContext';
 import { UserProvider } from './context/UserContext';
 import type { Page } from './types';
 import UserBadge from './components/UserBadge';
+import MaintenancePage from './components/MaintenancePage';
+import { SITE_ACTIVE } from './constants';
 
 // This helper is now only used for pages that need to persist state.
 const PageWrapper: React.FC<{ name: Page; currentPage: Page; children: React.ReactNode }> = ({ name, currentPage, children }) => {
@@ -45,6 +47,11 @@ import AuthOverlay from './components/AuthOverlay';
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>('Dashboard');
+
+  // Show maintenance page if site is not active
+  if (!SITE_ACTIVE) {
+    return <MaintenancePage />;
+  }
 
   return (
     <UserProvider>

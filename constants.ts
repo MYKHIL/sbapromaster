@@ -1,3 +1,6 @@
+// MAINTENANCE MODE: Set to false to show "Under Construction" page
+export const SITE_ACTIVE = false;
+
 import type { SchoolSettings, Student, Subject, Class, Grade, Assessment, Score, ReportSpecificData, ClassSpecificData } from './types';
 
 export const AI_FEATURES_ENABLED = false;
@@ -33,8 +36,8 @@ export const INITIAL_SUBJECTS: Subject[] = [
 ];
 
 export const INITIAL_CLASSES: Class[] = [
-    { id: 1, name: 'JHS 1', teacherName: 'Mr. Emmanuel Quarshie', teacherSignature: '' },
-    { id: 2, name: 'JHS 2', teacherName: 'Mrs. Alberta Mensah', teacherSignature: '' },
+  { id: 1, name: 'JHS 1', teacherName: 'Mr. Emmanuel Quarshie', teacherSignature: '' },
+  { id: 2, name: 'JHS 2', teacherName: 'Mrs. Alberta Mensah', teacherSignature: '' },
 ];
 
 export const INITIAL_GRADES: Grade[] = [
