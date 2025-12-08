@@ -150,8 +150,13 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
                                 <input
                                     type="text"
                                     inputMode="decimal"
+                                    pattern="[0-9./]*"
                                     value={inlineValues[assessment.id] || ''}
-                                    onChange={(e) => handleValueChange(assessment.id, e.target.value)}
+                                    onChange={(e) => {
+                                        // Only allow numbers, /, and .
+                                        const filtered = e.target.value.replace(/[^0-9/.]/g, '');
+                                        handleValueChange(assessment.id, filtered);
+                                    }}
                                     onBlur={() => handleSave(assessment.id)}
                                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSave(assessment.id); (e.target as HTMLInputElement).blur(); } }}
                                     placeholder={assessment.name.toLowerCase().includes('exam') ? 'e.g., 85' : '-'}
