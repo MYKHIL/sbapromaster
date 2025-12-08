@@ -43,7 +43,7 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
     };
 
     // Helper to draw dotted underline field
-    const addUnderlinedField = (label: string, value: string, x: number, y: number, totalWidth: number, labelWidth: number) => {
+    const addUnderlinedField = (label: string, value: string, x: number, y: number, totalWidth: number, labelWidth: number, align: 'left' | 'center' = 'center', isBold: boolean = false, fontSize: number = 10) => {
         doc.setFont('times', 'bold');
         doc.setFontSize(10); // Standard label size
         doc.text(label + ':', x, y);
@@ -59,7 +59,9 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
         doc.setLineDashPattern([], 0); // Reset
 
         // Draw value
-        addFitText(value, valueX + (valueWidth / 2), y, valueWidth, 10, 'center');
+        let textX = valueX + (valueWidth / 2);
+        if (align === 'left') textX = valueX + 2;
+        addFitText(value, textX, y, valueWidth - 2, fontSize, align, isBold);
     };
 
     // Sort grades for key
@@ -148,7 +150,8 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
         const infoWidth = CARD_WIDTH - 12 - photoWidth - 5; // Space for info
 
         // Name
-        addUnderlinedField("Name", student.name, leftColX, currentY, infoWidth, 15);
+        // Name
+        addUnderlinedField("Name", student.name, leftColX, currentY, infoWidth, 15, 'left', true, 14);
 
         currentY += 8;
         const colGap = 4;
@@ -340,13 +343,14 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
         addUnderlinedField("", totalSchoolDays, MARGIN_X + 54, currentY, 20, 0);
 
         currentY += 6;
-        addUnderlinedField("Conduct", reportSpecificData?.conduct || '', MARGIN_X + 6, currentY, tableWidth, 20);
         currentY += 6;
-        addUnderlinedField("Interest", reportSpecificData?.interest || '', MARGIN_X + 6, currentY, tableWidth, 20);
+        addUnderlinedField("Conduct", reportSpecificData?.conduct || '', MARGIN_X + 6, currentY, tableWidth, 20, 'left');
         currentY += 6;
-        addUnderlinedField("Attitude", reportSpecificData?.attitude || '', MARGIN_X + 6, currentY, tableWidth, 20);
+        addUnderlinedField("Interest", reportSpecificData?.interest || '', MARGIN_X + 6, currentY, tableWidth, 20, 'left');
         currentY += 6;
-        addUnderlinedField("Class Teacher's Remarks", reportSpecificData?.teacherRemark || '', MARGIN_X + 6, currentY, tableWidth, 40);
+        addUnderlinedField("Attitude", reportSpecificData?.attitude || '', MARGIN_X + 6, currentY, tableWidth, 20, 'left');
+        currentY += 6;
+        addUnderlinedField("Class Teacher's Remarks", reportSpecificData?.teacherRemark || '', MARGIN_X + 6, currentY, tableWidth, 40, 'left');
 
         // Signatures
         currentY += 12;
