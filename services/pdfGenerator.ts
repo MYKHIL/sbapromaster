@@ -7,8 +7,8 @@ import type { Student, Grade } from '../types';
 // Constants for layout (in mm)
 const PAGE_WIDTH = 210;
 const PAGE_HEIGHT = 297;
-const CARD_WIDTH = 200;
-const CARD_HEIGHT = 287;
+const CARD_WIDTH = 190; // Reduced from 200 for better margins
+const CARD_HEIGHT = 277; // Reduced from 287 for better margins
 const MARGIN_X = (PAGE_WIDTH - CARD_WIDTH) / 2;
 const MARGIN_Y = (PAGE_HEIGHT - CARD_HEIGHT) / 2;
 const CONTENT_MARGIN = 6; // Padding inside the card
@@ -377,7 +377,8 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
             doc.text(`(${classInfo.teacherName})`, tSigX + (sigWidth / 2), sigY + 8, { align: 'center' });
         }
 
-        const hSigX = MARGIN_X + CARD_WIDTH - 10 - sigWidth;
+        // Headmaster's Signature (Now Center)
+        const hSigX = MARGIN_X + (CARD_WIDTH / 2) - (sigWidth / 2);
         if (settings.headmasterSignature) {
             try {
                 doc.addImage(settings.headmasterSignature, 'PNG', hSigX + 10, currentY, 30, 15, undefined, 'FAST');
@@ -392,7 +393,8 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
         }
         doc.setLineDashPattern([], 0);
 
-        const stampX = MARGIN_X + (CARD_WIDTH / 2) - 25;
+        // Official School Stamp (Now Right)
+        const stampX = MARGIN_X + CARD_WIDTH - 10 - 50;
         doc.setDrawColor(150);
         doc.setLineWidth(0.5);
         doc.line(stampX, currentY, stampX + 50, currentY);
