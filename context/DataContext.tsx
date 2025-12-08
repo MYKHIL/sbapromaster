@@ -102,6 +102,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [isSyncing, setIsSyncing] = useState(false);
     const [queuedCount, setQueuedCount] = useState(offlineQueue.getQueueSize());
 
+    // Sync lock to prevent concurrent syncs
+    const isSyncingRef = React.useRef(false);
+
     // FIX: Implement function to overwrite all data from an imported file.
     const loadImportedData = (data: Partial<AppDataType>) => {
         // This function overwrites existing data with data from an imported file.
@@ -135,6 +138,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             console.log("No school ID, skipping cloud save.");
             return;
         }
+
+        // Prevent concurrent syncs
+        if (isSyncingRef.current) {
+            console.log("Sync already in progress, skipping duplicate sync");
+            return;
+        }
+
+        // Capture CURRENT state at sync time (not stale state from when timeout started)
         const currentData: AppDataType = {
             settings,
             students,
@@ -156,16 +167,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
 
         try {
+            isSyncingRef.current = true;
             setIsSyncing(true);
             await saveUserDatabase(schoolId, currentData);
             console.log("Data saved to cloud successfully.");
             setIsSyncing(false);
+            isSyncingRef.current = false;
         } catch (error) {
             console.error("Failed to save data to cloud:", error);
             // Add to queue on failure
             offlineQueue.addToQueue(currentData);
             setQueuedCount(offlineQueue.getQueueSize());
             setIsSyncing(false);
+            isSyncingRef.current = false;
         }
     };
 
@@ -207,6 +221,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         lastLocalUpdate.current = Date.now();
 
         const handler = setTimeout(() => {
+            // saveToCloud will capture CURRENT state when it runs
             saveToCloud();
         }, 2000); // Auto-save 2 seconds after the last change
 
