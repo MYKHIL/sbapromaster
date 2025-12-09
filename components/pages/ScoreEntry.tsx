@@ -11,7 +11,7 @@ import { getAvailableClasses, getAvailableSubjects } from '../../utils/permissio
 
 const ScoreEntry: React.FC = () => {
     // Destructure with default empty arrays to prevent undefined errors
-    const { students = [], subjects: allSubjects = [], assessments = [], classes: allClasses = [], getStudentScores, updateStudentScores, isOnline, isSyncing, queuedCount, saveToCloud, refreshFromCloud } = useData();
+    const { students = [], subjects: allSubjects = [], assessments = [], classes: allClasses = [], getStudentScores, updateStudentScores, isOnline, isSyncing, queuedCount, saveToCloud, refreshFromCloud, hasLocalChanges, setHasLocalChanges } = useData();
     const { currentUser } = useUser();
     const isReadOnly = currentUser?.role === 'Guest';
 
@@ -431,23 +431,25 @@ const ScoreEntry: React.FC = () => {
                                                 <div className="flex items-center gap-1">
                                                     <button
                                                         onClick={() => saveToCloud()}
-                                                        disabled={isSyncing || !isOnline}
-                                                        className={`p-1 rounded-full hover:bg-gray-200 transition-colors ${isSyncing ? 'opacity-50 cursor-not-allowed' : 'text-blue-600'}`}
-                                                        title="Upload to Cloud"
+                                                        disabled={!hasLocalChanges || isSyncing || !isOnline}
+                                                        className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors shadow-sm ${(!hasLocalChanges || isSyncing) ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                                                        title="Click here when you have finished entering all data and wait for sync to complete"
                                                     >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${isSyncing ? 'animate-pulse' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${isSyncing ? 'animate-pulse' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                                                         </svg>
+                                                        <span className="text-xs font-bold uppercase tracking-wide">Upload</span>
                                                     </button>
                                                     <button
                                                         onClick={() => refreshFromCloud()}
                                                         disabled={isSyncing || !isOnline}
-                                                        className={`p-1 rounded-full hover:bg-gray-200 transition-colors ${isSyncing ? 'opacity-50 cursor-not-allowed' : 'text-green-600'}`}
-                                                        title="Download from Cloud (Refresh)"
+                                                        className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors shadow-sm ${isSyncing ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}
+                                                        title="Download: Click here to fetch the latest data from the cloud"
                                                     >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${isSyncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
                                                         </svg>
+                                                        <span className="text-xs font-bold uppercase tracking-wide">Download</span>
                                                     </button>
                                                     <NetworkIndicator isOnline={isOnline} isSyncing={isSyncing} queuedCount={queuedCount} />
                                                 </div>
@@ -472,6 +474,7 @@ const ScoreEntry: React.FC = () => {
                                                         });
                                                         setLocalScore(filtered);
                                                         setScoreModified(true); // Mark as modified when user types
+                                                        setHasLocalChanges(true); // Enable Upload button globally
                                                     }}
                                                     onBlur={commitScore}
                                                     onKeyDown={(e) => {

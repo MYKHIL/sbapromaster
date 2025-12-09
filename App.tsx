@@ -56,35 +56,6 @@ const GreetingWrapper: React.FC<{ currentPage: Page }> = ({ currentPage }) => {
   return <GreetingToast currentUser={currentUser} currentPage={currentPage} />;
 };
 
-// Component to handle page visit logging
-const PageVisitLogger: React.FC<{ currentPage: Page }> = ({ currentPage }) => {
-  const { currentUser } = useUser();
-  const { logPageVisit } = useData();
-  const previousPageRef = React.useRef<Page | null>(null);
-
-  React.useEffect(() => {
-    if (!currentUser) return;
-
-    const previousPage = previousPageRef.current;
-
-    // Log page visit
-    logPageVisit(
-      currentUser.id,
-      currentUser.name,
-      currentUser.role,
-      currentPage,
-      previousPage
-    ).catch(error => {
-      console.error('Failed to log page visit:', error);
-    });
-
-    // Update ref for next navigation
-    previousPageRef.current = currentPage;
-  }, [currentPage, currentUser, logPageVisit]);
-
-  return null; // This component doesn't render anything
-};
-
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>(() => {
     // Try to load last visited page from localStorage
@@ -115,7 +86,7 @@ const App: React.FC = () => {
       <UserProvider>
         <AuthOverlay>
           <SyncOverlayConnected />
-          <PageVisitLogger currentPage={currentPage} />
+          {/* PageVisitLogger removed to prevent excessive logging */}
           <GreetingWrapper currentPage={currentPage} />
           <TeacherPageRedirect currentPage={currentPage} setCurrentPage={setCurrentPage} />
           <UserBadge />

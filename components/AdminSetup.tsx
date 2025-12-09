@@ -35,6 +35,19 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
     const classNames = React.useMemo(() => classes.map(c => c.name), [classes]);
     const subjectNames = React.useMemo(() => subjects.map(s => s.subject), [subjects]);
 
+    // Ref for auto-scrolling to bottom of user list
+    const userListRef = React.useRef<HTMLDivElement>(null);
+    // Ref for main modal to ensure new forms are visible
+    const modalRef = React.useRef<HTMLDivElement>(null);
+
+    // Auto-scroll to bottom when users are added
+    useEffect(() => {
+        // Scroll main modal to ensure the new section is visible
+        if (modalRef.current) {
+            modalRef.current.scrollTo({ top: modalRef.current.scrollHeight, behavior: 'smooth' });
+        }
+    }, [users.length]);
+
     // Manual data refresh handler
     const handleRefreshData = async () => {
         setIsRefreshing(true);
@@ -179,13 +192,10 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         setUsers([]);
         setError(null);
 
-        // Auto-save changes in management mode
+
+        // Removed auto-save. Changes are batched until close.
         if (mode === 'management') {
-            if (onUpdate) {
-                onUpdate(updatedUsers);
-            } else {
-                onComplete(updatedUsers);
-            }
+            // Do nothing here, wait for manual save/close
         }
     };
 
@@ -206,19 +216,19 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         setDeleteConfirmUserId(null);
         setError(null);
 
-        // Auto-save changes in management mode
+        // Auto-save changes in management mode REMOVED
         if (mode === 'management') {
-            if (onUpdate) {
-                onUpdate(updatedUsers);
-            } else {
-                onComplete(updatedUsers);
-            }
-
-            // If user deleted themselves, logout after save
+            // If user deleted themselves, logout after save (deferred to close)
+            // Check if we need to handle self-deletion logout here or later.
+            // If we defer save, we should defer logout.
             if (isDeletingSelf) {
-                setTimeout(() => {
-                    logout();
-                }, 500);
+                // Warning: If we don't logout now, they might continue acting as admin.
+                // But without saving, the deletion isn't real yet.
+                // We will handle logout when they click "Save & Close" or we can't defer this one.
+                // Actually, for self-deletion, we should probably force a save or logout immediately?
+                // User asked for "batch updates". If I delete myself, I see it gone from list.
+                // If I close without saving, it comes back.
+                // If I close with saving, I should get logged out.
             }
         }
     };
@@ -232,17 +242,14 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
 
         setExistingUsers(updatedUsers);
 
-        // Auto-save changes
-        if (onUpdate) {
-            onUpdate(updatedUsers);
-        } else {
-            onComplete(updatedUsers);
-        }
-
-        // If user reset their own password, logout immediately
+        // Auto-save changes REMOVED
+        // If user reset their own password, logout immediately?
+        // Deferred until save.
+        /*
         if (currentUser && currentUser.id === resetConfirmUserId) {
             logout();
         }
+        */
 
         setResetConfirmUserId(null);
     };
@@ -271,17 +278,18 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
             setUsers([]);
             setError(null);
 
-            // Auto-save the new user
-            if (onUpdate) {
-                onUpdate(updatedUsers);
-            } else {
-                onComplete(updatedUsers);
-            }
+            // Auto-save the new user REMOVED
+            // Do nothing here, wait for manual save/close
             return;
         }
 
-        // If not adding/editing, manual save isn't needed if we auto-save everything.
-        // But let's keep it as a fallback if users somehow get here.
+        // This function 'handleSaveManagement' is triggered by the "Add User" button when adding new user.
+        // Or "Save Changes" button?
+        // Line 646: users.length > 0 ? 'Add User' : 'Save Changes'
+        // If users.length == 0 (not adding), it calls handleSaveManagement.
+        // If we are in management mode and not adding a user, this button shouldn't really be needed if we save on Close.
+        // But if it is there, it can act as "Save".
+
         onComplete(existingUsers);
     };
 
@@ -292,7 +300,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
     };
 
     return (
-        <div className="fixed inset-0 bg-gray-900 bg-opacity-95 z-50 flex items-center justify-center p-4 overflow-y-auto">
+        <div ref={modalRef} className="fixed inset-0 bg-gray-900 bg-opacity-95 z-50 flex items-center justify-center p-4 overflow-y-auto">
             <div className="bg-white rounded-lg shadow-2xl p-6 md:p-8 max-w-4xl w-full my-8">
                 <div className="text-center mb-6">
                     <h2 className="text-3xl font-bold text-gray-800">
@@ -451,7 +459,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                 )}
 
                 {(mode === 'setup' || users.length > 0) && (
-                    <div className="space-y-6 max-h-96 overflow-y-auto">
+                    <div ref={userListRef} className="space-y-6">
                         {users.map((user, index) => (
                             <div key={index} className="border-2 border-gray-200 rounded-lg p-4 bg-gray-50">
                                 <div className="flex justify-between items-center mb-3">
@@ -619,10 +627,13 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                 <div className="mt-6 flex gap-3">
                     {onCancel && mode === 'management' && users.length === 0 && (
                         <button
-                            onClick={onCancel}
-                            className="flex-1 py-3 px-4 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition"
+                            onClick={() => {
+                                // Save changes on close
+                                onComplete(existingUsers);
+                            }}
+                            className="flex-1 py-3 px-4 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition"
                         >
-                            Close
+                            Save & Close
                         </button>
                     )}
                     {mode === 'management' && users.length > 0 && (

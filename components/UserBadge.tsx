@@ -35,7 +35,7 @@ const UserBadge: React.FC = () => {
 
     return (
         <>
-            <div className="fixed top-4 right-4 z-[60] flex flex-col items-end gap-2 lg:flex-row lg:items-center lg:gap-2" style={{ position: 'fixed' }}>
+            <div className="fixed top-20 right-4 z-[60] flex flex-col items-end gap-2 lg:flex-row lg:items-center lg:gap-2" style={{ position: 'fixed' }}>
                 {/* User Info Badge */}
                 <div
                     className={`flex items-center gap-2 px-3 py-2 rounded-full shadow-lg border backdrop-blur-sm bg-opacity-95 ${getRoleColor(currentUser.role)} ${isAdmin ? 'cursor-pointer' : ''}`}
@@ -87,7 +87,7 @@ const UserBadge: React.FC = () => {
                         }}
                         disabled={isSyncing || !isOnline}
                         className={`p-1 rounded-full hover:bg-white/50 transition-colors ${isSyncing ? 'opacity-50 cursor-not-allowed' : 'text-blue-700'}`}
-                        title="Upload to Cloud"
+                        title="Upload: Click here when finished entering data and wait for sync to complete"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${isSyncing ? 'animate-pulse' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />

@@ -85,7 +85,10 @@ export interface DataContextType {
     // New Actions
     logUserAction: (userId: number, userName: string, role: string, action: 'Login' | 'Logout') => Promise<void>;
     sendHeartbeat: (userId: number) => Promise<void>;
-    logPageVisit: (userId: number, userName: string, role: string, currentPage: string, previousPage: string | null) => Promise<void>;
+
+    // UI Feedback
+    hasLocalChanges: boolean;
+    setHasLocalChanges: (hasChanges: boolean) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -140,6 +143,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         SyncLogger.log(`Stack trace: ${new Error().stack}`);
         setUsersInternal(newValue);
     };
+
+    // Track overall local changes for UI feedback (e.g. enabling Upload button)
+    const [hasLocalChanges, setHasLocalChanges] = useState(false);
 
     // FIX: Use a Ref to hold the latest state for saveToCloud to access during retries
     // This prevents the "stale closure" bug where a postponed save uses old data
@@ -280,6 +286,23 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         previousSchoolId.current = schoolId;
     }, [schoolId]);
 
+    // -------------------------------------------------------------------------
+    // DIRTY FIELD TRACKING OPTIMIZATION
+    // -------------------------------------------------------------------------
+    // We track exactly which top-level keys in AppDataType have changed locally.
+    // This allows us to only push modified data to Firestore, drastically reducing
+    // write sizes and potential conflicts.
+    const dirtyFields = React.useRef<Set<keyof AppDataType>>(new Set());
+
+    const markDirty = (field: keyof AppDataType) => {
+        // Only mark dirty if it's NOT a remote update
+        if (!isRemoteUpdate.current) {
+            dirtyFields.current.add(field);
+            setHasLocalChanges(true); // Enable Upload button globally
+            // console.log(`[DataContext] 📝 Marked dirty: ${field}`);
+        }
+    };
+
     const saveToCloud = async () => {
         // CRITICAL: Check if sync is paused (during authentication)
         if (isSyncPaused.current) {
@@ -308,12 +331,23 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return;
         }
 
+        // ---------------------------------------------------------------------
+        // NEW LOGIC: Only save dirty fields
+        // ---------------------------------------------------------------------
+        if (dirtyFields.current.size === 0) {
+            console.log('[DataContext] 💤 No dirty fields to sync. Skipping save.');
+            return;
+        }
+
+        const fieldsToSave = Array.from(dirtyFields.current);
+        console.log(`[DataContext] ☁️ Syncing dirty fields: ${fieldsToSave.join(', ')}`);
+
         // Capture CURRENT state at sync time (not stale state from when timeout started)
         SyncLogger.log(`saveToCloud: Preparing to save. Users count: ${users.length}`);
 
         // CRITICAL: Log warning if saving empty users array
         // The sync pause mechanism should prevent this, but we log for visibility
-        if (users.length === 0 && schoolId) {
+        if (fieldsToSave.includes('users') && users.length === 0 && schoolId) {
             SyncLogger.log(`WARNING: Attempting to save with empty users array. This may indicate an issue.`);
             console.warn('[DataContext] Saving with empty users array - this should only happen for new school accounts');
         }
@@ -321,15 +355,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Use stateRef to get the ABSOLUTE LATEST data at the moment of execution
         const currentData = stateRef.current;
 
-        // Log for debugging
-        if (users.length !== currentData.users?.length) {
-            console.log(`[DataContext] ⚠️ saveToCloud: Closure users count (${users.length}) differs from Ref users count (${currentData.users?.length}). Using Ref.`);
-        }
+        // Construct the payload with ONLY the dirty fields
+        const payload: Partial<AppDataType> = {};
+
+        // Always ensure we have valid objects for the dirty keys
+        fieldsToSave.forEach(field => {
+            // @ts-ignore - Dynamic access is safe here because we iterate known keys
+            payload[field] = currentData[field];
+        });
 
         // Check network status
         if (!isOnline) {
             console.log("Offline - adding to queue");
-            offlineQueue.addToQueue(currentData);
+            offlineQueue.addToQueue(payload); // Queue the partial payload
             setQueuedCount(offlineQueue.getQueueSize());
             return;
         }
@@ -337,17 +375,22 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
             isSyncingRef.current = true;
             setIsSyncing(true);
-            console.log('[DataContext] ☁️ Uploading data to cloud database...');
-            await saveUserDatabase(schoolId, currentData);
+            console.log('[DataContext] ☁️ Uploading partial data to cloud database...');
+            await saveUserDatabase(schoolId, payload);
             console.log('[DataContext] ✅ Data saved to cloud successfully!');
-            console.log('[DataContext] 🎉 Sync complete - local cache and cloud database are now in sync');
+            console.log('[DataContext] 🎉 Sync complete - cleared dirty fields');
+
+            // Clear dirty fields only after successful save
+            dirtyFields.current.clear();
+            setHasLocalChanges(false); // Disable Upload button
+
             setIsSyncing(false);
             isSyncingRef.current = false;
         } catch (error) {
             console.error('[DataContext] ❌ Failed to save data to cloud:', error);
             console.log('[DataContext] 📦 Adding to offline queue for retry when online');
             // Add to queue on failure
-            offlineQueue.addToQueue(currentData);
+            offlineQueue.addToQueue(payload);
             setQueuedCount(offlineQueue.getQueueSize());
             setIsSyncing(false);
             isSyncingRef.current = false;
@@ -373,6 +416,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 isRemoteUpdate.current = true;
                 loadImportedData(data);
                 console.log('[DataContext] 🎉 Manual refresh complete');
+                // Creating a manual refresh clears dirty flags to avoid conflicts? 
+                // Actually, if we just fetched from cloud, our local state is now same as cloud.
+                dirtyFields.current.clear();
             } else {
                 console.log('[DataContext] ⚠️ No data found for this school ID');
             }
@@ -499,28 +545,34 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
     }, [schoolId, settings, students, subjects, classes, grades, assessments, scores, reportData, classData]);
 
+    // Helper to wrap state setters with dirty marking
     const createCrud = <T extends { id: number }>(
         items: T[],
-        setItems: React.Dispatch<React.SetStateAction<T[]>>
+        setItems: React.Dispatch<React.SetStateAction<T[]>>,
+        fieldKey: keyof AppDataType
     ) => ({
         add: (item: Omit<T, 'id'>) => {
+            markDirty(fieldKey);
             setItems(prev => [...prev, { ...item, id: Date.now() } as T]);
         },
         update: (updatedItem: T) => {
+            markDirty(fieldKey);
             setItems(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item));
         },
         delete: (id: number) => {
+            markDirty(fieldKey);
             setItems(prev => prev.filter(item => item.id !== id));
         },
     });
 
-    const studentCrud = createCrud(students, setStudents);
-    const subjectCrud = createCrud(subjects, setSubjects);
-    const classCrud = createCrud(classes, setClasses);
-    const gradeCrud = createCrud(grades, setGrades);
+    const studentCrud = createCrud(students, setStudents, 'students');
+    const subjectCrud = createCrud(subjects, setSubjects, 'subjects');
+    const classCrud = createCrud(classes, setClasses, 'classes');
+    const gradeCrud = createCrud(grades, setGrades, 'grades');
 
     // Custom Assessment CRUD to handle exam ordering
     const addAssessment = (assessment: Omit<Assessment, 'id'>) => {
+        markDirty('assessments');
         const newAssessment = { ...assessment, id: Date.now() };
         setAssessments(prev => {
             const examIndex = prev.findIndex(a => a.name.toLowerCase().includes('exam'));
@@ -533,13 +585,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
     };
     const updateAssessment = (updatedAssessment: Assessment) => {
+        markDirty('assessments');
         setAssessments(prev => prev.map(item => item.id === updatedAssessment.id ? updatedAssessment : item));
     };
     const deleteAssessment = (id: number) => {
+        markDirty('assessments');
         setAssessments(prev => prev.filter(item => item.id !== id));
     };
 
     const updateStudentScores = (studentId: number, subjectId: number, assessmentId: number, newScores: string[]) => {
+        markDirty('scores');
         const scoreId = `${studentId}-${subjectId}`;
 
         console.log('[DataContext] 📥 updateStudentScores called:', {
@@ -601,6 +656,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const updateReportData = (studentId: number, data: Partial<Omit<ReportSpecificData, 'totalSchoolDays'>>) => {
+        markDirty('reportData');
         setReportData(prev => {
             const existingIndex = prev.findIndex(d => d.studentId === studentId);
             if (existingIndex > -1) {
@@ -628,6 +684,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const updateClassData = (classId: number, data: Partial<ClassSpecificData>) => {
+        markDirty('classData');
         setClassData(prev => {
             const existingIndex = prev.findIndex(d => d.classId === classId);
             if (existingIndex > -1) {
@@ -646,6 +703,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const updateSettings = (updates: Partial<SchoolSettings>) => {
+        markDirty('settings');
         setSettings(prev => ({ ...prev, ...updates }));
     };
 
@@ -669,6 +727,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 reportData,
                 classData
             };
+
+            // NOTE: Offline recovery should probably sync EVERYTHING just in case,
+            // or we could inspect the queue. For simplicity, we sync full state on recovery for now.
+            // Or we could trust the queue. The queue contains partials now.
+            // But 'currentData' here is the FULL state.
+            // Let's stick to full sync on recovery for safety.
 
             saveUserDatabase(schoolId, currentData)
                 .then(() => {
@@ -743,6 +807,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const logUserAction = async (userId: number, userName: string, role: string, action: 'Login' | 'Logout') => {
         if (!schoolId) return;
 
+        // ONLY log 'Login' actions as per user request to reduce writes
+        if (action !== 'Login') {
+            return;
+        }
+
         const log: UserLog = {
             id: `${Date.now()}-${Math.floor(Math.random() * 1000)}`,
             userId,
@@ -752,31 +821,28 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             timestamp: new Date().toISOString(),
         };
 
-        await logUserActivity(schoolId, log);
+        // Mark as dirty to sync this log
+        // Actually logUserActivity in firebaseService writes directly to DB?
+        // Checking firebaseService.ts... 
+        // Yes, logUserActivity does `setDoc(..., { userLogs: logs }, { merge: true })`.
+        // This is a DIRECT write. To optimize this, we should add it to local state and let auto-sync handle it!
+        // Wait, current implementation of logUserActivity in firebaseService performs a READ, then WRITE.
+        // This is expensive.
+
+        // BETTER APPROACH: Add to local state `userLogs` and mark dirty.
+        setUserLogs(prev => {
+            const newLogs = [...prev, log];
+            // Limit to 500
+            if (newLogs.length > 500) newLogs.shift();
+            return newLogs;
+        });
+        markDirty('userLogs');
+
+        // We do NOT call the direct firebase service anymore.
+        // await logUserActivity(schoolId, log);
     };
 
-    const logPageVisit = async (
-        userId: number,
-        userName: string,
-        role: string,
-        currentPage: string,
-        previousPage: string | null
-    ) => {
-        if (!schoolId) return;
-
-        const log: UserLog = {
-            id: `${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-            userId,
-            userName,
-            role: role as any,
-            action: 'Page Visit',
-            timestamp: new Date().toISOString(),
-            pageName: currentPage,
-            previousPage: previousPage || undefined,
-        };
-
-        await logUserActivity(schoolId, log);
-    };
+    // Removed logPageVisit to prevent excessive logging
 
     // Sync control functions
     const pauseSync = () => {
@@ -861,13 +927,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         blockRemoteUpdates,
         allowRemoteUpdates,
         // User logs and sessions
+        users, // Added users
         userLogs,
         activeSessions,
         // New exports
         onlineUsers,
         logUserAction,
         sendHeartbeat,
-        logPageVisit,
+        hasLocalChanges,
+        setHasLocalChanges,
     };
 
     return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

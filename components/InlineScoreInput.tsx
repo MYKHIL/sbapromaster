@@ -43,7 +43,7 @@ const formatScore = (score: number): string => {
 
 
 const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId, assessments, onOpenModal, readOnly, index }) => {
-    const { getStudentScores, updateStudentScores } = useData();
+    const { getStudentScores, updateStudentScores, setHasLocalChanges } = useData();
 
     const [inlineValues, setInlineValues] = useState<{ [key: number]: string }>({});
     const [errors, setErrors] = useState<{ [key: number]: string | undefined }>({});
@@ -84,6 +84,7 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
 
         setInlineValues(prev => ({ ...prev, [assessmentId]: filteredValue }));
         setModifiedFields(prev => new Set(prev).add(assessmentId)); // Mark as modified
+        setHasLocalChanges(true); // Enable Upload button globally
         if (errors[assessmentId]) {
             setErrors(prev => ({ ...prev, [assessmentId]: undefined }));
         }
