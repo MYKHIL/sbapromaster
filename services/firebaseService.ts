@@ -1,20 +1,22 @@
 import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
 import { getFirestore, doc, getDoc, setDoc, collection, getDocs, onSnapshot } from "firebase/firestore";
 import type { SchoolSettings, Student, Subject, Class, Grade, Assessment, Score, ReportSpecificData, ClassSpecificData, User, DeviceCredential, UserLog, OnlineUser } from '../types';
 
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-    apiKey: "AIzaSyBP6gLbFLhfbAvjB2ddXSq6zqE_gWK2MEI",
-    authDomain: "sba-pro-master-40f08.firebaseapp.com",
-    projectId: "sba-pro-master-40f08",
-    storageBucket: "sba-pro-master-40f08.firebasestorage.app",
-    messagingSenderId: "91692962474",
-    appId: "1:91692962474:web:eefa6a3a04ba557c38b6d3",
-    measurementId: "G-EHHNKZ5FBG"
+    apiKey: "AIzaSyCe0O-mBCODiEA-KNVLXLMp00lJ6_Jt5SU",
+    authDomain: "sba-pro-master-759f6.firebaseapp.com",
+    projectId: "sba-pro-master-759f6",
+    storageBucket: "sba-pro-master-759f6.firebasestorage.app",
+    messagingSenderId: "239073604626",
+    appId: "1:239073604626:web:452bc2719fc980704d14cb",
+    measurementId: "G-47MMKKX888"
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 export const db = getFirestore(app);
 
 // Type for the full application data (matching DataContext)
