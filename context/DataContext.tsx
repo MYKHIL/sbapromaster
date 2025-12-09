@@ -1,5 +1,6 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
 import { saveUserDatabase, subscribeToSchoolData, AppDataType, updateHeartbeat, logUserActivity } from '../services/firebaseService';
+import * as SyncLogger from '../services/syncLogger';
 import useLocalStorage from '../hooks/useLocalStorage';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { offlineQueue } from '../services/offlineQueue';
@@ -74,6 +75,9 @@ export interface DataContextType {
     isOnline: boolean;
     isSyncing: boolean;
     queuedCount: number;
+    // Sync control
+    pauseSync: () => void;
+    resumeSync: () => void;
 
     // New Actions
     logUserAction: (userId: number, userName: string, role: string, action: 'Login' | 'Logout') => Promise<void>;
@@ -83,17 +87,24 @@ export interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
+
 export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [settings, setSettings] = useLocalStorage<SchoolSettings>('sba-settings', INITIAL_SETTINGS);
-    const [students, setStudents] = useLocalStorage<Student[]>('sba-students', INITIAL_STUDENTS);
-    const [subjects, setSubjects] = useLocalStorage<Subject[]>('sba-subjects', INITIAL_SUBJECTS);
-    const [classes, setClasses] = useLocalStorage<Class[]>('sba-classes', INITIAL_CLASSES);
-    const [grades, setGrades] = useLocalStorage<Grade[]>('sba-grades', INITIAL_GRADES);
-    const [assessments, setAssessments] = useLocalStorage<Assessment[]>('sba-assessments', INITIAL_ASSESSMENTS);
-    const [scores, setScores] = useLocalStorage<Score[]>('sba-scores', INITIAL_SCORES);
-    const [reportData, setReportData] = useLocalStorage<ReportSpecificData[]>('sba-report-data', INITIAL_REPORT_DATA);
-    const [classData, setClassData] = useLocalStorage<ClassSpecificData[]>('sba-class-data', INITIAL_CLASS_DATA);
-    const [schoolId, setSchoolId] = useLocalStorage<string | null>('sba-school-id', null); // FIX: Persist schoolId
+    // CRITICAL: Get schoolId first (non-namespaced)
+    const [schoolId, setSchoolId] = useLocalStorage<string | null>('sba-school-id', null);
+
+    // Helper to create school-specific localStorage keys
+    const getKey = (base: string) => schoolId ? `sba-${schoolId}-${base}` : `sba-${base}`;
+
+    // All data uses schoolId-namespaced keys
+    const [settings, setSettings] = useLocalStorage<SchoolSettings>(getKey('settings'), INITIAL_SETTINGS);
+    const [students, setStudents] = useLocalStorage<Student[]>(getKey('students'), INITIAL_STUDENTS);
+    const [subjects, setSubjects] = useLocalStorage<Subject[]>(getKey('subjects'), INITIAL_SUBJECTS);
+    const [classes, setClasses] = useLocalStorage<Class[]>(getKey('classes'), INITIAL_CLASSES);
+    const [grades, setGrades] = useLocalStorage<Grade[]>(getKey('grades'), INITIAL_GRADES);
+    const [assessments, setAssessments] = useLocalStorage<Assessment[]>(getKey('assessments'), INITIAL_ASSESSMENTS);
+    const [scores, setScores] = useLocalStorage<Score[]>(getKey('scores'), INITIAL_SCORES);
+    const [reportData, setReportData] = useLocalStorage<ReportSpecificData[]>(getKey('report-data'), INITIAL_REPORT_DATA);
+    const [classData, setClassData] = useLocalStorage<ClassSpecificData[]>(getKey('class-data'), INITIAL_CLASS_DATA);
     const isRemoteUpdate = React.useRef(false);
     const lastLocalUpdate = React.useRef(Date.now());
 
@@ -107,13 +118,29 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Sync lock to prevent concurrent syncs
     const isSyncingRef = React.useRef(false);
 
+    // Sync pause control - used during authentication to stop all auto-save
+    const isSyncPaused = React.useRef(false);
+    const pendingSaveTimeout = React.useRef<NodeJS.Timeout | null>(null);
+
     // FIX: Add users to DataContextstate so it's included in sync/saves
-    const [users, setUsers] = useState<User[]>([]);
+    const [users, setUsersInternal] = useState<User[]>([]);
     const [userLogs, setUserLogs] = useState<UserLog[]>([]);
     const [activeSessions, setActiveSessions] = useState<Record<string, string>>({});
 
+    // Wrapped setUsers with logging to track all changes
+    const setUsers = (value: React.SetStateAction<User[]>) => {
+        const newValue = typeof value === 'function' ? value(users) : value;
+        SyncLogger.log(`setUsers called. Current count: ${users.length}, New count: ${newValue.length}`);
+        SyncLogger.log(`Stack trace: ${new Error().stack}`);
+        setUsersInternal(newValue);
+    };
+
     // FIX: Implement function to overwrite all data from an imported file.
     const loadImportedData = (data: Partial<AppDataType>) => {
+        // CRITICAL: Mark this as a remote update to prevent syncing back to cloud
+        // This prevents localStorage from overwriting imported/cloud data
+        isRemoteUpdate.current = true;
+
         // This function overwrites existing data with data from an imported file.
         // If a key is missing in the imported data, it resets to the initial default state
         // to ensure a clean slate, matching user expectations of a full data replacement.
@@ -140,6 +167,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setReportData(importedReportData || INITIAL_REPORT_DATA);
         setClassData(importedClassData || INITIAL_CLASS_DATA);
         // Sync users if present
+        SyncLogger.log(`loadImportedData: Loading users. Count: ${importedUsers?.length || 0}`);
         if (importedUsers) {
             setUsers(importedUsers);
         }
@@ -147,7 +175,38 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (data.activeSessions) setActiveSessions(data.activeSessions);
     };
 
+    // CRITICAL: When schoolId changes, reset all data to prevent cross-school contamination
+    const previousSchoolId = React.useRef<string | null>(schoolId);
+    React.useEffect(() => {
+        if (previousSchoolId.current !== null && previousSchoolId.current !== schoolId) {
+            console.log(`SchoolId changed from ${previousSchoolId.current} to ${schoolId}, resetting all data`);
+
+            // Clear all state to prevent old school data from lingering
+            setSettings(INITIAL_SETTINGS);
+            setStudents(INITIAL_STUDENTS);
+            setSubjects(INITIAL_SUBJECTS);
+            setClasses(INITIAL_CLASSES);
+            setGrades(INITIAL_GRADES);
+            setAssessments(INITIAL_ASSESSMENTS);
+            setScores(INITIAL_SCORES);
+            setReportData(INITIAL_REPORT_DATA);
+            setClassData(INITIAL_CLASS_DATA);
+            // CRITICAL FIX: Do NOT reset users here! Users are loaded from cloud via loadImportedData
+            // Resetting them to [] triggers auto-save which deletes all users from cloud database
+            // setUsers([]);
+            setUserLogs([]);
+            setActiveSessions({});
+        }
+        previousSchoolId.current = schoolId;
+    }, [schoolId]);
+
     const saveToCloud = async () => {
+        // CRITICAL: Check if sync is paused (during authentication)
+        if (isSyncPaused.current) {
+            console.log("Sync is paused (likely during authentication), skipping save");
+            return;
+        }
+
         if (!schoolId) {
             console.log("No school ID, skipping cloud save.");
             return;
@@ -170,6 +229,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
 
         // Capture CURRENT state at sync time (not stale state from when timeout started)
+        SyncLogger.log(`saveToCloud: Preparing to save. Users count: ${users.length}`);
+
+        // CRITICAL: Log warning if saving empty users array
+        // The sync pause mechanism should prevent this, but we log for visibility
+        if (users.length === 0 && schoolId) {
+            SyncLogger.log(`WARNING: Attempting to save with empty users array. This may indicate an issue.`);
+            console.warn('[DataContext] Saving with empty users array - this should only happen for new school accounts');
+        }
+
         const currentData: AppDataType = {
             settings,
             students,
@@ -221,11 +289,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // This also effectively ignores the "echo" from our own saves.
             const timeSinceLastLocalUpdate = Date.now() - lastLocalUpdate.current;
             if (timeSinceLastLocalUpdate < 10000) {
-                console.log(`Skipping remote update due to local activity (${timeSinceLastLocalUpdate}ms ago).`);
+                console.log(`[SYNC_LOG] Skipping remote update due to local activity (${timeSinceLastLocalUpdate}ms ago).`);
                 return;
             }
 
-            console.log("Received remote update");
+            SyncLogger.log(`Received remote update from cloud. Users count in update: ${data.users?.length || 0}`);
             isRemoteUpdate.current = true;
             loadImportedData(data);
         });
@@ -233,9 +301,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return () => unsubscribe();
     }, [schoolId]);
 
+    // Track initial mount to prevent auto-save before data is loaded from cloud
+    const isInitialMount = React.useRef(true);
+
     // Background sync effect (Debounced Auto-Save)
     useEffect(() => {
         if (!schoolId) return;
+
+        // CRITICAL: Skip auto-save on initial mount to prevent syncing empty arrays before data loads from cloud
+        if (isInitialMount.current) {
+            console.log("Skipping auto-save on initial mount - waiting for data to load from cloud");
+            isInitialMount.current = false;
+            return;
+        }
 
         // If this change came from a remote update, skip saving
         if (isRemoteUpdate.current) {
@@ -247,13 +325,31 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // It's a local update, mark the timestamp
         lastLocalUpdate.current = Date.now();
 
-        const handler = setTimeout(() => {
+        // Clear any existing timeout first
+        if (pendingSaveTimeout.current) {
+            clearTimeout(pendingSaveTimeout.current);
+            pendingSaveTimeout.current = null;
+        }
+
+        // Skip if sync is paused
+        if (isSyncPaused.current) {
+            console.log("Skipping auto-save schedule - sync is paused");
+            return;
+        }
+
+        pendingSaveTimeout.current = setTimeout(() => {
+            pendingSaveTimeout.current = null;
             // saveToCloud will capture CURRENT state when it runs
             saveToCloud();
         }, 5000); // Auto-save 5 seconds after the last change (increased from 2s to reduce mid-entry syncs)
 
-        return () => clearTimeout(handler);
-    }, [schoolId, settings, students, subjects, classes, grades, assessments, scores, reportData, classData]);
+        return () => {
+            if (pendingSaveTimeout.current) {
+                clearTimeout(pendingSaveTimeout.current);
+                pendingSaveTimeout.current = null;
+            }
+        };
+    }, [schoolId, settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions]);
 
     const createCrud = <T extends { id: number }>(
         items: T[],
@@ -516,6 +612,26 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         await logUserActivity(schoolId, log);
     };
 
+    // Sync control functions
+    const pauseSync = () => {
+        console.log('[DataContext] Sync PAUSED - clearing all pending saves');
+        isSyncPaused.current = true;
+
+        // Clear any pending save timeout
+        if (pendingSaveTimeout.current) {
+            clearTimeout(pendingSaveTimeout.current);
+            pendingSaveTimeout.current = null;
+        }
+
+        // Also clear the sync lock to allow fresh start
+        isSyncingRef.current = false;
+    };
+
+    const resumeSync = () => {
+        console.log('[DataContext] Sync RESUMED');
+        isSyncPaused.current = false;
+    };
+
     const value: DataContextType = {
         settings, setSettings, updateSettings,
         students,
@@ -556,6 +672,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isOnline,
         isSyncing,
         queuedCount,
+        // Sync control
+        pauseSync,
+        resumeSync,
+        // User logs and sessions
         userLogs,
         activeSessions,
         // New exports

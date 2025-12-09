@@ -1,5 +1,5 @@
 // MAINTENANCE MODE: Set to false to show "Under Construction" page
-export const SITE_ACTIVE = false;
+export const SITE_ACTIVE = true;
 
 import type { SchoolSettings, Student, Subject, Class, Grade, Assessment, Score, ReportSpecificData, ClassSpecificData } from './types';
 

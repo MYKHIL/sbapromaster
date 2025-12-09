@@ -6,6 +6,7 @@ import { loginOrRegisterSchool, AppDataType, createDocumentId, searchSchools, up
 import { useData } from '../context/DataContext';
 import { useUser } from '../context/UserContext';
 import { saveDeviceCredential, getDeviceCredential, hashPassword } from '../services/authService';
+import * as SyncLogger from '../services/syncLogger';
 import { INITIAL_SETTINGS, INITIAL_STUDENTS, INITIAL_SUBJECTS, INITIAL_CLASSES, INITIAL_GRADES, INITIAL_ASSESSMENTS, INITIAL_SCORES, INITIAL_REPORT_DATA, INITIAL_CLASS_DATA } from '../constants';
 import type { User, DeviceCredential } from '../types';
 
@@ -16,7 +17,7 @@ interface AuthOverlayProps {
 }
 
 const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
-    const { loadImportedData, setSchoolId } = useData();
+    const { loadImportedData, setSchoolId, pauseSync, resumeSync } = useData();
     const { setUsers, users, login, setPassword: setUserPassword, checkAutoLogin, isAuthenticated } = useUser();
 
     // School login state
@@ -46,6 +47,26 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             setAuthStage('user-selection');
         }
     }, [isAuthenticated, currentSchoolId, authStage]);
+
+    // Initialize SyncLogger when component mounts
+    useEffect(() => {
+        SyncLogger.startNewLog('School Authentication');
+        SyncLogger.log('AuthOverlay component mounted');
+
+        // Cleanup: download log when unmounting
+        return () => {
+            SyncLogger.log('AuthOverlay component unmounting');
+        };
+    }, []);
+
+    // CRITICAL: Pause all sync activities when in auth mode
+    useEffect(() => {
+        if (authStage !== 'authenticated') {
+            console.log('[AuthOverlay] Pausing sync - authentication in progress');
+            SyncLogger.log('Pausing sync - authentication in progress');
+            pauseSync();
+        }
+    }, [authStage, pauseSync]);
 
     const handleSchoolNameChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
@@ -113,6 +134,9 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
 
         if (result.status === 'success') {
             const docId = result.docId;
+            console.log(`[SYNC_LOG] School login successful. DocId: ${docId}`);
+            console.log(`[SYNC_LOG] Users from result.data: ${result.data.users?.length || 0}`);
+
             setSchoolId(docId);
             setCurrentSchoolId(docId);
             loadImportedData(result.data);
@@ -120,6 +144,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
 
             // Check if users exist
             const users = result.data.users || [];
+            console.log(`[SYNC_LOG] Setting users from login result. Count: ${users.length}`);
             setUsers(users);
 
             if (users.length === 0) {
@@ -129,7 +154,8 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 // Users exist, check for auto-login
                 const autoLoginUser = await checkAutoLogin(docId, users);
                 if (autoLoginUser) {
-                    // Auto-login successful
+                    // Auto-login successful - resume sync
+                    resumeSync();
                     setAuthStage('authenticated');
                 } else {
                     // Show user selection
@@ -223,7 +249,8 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                     // Save device credential for auto-login next time
                     saveDeviceCredential(currentSchoolId, adminUser.id);
 
-                    // Successfully logged in - transition to authenticated state
+                    // Successfully logged in - resume sync and transition to authenticated state
+                    resumeSync();
                     setAuthStage('authenticated');
                 } else {
                     // Login failed - this shouldn't happen since we just set the password
@@ -249,6 +276,8 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
         if (success && currentSchoolId) {
             // Save device credential
             saveDeviceCredential(currentSchoolId, userId);
+            // Resume sync now that we're authenticated
+            resumeSync();
             setAuthStage('authenticated');
             return true;
         }
@@ -278,6 +307,8 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
 
         // Save device credential
         saveDeviceCredential(currentSchoolId, userId);
+        // Resume sync now that we're authenticated
+        resumeSync();
         setAuthStage('authenticated');
     };
 
