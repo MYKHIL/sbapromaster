@@ -8,7 +8,8 @@ export type Page =
   | 'Grading System'
   | 'Assessment Types'
   | 'School Setup'
-  | 'Data Management';
+  | 'Data Management'
+  | 'Score Summary';
 
 export interface Student {
   id: number;

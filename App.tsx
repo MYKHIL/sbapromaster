@@ -10,6 +10,7 @@ import Teachers from './components/pages/Teachers';
 import GradingSystem from './components/pages/GradingSystem';
 import AssessmentTypes from './components/pages/AssessmentTypes';
 import DataManagement from './components/pages/DataManagement';
+import ScoreSummary from './components/pages/ScoreSummary';
 import { DataProvider } from './context/DataContext';
 import { UserProvider, useUser } from './context/UserContext';
 import type { Page } from './types';
@@ -40,6 +41,7 @@ const ActivePage: React.FC<{ page: Page }> = ({ page }) => {
     case 'Grading System': return <GradingSystem />;
     case 'Assessment Types': return <AssessmentTypes />;
     case 'Score Entry': return <ScoreEntry />;
+    case 'Score Summary': return <ScoreSummary />;
     case 'Report Viewer': return <ReportViewer />;
     // Data Management is handled separately to preserve its state
     default: return null;
