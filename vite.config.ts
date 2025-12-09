@@ -20,7 +20,6 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         input: {
           main: path.resolve(__dirname, 'index.html'),
-          pdfGenerator: path.resolve(__dirname, 'services/pdfGenerator.ts')
         },
         output: {
           manualChunks: {

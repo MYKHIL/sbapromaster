@@ -1,4 +1,4 @@
-import initSqlJs from 'sql.js';
+import initSqlJs from 'sql.js/dist/sql-wasm';
 import type { Database } from 'sql.js';
 import type { Student, Subject, Class, Grade, Assessment, Score, SchoolSettings, ReportSpecificData, ClassSpecificData } from '../types';
 
@@ -16,9 +16,9 @@ type AppData = {
 };
 
 export interface ImportDiagnostics {
-  records: { total: number; skipped: number };
-  comments: { total: number; skipped: number };
-  skippedReasons: string[];
+    records: { total: number; skipped: number };
+    comments: { total: number; skipped: number };
+    skippedReasons: string[];
 }
 
 export interface ImportResult {
@@ -63,12 +63,12 @@ function normalizeDateString(dateStr: any): string {
             return `${year}-${month}-${day}`;
         }
     }
-    
+
     // If it's just a year, don't format it.
     if (/^\d{4}$/.test(trimmedDateStr)) {
         return trimmedDateStr;
     }
-    
+
     console.warn(`Could not normalize date string: "${trimmedDateStr}". Using it as-is.`);
     return trimmedDateStr;
 }
@@ -114,7 +114,7 @@ async function getDb(data?: Uint8Array): Promise<Database> {
         // FIX: Provide more specific error messages for import vs. export failures.
         const errorMessage = e instanceof Error ? e.message : String(e);
         if (data) {
-             // This error happens during an import.
+            // This error happens during an import.
             throw new Error(`The provided file is not a valid SQLite database or it is corrupted. Error: ${errorMessage}`);
         } else {
             // This error happens during an export.
@@ -216,11 +216,11 @@ export async function exportDatabase(data: AppData): Promise<Uint8Array> {
                 });
             });
         });
-        
+
         // Comments (Report Data)
         data.reportData.forEach(rd => {
             const student = studentMap.get(rd.studentId);
-            if(!student) return;
+            if (!student) return;
             const classInfo = data.classes.find(c => c.name === student.class);
             const classData = classInfo ? data.classData.find(cd => cd.classId === classInfo.id) : undefined;
             db.prepare('INSERT INTO Comments (Student, IndexNumber, Class, Attendance, Outof, Conduct, Attitude, TeacherRemarks, HeadRemarks) VALUES (?,?,?,?,?,?,?,?,?)').run([
@@ -267,14 +267,14 @@ export async function importDatabase(dbFile: Uint8Array): Promise<ImportResult> 
             }
             return results;
         };
-        
+
         // Settings
         const settingsRes = query('SELECT * FROM Settings LIMIT 1')[0];
         if (settingsRes) {
             importedData.settings = {
                 schoolName: settingsRes.SchoolName, district: settingsRes.District, address: settingsRes.Address,
                 academicYear: settingsRes.AcademicYear, academicTerm: settingsRes.AcademicTerm,
-                vacationDate: normalizeDateString(settingsRes.VacationDate), 
+                vacationDate: normalizeDateString(settingsRes.VacationDate),
                 reopeningDate: normalizeDateString(settingsRes.ReopeningDate),
                 headmasterName: settingsRes.HeadmasterName || '',
                 logo: uint8ArrayToBase64(settingsRes.LogoPath),
@@ -296,7 +296,7 @@ export async function importDatabase(dbFile: Uint8Array): Promise<ImportResult> 
             };
         });
         importedData.subjects = query('SELECT * FROM Subjects').map((r: any): Subject => ({ id: r.ID, subject: r.Subject, type: r.Type, facilitator: r.Facilitator, signature: uint8ArrayToBase64(r.Signature) }));
-        
+
         // Classes (from TeacherSignature table)
         importedData.classes = query('SELECT * FROM TeacherSignature').map((r: any): Class => ({
             id: r.ID,
@@ -308,7 +308,7 @@ export async function importDatabase(dbFile: Uint8Array): Promise<ImportResult> 
 
         importedData.grades = query('SELECT * FROM Grades').map((r: any): Grade => ({ id: r.ID, name: r.Grade, minScore: Number(r.MinimumValue), maxScore: Number(r.MaximumValue), remark: r.Remarks }));
         importedData.assessments = query('SELECT * FROM Assessment').map((r: any): Assessment => ({ id: r.ID, name: r.Name, weight: Number(r.TargetValue || r.Basis || 0) }));
-        
+
         // Check if essential data was loaded. If not, the DB schema might be wrong.
         if (!importedData.students?.length && !importedData.subjects?.length) {
             throw new Error("The database file does not contain any student or subject data, or the table names are incorrect.");
@@ -317,7 +317,7 @@ export async function importDatabase(dbFile: Uint8Array): Promise<ImportResult> 
         // Complex Mappings with robust, whitespace-insensitive lookups
         const recordsFromDb = query('SELECT * FROM Records');
         diagnostics.records.total = recordsFromDb.length;
-        
+
         const studentMap = new Map((importedData.students || []).map(s => [s.indexNumber?.trim(), s]));
         const subjectMap = new Map((importedData.subjects || []).map(s => [s.subject?.trim(), s]));
         const assessmentMap = new Map((importedData.assessments || []).map(a => [a.name?.trim(), a]));
@@ -336,7 +336,7 @@ export async function importDatabase(dbFile: Uint8Array): Promise<ImportResult> 
                 reasonCounts.set(reasonKey, (reasonCounts.get(reasonKey) || 0) + 1);
                 return;
             }
-            
+
             const rawScore = String(rec.Score || '').trim();
             if (rawScore === '') {
                 // Skip records with no score value. This is not an error, just empty data.
@@ -345,11 +345,11 @@ export async function importDatabase(dbFile: Uint8Array): Promise<ImportResult> 
 
             let scoreValue: string;
             const rawBasis = String(rec.AssessmentBasis || '').trim();
-            
+
             // Case 1: Old format with explicit basis (e.g., Score: 15, AssessmentBasis: 20)
             if (rawBasis !== '') {
                 scoreValue = `${rawScore}/${rawBasis}`;
-            } 
+            }
             // Case 2: New format where score is already "x/y" (e.g., Score: "15/20")
             else if (rawScore.includes('/')) {
                 scoreValue = rawScore;
@@ -368,9 +368,9 @@ export async function importDatabase(dbFile: Uint8Array): Promise<ImportResult> 
                 reasonCounts.set(reasonKey, (reasonCounts.get(reasonKey) || 0) + 1);
                 return;
             }
-            
+
             const scoreId = `${student.id}-${subject.id}`;
-            
+
             const existing = scoresMap.get(scoreId);
             if (existing) {
                 if (existing.assessmentScores[assessment.id]) {
@@ -386,7 +386,7 @@ export async function importDatabase(dbFile: Uint8Array): Promise<ImportResult> 
             }
         });
         importedData.scores = Array.from(scoresMap.values());
-        
+
         const commentsFromDb = query('SELECT * FROM Comments');
         diagnostics.comments.total = commentsFromDb.length;
         const classMap = new Map((importedData.classes || []).map(c => [c.name?.trim(), c]));
@@ -396,13 +396,13 @@ export async function importDatabase(dbFile: Uint8Array): Promise<ImportResult> 
 
         commentsFromDb.forEach((com: any) => {
             const student = studentMap.get(com.IndexNumber?.trim());
-            if(!student) {
+            if (!student) {
                 diagnostics.comments.skipped++;
                 const reasonKey = `Comment record skipped: Student with Index No. '${com.IndexNumber || 'N/A'}' not found`;
                 reasonCounts.set(reasonKey, (reasonCounts.get(reasonKey) || 0) + 1);
                 return;
             }
-            
+
             importedData.reportData?.push({
                 studentId: student.id,
                 attendance: com.Attendance,
@@ -411,9 +411,9 @@ export async function importDatabase(dbFile: Uint8Array): Promise<ImportResult> 
                 attitude: com.Attitude,
                 teacherRemark: com.TeacherRemarks,
             });
-            
+
             const classInfo = classMap.get(student.class?.trim());
-            if(classInfo && !classDataMap.has(classInfo.id)) {
+            if (classInfo && !classDataMap.has(classInfo.id)) {
                 classDataMap.set(classInfo.id, {
                     classId: classInfo.id,
                     totalSchoolDays: com.Outof,
@@ -421,7 +421,7 @@ export async function importDatabase(dbFile: Uint8Array): Promise<ImportResult> 
             }
         });
         importedData.classData = Array.from(classDataMap.values());
-        
+
         for (const [reason, count] of reasonCounts.entries()) {
             diagnostics.skippedReasons.push(`${reason} (${count} instance${count > 1 ? 's' : ''}).`);
         }
@@ -439,6 +439,6 @@ export async function importDatabase(dbFile: Uint8Array): Promise<ImportResult> 
         }
         throw new Error("Failed to parse database file. It may be corrupt or have an incompatible schema.");
     }
-    
+
     return { data: importedData, diagnostics };
 }
