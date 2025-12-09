@@ -1,100 +1,2304 @@
-# Score Entry Bug Fix - FINAL SOLUTION ✅
-
-## Problem
-Even with 60-second echo filter, scores entered for Acquah Evans and others were being cleared by remote sync updates.
-
-## Root Cause Analysis
-
-Looking at the console logs, the issue was:
-
-1. ✅ User enters scores → Saved to local cache successfully
-2. ✅ Auto-sync triggered → Uploaded to cloud successfully  
-3. 🔔 **Firebase real-time listener keeps sending remote updates**
-4. 📊 Remote updates show `scoresCount: 384` (STALE - same as before new entries!)
-5. ⏰ After 60 seconds, echo filter expires
-6. ✅ Remote update processes with stale 384 scores
-7. ❌ **Fresh local scores (385-388) get OVERWRITTEN by stale cloud data (384)**
-
-**The Firebase listener was continuously sending old snapshots that didn't include the newly saved scores!**
-
-## The Solution
-
-Added **stale data protection** - remote updates are now rejected if they don't have MORE data than local state:
-
-```tsx
-// CRITICAL: Reject stale remote data
-const remoteScoresCount = data.scores?.length || 0;
-const localScoresCount = scores.length;
-
-if (remoteScoresCount < localScoresCount) {
-    console.log(`🚫 Rejecting stale remote data - remote has ${remoteScoresCount}, local has ${localScoresCount}`);
-    return;
-}
-
-if (remoteScoresCount === localScoresCount) {
-    console.log(`⚠️ Remote and local have same count. Assuming stale echo, skipping.`);
-    return;
-}
-```
-
-**Logic:**
-- Only accept remote updates that have **MORE scores** than local
-- This allows legitimate additions from other users/tabs
-- Blocks stale Firebase snapshots from overwriting fresh data
-
-## What You'll See Now
-
-### When Entering Scores
-```
-[ScoreEntry] User enters score
-[ScoreEntry] ✅ Score saved to local cache  
-[DataContext] ⏱️ Auto-sync scheduled
-[DataContext] ☁️ Uploading to cloud...
-[DataContext] ✅ Data saved to cloud successfully!
-[DataContext] 🔔 Remote update received: { scoresCount: 384 }
-[DataContext] 🚫 Skipping - local activity 2s ago (echo filter)
-...
-[DataContext] 🔔 Remote update received: { scoresCount: 384 }
-[DataContext] ⚠️ Remote and local have same score count (384). Assuming stale echo, skipping.
-```
-
-### When Another User Adds Data (Cross-Tab/Cross-Device)
-```
-[DataContext] 🔔 Remote update received: { scoresCount: 386 }
-[DataContext] ✅ Processing remote update - remote has MORE data (386 > 384)
-[DataContext] ✅ Updating scores from cloud: 386
-```
-
-## Benefits
-
-✅ **No more data loss** - Local scores never overwritten by stale cloud data  
-✅ **Fast local updates** - Immediate save to local cache  
-✅ **Cross-tab sync still works** - Legitimate remote additions are accepted  
-✅ **Echo filtering** - 60-second window blocks immediate reflections  
-✅ **Stale data filtering** - Score count comparison blocks old snapshots  
-
-## Testing
-
-1. Enter scores for multiple students
-2. Watch console - you should see:
-   - ✅ Scores save locally
-   - ✅ Cloud sync completes
-   - 🚫 Stale remote updates rejected
-   - ✅ Your scores remain intact!
-
-3. Open second tab, add more scores
-4. First tab should:
-   - 🔔 Receive remote update
-   - ✅ Accept it (has MORE scores)
-   - ✅ Sync the new data
-
-## Files Modified
-
-- **`DataContext.tsx`** - Added stale data rejection logic to real-time sync listener
-
----
-
-**Status: FIXED** 🎉
-
-The score clearing issue is now fully resolved. The combination of echo filtering (60s) and stal
-e data rejection (count comparison) provides comprehensive protection against data loss while maintaining cross-tab sync functionality.
+firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?gsessionid=mh-m8aL-B_9XaA0uLLf58ewZNSbxgTS8GU6jqpNAwDA&VER=8&database=projects%2Fsba-pro-master-40f08%2Fdatabases%2F(default)&RID=rpc&SID=4uVBSyCjHdy9wIJUC9aUCQ&AID=10&CI=0&TYPE=xmlhttp&zx=5a35rj3d0s26&t=1:1   Failed to load resource: net::ERR_QUIC_PROTOCOL_ERROR.QUIC_TOO_MANY_RTOS
+firestore.googleapis.com/google.firestore.v1.Firestore/Listen/channel?gsessionid=okO4tlD-xAd_Z3idhVJOd5hMGpRKsJo1GH0GPURmnVs&VER=8&database=projects%2Fsba-pro-master-40f08%2Fdatabases%2F(default)&RID=rpc&SID=XwJzsp_LwdNUrELqZaAQIg&AID=517&CI=0&TYPE=xmlhttp&zx=dz1l8yfat3i&t=1:1   Failed to load resource: net::ERR_QUIC_PROTOCOL_ERROR.QUIC_TOO_MANY_RTOS
+firestore.googleapis.com/google.firestore.v1.Firestore/Listen/channel?gsessionid=okO4tlD-xAd_Z3idhVJOd5hMGpRKsJo1GH0GPURmnVs&VER=8&database=projects%2Fsba-pro-master-40f08%2Fdatabases%2F(default)&RID=rpc&SID=XwJzsp_LwdNUrELqZaAQIg&AID=537&CI=0&TYPE=xmlhttp&zx=t5y435iu7ltq&t=2:1   Failed to load resource: the server responded with a status of 404 ()
+firestore.googleapis.com/google.firestore.v1.Firestore/Listen/channel?VER=8&database=projects%2Fsba-pro-master-40f08%2Fdatabases%2F(default)&gsessionid=okO4tlD-xAd_Z3idhVJOd5hMGpRKsJo1GH0GPURmnVs&SID=XwJzsp_LwdNUrELqZaAQIg&RID=64788&AID=537&zx=ysjk8dj0ozys&t=1:1   Failed to load resource: the server responded with a status of 400 ()
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+DataContext.tsx:203 [DataContext] ✅ Updating settings from cloud
+DataContext.tsx:207 [DataContext] ✅ Updating students from cloud: 174
+DataContext.tsx:211 [DataContext] ✅ Updating subjects from cloud: 14
+DataContext.tsx:215 [DataContext] ✅ Updating classes from cloud: 11
+DataContext.tsx:219 [DataContext] ✅ Updating grades from cloud: 9
+DataContext.tsx:223 [DataContext] ✅ Updating assessments from cloud: 5
+DataContext.tsx:227 [DataContext] ✅ Updating scores from cloud: 414
+DataContext.tsx:233 [DataContext] ✅ Updating reportData from cloud: 7
+DataContext.tsx:237 [DataContext] ✅ Updating classData from cloud: 4
+syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users. Count: 17
+DataContext.tsx:244 [DataContext] ✅ Updating users from cloud: 17
+syncLogger.ts:59 [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
+    at setUsers (:3000/context/DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (:3000/context/DataContext.tsx?t=1765295495852:149:7)
+    at :3000/context/DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (:3000/services/firebaseService.ts?t=1765285831207:116:7)
+    at next (:3000/node_modules/.vite/deps/firebase_firestore.js?v=d1f63af8:17880:19)
+    at :3000/node_modules/.vite/deps/firebase_firestore.js?v=d1f63af8:14996:21
+DataContext.tsx:460 Skipping save due to remote update
+DataContext.tsx:388 [DataContext] 🔔 Remote update received from cloud: Object
+DataContext.tsx:434 [DataContext] ✅ Processing remote update - applying cloud data
+syncLogger.ts:59 [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+DataContext.tsx:188 [DataContext] 📦 loadImportedData called with: Object
+DataContext.tsx:203 [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: Object
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: Object
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+syncLogger.ts:59 [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
+    at setUsers (:3000/context/DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (:3000/context/DataContext.tsx?t=1765295495852:149:7)
+    at :3000/context/DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (:3000/services/firebaseService.ts?t=1765285831207:116:7)
+    at next (:3000/node_modules/.vite/deps/firebase_firestore.js?v=d1f63af8:17880:19)
+    at :3000/node_modules/.vite/deps/firebase_firestore.js?v=d1f63af8:14996:21
+DataContext.tsx:388 [DataContext] 🔔 Remote update received from cloud: Object
+DataContext.tsx:434 [DataContext] ✅ Processing remote update - applying cloud data
+syncLogger.ts:59 [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+DataContext.tsx:188 [DataContext] 📦 loadImportedData called with: Object
+DataContext.tsx:203 [DataContext] ✅ Updating settings from cloud
+DataContext.tsx:207 [DataContext] ✅ Updating students from cloud: 174
+DataContext.tsx:211 [DataContext] ✅ Updating subjects from cloud: 14
+DataContext.tsx:215 [DataContext] ✅ Updating classes from cloud: 11
+DataContext.tsx:219 [DataContext] ✅ Updating grades from cloud: 9
+DataContext.tsx:223 [DataContext] ✅ Updating assessments from cloud: 5
+DataContext.tsx:227 [DataContext] ✅ Updating scores from cloud: 414
+DataContext.tsx:233 [DataContext] ✅ Updating reportData from cloud: 7
+DataContext.tsx:237 [DataContext] ✅ Updating classData from cloud: 4
+syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users. Count: 17
+DataContext.tsx:244 [DataContext] ✅ Updating users from cloud: 17
+syncLogger.ts:59 [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
+    at setUsers (:3000/context/DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (:3000/context/DataContext.tsx?t=1765295495852:149:7)
+    at :3000/context/DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (:3000/services/firebaseService.ts?t=1765285831207:116:7)
+    at next (:3000/node_modules/.vite/deps/firebase_firestore.js?v=d1f63af8:17880:19)
+    at :3000/node_modules/.vite/deps/firebase_firestore.js?v=d1f63af8:14996:21
+DataContext.tsx:460 Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx:140:40)
+    at loadImportedData (DataContext.tsx:245:13)
+    at DataContext.tsx:437:13
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (reference_impl.ts:707:13)
+    at async_observer.ts:65:9
+DataContext.tsx:388 [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+DataContext.tsx:434 [DataContext] ✅ Processing remote update - applying cloud data
+syncLogger.ts:59 [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+DataContext.tsx:188 [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+DataContext.tsx:203 [DataContext] ✅ Updating settings from cloud
+DataContext.tsx:207 [DataContext] ✅ Updating students from cloud: 174
+DataContext.tsx:211 [DataContext] ✅ Updating subjects from cloud: 14
+DataContext.tsx:215 [DataContext] ✅ Updating classes from cloud: 11
+DataContext.tsx:219 [DataContext] ✅ Updating grades from cloud: 9
+DataContext.tsx:223 [DataContext] ✅ Updating assessments from cloud: 5
+DataContext.tsx:227 [DataContext] ✅ Updating scores from cloud: 414
+DataContext.tsx:233 [DataContext] ✅ Updating reportData from cloud: 7
+DataContext.tsx:237 [DataContext] ✅ Updating classData from cloud: 4
+syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users. Count: 17
+DataContext.tsx:244 [DataContext] ✅ Updating users from cloud: 17
+syncLogger.ts:59 [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx:140:40)
+    at loadImportedData (DataContext.tsx:245:13)
+    at DataContext.tsx:437:13
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (reference_impl.ts:707:13)
+    at async_observer.ts:65:9
+DataContext.tsx:460 Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx:140:40)
+    at loadImportedData (DataContext.tsx:245:13)
+    at DataContext.tsx:437:13
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (reference_impl.ts:707:13)
+    at async_observer.ts:65:9
+DataContext.tsx:388 [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+DataContext.tsx:434 [DataContext] ✅ Processing remote update - applying cloud data
+syncLogger.ts:59 [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+DataContext.tsx:188 [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+DataContext.tsx:203 [DataContext] ✅ Updating settings from cloud
+DataContext.tsx:207 [DataContext] ✅ Updating students from cloud: 174
+DataContext.tsx:211 [DataContext] ✅ Updating subjects from cloud: 14
+DataContext.tsx:215 [DataContext] ✅ Updating classes from cloud: 11
+DataContext.tsx:219 [DataContext] ✅ Updating grades from cloud: 9
+DataContext.tsx:223 [DataContext] ✅ Updating assessments from cloud: 5
+DataContext.tsx:227 [DataContext] ✅ Updating scores from cloud: 414
+DataContext.tsx:233 [DataContext] ✅ Updating reportData from cloud: 7
+DataContext.tsx:237 [DataContext] ✅ Updating classData from cloud: 4
+syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users. Count: 17
+DataContext.tsx:244 [DataContext] ✅ Updating users from cloud: 17
+syncLogger.ts:59 [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx:140:40)
+    at loadImportedData (DataContext.tsx:245:13)
+    at DataContext.tsx:437:13
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (reference_impl.ts:707:13)
+    at async_observer.ts:65:9
+DataContext.tsx:460 Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+syncLogger.ts:59 [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx:140:40)
+    at loadImportedData (DataContext.tsx:245:13)
+    at DataContext.tsx:437:13
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (reference_impl.ts:707:13)
+    at async_observer.ts:65:9
+DataContext.tsx:388 [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+DataContext.tsx:434 [DataContext] ✅ Processing remote update - applying cloud data
+syncLogger.ts:59 [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+DataContext.tsx:188 [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+DataContext.tsx:203 [DataContext] ✅ Updating settings from cloud
+DataContext.tsx:207 [DataContext] ✅ Updating students from cloud: 174
+DataContext.tsx:211 [DataContext] ✅ Updating subjects from cloud: 14
+DataContext.tsx:215 [DataContext] ✅ Updating classes from cloud: 11
+DataContext.tsx:219 [DataContext] ✅ Updating grades from cloud: 9
+DataContext.tsx:223 [DataContext] ✅ Updating assessments from cloud: 5
+DataContext.tsx:227 [DataContext] ✅ Updating scores from cloud: 414
+DataContext.tsx:233 [DataContext] ✅ Updating reportData from cloud: 7
+DataContext.tsx:237 [DataContext] ✅ Updating classData from cloud: 4
+syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users. Count: 17
+DataContext.tsx:244 [DataContext] ✅ Updating users from cloud: 17
+syncLogger.ts:59 [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx:140:40)
+    at loadImportedData (DataContext.tsx:245:13)
+    at DataContext.tsx:437:13
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (reference_impl.ts:707:13)
+    at async_observer.ts:65:9
+DataContext.tsx:460 Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx:140:40)
+    at loadImportedData (DataContext.tsx:245:13)
+    at DataContext.tsx:437:13
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (reference_impl.ts:707:13)
+    at async_observer.ts:65:9
+DataContext.tsx:388 [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+DataContext.tsx:434 [DataContext] ✅ Processing remote update - applying cloud data
+syncLogger.ts:59 [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+DataContext.tsx:188 [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+DataContext.tsx:203 [DataContext] ✅ Updating settings from cloud
+DataContext.tsx:207 [DataContext] ✅ Updating students from cloud: 174
+DataContext.tsx:211 [DataContext] ✅ Updating subjects from cloud: 14
+DataContext.tsx:215 [DataContext] ✅ Updating classes from cloud: 11
+DataContext.tsx:219 [DataContext] ✅ Updating grades from cloud: 9
+DataContext.tsx:223 [DataContext] ✅ Updating assessments from cloud: 5
+DataContext.tsx:227 [DataContext] ✅ Updating scores from cloud: 414
+DataContext.tsx:233 [DataContext] ✅ Updating reportData from cloud: 7
+DataContext.tsx:237 [DataContext] ✅ Updating classData from cloud: 4
+syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users. Count: 17
+DataContext.tsx:244 [DataContext] ✅ Updating users from cloud: 17
+syncLogger.ts:59 [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx:140:40)
+    at loadImportedData (DataContext.tsx:245:13)
+    at DataContext.tsx:437:13
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (reference_impl.ts:707:13)
+    at async_observer.ts:65:9
+DataContext.tsx:460 Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx:140:40)
+    at loadImportedData (DataContext.tsx:245:13)
+    at DataContext.tsx:437:13
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (reference_impl.ts:707:13)
+    at async_observer.ts:65:9
+DataContext.tsx:388 [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+DataContext.tsx:434 [DataContext] ✅ Processing remote update - applying cloud data
+syncLogger.ts:59 [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+DataContext.tsx:188 [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+DataContext.tsx:203 [DataContext] ✅ Updating settings from cloud
+DataContext.tsx:207 [DataContext] ✅ Updating students from cloud: 174
+DataContext.tsx:211 [DataContext] ✅ Updating subjects from cloud: 14
+DataContext.tsx:215 [DataContext] ✅ Updating classes from cloud: 11
+DataContext.tsx:219 [DataContext] ✅ Updating grades from cloud: 9
+DataContext.tsx:223 [DataContext] ✅ Updating assessments from cloud: 5
+DataContext.tsx:227 [DataContext] ✅ Updating scores from cloud: 414
+DataContext.tsx:233 [DataContext] ✅ Updating reportData from cloud: 7
+DataContext.tsx:237 [DataContext] ✅ Updating classData from cloud: 4
+syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users. Count: 17
+DataContext.tsx:244 [DataContext] ✅ Updating users from cloud: 17
+syncLogger.ts:59 [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx:140:40)
+    at loadImportedData (DataContext.tsx:245:13)
+    at DataContext.tsx:437:13
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (reference_impl.ts:707:13)
+    at async_observer.ts:65:9
+DataContext.tsx:460 Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx:140:40)
+    at loadImportedData (DataContext.tsx:245:13)
+    at DataContext.tsx:437:13
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (reference_impl.ts:707:13)
+    at async_observer.ts:65:9
+DataContext.tsx:388 [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+DataContext.tsx:434 [DataContext] ✅ Processing remote update - applying cloud data
+syncLogger.ts:59 [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+DataContext.tsx:188 [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+DataContext.tsx:203 [DataContext] ✅ Updating settings from cloud
+DataContext.tsx:207 [DataContext] ✅ Updating students from cloud: 174
+DataContext.tsx:211 [DataContext] ✅ Updating subjects from cloud: 14
+DataContext.tsx:215 [DataContext] ✅ Updating classes from cloud: 11
+DataContext.tsx:219 [DataContext] ✅ Updating grades from cloud: 9
+DataContext.tsx:223 [DataContext] ✅ Updating assessments from cloud: 5
+DataContext.tsx:227 [DataContext] ✅ Updating scores from cloud: 414
+DataContext.tsx:233 [DataContext] ✅ Updating reportData from cloud: 7
+DataContext.tsx:237 [DataContext] ✅ Updating classData from cloud: 4
+syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users. Count: 17
+DataContext.tsx:244 [DataContext] ✅ Updating users from cloud: 17
+syncLogger.ts:59 [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx:140:40)
+    at loadImportedData (DataContext.tsx:245:13)
+    at DataContext.tsx:437:13
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (reference_impl.ts:707:13)
+    at async_observer.ts:65:9
+DataContext.tsx:460 Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx:140:40)
+    at loadImportedData (DataContext.tsx:245:13)
+    at DataContext.tsx:437:13
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (reference_impl.ts:707:13)
+    at async_observer.ts:65:9
+DataContext.tsx:388 [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+DataContext.tsx:434 [DataContext] ✅ Processing remote update - applying cloud data
+syncLogger.ts:59 [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+DataContext.tsx:188 [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+DataContext.tsx:203 [DataContext] ✅ Updating settings from cloud
+DataContext.tsx:207 [DataContext] ✅ Updating students from cloud: 174
+DataContext.tsx:211 [DataContext] ✅ Updating subjects from cloud: 14
+DataContext.tsx:215 [DataContext] ✅ Updating classes from cloud: 11
+DataContext.tsx:219 [DataContext] ✅ Updating grades from cloud: 9
+DataContext.tsx:223 [DataContext] ✅ Updating assessments from cloud: 5
+DataContext.tsx:227 [DataContext] ✅ Updating scores from cloud: 414
+DataContext.tsx:233 [DataContext] ✅ Updating reportData from cloud: 7
+DataContext.tsx:237 [DataContext] ✅ Updating classData from cloud: 4
+syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users. Count: 17
+DataContext.tsx:244 [DataContext] ✅ Updating users from cloud: 17
+syncLogger.ts:59 [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx:140:40)
+    at loadImportedData (DataContext.tsx:245:13)
+    at DataContext.tsx:437:13
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (reference_impl.ts:707:13)
+    at async_observer.ts:65:9
+DataContext.tsx:460 Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx:140:40)
+    at loadImportedData (DataContext.tsx:245:13)
+    at DataContext.tsx:437:13
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (reference_impl.ts:707:13)
+    at async_observer.ts:65:9
+DataContext.tsx:388 [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+DataContext.tsx:434 [DataContext] ✅ Processing remote update - applying cloud data
+syncLogger.ts:59 [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+DataContext.tsx:188 [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+DataContext.tsx:203 [DataContext] ✅ Updating settings from cloud
+DataContext.tsx:207 [DataContext] ✅ Updating students from cloud: 174
+DataContext.tsx:211 [DataContext] ✅ Updating subjects from cloud: 14
+DataContext.tsx:215 [DataContext] ✅ Updating classes from cloud: 11
+DataContext.tsx:219 [DataContext] ✅ Updating grades from cloud: 9
+DataContext.tsx:223 [DataContext] ✅ Updating assessments from cloud: 5
+DataContext.tsx:227 [DataContext] ✅ Updating scores from cloud: 414
+DataContext.tsx:233 [DataContext] ✅ Updating reportData from cloud: 7
+DataContext.tsx:237 [DataContext] ✅ Updating classData from cloud: 4
+syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users. Count: 17
+DataContext.tsx:244 [DataContext] ✅ Updating users from cloud: 17
+syncLogger.ts:59 [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx:140:40)
+    at loadImportedData (DataContext.tsx:245:13)
+    at DataContext.tsx:437:13
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (reference_impl.ts:707:13)
+    at async_observer.ts:65:9
+DataContext.tsx:460 Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx:140:40)
+    at loadImportedData (DataContext.tsx:245:13)
+    at DataContext.tsx:437:13
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (reference_impl.ts:707:13)
+    at async_observer.ts:65:9
+DataContext.tsx:388 [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+DataContext.tsx:434 [DataContext] ✅ Processing remote update - applying cloud data
+syncLogger.ts:59 [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+DataContext.tsx:188 [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+DataContext.tsx:203 [DataContext] ✅ Updating settings from cloud
+DataContext.tsx:207 [DataContext] ✅ Updating students from cloud: 174
+DataContext.tsx:211 [DataContext] ✅ Updating subjects from cloud: 14
+DataContext.tsx:215 [DataContext] ✅ Updating classes from cloud: 11
+DataContext.tsx:219 [DataContext] ✅ Updating grades from cloud: 9
+DataContext.tsx:223 [DataContext] ✅ Updating assessments from cloud: 5
+DataContext.tsx:227 [DataContext] ✅ Updating scores from cloud: 414
+DataContext.tsx:233 [DataContext] ✅ Updating reportData from cloud: 7
+DataContext.tsx:237 [DataContext] ✅ Updating classData from cloud: 4
+syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users. Count: 17
+DataContext.tsx:244 [DataContext] ✅ Updating users from cloud: 17
+syncLogger.ts:59 [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx:140:40)
+    at loadImportedData (DataContext.tsx:245:13)
+    at DataContext.tsx:437:13
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (reference_impl.ts:707:13)
+    at async_observer.ts:65:9
+DataContext.tsx:460 Skipping save due to remote update
+DataContext.tsx:388 [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+DataContext.tsx:434 [DataContext] ✅ Processing remote update - applying cloud data
+syncLogger.ts:59 [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+DataContext.tsx:188 [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+DataContext.tsx:203 [DataContext] ✅ Updating settings from cloud
+DataContext.tsx:207 [DataContext] ✅ Updating students from cloud: 174
+DataContext.tsx:211 [DataContext] ✅ Updating subjects from cloud: 14
+DataContext.tsx:215 [DataContext] ✅ Updating classes from cloud: 11
+DataContext.tsx:219 [DataContext] ✅ Updating grades from cloud: 9
+DataContext.tsx:223 [DataContext] ✅ Updating assessments from cloud: 5
+DataContext.tsx:227 [DataContext] ✅ Updating scores from cloud: 414
+DataContext.tsx:233 [DataContext] ✅ Updating reportData from cloud: 7
+DataContext.tsx:237 [DataContext] ✅ Updating classData from cloud: 4
+syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+ [DataContext] ✅ Updating settings from cloud
+  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+getRootForUpdatedFiber @ react-dom_client.js?v=d1f63af8:3529
+enqueueConcurrentHookUpdate @ react-dom_client.js?v=d1f63af8:3510
+dispatchSetStateInternal @ react-dom_client.js?v=d1f63af8:6832
+dispatchSetState @ react-dom_client.js?v=d1f63af8:6803
+loadImportedData @ DataContext.tsx?t=1765295495852:110
+(anonymous) @ DataContext.tsx?t=1765295495852:285
+(anonymous) @ firebaseService.ts?t=1765285831207:116
+next @ firebase_firestore.js?v=d1f63af8:17880
+(anonymous) @ firebase_firestore.js?v=d1f63af8:14996
+setTimeout
+Ou @ firebase_firestore.js?v=d1f63af8:14995
+next @ firebase_firestore.js?v=d1f63af8:14986
+Fa @ firebase_firestore.js?v=d1f63af8:13809
+__PRIVATE_eventManagerOnWatchChange @ firebase_firestore.js?v=d1f63af8:13757
+__PRIVATE_syncEngineEmitNewSnapsAndNotifyLocalStore @ firebase_firestore.js?v=d1f63af8:14534
+await in __PRIVATE_syncEngineEmitNewSnapsAndNotifyLocalStore
+__PRIVATE_syncEngineWrite @ firebase_firestore.js?v=d1f63af8:14356
+await in __PRIVATE_syncEngineWrite
+(anonymous) @ firebase_firestore.js?v=d1f63af8:18010
+await in (anonymous)
+(anonymous) @ firebase_firestore.js?v=d1f63af8:15993
+(anonymous) @ firebase_firestore.js?v=d1f63af8:16024
+Promise.then
+cc @ firebase_firestore.js?v=d1f63af8:16024
+enqueue @ firebase_firestore.js?v=d1f63af8:15993
+enqueueAndForget @ firebase_firestore.js?v=d1f63af8:15975
+__PRIVATE_firestoreClientWrite @ firebase_firestore.js?v=d1f63af8:18010
+executeWrite @ firebase_firestore.js?v=d1f63af8:18011
+setDoc @ firebase_firestore.js?v=d1f63af8:17843
+logUserActivity @ firebaseService.ts?t=1765296195687:152
+await in logUserActivity
+logPageVisit @ DataContext.tsx?t=1765296195687:538
+(anonymous) @ App.tsx?t=1765296195687:122
+react_stack_bottom_frame @ react-dom_client.js?v=d1f63af8:18567
+runWithFiberInDEV @ react-dom_client.js?v=d1f63af8:997
+commitHookEffectListMount @ react-dom_client.js?v=d1f63af8:9411
+commitHookPassiveMountEffects @ react-dom_client.js?v=d1f63af8:9465
+commitPassiveMountOnFiber @ react-dom_client.js?v=d1f63af8:11040
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=d1f63af8:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=d1f63af8:11033
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=d1f63af8:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=d1f63af8:11201
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=d1f63af8:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=d1f63af8:11033
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=d1f63af8:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=d1f63af8:11201
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=d1f63af8:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=d1f63af8:11033
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=d1f63af8:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=d1f63af8:11033
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=d1f63af8:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=d1f63af8:11201
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=d1f63af8:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=d1f63af8:11066
+flushPassiveEffects @ react-dom_client.js?v=d1f63af8:13150
+(anonymous) @ react-dom_client.js?v=d1f63af8:12776
+performWorkUntilDeadline @ react-dom_client.js?v=d1f63af8:36
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update
+ [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ [DataContext] 🔔 Remote update received from cloud: {hasScores: true, scoresCount: 414, hasUsers: true, usersCount: 17, hasStudents: true, …}
+ [DataContext] ✅ Processing remote update - applying cloud data
+ [SYNC_LOG] Received remote update from cloud. Users count in update: 17
+ [DataContext] 📦 loadImportedData called with: {hasSettings: true, studentsCount: 174, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+ [DataContext] ✅ Updating settings from cloud
+ [DataContext] ✅ Updating students from cloud: 174
+ [DataContext] ✅ Updating subjects from cloud: 14
+ [DataContext] ✅ Updating classes from cloud: 11
+ [DataContext] ✅ Updating grades from cloud: 9
+ [DataContext] ✅ Updating assessments from cloud: 5
+ [DataContext] ✅ Updating scores from cloud: 414
+ [DataContext] ✅ Updating reportData from cloud: 7
+ [DataContext] ✅ Updating classData from cloud: 4
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users from cloud: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1765295495852:49:36)
+    at loadImportedData (DataContext.tsx?t=1765295495852:149:7)
+    at DataContext.tsx?t=1765295495852:285:7
+    at Array.<anonymous> (firebaseService.ts?t=1765285831207:116:7)
+    at next (firebase_firestore.j…v=d1f63af8:17880:19)
+    at firebase_firestore.j…v=d1f63af8:14996:21
+ Skipping save due to remote update

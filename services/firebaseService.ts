@@ -207,12 +207,22 @@ export const saveUserDatabase = async (docId: string, data: Partial<AppDataType>
 };
 
 // Helper to subscribe to real-time updates
-export const subscribeToSchoolData = (docId: string, callback: (data: AppDataType) => void) => {
+export const subscribeToSchoolData = (docId: string, callback: (data: AppDataType, isLocal?: boolean) => void) => {
     const docRef = doc(db, "schools", docId);
 
-    return onSnapshot(docRef, (doc) => {
+    // FIX: Add includeMetadataChanges to ensure we can accurately detect local vs remote changes
+    return onSnapshot(docRef, { includeMetadataChanges: true }, (doc) => {
+        // CRITICAL: Ignore local updates (latency compensation)
+        // If hasPendingWrites is true, this data hasn't reached the server yet.
+        // We already have this data locally (since we wrote it), so we don't need to process it.
+        // This prevents the "Echo Loop" where a local write triggers a listener event, which was then treated as a remote update.
+        if (doc.metadata.hasPendingWrites) {
+            console.log('[firebaseService] 🚫 Ignoring local pending write snapshot (Echo suppression)');
+            return;
+        }
+
         if (doc.exists()) {
-            callback(doc.data() as AppDataType);
+            callback(doc.data() as AppDataType, false);
         }
     }, (error) => {
         console.error("Real-time sync error:", error);
@@ -289,3 +299,20 @@ export const updateHeartbeat = async (docId: string, userId: number) => {
     await setDoc(docRef, { activeSessions }, { merge: true });
 };
 
+/**
+ * Fetch the full school data document
+ */
+export const getSchoolData = async (docId: string): Promise<AppDataType | null> => {
+    try {
+        const docRef = doc(db, "schools", docId);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            return docSnap.data() as AppDataType;
+        }
+        return null;
+    } catch (e) {
+        console.error("Error fetching school data:", e);
+        throw e;
+    }
+};

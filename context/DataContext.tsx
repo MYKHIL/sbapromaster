@@ -1,6 +1,5 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
-import { saveUserDatabase, subscribeToSchoolData, AppDataType, updateHeartbeat, logUserActivity, db } from '../services/firebaseService';
-import { doc, getDoc } from 'firebase/firestore';
+import { saveUserDatabase, subscribeToSchoolData, AppDataType, updateHeartbeat, logUserActivity, getSchoolData } from '../services/firebaseService';
 import * as SyncLogger from '../services/syncLogger';
 import useLocalStorage from '../hooks/useLocalStorage';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
@@ -142,11 +141,38 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUsersInternal(newValue);
     };
 
+    // FIX: Use a Ref to hold the latest state for saveToCloud to access during retries
+    // This prevents the "stale closure" bug where a postponed save uses old data
+    const stateRef = React.useRef<AppDataType>({
+        settings, students: [], subjects: [], classes: [], grades: [], assessments: [], scores: [], reportData: [], classData: [], users: [], userLogs: [], activeSessions: {}
+    });
+
+    useEffect(() => {
+        stateRef.current = {
+            settings,
+            students,
+            subjects,
+            classes,
+            grades,
+            assessments,
+            scores,
+            reportData,
+            classData,
+            users,
+            userLogs,
+            activeSessions
+        };
+    }, [settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions]);
+
     // FIX: Implement function to overwrite all data from an imported file.
     const loadImportedData = (data: Partial<AppDataType>) => {
         // CRITICAL: Mark this as a remote update to prevent syncing back to cloud
         // This prevents localStorage from overwriting imported/cloud data
         isRemoteUpdate.current = true;
+        // Automatically reset after 500ms to allow all effects to settle
+        setTimeout(() => {
+            isRemoteUpdate.current = false;
+        }, 500);
 
         // SMART MERGING: Only update state if imported data is ACTUALLY provided and not empty
         // This prevents replacing valid local data with undefined/empty cloud data
@@ -292,20 +318,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             console.warn('[DataContext] Saving with empty users array - this should only happen for new school accounts');
         }
 
-        const currentData: AppDataType = {
-            settings,
-            students,
-            subjects,
-            classes,
-            grades,
-            assessments,
-            scores,
-            reportData,
-            classData,
-            users, // Include users in the save
-            userLogs,
-            activeSessions
-        };
+        // Use stateRef to get the ABSOLUTE LATEST data at the moment of execution
+        const currentData = stateRef.current;
+
+        // Log for debugging
+        if (users.length !== currentData.users?.length) {
+            console.log(`[DataContext] ⚠️ saveToCloud: Closure users count (${users.length}) differs from Ref users count (${currentData.users?.length}). Using Ref.`);
+        }
 
         // Check network status
         if (!isOnline) {
@@ -347,24 +366,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setIsSyncing(true);
             console.log('[DataContext] 📥 Manual refresh initiated - fetching data from cloud...');
 
-            // Fetch data directly using Firestore SDK (inline logic to avoid import issues)
-            try {
-                const docRef = doc(db, "schools", schoolId);
-                const docSnap = await getDoc(docRef);
-
-                if (docSnap.exists()) {
-                    const data = docSnap.data() as AppDataType;
-                    console.log('[DataContext] ✅ Data fetched successfully, applying updates...');
-                    // Mark as manual remote update
-                    isRemoteUpdate.current = true;
-                    loadImportedData(data);
-                    console.log('[DataContext] 🎉 Manual refresh complete');
-                } else {
-                    console.log('[DataContext] ⚠️ No data found for this school ID');
-                }
-            } catch (fetchError) {
-                console.error('[DataContext] ❌ Error fetching school data:', fetchError);
-                throw fetchError;
+            const data = await getSchoolData(schoolId);
+            if (data) {
+                console.log('[DataContext] ✅ Data fetched successfully, applying updates...');
+                // Mark as manual remote update
+                isRemoteUpdate.current = true;
+                loadImportedData(data);
+                console.log('[DataContext] 🎉 Manual refresh complete');
+            } else {
+                console.log('[DataContext] ⚠️ No data found for this school ID');
             }
         } catch (error) {
             console.error('[DataContext] ❌ Failed to refresh data from cloud:', error);
@@ -419,8 +429,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             // If counts are equal, check if remote data is actually different
             if (remoteScoresCount === localScoresCount) {
-                console.log(`[DataContext] ⚠️ Remote and local have same score count (${remoteScoresCount}). Assuming stale echo, skipping.`);
-                return;
+                console.log(`[DataContext] ℹ️ Remote and local have same score count (${remoteScoresCount}). Allowing update if content differs (handled by loadImportedData).`);
+                // We DO NOT return here anymore. 
+                // The echo filter (timeSinceLastLocalUpdate < 60000) above handles the "my own save" case.
+                // If we passed the echo filter, this matching-count update is likely an EDIT from another device.
             }
 
             console.log('[DataContext] ✅ Processing remote update - applying cloud data');
@@ -447,11 +459,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
 
         // CRITICAL: If this change came from a remote update, skip the entire effect
-        // Reset the flag BEFORE returning to prevent it from staying true
         if (isRemoteUpdate.current) {
             console.log("Skipping save due to remote update");
-            isRemoteUpdate.current = false; // Reset FIRST
-            return; // Then return WITHOUT updating lastLocalUpdate
+            // Do NOT reset isRemoteUpdate.current here - let the timeout handle it
+            // distinct from the batching issue.
+            return;
         }
 
         // It's a local update, mark the timestamp
@@ -485,7 +497,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 pendingSaveTimeout.current = null;
             }
         };
-    }, [schoolId, settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions]);
+    }, [schoolId, settings, students, subjects, classes, grades, assessments, scores, reportData, classData]);
 
     const createCrud = <T extends { id: number }>(
         items: T[],
@@ -699,7 +711,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         userId: uid,
                         userName: user.name,
                         role: user.role,
-                        lastActive: timestamp
+                        lastActive: timestamp as string
                     });
                 }
             }
@@ -756,7 +768,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             id: `${Date.now()}-${Math.floor(Math.random() * 1000)}`,
             userId,
             userName,
-            role: role as any, // Cast to any to avoid type conflict if strict
+            role: role as any,
             action: 'Page Visit',
             timestamp: new Date().toISOString(),
             pageName: currentPage,
