@@ -630,6 +630,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const resumeSync = () => {
         console.log('[DataContext] Sync RESUMED');
         isSyncPaused.current = false;
+
+        // CRITICAL FIX: Reset lastLocalUpdate to allow Firebase data to load immediately
+        // Without this, if user navigates quickly after login, the 10-second check
+        // in the Firebase subscription prevents data from loading
+        lastLocalUpdate.current = 0;
     };
 
     const value: DataContextType = {
