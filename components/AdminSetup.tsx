@@ -325,6 +325,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Page</th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
@@ -340,10 +341,24 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                                 {log.role}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${log.action === 'Login' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${log.action === 'Login' ? 'bg-green-100 text-green-800' :
+                                                        log.action === 'Logout' ? 'bg-red-100 text-red-800' :
+                                                            'bg-blue-100 text-blue-800'
                                                     }`}>
                                                     {log.action}
                                                 </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">
+                                                {log.pageName ? (
+                                                    <>
+                                                        <span className="font-medium">{log.pageName}</span>
+                                                        {log.previousPage && (
+                                                            <span className="text-xs text-gray-400 block mt-1">
+                                                                from {log.previousPage}
+                                                            </span>
+                                                        )}
+                                                    </>
+                                                ) : '-'}
                                             </td>
                                         </tr>
                                     ))}

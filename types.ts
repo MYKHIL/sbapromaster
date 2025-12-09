@@ -111,9 +111,11 @@ export interface UserLog {
   userId: number;
   userName: string;
   role: UserRole;
-  action: 'Login' | 'Logout';
+  action: 'Login' | 'Logout' | 'Page Visit';
   timestamp: string; // ISO
   deviceId?: string;
+  pageName?: string; // Current page being visited
+  previousPage?: string; // Last page visited (for navigation logs)
 }
 
 export interface OnlineUser {

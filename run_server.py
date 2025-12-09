@@ -158,7 +158,7 @@ def main():
 
     # Step 1: find & kill existing processes on ports 5173-5180
     # We check a range because Vite might have incremented the port if 5173 was busy.
-    ports_to_check = range(3000, 5181)
+    ports_to_check = range(3000, 3010)
     all_pids = set()
     for p in ports_to_check:
         found = find_pids_on_port(p)

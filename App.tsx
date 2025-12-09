@@ -11,7 +11,7 @@ import GradingSystem from './components/pages/GradingSystem';
 import AssessmentTypes from './components/pages/AssessmentTypes';
 import DataManagement from './components/pages/DataManagement';
 import ScoreSummary from './components/pages/ScoreSummary';
-import { DataProvider } from './context/DataContext';
+import { DataProvider, useData } from './context/DataContext';
 import { UserProvider, useUser } from './context/UserContext';
 import type { Page } from './types';
 import UserBadge from './components/UserBadge';
@@ -56,6 +56,35 @@ const GreetingWrapper: React.FC<{ currentPage: Page }> = ({ currentPage }) => {
   return <GreetingToast currentUser={currentUser} currentPage={currentPage} />;
 };
 
+// Component to handle page visit logging
+const PageVisitLogger: React.FC<{ currentPage: Page }> = ({ currentPage }) => {
+  const { currentUser } = useUser();
+  const { logPageVisit } = useData();
+  const previousPageRef = React.useRef<Page | null>(null);
+
+  React.useEffect(() => {
+    if (!currentUser) return;
+
+    const previousPage = previousPageRef.current;
+
+    // Log page visit
+    logPageVisit(
+      currentUser.id,
+      currentUser.name,
+      currentUser.role,
+      currentPage,
+      previousPage
+    ).catch(error => {
+      console.error('Failed to log page visit:', error);
+    });
+
+    // Update ref for next navigation
+    previousPageRef.current = currentPage;
+  }, [currentPage, currentUser, logPageVisit]);
+
+  return null; // This component doesn't render anything
+};
+
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>(() => {
     // Try to load last visited page from localStorage
@@ -86,6 +115,7 @@ const App: React.FC = () => {
       <UserProvider>
         <AuthOverlay>
           <SyncOverlayConnected />
+          <PageVisitLogger currentPage={currentPage} />
           <GreetingWrapper currentPage={currentPage} />
           <TeacherPageRedirect currentPage={currentPage} setCurrentPage={setCurrentPage} />
           <UserBadge />

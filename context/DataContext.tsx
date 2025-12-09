@@ -78,6 +78,7 @@ export interface DataContextType {
     // New Actions
     logUserAction: (userId: number, userName: string, role: string, action: 'Login' | 'Logout') => Promise<void>;
     sendHeartbeat: (userId: number) => Promise<void>;
+    logPageVisit: (userId: number, userName: string, role: string, currentPage: string, previousPage: string | null) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -92,7 +93,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [scores, setScores] = useLocalStorage<Score[]>('sba-scores', INITIAL_SCORES);
     const [reportData, setReportData] = useLocalStorage<ReportSpecificData[]>('sba-report-data', INITIAL_REPORT_DATA);
     const [classData, setClassData] = useLocalStorage<ClassSpecificData[]>('sba-class-data', INITIAL_CLASS_DATA);
-    const [schoolId, setSchoolId] = useState<string | null>(null);
+    const [schoolId, setSchoolId] = useLocalStorage<string | null>('sba-school-id', null); // FIX: Persist schoolId
     const isRemoteUpdate = React.useRef(false);
     const lastLocalUpdate = React.useRef(Date.now());
 
@@ -492,6 +493,29 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         await logUserActivity(schoolId, log);
     };
 
+    const logPageVisit = async (
+        userId: number,
+        userName: string,
+        role: string,
+        currentPage: string,
+        previousPage: string | null
+    ) => {
+        if (!schoolId) return;
+
+        const log: UserLog = {
+            id: `${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            userId,
+            userName,
+            role: role as any,
+            action: 'Page Visit',
+            timestamp: new Date().toISOString(),
+            pageName: currentPage,
+            previousPage: previousPage || undefined,
+        };
+
+        await logUserActivity(schoolId, log);
+    };
+
     const value: DataContextType = {
         settings, setSettings, updateSettings,
         students,
@@ -538,6 +562,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         onlineUsers,
         logUserAction,
         sendHeartbeat,
+        logPageVisit,
     };
 
     return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
