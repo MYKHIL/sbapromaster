@@ -68,7 +68,21 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
     }, [student, subjectId, assessments, getStudentScores]); // Removed inlineValues and modifiedFields to prevent infinite loop
 
     const handleValueChange = (assessmentId: number, value: string) => {
-        setInlineValues(prev => ({ ...prev, [assessmentId]: value }));
+        const filteredValue = value.replace(/[^0-9/.]/g, '');
+        const assessment = assessments.find(a => a.id === assessmentId);
+
+        console.log('[InlineScoreInput] User input:', {
+            studentId: student.id,
+            studentName: student.name,
+            subjectId,
+            assessmentId,
+            assessmentName: assessment?.name,
+            rawInput: value,
+            filteredInput: filteredValue,
+            previousValue: inlineValues[assessmentId] || ''
+        });
+
+        setInlineValues(prev => ({ ...prev, [assessmentId]: filteredValue }));
         setModifiedFields(prev => new Set(prev).add(assessmentId)); // Mark as modified
         if (errors[assessmentId]) {
             setErrors(prev => ({ ...prev, [assessmentId]: undefined }));
@@ -82,7 +96,20 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
         const maxScore = isExam ? 100 : assessment.weight;
         const basis = isExam ? 100 : assessment.weight;
 
+        console.log('[InlineScoreInput] handleSave called:', {
+            studentId: student.id,
+            studentName: student.name,
+            subjectId,
+            assessmentId,
+            assessmentName: assessment.name,
+            rawInput: rawScoreInput
+        });
+
         if (!rawScoreInput) {
+            console.log('[InlineScoreInput] Empty score - clearing:', {
+                studentId: student.id,
+                studentName: student.name
+            });
             updateStudentScores(student.id, subjectId, assessment.id, []);
             // Clear modification flag after save
             setModifiedFields(prev => {
@@ -96,21 +123,59 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
         let convertedScore: number;
         if (rawScoreInput.includes('/')) {
             const parts = rawScoreInput.split('/');
-            if (parts.length !== 2) { setErrors(prev => ({ ...prev, [assessmentId]: "Use 'x' or 'x/y'" })); return; }
+            if (parts.length !== 2) {
+                console.log('[InlineScoreInput] Validation error: Invalid fraction format');
+                setErrors(prev => ({ ...prev, [assessmentId]: "Use 'x' or 'x/y'" }));
+                return;
+            }
             const [x, y] = parts.map(Number);
-            if (isNaN(x) || isNaN(y)) { setErrors(prev => ({ ...prev, [assessmentId]: "Numbers only" })); return; }
-            if (y === 0) { setErrors(prev => ({ ...prev, [assessmentId]: "Base cannot be 0" })); return; }
+            if (isNaN(x) || isNaN(y)) {
+                console.log('[InlineScoreInput] Validation error: Non-numeric values in fraction');
+                setErrors(prev => ({ ...prev, [assessmentId]: "Numbers only" }));
+                return;
+            }
+            if (y === 0) {
+                console.log('[InlineScoreInput] Validation error: Division by zero');
+                setErrors(prev => ({ ...prev, [assessmentId]: "Base cannot be 0" }));
+                return;
+            }
             convertedScore = (x / y) * maxScore;
+            console.log('[InlineScoreInput] Fraction conversion:', { x, y, maxScore, convertedScore });
         } else {
             const z = Number(rawScoreInput);
-            if (isNaN(z)) { setErrors(prev => ({ ...prev, [assessmentId]: "Score must be a number" })); return; }
+            if (isNaN(z)) {
+                console.log('[InlineScoreInput] Validation error: Not a number');
+                setErrors(prev => ({ ...prev, [assessmentId]: "Score must be a number" }));
+                return;
+            }
             convertedScore = z;
+            console.log('[InlineScoreInput] Direct score:', { rawInput: z, convertedScore });
         }
 
-        if (convertedScore > maxScore) { setErrors(prev => ({ ...prev, [assessmentId]: `Max is ${maxScore}` })); return; }
-        if (convertedScore < 0) { setErrors(prev => ({ ...prev, [assessmentId]: "Cannot be negative" })); return; }
+        if (convertedScore > maxScore) {
+            console.log('[InlineScoreInput] Validation error: Exceeds max score', { convertedScore, maxScore });
+            setErrors(prev => ({ ...prev, [assessmentId]: `Max is ${maxScore}` }));
+            return;
+        }
+        if (convertedScore < 0) {
+            console.log('[InlineScoreInput] Validation error: Negative score');
+            setErrors(prev => ({ ...prev, [assessmentId]: "Cannot be negative" }));
+            return;
+        }
 
         const finalScore = `${Number(convertedScore.toFixed(1))}/${basis}`;
+        console.log('[InlineScoreInput] ✅ Score validated and formatted:', {
+            studentId: student.id,
+            studentName: student.name,
+            subjectId,
+            assessmentId,
+            assessmentName: assessment.name,
+            rawInput: rawScoreInput,
+            convertedScore,
+            finalScore
+        });
+
+        console.log('[InlineScoreInput] 💾 Calling updateStudentScores (saving to local cache)...');
         updateStudentScores(student.id, subjectId, assessment.id, [finalScore]);
 
         // Clear modification flag after successful save
@@ -119,6 +184,7 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
             newSet.delete(assessmentId);
             return newSet;
         });
+        console.log('[InlineScoreInput] ✅ Score committed successfully');
     };
 
     const totalWeightedScoreForDisplay = assessments.reduce((total, assessment) => {
@@ -171,7 +237,6 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
                                 <input
                                     type="text"
                                     inputMode="decimal"
-                                    pattern="[0-9./]*"
                                     value={inlineValues[assessment.id] || ''}
                                     onChange={(e) => handleValueChange(assessment.id, e.target.value)}
                                     onBlur={() => handleSave(assessment.id)}

@@ -171,6 +171,15 @@ const ScoreEntry: React.FC = () => {
         const assessment = assessments.find(a => a.id === selectedAssessmentId);
         if (!assessment) return;
 
+        console.log('[ScoreEntry - Mobile] commitScore called:', {
+            studentId: student.id,
+            studentName: student.name,
+            subjectId: selectedSubjectId,
+            assessmentId: assessment.id,
+            assessmentName: assessment.name,
+            rawInput: localScore
+        });
+
         const rawScoreInput = localScore.trim();
         const isExam = assessment.name.toLowerCase().includes('exam');
         const maxScore = isExam ? 100 : assessment.weight;
@@ -179,6 +188,10 @@ const ScoreEntry: React.FC = () => {
         setMobileScoreError('');
 
         if (!rawScoreInput) {
+            console.log('[ScoreEntry - Mobile] Empty score - clearing:', {
+                studentId: student.id,
+                studentName: student.name
+            });
             updateStudentScores(student.id, selectedSubjectId, assessment.id, []);
             setScoreModified(false); // Clear modification flag
             return;
@@ -187,26 +200,65 @@ const ScoreEntry: React.FC = () => {
         let convertedScore: number;
         if (rawScoreInput.includes('/')) {
             const parts = rawScoreInput.split('/');
-            if (parts.length !== 2) { setMobileScoreError("Use 'x' or 'x/y'"); return; }
+            if (parts.length !== 2) {
+                console.log('[ScoreEntry - Mobile] Validation error: Invalid fraction format');
+                setMobileScoreError("Use 'x' or 'x/y'");
+                return;
+            }
             const [x, y] = parts.map(Number);
-            if (isNaN(x) || isNaN(y)) { setMobileScoreError("Numbers only"); return; }
-            if (y === 0) { setMobileScoreError("Base cannot be 0"); return; }
+            if (isNaN(x) || isNaN(y)) {
+                console.log('[ScoreEntry - Mobile] Validation error: Non-numeric values in fraction');
+                setMobileScoreError("Numbers only");
+                return;
+            }
+            if (y === 0) {
+                console.log('[ScoreEntry - Mobile] Validation error: Division by zero');
+                setMobileScoreError("Base cannot be 0");
+                return;
+            }
             convertedScore = (x / y) * maxScore;
+            console.log('[ScoreEntry - Mobile] Fraction conversion:', { x, y, maxScore, convertedScore });
         } else {
             const z = Number(rawScoreInput);
-            if (isNaN(z)) { setMobileScoreError("Score must be a number"); return; }
+            if (isNaN(z)) {
+                console.log('[ScoreEntry - Mobile] Validation error: Not a number');
+                setMobileScoreError("Score must be a number");
+                return;
+            }
             convertedScore = z;
+            console.log('[ScoreEntry - Mobile] Direct score:', { rawInput: z, convertedScore });
         }
 
-        if (convertedScore > maxScore) { setMobileScoreError(`Max is ${maxScore}`); return; }
-        if (convertedScore < 0) { setMobileScoreError("Cannot be negative"); return; }
+        if (convertedScore > maxScore) {
+            console.log('[ScoreEntry - Mobile] Validation error: Exceeds max score', { convertedScore, maxScore });
+            setMobileScoreError(`Max is ${maxScore}`);
+            return;
+        }
+        if (convertedScore < 0) {
+            console.log('[ScoreEntry - Mobile] Validation error: Negative score');
+            setMobileScoreError("Cannot be negative");
+            return;
+        }
 
         const finalScore = `${Number(convertedScore.toFixed(1))}/${basis}`;
+        console.log('[ScoreEntry - Mobile] ✅ Score validated and formatted:', {
+            studentId: student.id,
+            studentName: student.name,
+            subjectId: selectedSubjectId,
+            assessmentId: assessment.id,
+            assessmentName: assessment.name,
+            rawInput: rawScoreInput,
+            convertedScore,
+            finalScore
+        });
+
+        console.log('[ScoreEntry - Mobile] 💾 Calling updateStudentScores (saving to local cache)...');
         updateStudentScores(student.id, selectedSubjectId, assessment.id, [finalScore]);
 
         // Update local score to formatted version and clear modification flag
         setLocalScore(finalScore);
         setScoreModified(false);
+        console.log('[ScoreEntry - Mobile] ✅ Score committed successfully');
     };
 
     const getPlaceholder = () => {
@@ -383,11 +435,19 @@ const ScoreEntry: React.FC = () => {
                                                     ref={scoreInputRef}
                                                     type="text"
                                                     inputMode="decimal"
-                                                    pattern="[0-9./]*"
                                                     value={localScore}
                                                     onChange={(e) => {
                                                         // Only allow numbers, forward slash (/), and dot (.)
                                                         const filtered = e.target.value.replace(/[^0-9/.]/g, '');
+                                                        console.log('[ScoreEntry - Mobile] User input:', {
+                                                            studentId: filteredStudents[selectedStudentIndex]?.id,
+                                                            studentName: filteredStudents[selectedStudentIndex]?.name,
+                                                            subjectId: selectedSubjectId,
+                                                            assessmentId: selectedAssessmentId,
+                                                            rawInput: e.target.value,
+                                                            filteredInput: filtered,
+                                                            previousValue: localScore
+                                                        });
                                                         setLocalScore(filtered);
                                                         setScoreModified(true); // Mark as modified when user types
                                                     }}

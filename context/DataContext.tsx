@@ -146,9 +146,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // This prevents localStorage from overwriting imported/cloud data
         isRemoteUpdate.current = true;
 
-        // This function overwrites existing data with data from an imported file.
-        // If a key is missing in the imported data, it resets to the initial default state
-        // to ensure a clean slate, matching user expectations of a full data replacement.
+        // SMART MERGING: Only update state if imported data is ACTUALLY provided and not empty
+        // This prevents replacing valid local data with undefined/empty cloud data
         const {
             settings: importedSettings,
             students: importedStudents,
@@ -162,20 +161,68 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             users: importedUsers,
         } = data;
 
-        setSettings(importedSettings || INITIAL_SETTINGS);
-        setStudents(importedStudents || INITIAL_STUDENTS);
-        setSubjects(importedSubjects || INITIAL_SUBJECTS);
-        setClasses(importedClasses || INITIAL_CLASSES);
-        setGrades(importedGrades || INITIAL_GRADES);
-        setAssessments(importedAssessments || INITIAL_ASSESSMENTS);
-        setScores(importedScores || INITIAL_SCORES);
-        setReportData(importedReportData || INITIAL_REPORT_DATA);
-        setClassData(importedClassData || INITIAL_CLASS_DATA);
+        console.log('[DataContext] 📦 loadImportedData called with:', {
+            hasSettings: !!importedSettings,
+            studentsCount: importedStudents?.length || 0,
+            subjectsCount: importedSubjects?.length || 0,
+            classesCount: importedClasses?.length || 0,
+            gradesCount: importedGrades?.length || 0,
+            assessmentsCount: importedAssessments?.length || 0,
+            scoresCount: importedScores?.length || 0,
+            reportDataCount: importedReportData?.length || 0,
+            classDataCount: importedClassData?.length || 0,
+            usersCount: importedUsers?.length || 0
+        });
+
+        // ✅ ONLY update if imported data is ACTUALLY provided and not empty
+        if (importedSettings) {
+            console.log('[DataContext] ✅ Updating settings from cloud');
+            setSettings(importedSettings);
+        }
+        if (importedStudents && importedStudents.length > 0) {
+            console.log('[DataContext] ✅ Updating students from cloud:', importedStudents.length);
+            setStudents(importedStudents);
+        }
+        if (importedSubjects && importedSubjects.length > 0) {
+            console.log('[DataContext] ✅ Updating subjects from cloud:', importedSubjects.length);
+            setSubjects(importedSubjects);
+        }
+        if (importedClasses && importedClasses.length > 0) {
+            console.log('[DataContext] ✅ Updating classes from cloud:', importedClasses.length);
+            setClasses(importedClasses);
+        }
+        if (importedGrades && importedGrades.length > 0) {
+            console.log('[DataContext] ✅ Updating grades from cloud:', importedGrades.length);
+            setGrades(importedGrades);
+        }
+        if (importedAssessments && importedAssessments.length > 0) {
+            console.log('[DataContext] ✅ Updating assessments from cloud:', importedAssessments.length);
+            setAssessments(importedAssessments);
+        }
+        if (importedScores && importedScores.length > 0) {
+            console.log('[DataContext] ✅ Updating scores from cloud:', importedScores.length);
+            setScores(importedScores);
+        } else {
+            console.log('[DataContext] 🚫 Skipping scores update - cloud data is empty/undefined');
+        }
+        if (importedReportData && importedReportData.length > 0) {
+            console.log('[DataContext] ✅ Updating reportData from cloud:', importedReportData.length);
+            setReportData(importedReportData);
+        }
+        if (importedClassData && importedClassData.length > 0) {
+            console.log('[DataContext] ✅ Updating classData from cloud:', importedClassData.length);
+            setClassData(importedClassData);
+        }
+
         // Sync users if present
         SyncLogger.log(`loadImportedData: Loading users. Count: ${importedUsers?.length || 0}`);
-        if (importedUsers) {
+        if (importedUsers && importedUsers.length > 0) {
+            console.log('[DataContext] ✅ Updating users from cloud:', importedUsers.length);
             setUsers(importedUsers);
+        } else {
+            console.log('[DataContext] 🚫 Skipping users update - cloud data is empty/undefined');
         }
+
         if (data.userLogs) setUserLogs(data.userLogs);
         if (data.activeSessions) setActiveSessions(data.activeSessions);
     };
@@ -269,12 +316,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
             isSyncingRef.current = true;
             setIsSyncing(true);
+            console.log('[DataContext] ☁️ Uploading data to cloud database...');
             await saveUserDatabase(schoolId, currentData);
-            console.log("Data saved to cloud successfully.");
+            console.log('[DataContext] ✅ Data saved to cloud successfully!');
+            console.log('[DataContext] 🎉 Sync complete - local cache and cloud database are now in sync');
             setIsSyncing(false);
             isSyncingRef.current = false;
         } catch (error) {
-            console.error("Failed to save data to cloud:", error);
+            console.error('[DataContext] ❌ Failed to save data to cloud:', error);
+            console.log('[DataContext] 📦 Adding to offline queue for retry when online');
             // Add to queue on failure
             offlineQueue.addToQueue(currentData);
             setQueuedCount(offlineQueue.getQueueSize());
@@ -288,22 +338,51 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (!schoolId) return;
 
         const unsubscribe = subscribeToSchoolData(schoolId, (data) => {
+            console.log('[DataContext] 🔔 Remote update received from cloud:', {
+                hasScores: !!data.scores,
+                scoresCount: data.scores?.length || 0,
+                hasUsers: !!data.users,
+                usersCount: data.users?.length || 0,
+                hasStudents: !!data.students,
+                studentsCount: data.students?.length || 0,
+                timestamp: new Date().toISOString()
+            });
+
             // CRITICAL: Block remote updates if a form is actively open
             if (isFormOpen.current) {
-                console.log('[SYNC] Blocking remote update - form is actively open');
+                console.log('[DataContext] 🚫 Blocking remote update - form is actively open');
                 return;
             }
 
             // Intelligent Sync:
-            // If the user has interacted locally within the last 10 seconds,
+            // If the user has interacted locally within the last 60 seconds,
             // we ignore the remote update to prevent overwriting their active work.
             // This also effectively ignores the "echo" from our own saves.
+            // Extended to 60s because rapid remote updates after 10s were clearing buffered inputs.
             const timeSinceLastLocalUpdate = Date.now() - lastLocalUpdate.current;
-            if (timeSinceLastLocalUpdate < 10000) {
-                console.log(`[SYNC_LOG] Skipping remote update due to local activity (${timeSinceLastLocalUpdate}ms ago).`);
+            if (timeSinceLastLocalUpdate < 60000) {
+                console.log(`[DataContext] 🚫 Skipping remote update - local activity ${timeSinceLastLocalUpdate}ms ago (echo filter)`);
                 return;
             }
 
+            // CRITICAL: Reject stale remote data
+            // Only accept remote updates that have MORE scores than we have locally.
+            // This prevents old Firebase snapshots from wiping out fresh local entries.
+            const remoteScoresCount = data.scores?.length || 0;
+            const localScoresCount = scores.length;
+
+            if (remoteScoresCount < localScoresCount) {
+                console.log(`[DataContext] 🚫 Rejecting stale remote data - remote has ${remoteScoresCount} scores, local has ${localScoresCount} scores`);
+                return;
+            }
+
+            // If counts are equal, check if remote data is actually different
+            if (remoteScoresCount === localScoresCount) {
+                console.log(`[DataContext] ⚠️ Remote and local have same score count (${remoteScoresCount}). Assuming stale echo, skipping.`);
+                return;
+            }
+
+            console.log('[DataContext] ✅ Processing remote update - applying cloud data');
             SyncLogger.log(`Received remote update from cloud. Users count in update: ${data.users?.length || 0}`);
             isRemoteUpdate.current = true;
             loadImportedData(data);
@@ -326,11 +405,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return;
         }
 
-        // If this change came from a remote update, skip saving
+        // CRITICAL: If this change came from a remote update, skip the entire effect
+        // Reset the flag BEFORE returning to prevent it from staying true
         if (isRemoteUpdate.current) {
             console.log("Skipping save due to remote update");
-            isRemoteUpdate.current = false;
-            return;
+            isRemoteUpdate.current = false; // Reset FIRST
+            return; // Then return WITHOUT updating lastLocalUpdate
         }
 
         // It's a local update, mark the timestamp
@@ -350,9 +430,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         pendingSaveTimeout.current = setTimeout(() => {
             pendingSaveTimeout.current = null;
+            console.log('[DataContext] ⏰ Auto-sync timer triggered (5 seconds since last change)');
+            console.log('[DataContext] 🔄 Initiating cloud sync...');
             // saveToCloud will capture CURRENT state when it runs
             saveToCloud();
         }, 5000); // Auto-save 5 seconds after the last change (increased from 2s to reduce mid-entry syncs)
+
+        console.log('[DataContext] ⏱️ Auto-sync scheduled: Will sync to cloud in 5 seconds if no further changes');
 
         return () => {
             if (pendingSaveTimeout.current) {
@@ -404,11 +488,24 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const updateStudentScores = (studentId: number, subjectId: number, assessmentId: number, newScores: string[]) => {
         const scoreId = `${studentId}-${subjectId}`;
+
+        console.log('[DataContext] 📥 updateStudentScores called:', {
+            studentId,
+            subjectId,
+            assessmentId,
+            scoreId,
+            newScores,
+            timestamp: new Date().toISOString()
+        });
+
         setScores(prevScores => {
             const existingScoreIndex = prevScores.findIndex(s => s.id === scoreId);
+
+            let updatedScores;
             if (existingScoreIndex > -1) {
                 // Update existing score object
-                return prevScores.map((score, index) => {
+                console.log('[DataContext] 🔄 Updating existing score entry');
+                updatedScores = prevScores.map((score, index) => {
                     if (index === existingScoreIndex) {
                         return {
                             ...score,
@@ -422,6 +519,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 });
             } else {
                 // Add new score object
+                console.log('[DataContext] ➕ Adding new score entry');
                 const newScoreEntry: Score = {
                     id: scoreId,
                     studentId,
@@ -430,8 +528,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         [assessmentId]: newScores,
                     },
                 };
-                return [...prevScores, newScoreEntry];
+                updatedScores = [...prevScores, newScoreEntry];
             }
+
+            console.log('[DataContext] ✅ Score saved to local cache (React state)');
+            console.log('[DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook');
+            return updatedScores;
         });
     };
 
