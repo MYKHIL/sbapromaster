@@ -1,5 +1,5 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
-import { saveUserDatabase, subscribeToSchoolData, AppDataType, updateHeartbeat, logUserActivity } from '../services/firebaseService';
+import { saveUserDatabase, subscribeToSchoolData, AppDataType, updateHeartbeat, logUserActivity, getSchoolData } from '../services/firebaseService';
 import * as SyncLogger from '../services/syncLogger';
 import useLocalStorage from '../hooks/useLocalStorage';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
@@ -69,6 +69,7 @@ export interface DataContextType {
     // FIX: Add function to load imported data.
     loadImportedData: (data: Partial<AppDataType>) => void;
     saveToCloud: () => Promise<void>;
+    refreshFromCloud: () => Promise<void>;
     schoolId: string | null;
     setSchoolId: (id: string | null) => void;
     // Network status
@@ -328,6 +329,36 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // Add to queue on failure
             offlineQueue.addToQueue(currentData);
             setQueuedCount(offlineQueue.getQueueSize());
+            setIsSyncing(false);
+            isSyncingRef.current = false;
+        }
+    };
+
+    const refreshFromCloud = async () => {
+        if (!schoolId) return;
+        if (isSyncingRef.current) {
+            console.log("Sync already in progress, skipping manual refresh");
+            return;
+        }
+
+        try {
+            isSyncingRef.current = true;
+            setIsSyncing(true);
+            console.log('[DataContext] 📥 Manual refresh initiated - fetching data from cloud...');
+
+            const data = await getSchoolData(schoolId);
+            if (data) {
+                console.log('[DataContext] ✅ Data fetched successfully, applying updates...');
+                // Mark as manual remote update
+                isRemoteUpdate.current = true;
+                loadImportedData(data);
+                console.log('[DataContext] 🎉 Manual refresh complete');
+            } else {
+                console.log('[DataContext] ⚠️ No data found for this school ID');
+            }
+        } catch (error) {
+            console.error('[DataContext] ❌ Failed to refresh data from cloud:', error);
+        } finally {
             setIsSyncing(false);
             isSyncingRef.current = false;
         }
@@ -795,6 +826,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         updateClassData,
         loadImportedData,
         saveToCloud,
+        refreshFromCloud,
         schoolId,
         setSchoolId,
         // Network status

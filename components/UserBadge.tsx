@@ -7,7 +7,7 @@ import OnlineUsersModal from './OnlineUsersModal';
 
 const UserBadge: React.FC = () => {
     const { currentUser, logout } = useUser();
-    const { isOnline, isSyncing, queuedCount, onlineUsers, settings } = useData();
+    const { isOnline, isSyncing, queuedCount, onlineUsers, settings, saveToCloud, refreshFromCloud } = useData();
     const [showConfirm, setShowConfirm] = useState(false);
     const [showOnlineUsers, setShowOnlineUsers] = useState(false);
 
@@ -78,6 +78,36 @@ const UserBadge: React.FC = () => {
                             </svg>
                         </div>
                     )}
+
+                    {/* Upload Button */}
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            saveToCloud();
+                        }}
+                        disabled={isSyncing || !isOnline}
+                        className={`p-1 rounded-full hover:bg-white/50 transition-colors ${isSyncing ? 'opacity-50 cursor-not-allowed' : 'text-blue-700'}`}
+                        title="Upload to Cloud"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${isSyncing ? 'animate-pulse' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                    </button>
+
+                    {/* Download Button */}
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            refreshFromCloud();
+                        }}
+                        disabled={isSyncing || !isOnline}
+                        className={`p-1 rounded-full hover:bg-white/50 transition-colors ${isSyncing ? 'opacity-50 cursor-not-allowed' : 'text-green-700'}`}
+                        title="Download from Cloud"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                        </svg>
+                    </button>
 
                     {/* Network Indicator */}
                     <NetworkIndicator isOnline={isOnline} isSyncing={isSyncing} queuedCount={queuedCount} />
