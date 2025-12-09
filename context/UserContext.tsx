@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
+import React, { createContext, useContext, ReactNode, useState, useEffect, useRef } from 'react';
 import type { User, DeviceCredential } from '../types';
 import {
     generateDeviceId,
@@ -9,6 +9,7 @@ import {
     clearDeviceCredential as clearDeviceCredentialLocal
 } from '../services/authService';
 import { getUserById, updateUsers, updateDeviceCredentials } from '../services/firebaseService';
+import { useData } from './DataContext';
 
 interface UserContextType {
     currentUser: User | null;
@@ -29,6 +30,23 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [deviceId] = useState<string>(generateDeviceId());
     const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
     const [users, setUsers] = useState<User[]>([]);
+
+    // Access schoolId and actions from DataContext
+    const { schoolId, sendHeartbeat, logUserAction } = useData();
+
+    // Heartbeat Effect
+    useEffect(() => {
+        if (!currentUser) return;
+
+        // Initial heartbeat
+        sendHeartbeat(currentUser.id);
+
+        const intervalId = setInterval(() => {
+            sendHeartbeat(currentUser.id);
+        }, 60000); // Every 1 minute
+
+        return () => clearInterval(intervalId);
+    }, [currentUser, sendHeartbeat]);
 
     /**
      * Check for auto-login using device credentials
@@ -73,6 +91,10 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (isValid) {
             setCurrentUser(user);
             setIsAuthenticated(true);
+
+            // Log Activity
+            await logUserAction(user.id, user.name, user.role, 'Login');
+
             return true;
         }
 
@@ -104,6 +126,10 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
      * Logout current user
      */
     const logout = () => {
+        if (currentUser) {
+            logUserAction(currentUser.id, currentUser.name, currentUser.role, 'Logout');
+        }
+
         setCurrentUser(null);
         setIsAuthenticated(false);
     };

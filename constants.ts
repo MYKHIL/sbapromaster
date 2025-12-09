@@ -23,6 +23,7 @@ export const INITIAL_SETTINGS: SchoolSettings = {
   headmasterName: 'Mr. Michael Darko',
   logo: '',
   headmasterSignature: '',
+  isDataEntryLocked: false,
 };
 
 export const INITIAL_STUDENTS: Student[] = [

@@ -156,13 +156,23 @@ def wait_for_server(url, timeout=30.0):
 def main():
     print('Start script running in:', PROJECT_ROOT)
 
-    # Step 1: find & kill existing processes on the port
-    pids = find_pids_on_port(PORT)
-    if pids:
-        print(f'Found {len(pids)} process(es) on port {PORT}:', ', '.join(map(str, pids)))
-        kill_pids(pids)
+    # Step 1: find & kill existing processes on ports 5173-5180
+    # We check a range because Vite might have incremented the port if 5173 was busy.
+    ports_to_check = range(5173, 5181)
+    all_pids = set()
+    for p in ports_to_check:
+        found = find_pids_on_port(p)
+        if found:
+            print(f'Found process(es) on port {p}: {found}')
+            all_pids.update(found)
+    
+    if all_pids:
+        print(f'Killing {len(all_pids)} process(es) on ports 5173-5180...')
+        kill_pids(all_pids)
+        # Give them a moment to die
+        time.sleep(1)
     else:
-        print(f'No processes found on port {PORT}.')
+        print(f'No processes found on ports 5173-5180.')
 
     # Step 2: start dev server
     # Try to locate an npm executable on Windows (`npm` or `npm.cmd`) or fall back

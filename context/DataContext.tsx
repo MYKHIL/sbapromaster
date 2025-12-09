@@ -1,9 +1,9 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
-import { saveUserDatabase, subscribeToSchoolData, AppDataType } from '../services/firebaseService';
+import { saveUserDatabase, subscribeToSchoolData, AppDataType, updateHeartbeat, logUserActivity } from '../services/firebaseService';
 import useLocalStorage from '../hooks/useLocalStorage';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { offlineQueue } from '../services/offlineQueue';
-import type { Student, Subject, Class, Grade, Assessment, Score, SchoolSettings, ReportSpecificData, ClassSpecificData, User } from '../types';
+import type { Student, Subject, Class, Grade, Assessment, Score, SchoolSettings, ReportSpecificData, ClassSpecificData, User, UserLog, OnlineUser } from '../types';
 import {
     INITIAL_SETTINGS,
     INITIAL_STUDENTS,
@@ -15,15 +15,6 @@ import {
     INITIAL_REPORT_DATA,
     INITIAL_CLASS_DATA,
 } from '../constants';
-
-// FIX: Add a type for the full application data, to be used for data import.
-// AppDataType is now imported from firebaseService to avoid duplication and circular deps if possible, 
-// but since it was defined here first, I should probably keep it here or use the one from firebaseService.
-// The previous edit showed AppDataType being defined here.
-// I will remove the local definition if I import it, OR I will just use the local one and cast it.
-// To be safe and avoid conflicts, I'll remove the local AppDataType definition and use the imported one.
-// Wait, I imported AppDataType from firebaseService in the previous chunk.
-// So I should remove the local definition.
 
 export interface DataContextType {
     // State
@@ -37,6 +28,9 @@ export interface DataContextType {
     reportData: ReportSpecificData[];
     classData: ClassSpecificData[];
     users?: User[]; // Optional because it might be empty initially
+    userLogs?: UserLog[];
+    activeSessions?: Record<string, string>;
+    onlineUsers: OnlineUser[];
 
     // Setters
     setSettings: React.Dispatch<React.SetStateAction<SchoolSettings>>;
@@ -80,6 +74,10 @@ export interface DataContextType {
     isOnline: boolean;
     isSyncing: boolean;
     queuedCount: number;
+
+    // New Actions
+    logUserAction: (userId: number, userName: string, role: string, action: 'Login' | 'Logout') => Promise<void>;
+    sendHeartbeat: (userId: number) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -110,6 +108,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // FIX: Add users to DataContextstate so it's included in sync/saves
     const [users, setUsers] = useState<User[]>([]);
+    const [userLogs, setUserLogs] = useState<UserLog[]>([]);
+    const [activeSessions, setActiveSessions] = useState<Record<string, string>>({});
 
     // FIX: Implement function to overwrite all data from an imported file.
     const loadImportedData = (data: Partial<AppDataType>) => {
@@ -142,6 +142,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (importedUsers) {
             setUsers(importedUsers);
         }
+        if (data.userLogs) setUserLogs(data.userLogs);
+        if (data.activeSessions) setActiveSessions(data.activeSessions);
     };
 
     const saveToCloud = async () => {
@@ -177,7 +179,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             scores,
             reportData,
             classData,
-            users // Include users in the save
+            users, // Include users in the save
+            userLogs,
+            activeSessions
         };
 
         // Check network status
@@ -419,6 +423,75 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }, [isOnline, schoolId, settings, students, subjects, classes, grades, assessments, scores, reportData, classData]);
 
+    // FIX: Add logic to process activeSessions and determine online users
+    // An online user is one who has a heartbeat within the last 5 minutes (300000ms)
+    // We update our own heartbeat every minute if active
+    const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
+
+    useEffect(() => {
+        if (!activeSessions || !users) {
+            setOnlineUsers([]);
+            return;
+        }
+
+        const now = new Date();
+        const threshold = 5 * 60 * 1000; // 5 minutes
+
+        const online: OnlineUser[] = [];
+        Object.entries(activeSessions).forEach(([userIdStr, timestamp]) => {
+            const lastActive = new Date(timestamp as string);
+            if (now.getTime() - lastActive.getTime() < threshold) {
+                const uid = parseInt(userIdStr);
+                const user = users.find(u => u.id === uid);
+                if (user) {
+                    online.push({
+                        userId: uid,
+                        userName: user.name,
+                        role: user.role,
+                        lastActive: timestamp
+                    });
+                }
+            }
+        });
+
+        setOnlineUsers(online);
+    }, [activeSessions, users]);
+
+    // Heartbeat effect
+    useEffect(() => {
+        if (!schoolId || !users || users.length === 0) return;
+
+        // Find current user ID from session/local storage?
+        // Actually DataContext doesn't know the current user directly, UserContext does.
+        // But we can't import UserContext here (circular dependency).
+        // Solution: We expose a function `sendHeartbeat(userId)` and let UserContext call it.
+    }, []);
+
+    const sendHeartbeat = async (userId: number) => {
+        if (schoolId) {
+            // Use imported service (we need to import it properly at top)
+            // We can use a dynamic import or assuming it's available.
+            // Ideally we move updateHeartbeat to services/firebaseService if it's there.
+            // It is there.
+            await updateHeartbeat(schoolId, userId);
+        }
+    };
+
+    const logUserAction = async (userId: number, userName: string, role: string, action: 'Login' | 'Logout') => {
+        if (!schoolId) return;
+
+        const log: UserLog = {
+            id: `${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            userId,
+            userName,
+            role: role as any,
+            action,
+            timestamp: new Date().toISOString(),
+        };
+
+        await logUserActivity(schoolId, log);
+    };
+
     const value: DataContextType = {
         settings, setSettings, updateSettings,
         students,
@@ -459,6 +532,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isOnline,
         isSyncing,
         queuedCount,
+        userLogs,
+        activeSessions,
+        // New exports
+        onlineUsers,
+        logUserAction,
+        sendHeartbeat,
     };
 
     return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

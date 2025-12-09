@@ -82,8 +82,8 @@ const App: React.FC = () => {
   }
 
   return (
-    <UserProvider>
-      <DataProvider>
+    <DataProvider>
+      <UserProvider>
         <AuthOverlay>
           <SyncOverlayConnected />
           <GreetingWrapper currentPage={currentPage} />
@@ -102,8 +102,8 @@ const App: React.FC = () => {
             </main>
           </div>
         </AuthOverlay>
-      </DataProvider>
-    </UserProvider>
+      </UserProvider>
+    </DataProvider>
   );
 };
 

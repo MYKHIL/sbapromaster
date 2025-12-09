@@ -1,5 +1,6 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useUser } from '../context/UserContext';
+import { useData } from '../context/DataContext';
 import type { UserRole } from '../types';
 
 interface PermissionContextType {
@@ -27,13 +28,16 @@ const ReadOnlyWrapper: React.FC<ReadOnlyWrapperProps> = ({
     allowedRoles = ['Admin'],
     requiresAdmin = false
 }) => {
+    const { settings } = useData();
     const { currentUser, isAuthenticated } = useUser();
 
+    // If global lock is on, ONLY admins can edit.
+    // Even if the user has a role in allowedRoles, the lock overrides it unless they are Admin.
+    const isLocked = settings.isDataEntryLocked;
+
     const canEdit = isAuthenticated && currentUser && (
-        requiresAdmin
-            ? currentUser.role === 'Admin'
-            : allowedRoles.includes(currentUser.role)
-    );
+        currentUser.role === 'Admin' || (!isLocked && allowedRoles.includes(currentUser.role))
+    ) && (requiresAdmin ? currentUser.role === 'Admin' : true);
 
     const permissionValue: PermissionContextType = {
         canEdit,

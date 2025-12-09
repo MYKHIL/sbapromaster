@@ -71,6 +71,7 @@ export interface SchoolSettings {
   headmasterName: string;
   logo: string; // base64 string
   headmasterSignature: string; // base64 string
+  isDataEntryLocked?: boolean; // If true, non-admins cannot add/edit/delete
 }
 
 export interface ReportSpecificData {
@@ -103,4 +104,21 @@ export interface DeviceCredential {
   deviceId: string; // Unique device fingerprint
   userId: number; // User ID associated with this device
   lastLogin: string; // ISO timestamp of last login
+}
+
+export interface UserLog {
+  id: string; // timestamp-random
+  userId: number;
+  userName: string;
+  role: UserRole;
+  action: 'Login' | 'Logout';
+  timestamp: string; // ISO
+  deviceId?: string;
+}
+
+export interface OnlineUser {
+  userId: number;
+  userName: string;
+  role: string;
+  lastActive: string; // ISO
 }

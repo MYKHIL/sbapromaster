@@ -26,6 +26,8 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
     const [editingUserId, setEditingUserId] = useState<number | null>(null);
     const [deleteConfirmUserId, setDeleteConfirmUserId] = useState<number | null>(null);
     const [resetConfirmUserId, setResetConfirmUserId] = useState<number | null>(null);
+    const [showLogs, setShowLogs] = useState(false);
+    const { userLogs } = useData();
 
     const classNames = classes.map(c => c.name);
     const subjectNames = subjects.map(s => s.subject);
@@ -285,7 +287,76 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                     </div>
                 )}
 
-                {mode === 'management' && editingUserId === null && (
+                {(error || externalError) && (
+                    <div className={`border-l-4 p-4 mb-4 text-sm ${(error || externalError)?.startsWith('⏳')
+                        ? 'bg-blue-50 border-blue-500 text-blue-700'
+                        : 'bg-red-50 border-red-500 text-red-700'
+                        }`}>
+                        {externalError || error}
+                    </div>
+                )}
+
+                {/* Tabs for Management Mode */}
+                {mode === 'management' && (
+                    <div className="flex border-b border-gray-200 mb-6">
+                        <button
+                            className={`px-4 py-2 font-medium text-sm focus:outline-none ${!showLogs ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                            onClick={() => setShowLogs(false)}
+                        >
+                            Users
+                        </button>
+                        <button
+                            className={`px-4 py-2 font-medium text-sm focus:outline-none ${showLogs ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                            onClick={() => setShowLogs(true)}
+                        >
+                            User Logs
+                        </button>
+                    </div>
+                )}
+
+                {/* User Logs Tab Content */}
+                {mode === 'management' && showLogs && (
+                    <div className="overflow-y-auto max-h-96">
+                        {userLogs && userLogs.length > 0 ? (
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {[...userLogs].reverse().map((log) => (
+                                        <tr key={log.id}>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                {new Date(log.timestamp).toLocaleString()}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                {log.userName}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                {log.role}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${log.action === 'Login' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                                    }`}>
+                                                    {log.action}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        ) : (
+                            <p className="text-gray-500 text-center py-4">No logs found.</p>
+                        )}
+                    </div>
+                )}
+
+                {/* Users Tab Content */}
+                {mode === 'management' && !showLogs && editingUserId === null && (
                     <div className="mb-6">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-xl font-semibold text-gray-700">

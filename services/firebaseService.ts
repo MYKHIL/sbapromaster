@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, getDoc, setDoc, collection, getDocs, onSnapshot } from "firebase/firestore";
-import type { SchoolSettings, Student, Subject, Class, Grade, Assessment, Score, ReportSpecificData, ClassSpecificData, User, DeviceCredential } from '../types';
+import type { SchoolSettings, Student, Subject, Class, Grade, Assessment, Score, ReportSpecificData, ClassSpecificData, User, DeviceCredential, UserLog, OnlineUser } from '../types';
 
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
@@ -31,6 +31,8 @@ export type AppDataType = {
     // Multi-user authentication fields
     users?: User[];
     deviceCredentials?: DeviceCredential[];
+    userLogs?: UserLog[];
+    activeSessions?: Record<string, string>; // userId -> ISO timestamp
     // School-level auth (legacy/initial setup)
     password?: string;
     Access?: boolean;
@@ -249,4 +251,40 @@ export const getUserById = async (docId: string, userId: number): Promise<User |
 export const updateDeviceCredentials = async (docId: string, deviceCredentials: DeviceCredential[]) => {
     const docRef = doc(db, "schools", docId);
     await setDoc(docRef, { deviceCredentials }, { merge: true });
+};
+
+/**
+ * Log a user activity
+ */
+export const logUserActivity = async (docId: string, log: UserLog) => {
+    const docRef = doc(db, "schools", docId);
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) return;
+
+    const data = docSnap.data() as AppDataType;
+    const logs = data.userLogs || [];
+
+    // Optional: limit logs
+    if (logs.length > 500) logs.shift(); // Keep last 500
+
+    logs.push(log);
+
+    await setDoc(docRef, { userLogs: logs }, { merge: true });
+};
+
+/**
+ * Update user heartbeat
+ */
+export const updateHeartbeat = async (docId: string, userId: number) => {
+    // We can't use simple dot notation for dynamic keys in setDoc with merge efficiently without a map
+    // So we read-update-write activeSessions map
+    const docRef = doc(db, "schools", docId);
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) return;
+
+    const data = docSnap.data() as AppDataType;
+    const activeSessions = data.activeSessions || {};
+    activeSessions[userId] = new Date().toISOString();
+
+    await setDoc(docRef, { activeSessions }, { merge: true });
 };
