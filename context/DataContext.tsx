@@ -796,11 +796,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const sendHeartbeat = async (userId: number) => {
         if (schoolId) {
-            // Use imported service (we need to import it properly at top)
-            // We can use a dynamic import or assuming it's available.
-            // Ideally we move updateHeartbeat to services/firebaseService if it's there.
-            // It is there.
-            await updateHeartbeat(schoolId, userId);
+            // OPTIMIZATION: Update local state and let auto-sync handle the write
+            // This avoids a separate READ + WRITE operation every minute
+            const timestamp = new Date().toISOString();
+
+            setActiveSessions(prev => ({
+                ...prev,
+                [userId.toString()]: timestamp
+            }));
+
+            markDirty('activeSessions');
+            // await updateHeartbeat(schoolId, userId); // Removed direct call
         }
     };
 

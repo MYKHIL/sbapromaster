@@ -455,38 +455,56 @@ const ScoreEntry: React.FC = () => {
                                                 </div>
                                             </div>
                                             <div className="flex flex-col">
-                                                <input
-                                                    ref={scoreInputRef}
-                                                    type="text"
-                                                    inputMode="decimal"
-                                                    value={localScore}
-                                                    onChange={(e) => {
-                                                        // Only allow numbers, forward slash (/), and dot (.)
-                                                        const filtered = e.target.value.replace(/[^0-9/.]/g, '');
-                                                        console.log('[ScoreEntry - Mobile] User input:', {
-                                                            studentId: filteredStudents[selectedStudentIndex]?.id,
-                                                            studentName: filteredStudents[selectedStudentIndex]?.name,
-                                                            subjectId: selectedSubjectId,
-                                                            assessmentId: selectedAssessmentId,
-                                                            rawInput: e.target.value,
-                                                            filteredInput: filtered,
-                                                            previousValue: localScore
-                                                        });
-                                                        setLocalScore(filtered);
-                                                        setScoreModified(true); // Mark as modified when user types
-                                                        setHasLocalChanges(true); // Enable Upload button globally
-                                                    }}
-                                                    onBlur={commitScore}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter') {
-                                                            commitScore();
-                                                            e.currentTarget.blur();
-                                                        }
-                                                    }}
-                                                    placeholder={getPlaceholder()}
-                                                    className={`w-full p-3 text-center text-2xl font-mono bg-gray-50 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isReadOnly ? 'cursor-not-allowed text-gray-500' : ''}`}
-                                                    readOnly={isReadOnly}
-                                                />
+                                                <div className="relative">
+                                                    <input
+                                                        ref={scoreInputRef}
+                                                        type="text"
+                                                        inputMode="decimal"
+                                                        value={localScore}
+                                                        onChange={(e) => {
+                                                            // Only allow numbers, forward slash (/), and dot (.)
+                                                            const filtered = e.target.value.replace(/[^0-9/.]/g, '');
+                                                            console.log('[ScoreEntry - Mobile] User input:', {
+                                                                studentId: filteredStudents[selectedStudentIndex]?.id,
+                                                                studentName: filteredStudents[selectedStudentIndex]?.name,
+                                                                subjectId: selectedSubjectId,
+                                                                assessmentId: selectedAssessmentId,
+                                                                rawInput: e.target.value,
+                                                                filteredInput: filtered,
+                                                                previousValue: localScore
+                                                            });
+                                                            setLocalScore(filtered);
+                                                            setScoreModified(true); // Mark as modified when user types
+                                                            setHasLocalChanges(true); // Enable Upload button globally
+                                                        }}
+                                                        onBlur={commitScore}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') {
+                                                                commitScore();
+                                                                e.currentTarget.blur();
+                                                            }
+                                                        }}
+                                                        placeholder={getPlaceholder()}
+                                                        className={`w-full p-3 text-center text-2xl font-mono bg-gray-50 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isReadOnly ? 'cursor-not-allowed text-gray-500' : ''}`}
+                                                        readOnly={isReadOnly}
+                                                    />
+                                                    {localScore && !isReadOnly && (
+                                                        <button
+                                                            onClick={() => {
+                                                                setLocalScore('');
+                                                                setScoreModified(true);
+                                                                setHasLocalChanges(true);
+                                                                scoreInputRef.current?.focus();
+                                                            }}
+                                                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-red-500 transition-colors"
+                                                            title="Clear score"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                            </svg>
+                                                        </button>
+                                                    )}
+                                                </div>
                                                 {mobileScoreError && <p className="text-red-500 text-sm mt-1">{mobileScoreError}</p>}
                                             </div>
                                         </div>
