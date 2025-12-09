@@ -184,6 +184,18 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
         }
     };
 
+    // FIX: Sync users from DataContext (remote updates) to UserContext
+    const { users: dbUsers } = useData();
+    useEffect(() => {
+        if (dbUsers && dbUsers.length > 0) {
+            // Check if different to avoid loops/redraws
+            if (JSON.stringify(dbUsers) !== JSON.stringify(users)) {
+                console.log("Syncing users from DataContext to UserContext");
+                setUsers(dbUsers);
+            }
+        }
+    }, [dbUsers, setUsers, users]);
+
     const handleAdminSetupComplete = async (users: User[], adminPassword?: string) => {
         if (!currentSchoolId || !schoolData) {
             setError('Setup error: Missing school data. Please try logging in again.');
@@ -196,8 +208,11 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             // Update users in Firebase
             await updateUsers(currentSchoolId, users);
 
-            // Update local state
+            // Update local state in UserContext
             setUsers(users);
+
+            // FIX: Update DataContext state so saveToCloud doesn't overwrite with empty users
+            loadImportedData({ users });
 
             // Auto-login the admin user
             if (adminPassword && users.length > 0) {
@@ -257,6 +272,9 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             u.id === userId ? { ...u, passwordHash: hashedPassword } : u
         );
         await updateUsers(currentSchoolId, updatedUsers);
+
+        // FIX: Update DataContext state
+        loadImportedData({ users: updatedUsers });
 
         // Save device credential
         saveDeviceCredential(currentSchoolId, userId);

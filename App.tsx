@@ -11,13 +11,14 @@ import GradingSystem from './components/pages/GradingSystem';
 import AssessmentTypes from './components/pages/AssessmentTypes';
 import DataManagement from './components/pages/DataManagement';
 import { DataProvider } from './context/DataContext';
-import { UserProvider } from './context/UserContext';
+import { UserProvider, useUser } from './context/UserContext';
 import type { Page } from './types';
 import UserBadge from './components/UserBadge';
 import MaintenancePage from './components/MaintenancePage';
 import { TeacherPageRedirect } from './components/TeacherPageRedirect';
 import { SyncOverlayConnected } from './components/SyncOverlayConnected';
 import { SITE_ACTIVE } from './constants';
+import GreetingToast from './components/GreetingToast';
 
 // This helper is now only used for pages that need to persist state.
 const PageWrapper: React.FC<{ name: Page; currentPage: Page; children: React.ReactNode }> = ({ name, currentPage, children }) => {
@@ -46,6 +47,12 @@ const ActivePage: React.FC<{ page: Page }> = ({ page }) => {
 };
 
 import AuthOverlay from './components/AuthOverlay';
+
+// Wrapper to consume context for GreetingToast
+const GreetingWrapper: React.FC<{ currentPage: Page }> = ({ currentPage }) => {
+  const { currentUser } = useUser();
+  return <GreetingToast currentUser={currentUser} currentPage={currentPage} />;
+};
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>(() => {
@@ -77,6 +84,7 @@ const App: React.FC = () => {
       <DataProvider>
         <AuthOverlay>
           <SyncOverlayConnected />
+          <GreetingWrapper currentPage={currentPage} />
           <TeacherPageRedirect currentPage={currentPage} setCurrentPage={setCurrentPage} />
           <UserBadge />
           <div className="flex h-screen overflow-hidden bg-gray-50">

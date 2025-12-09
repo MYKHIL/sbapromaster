@@ -205,6 +205,9 @@ const DataManagement: React.FC = () => {
         try {
             await updateUsers(schoolId, updatedUsers);
             setUsers(updatedUsers);
+            // FIX: Update DataContext state so saveToCloud includes the new users
+            loadImportedData({ users: updatedUsers });
+
             if (shouldClose) {
                 setIsUserManagementOpen(false);
             }

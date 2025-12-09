@@ -28,18 +28,30 @@ const Teachers: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [isEnhancing, setIsEnhancing] = useState(false);
 
-    const inputStyles = "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500";
+    const inputStyles = "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500";
     const searchInputStyles = "w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
 
     const filteredClasses = useMemo(() => {
         const query = searchQuery.toLowerCase();
-        if (!query) return classes;
-        return classes.filter(cls =>
-            cls.name.toLowerCase().includes(query) ||
-            cls.teacherName.toLowerCase().includes(query)
-        );
+        let result = classes;
+
+        // Filter by search query
+        if (query) {
+            result = result.filter(cls =>
+                cls.name.toLowerCase().includes(query) ||
+                cls.teacherName.toLowerCase().includes(query)
+            );
+        }
+
+        return result;
     }, [classes, searchQuery]);
 
+    // Check if current user can edit a specific class
+    const canEditClass = (cls: Class) => {
+        if (isAdmin) return true;
+        if (!currentUser) return false;
+        return currentUser.allowedClasses?.includes(cls.name);
+    };
 
     const handleAddNew = () => {
         setCurrentClassData(EMPTY_TEACHER_FORM);
@@ -47,8 +59,10 @@ const Teachers: React.FC = () => {
     };
 
     const handleEdit = (cls: Class) => {
-        setCurrentClassData(cls);
-        setIsModalOpen(true);
+        if (canEditClass(cls)) {
+            setCurrentClassData(cls);
+            setIsModalOpen(true);
+        }
     };
 
     const handleDeleteClick = (id: number) => {
@@ -135,7 +149,7 @@ const Teachers: React.FC = () => {
     };
 
     return (
-        <ReadOnlyWrapper allowedRoles={['Admin']}>
+        <ReadOnlyWrapper allowedRoles={['Admin', 'Teacher']}>
             <div className="space-y-6">
                 <h1 className="text-3xl font-bold text-gray-800">Manage Teachers &amp; Classes</h1>
 
@@ -182,15 +196,15 @@ const Teachers: React.FC = () => {
                                             <td className="p-4 font-medium text-gray-900">{cls.name}</td>
                                             <td className="p-4 text-gray-900">{cls.teacherName}</td>
                                             <td className="p-4 space-x-4 flex items-center">
+                                                {canEditClass(cls) && (
+                                                    <button onClick={() => handleEdit(cls)} className="text-blue-600 hover:text-blue-800" title="Edit">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
+                                                    </button>
+                                                )}
                                                 {isAdmin && (
-                                                    <>
-                                                        <button onClick={() => handleEdit(cls)} className="text-blue-600 hover:text-blue-800" title="Edit">
-                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
-                                                        </button>
-                                                        <button onClick={() => handleDeleteClick(cls.id)} className="text-red-600 hover:text-red-800" title="Delete">
-                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                                        </button>
-                                                    </>
+                                                    <button onClick={() => handleDeleteClick(cls.id)} className="text-red-600 hover:text-red-800" title="Delete">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                    </button>
                                                 )}
                                             </td>
                                         </tr>
@@ -217,15 +231,15 @@ const Teachers: React.FC = () => {
                                     <p className="text-sm text-gray-600">Class Teacher for: {cls.name}</p>
                                 </div>
                                 <div className="flex space-x-2 flex-shrink-0">
+                                    {canEditClass(cls) && (
+                                        <button onClick={() => handleEdit(cls)} className="text-blue-600 p-2 rounded-full hover:bg-blue-100" title="Edit">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
+                                        </button>
+                                    )}
                                     {isAdmin && (
-                                        <>
-                                            <button onClick={() => handleEdit(cls)} className="text-blue-600 p-2 rounded-full hover:bg-blue-100" title="Edit">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
-                                            </button>
-                                            <button onClick={() => handleDeleteClick(cls.id)} className="text-red-600 p-2 rounded-full hover:bg-red-100" title="Delete">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                            </button>
-                                        </>
+                                        <button onClick={() => handleDeleteClick(cls.id)} className="text-red-600 p-2 rounded-full hover:bg-red-100" title="Delete">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                        </button>
                                     )}
                                 </div>
                             </div>
@@ -244,7 +258,19 @@ const Teachers: React.FC = () => {
                             <form onSubmit={handleSubmit} className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Class Name</label>
-                                    <input type="text" name="name" value={currentClassData.name} onChange={handleChange} required className={inputStyles} />
+                                    <input
+                                        type="text"
+                                        name="name"
+                                        value={currentClassData.name}
+                                        onChange={handleChange}
+                                        required
+                                        className={inputStyles}
+                                        disabled={!isAdmin && 'id' in currentClassData} // Disable editing class name for non-admins if editing
+                                    />
+                                    {/* Clarification for teachers why this is disabled */}
+                                    {!isAdmin && 'id' in currentClassData && (
+                                        <p className="text-xs text-gray-500 mt-1">Class assignment cannot be changed.</p>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Teacher's Name</label>

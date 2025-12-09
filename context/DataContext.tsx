@@ -3,7 +3,7 @@ import { saveUserDatabase, subscribeToSchoolData, AppDataType } from '../service
 import useLocalStorage from '../hooks/useLocalStorage';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { offlineQueue } from '../services/offlineQueue';
-import type { Student, Subject, Class, Grade, Assessment, Score, SchoolSettings, ReportSpecificData, ClassSpecificData } from '../types';
+import type { Student, Subject, Class, Grade, Assessment, Score, SchoolSettings, ReportSpecificData, ClassSpecificData, User } from '../types';
 import {
     INITIAL_SETTINGS,
     INITIAL_STUDENTS,
@@ -36,6 +36,7 @@ export interface DataContextType {
     scores: Score[];
     reportData: ReportSpecificData[];
     classData: ClassSpecificData[];
+    users?: User[]; // Optional because it might be empty initially
 
     // Setters
     setSettings: React.Dispatch<React.SetStateAction<SchoolSettings>>;
@@ -97,6 +98,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const isRemoteUpdate = React.useRef(false);
     const lastLocalUpdate = React.useRef(Date.now());
 
+
+
     // Network and sync state
     const isOnline = useNetworkStatus();
     const [isSyncing, setIsSyncing] = useState(false);
@@ -104,6 +107,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Sync lock to prevent concurrent syncs
     const isSyncingRef = React.useRef(false);
+
+    // FIX: Add users to DataContextstate so it's included in sync/saves
+    const [users, setUsers] = useState<User[]>([]);
 
     // FIX: Implement function to overwrite all data from an imported file.
     const loadImportedData = (data: Partial<AppDataType>) => {
@@ -120,6 +126,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             scores: importedScores,
             reportData: importedReportData,
             classData: importedClassData,
+            users: importedUsers,
         } = data;
 
         setSettings(importedSettings || INITIAL_SETTINGS);
@@ -131,6 +138,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setScores(importedScores || INITIAL_SCORES);
         setReportData(importedReportData || INITIAL_REPORT_DATA);
         setClassData(importedClassData || INITIAL_CLASS_DATA);
+        // Sync users if present
+        if (importedUsers) {
+            setUsers(importedUsers);
+        }
     };
 
     const saveToCloud = async () => {
@@ -165,7 +176,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             assessments,
             scores,
             reportData,
-            classData
+            classData,
+            users // Include users in the save
         };
 
         // Check network status
