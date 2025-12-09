@@ -120,7 +120,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Sync pause control - used during authentication to stop all auto-save
     const isSyncPaused = React.useRef(false);
-    const pendingSaveTimeout = React.useRef<NodeJS.Timeout | null>(null);
+    const pendingSaveTimeout = React.useRef<number | null>(null);
 
     // FIX: Add users to DataContextstate so it's included in sync/saves
     const [users, setUsersInternal] = useState<User[]>([]);
