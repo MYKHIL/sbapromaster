@@ -284,7 +284,7 @@ export const updateHeartbeat = async (docId: string, userId: number) => {
 
     const data = docSnap.data() as AppDataType;
     const activeSessions = data.activeSessions || {};
-    activeSessions[userId] = new Date().toISOString();
+    activeSessions[userId.toString()] = new Date().toISOString();
 
     await setDoc(docRef, { activeSessions }, { merge: true });
 };
