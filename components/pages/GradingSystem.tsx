@@ -13,7 +13,7 @@ const EMPTY_GRADE_FORM: Omit<Grade, 'id'> = {
 };
 
 const GradingSystem: React.FC = () => {
-    const { grades, addGrade, updateGrade, deleteGrade } = useData();
+    const { grades, addGrade, updateGrade, deleteGrade, blockRemoteUpdates, allowRemoteUpdates } = useData();
     const { currentUser } = useUser();
     const isAdmin = currentUser?.role === 'Admin';
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -66,11 +66,13 @@ const GradingSystem: React.FC = () => {
     }, [grades]);
 
     const handleAddNew = () => {
+        blockRemoteUpdates(); // Block sync while editing
         setCurrentGrade(EMPTY_GRADE_FORM);
         setIsModalOpen(true);
     };
 
     const handleEdit = (grade: Grade) => {
+        blockRemoteUpdates(); // Block sync while editing
         setCurrentGrade(grade);
         setIsModalOpen(true);
     };
@@ -89,6 +91,7 @@ const GradingSystem: React.FC = () => {
     };
 
     const handleCloseModal = () => {
+        allowRemoteUpdates(); // Re-enable sync after closing
         setIsModalOpen(false);
         setCurrentGrade(null);
         setModalError('');

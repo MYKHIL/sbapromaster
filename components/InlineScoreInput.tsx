@@ -65,7 +65,7 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
         });
         setInlineValues(initialValues);
         setErrors({});
-    }, [student, subjectId, assessments]); // Removed getStudentScores to prevent reset during sync
+    }, [student, subjectId, assessments, getStudentScores]); // Removed inlineValues and modifiedFields to prevent infinite loop
 
     const handleValueChange = (assessmentId: number, value: string) => {
         setInlineValues(prev => ({ ...prev, [assessmentId]: value }));

@@ -144,7 +144,7 @@ const ScoreEntry: React.FC = () => {
     const [localScore, setLocalScore] = useState('');
     const [scoreModified, setScoreModified] = useState(false); // Track if user has modified the score
 
-    // Sync local score when student/assessment changes
+    // Sync local score when student/assessment changes OR when scores in DataContext change
     useEffect(() => {
         const student = filteredStudents[selectedStudentIndex];
         if (student) {
@@ -162,7 +162,7 @@ const ScoreEntry: React.FC = () => {
                 setLocalScore('');
             }
         }
-    }, [selectedStudentIndex, selectedSubjectId, selectedAssessmentId, filteredStudents]); // Removed getStudentScores
+    }, [selectedStudentIndex, selectedSubjectId, selectedAssessmentId, filteredStudents, getStudentScores]); // Removed localScore and scoreModified to prevent infinite loop
 
     const commitScore = () => {
         const student = filteredStudents[selectedStudentIndex];

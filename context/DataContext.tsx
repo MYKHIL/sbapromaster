@@ -78,6 +78,8 @@ export interface DataContextType {
     // Sync control
     pauseSync: () => void;
     resumeSync: () => void;
+    blockRemoteUpdates: () => void;
+    allowRemoteUpdates: () => void;
 
     // New Actions
     logUserAction: (userId: number, userName: string, role: string, action: 'Login' | 'Logout') => Promise<void>;
@@ -121,6 +123,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Sync pause control - used during authentication to stop all auto-save
     const isSyncPaused = React.useRef(false);
     const pendingSaveTimeout = React.useRef<number | null>(null);
+
+    // Form blocking control - used to block remote updates while forms are open
+    const isFormOpen = React.useRef(false);
 
     // FIX: Add users to DataContextstate so it's included in sync/saves
     const [users, setUsersInternal] = useState<User[]>([]);
@@ -283,6 +288,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (!schoolId) return;
 
         const unsubscribe = subscribeToSchoolData(schoolId, (data) => {
+            // CRITICAL: Block remote updates if a form is actively open
+            if (isFormOpen.current) {
+                console.log('[SYNC] Blocking remote update - form is actively open');
+                return;
+            }
+
             // Intelligent Sync:
             // If the user has interacted locally within the last 10 seconds,
             // we ignore the remote update to prevent overwriting their active work.
@@ -637,6 +648,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         lastLocalUpdate.current = 0;
     };
 
+    // Form blocking control functions
+    const blockRemoteUpdates = () => {
+        console.log('[DataContext] Blocking remote updates - form opened');
+        isFormOpen.current = true;
+    };
+
+    const allowRemoteUpdates = () => {
+        console.log('[DataContext] Allowing remote updates - form closed');
+        isFormOpen.current = false;
+    };
+
     const value: DataContextType = {
         settings, setSettings, updateSettings,
         students,
@@ -680,6 +702,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Sync control
         pauseSync,
         resumeSync,
+        blockRemoteUpdates,
+        allowRemoteUpdates,
         // User logs and sessions
         userLogs,
         activeSessions,
