@@ -29,8 +29,10 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
     const [showLogs, setShowLogs] = useState(false);
     const { userLogs } = useData();
 
-    const classNames = classes.map(c => c.name);
-    const subjectNames = subjects.map(s => s.subject);
+    // CRITICAL FIX: Use useMemo to dynamically update when classes/subjects change
+    // This ensures we always have the latest data, not just the initial default values
+    const classNames = React.useMemo(() => classes.map(c => c.name), [classes]);
+    const subjectNames = React.useMemo(() => subjects.map(s => s.subject), [subjects]);
 
     const addNewUser = () => {
         setUsers([...users, { role: 'Teacher' as UserRole, allowedClasses: [], allowedSubjects: [] }]);
@@ -342,8 +344,8 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                 <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${log.action === 'Login' ? 'bg-green-100 text-green-800' :
-                                                        log.action === 'Logout' ? 'bg-red-100 text-red-800' :
-                                                            'bg-blue-100 text-blue-800'
+                                                    log.action === 'Logout' ? 'bg-red-100 text-red-800' :
+                                                        'bg-blue-100 text-blue-800'
                                                     }`}>
                                                     {log.action}
                                                 </span>
