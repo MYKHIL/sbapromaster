@@ -1,5 +1,6 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
-import { saveUserDatabase, subscribeToSchoolData, AppDataType, updateHeartbeat, logUserActivity, getSchoolData } from '../services/firebaseService';
+import { saveUserDatabase, subscribeToSchoolData, AppDataType, updateHeartbeat, logUserActivity, db } from '../services/firebaseService';
+import { doc, getDoc } from 'firebase/firestore';
 import * as SyncLogger from '../services/syncLogger';
 import useLocalStorage from '../hooks/useLocalStorage';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
@@ -346,15 +347,24 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setIsSyncing(true);
             console.log('[DataContext] 📥 Manual refresh initiated - fetching data from cloud...');
 
-            const data = await getSchoolData(schoolId);
-            if (data) {
-                console.log('[DataContext] ✅ Data fetched successfully, applying updates...');
-                // Mark as manual remote update
-                isRemoteUpdate.current = true;
-                loadImportedData(data);
-                console.log('[DataContext] 🎉 Manual refresh complete');
-            } else {
-                console.log('[DataContext] ⚠️ No data found for this school ID');
+            // Fetch data directly using Firestore SDK (inline logic to avoid import issues)
+            try {
+                const docRef = doc(db, "schools", schoolId);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data() as AppDataType;
+                    console.log('[DataContext] ✅ Data fetched successfully, applying updates...');
+                    // Mark as manual remote update
+                    isRemoteUpdate.current = true;
+                    loadImportedData(data);
+                    console.log('[DataContext] 🎉 Manual refresh complete');
+                } else {
+                    console.log('[DataContext] ⚠️ No data found for this school ID');
+                }
+            } catch (fetchError) {
+                console.error('[DataContext] ❌ Error fetching school data:', fetchError);
+                throw fetchError;
             }
         } catch (error) {
             console.error('[DataContext] ❌ Failed to refresh data from cloud:', error);
@@ -746,7 +756,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             id: `${Date.now()}-${Math.floor(Math.random() * 1000)}`,
             userId,
             userName,
-            role: role as any,
+            role: role as any, // Cast to any to avoid type conflict if strict
             action: 'Page Visit',
             timestamp: new Date().toISOString(),
             pageName: currentPage,

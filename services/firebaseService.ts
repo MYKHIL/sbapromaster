@@ -289,20 +289,3 @@ export const updateHeartbeat = async (docId: string, userId: number) => {
     await setDoc(docRef, { activeSessions }, { merge: true });
 };
 
-/**
- * Fetch the full school data document
- */
-export const getSchoolData = async (docId: string): Promise<AppDataType | null> => {
-    try {
-        const docRef = doc(db, "schools", docId);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-            return docSnap.data() as AppDataType;
-        }
-        return null;
-    } catch (e) {
-        console.error("Error fetching school data:", e);
-        throw e;
-    }
-};
