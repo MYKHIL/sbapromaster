@@ -11,7 +11,7 @@ import { getAvailableClasses, getAvailableSubjects } from '../../utils/permissio
 
 const ScoreEntry: React.FC = () => {
     // Destructure with default empty arrays to prevent undefined errors
-    const { students = [], subjects: allSubjects = [], assessments = [], classes: allClasses = [], getStudentScores, updateStudentScores, isOnline, isSyncing, queuedCount, saveToCloud, refreshFromCloud, hasLocalChanges, setHasLocalChanges } = useData();
+    const { students = [], subjects: allSubjects = [], assessments = [], classes: allClasses = [], getStudentScores, updateStudentScores, isOnline, isSyncing, queuedCount, saveToCloud, refreshFromCloud, hasLocalChanges, setHasLocalChanges, timeToSync } = useData();
     const { currentUser } = useUser();
     const isReadOnly = currentUser?.role === 'Guest';
 
@@ -162,7 +162,8 @@ const ScoreEntry: React.FC = () => {
                 setLocalScore('');
             }
         }
-    }, [selectedStudentIndex, selectedSubjectId, selectedAssessmentId, filteredStudents, getStudentScores]); // Removed localScore and scoreModified to prevent infinite loop
+    }, [selectedStudentIndex, selectedSubjectId, selectedAssessmentId, filteredStudents]); // Removed localScore, scoreModified, and getStudentScores to prevent infinite loop/reset
+
 
     const commitScore = () => {
         const student = filteredStudents[selectedStudentIndex];
@@ -451,7 +452,23 @@ const ScoreEntry: React.FC = () => {
                                                         </svg>
                                                         <span className="text-xs font-bold uppercase tracking-wide">Download</span>
                                                     </button>
-                                                    <NetworkIndicator isOnline={isOnline} isSyncing={isSyncing} queuedCount={queuedCount} />
+
+                                                    {/* Auto-Sync Timer Label */}
+                                                    <div className="flex items-center px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                                                        {timeToSync !== null ? (
+                                                            <span className="text-xs font-semibold text-orange-600 animate-pulse">
+                                                                Auto-sync in: {timeToSync}s
+                                                            </span>
+                                                        ) : (
+                                                            /* Show Synced if no timer is running (implying sync is done or not needed) */
+                                                            <span className="text-xs font-medium text-green-600 flex items-center gap-1">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                                </svg>
+                                                                Synced
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div className="flex flex-col">
@@ -606,7 +623,7 @@ const ScoreEntry: React.FC = () => {
                     )
                 }
             </div>
-        </ReadOnlyWrapper>
+        </ReadOnlyWrapper >
     );
 };
 

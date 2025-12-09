@@ -103,8 +103,8 @@ const GreetingToast: React.FC<GreetingToastProps> = ({ currentUser, currentPage 
     if (!currentUser || !isVisible) return null;
 
     return (
-        <div className="fixed top-24 right-5 z-50 animate-fade-in-down">
-            <div className="bg-white/80 backdrop-blur-md border border-white/40 shadow-xl rounded-2xl p-4 max-w-sm flex items-start space-x-4 transform transition-all hover:scale-105 duration-300">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none">
+            <div className="pointer-events-auto bg-white/90 backdrop-blur-xl border border-white/40 shadow-2xl rounded-2xl p-6 max-w-sm flex items-start space-x-4 animate-bounce-in">
                 <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full p-2 shadow-lg">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />

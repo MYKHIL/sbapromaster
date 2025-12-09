@@ -65,7 +65,7 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
         });
         setInlineValues(initialValues);
         setErrors({});
-    }, [student, subjectId, assessments, getStudentScores]); // Removed inlineValues and modifiedFields to prevent infinite loop
+    }, [student, subjectId, assessments]); // Removed inlineValues, modifiedFields, and getStudentScores to prevent infinite loop/reset
 
     const handleValueChange = (assessmentId: number, value: string) => {
         const filteredValue = value.replace(/[^0-9/.]/g, '');

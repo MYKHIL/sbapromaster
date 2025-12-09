@@ -89,6 +89,7 @@ export interface DataContextType {
     // UI Feedback
     hasLocalChanges: boolean;
     setHasLocalChanges: (hasChanges: boolean) => void;
+    timeToSync: number | null; // Seconds remaining until auto-sync
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -294,14 +295,39 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // write sizes and potential conflicts.
     const dirtyFields = React.useRef<Set<keyof AppDataType>>(new Set());
 
+    // Auto-sync countdown state (in seconds)
+    const [timeToSync, setTimeToSync] = useState<number | null>(null);
+
     const markDirty = (field: keyof AppDataType) => {
         // Only mark dirty if it's NOT a remote update
         if (!isRemoteUpdate.current) {
             dirtyFields.current.add(field);
             setHasLocalChanges(true); // Enable Upload button globally
+
+            // RESET the auto-sync timer to 15 seconds whenever data changes
+            setTimeToSync(15);
+
             // console.log(`[DataContext] 📝 Marked dirty: ${field}`);
         }
     };
+
+    // Auto-sync countdown effect
+    useEffect(() => {
+        if (timeToSync === null) return;
+
+        if (timeToSync === 0) {
+            // Timer expired, trigger sync
+            saveToCloud();
+            setTimeToSync(null); // Stop timer
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            setTimeToSync(prev => (prev !== null && prev > 0) ? prev - 1 : null);
+        }, 1000);
+
+        return () => clearTimeout(timer);
+    }, [timeToSync]);
 
     const saveToCloud = async () => {
         // CRITICAL: Check if sync is paused (during authentication)
@@ -321,8 +347,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return;
         }
 
+        // CRITICAL: Stop auto-sync timer immediately on manual/triggered save
+        setTimeToSync(null);
+
         // CRITICAL: Don't sync if user was active very recently (within last 500ms)
         // This prevents syncing mid-keystroke or mid-interaction
+        // DISABLED: Old strict debounce logic replaced by 10s idle timer
+        /*
         const timeSinceLastUpdate = Date.now() - lastLocalUpdate.current;
         if (timeSinceLastUpdate < 500) {
             console.log(`User actively working (${timeSinceLastUpdate}ms ago), postponing sync`);
@@ -330,6 +361,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setTimeout(() => saveToCloud(), 1000);
             return;
         }
+        */
 
         // ---------------------------------------------------------------------
         // NEW LOGIC: Only save dirty fields
@@ -407,6 +439,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
             isSyncingRef.current = true;
             setIsSyncing(true);
+            setTimeToSync(null); // Stop auto-sync timer
             console.log('[DataContext] 📥 Manual refresh initiated - fetching data from cloud...');
 
             const data = await getSchoolData(schoolId);
@@ -942,6 +975,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         sendHeartbeat,
         hasLocalChanges,
         setHasLocalChanges,
+        timeToSync,
     };
 
     return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
