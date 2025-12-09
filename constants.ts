@@ -6,7 +6,7 @@ import type { SchoolSettings, Student, Subject, Class, Grade, Assessment, Score,
 // SYNC OVERLAY: Set to false to disable the blocking overlay during sync
 export const SHOW_SYNC_OVERLAY = false;
 
-export const AI_FEATURES_ENABLED = false;
+export const AI_FEATURES_ENABLED = false; 
 export const DEV_TOOLS_ENABLED = false;
 export const MULTI_SCORE_ENTRY_ENABLED = false;
 export const SHOW_PDF_DOWNLOAD_BUTTON = true;
