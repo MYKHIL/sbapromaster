@@ -30,7 +30,6 @@ const ReportViewer: React.FC = () => {
   });
   const [generatedReports, setGeneratedReports] = useState<Student[]>([]);
   const [showPanel, setShowPanel] = useState(false);
-  const [totalDays, setTotalDays] = useState('');
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
@@ -38,15 +37,6 @@ const ReportViewer: React.FC = () => {
   const reportContainerRef = useRef<HTMLDivElement>(null);
 
 
-
-  useEffect(() => {
-    if (selectedClassId) {
-      const classData = getClassData(Number(selectedClassId));
-      setTotalDays(classData?.totalSchoolDays || '');
-    } else {
-      setTotalDays('');
-    }
-  }, [selectedClassId, getClassData]);
 
   const studentsInClass = useMemo(() => {
     if (!selectedClassId) return [];
@@ -136,15 +126,6 @@ const ReportViewer: React.FC = () => {
     return undefined;
   }, [showPanel, selectedStudentId, students, currentUser]);
 
-  const handleTotalDaysBlur = () => {
-    if (selectedClassId) {
-      const selectedClass = classes.find(c => c.id === selectedClassId);
-      if (selectedClass && canEditClass(selectedClass.name)) {
-        updateClassData(Number(selectedClassId), { totalSchoolDays: totalDays });
-      }
-    }
-  };
-
   const handleDownloadPdf = async () => {
     if (generatedReports.length === 0) return;
     setIsGeneratingPdf(true);
@@ -202,33 +183,17 @@ const ReportViewer: React.FC = () => {
               </select>
             </div>
           </div>
-
-          {/* Row 2: Total Days (if applicable) */}
-          {selectedClassId && currentUser?.role !== 'Guest' && (
-            <div className="w-full md:w-64">
-              <label htmlFor="total-days" className="block text-sm font-medium text-gray-700 mb-1">Total School Days</label>
-              <input
-                id="total-days"
-                type="number"
-                value={totalDays}
-                onChange={(e) => setTotalDays(e.target.value)}
-                onBlur={handleTotalDaysBlur}
-                className="w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="e.g. 180"
-                disabled={!canEditClass(classes.find(c => c.id === selectedClassId)?.name || '')}
-              />
-            </div>
-          )}
         </div>
       </div>
 
-      {selectedStudentForPanel && (
+      {selectedStudentForPanel && selectedClassId && (
         <PerformanceSummaryFetcher student={selectedStudentForPanel}>
           {(summary) => (
             <ReportCustomizationPanel
               student={selectedStudentForPanel}
               performanceSummary={summary}
               onCollapseChange={setIsPanelCollapsed}
+              classId={Number(selectedClassId)}
             />
           )}
         </PerformanceSummaryFetcher>

@@ -8,6 +8,7 @@ interface ReportCustomizationPanelProps {
     student: Student;
     performanceSummary: string;
     onCollapseChange?: (isCollapsed: boolean) => void;
+    classId: number;
 }
 
 const AIGenerateButton: React.FC<{ isGenerating: boolean; onClick: () => void; }> = ({ isGenerating, onClick }) => (
@@ -464,12 +465,12 @@ const InputWithOptions: React.FC<{
     );
 };
 
-const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ student, performanceSummary, onCollapseChange }) => {
-    const { getReportData, updateReportData } = useData();
-    const [data, setData] = useState<Partial<Omit<ReportSpecificData, 'totalSchoolDays'>>>({
-        attendance: '', conduct: '', interest: '', attitude: '', teacherRemark: ''
-    });
+const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ student, performanceSummary, onCollapseChange, classId }) => {
+    const { getReportData, updateReportData, getClassData, updateClassData } = useData();
+    const [data, setData] = useState<Partial<Omit<ReportSpecificData, 'totalSchoolDays'>>>({ attendance: '', conduct: '', interest: '', attitude: '', teacherRemark: '' });
     const [originalData, setOriginalData] = useState<Partial<Omit<ReportSpecificData, 'totalSchoolDays'>>>({});
+    const [totalDays, setTotalDays] = useState('');
+    const [originalTotalDays, setOriginalTotalDays] = useState('');
     const [isGeneratingTeacherRemark, setIsGeneratingTeacherRemark] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(true);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -481,15 +482,23 @@ const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ stu
         const initialData = existingData || { attendance: '', conduct: '', interest: '', attitude: '', teacherRemark: '' };
         setData(initialData);
         setOriginalData(initialData); // Keep track of original to detect changes
+
+        // Load Total School Days
+        const classData = getClassData(classId);
+        const days = classData?.totalSchoolDays || '';
+        setTotalDays(days);
+        setOriginalTotalDays(days);
+
         setHasUnsavedChanges(false);
         setIsCollapsed(false);
-    }, [student.id]); // Intentional: exclude getReportData to avoid reset loop
+    }, [student.id, classId]); // Intentional: exclude getReportData/getClassData to avoid reset loop
 
     // Check for changes whenever data updates
     useEffect(() => {
-        const isDirty = JSON.stringify(data) !== JSON.stringify(originalData);
-        setHasUnsavedChanges(isDirty);
-    }, [data, originalData]);
+        const isDataDirty = JSON.stringify(data) !== JSON.stringify(originalData);
+        const isDaysDirty = totalDays !== originalTotalDays;
+        setHasUnsavedChanges(isDataDirty || isDaysDirty);
+    }, [data, originalData, totalDays, originalTotalDays]);
 
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -500,12 +509,23 @@ const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ stu
     const handleSave = () => {
         if (!hasUnsavedChanges) return;
 
-        // Save to Context/DB
+        // Save report data to Context/DB
         updateReportData(student.id, data);
 
-        // Update original data reference to current
+        // Save total school days to class data
+        updateClassData(classId, { totalSchoolDays: totalDays });
+
+        // Update original data references to current
         setOriginalData(data);
+        setOriginalTotalDays(totalDays);
         setHasUnsavedChanges(false);
+    };
+
+    const handleTotalDaysChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newValue = e.target.value;
+        setTotalDays(newValue);
+        // Immediately update class data locally (but don't persist to DB until Save)
+        updateClassData(classId, { totalSchoolDays: newValue });
     };
 
     const handleGenerateRemark = async () => {
@@ -610,6 +630,16 @@ const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ stu
 
                 {/* Fixed max-height for mobile to avoid obstructing report completely */}
                 <div className="space-y-4 max-h-[50vh] lg:max-h-[calc(100vh-12rem)] overflow-y-auto pr-2">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Total School Days</label>
+                        <input
+                            type="number"
+                            value={totalDays}
+                            onChange={handleTotalDaysChange}
+                            className={inputStyles}
+                            placeholder="e.g. 180"
+                        />
+                    </div>
                     <InputWithOptions
                         label="Days Attended"
                         name="attendance"
