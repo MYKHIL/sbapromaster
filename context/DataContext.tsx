@@ -543,9 +543,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const transactionDeletions: Record<string, string[]> = {};
 
         fieldsToSave.forEach(field => {
-            const currentVal = currentData[field];
-            // @ts-ignore
-            const originalVal = originalData.current[field];
+            const key = field as keyof AppDataType;
+            const currentVal = currentData[key];
+            const originalVal = originalData.current[key];
 
             // Check for Deletions (Array types with IDs)
             if (Array.isArray(currentVal) && Array.isArray(originalVal)) {
@@ -554,12 +554,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     .map((o: any) => String(o.id));
 
                 if (deletedIds.length > 0) {
-                    transactionDeletions[field] = deletedIds;
+                    transactionDeletions[key] = deletedIds;
                 }
             }
             // Optimization for Scores: Only send changed items to save bandwidth
             // (The server transaction handles smart merging either way, but sending 2 items is faster than 2000)
-            if (field === 'scores') {
+            if (key === 'scores') {
                 const currentScores = scores;
                 const originalScores = originalData.current.scores || [];
                 // Compute Diff
@@ -578,8 +578,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 // For other fields, we currently send the full list/object.
                 // The 'saveDataTransaction' will handle the smart merge on the server side 
                 // to prevent overwrites.
-                // @ts-ignore
-                transactionPayload[field] = currentData[field];
+                transactionPayload[key] = currentData[key] as any;
             }
         });
 
@@ -589,8 +588,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // Offline queue fallback
             const fullPayload: Partial<AppDataType> = {};
             fieldsToSave.forEach(field => {
-                // @ts-ignore
-                fullPayload[field] = currentData[field];
+                const key = field as keyof AppDataType;
+                fullPayload[key] = currentData[key] as any;
             });
 
             offlineQueue.addToQueue(fullPayload);
