@@ -7,6 +7,7 @@ import { AI_FEATURES_ENABLED } from '../constants';
 interface ReportCustomizationPanelProps {
     student: Student;
     performanceSummary: string;
+    onCollapseChange?: (isCollapsed: boolean) => void;
 }
 
 const AIGenerateButton: React.FC<{ isGenerating: boolean; onClick: () => void; }> = ({ isGenerating, onClick }) => (
@@ -463,7 +464,7 @@ const InputWithOptions: React.FC<{
     );
 };
 
-const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ student, performanceSummary }) => {
+const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ student, performanceSummary, onCollapseChange }) => {
     const { getReportData, updateReportData } = useData();
     const [data, setData] = useState<Partial<Omit<ReportSpecificData, 'totalSchoolDays'>>>({
         attendance: '', conduct: '', interest: '', attitude: '', teacherRemark: ''
@@ -546,6 +547,13 @@ const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ stu
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [isCollapsed]);
 
+    // Notify parent when collapse state changes
+    useEffect(() => {
+        if (onCollapseChange) {
+            onCollapseChange(isCollapsed);
+        }
+    }, [isCollapsed, onCollapseChange]);
+
     return (
         <div
             ref={panelRef}
@@ -585,7 +593,7 @@ const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ stu
             {/* Content Container */}
             <div className={`transition-opacity duration-300 ${isCollapsed && window.innerWidth >= 1024 ? 'opacity-0' : 'opacity-100'}`}>
                 <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-xl font-bold text-gray-800">Details for {student.name}</h3>
+                    <h3 className="text-xl font-bold text-gray-800">Performance Comments for {student.name}</h3>
                     <button
                         onClick={handleSave}
                         disabled={!hasUnsavedChanges}

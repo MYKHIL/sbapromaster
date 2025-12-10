@@ -33,6 +33,7 @@ const ReportViewer: React.FC = () => {
   const [totalDays, setTotalDays] = useState('');
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
 
   const reportContainerRef = useRef<HTMLDivElement>(null);
 
@@ -224,7 +225,11 @@ const ReportViewer: React.FC = () => {
       {selectedStudentForPanel && (
         <PerformanceSummaryFetcher student={selectedStudentForPanel}>
           {(summary) => (
-            <ReportCustomizationPanel student={selectedStudentForPanel} performanceSummary={summary} />
+            <ReportCustomizationPanel
+              student={selectedStudentForPanel}
+              performanceSummary={summary}
+              onCollapseChange={setIsPanelCollapsed}
+            />
           )}
         </PerformanceSummaryFetcher>
       )}
@@ -279,7 +284,7 @@ const ReportViewer: React.FC = () => {
           )}
         </div>
       </div>
-      {SHOW_PDF_DOWNLOAD_BUTTON && generatedReports.length > 0 && !selectedStudentForPanel && (
+      {SHOW_PDF_DOWNLOAD_BUTTON && generatedReports.length > 0 && (selectedStudentForPanel ? isPanelCollapsed : true) && (
         <div className="fixed bottom-6 right-6 z-20 flex flex-col items-center gap-4">
           <button
             onClick={handleDownloadPdf}

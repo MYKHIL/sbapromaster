@@ -90,7 +90,8 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
         // Logo
         if (settings.logo) {
             try {
-                doc.addImage(settings.logo, 'PNG', MARGIN_X + 6, currentY, 35, 28, undefined, 'FAST');
+                // Reduced width from 35mm to 28mm to prevent overlap with school name
+                doc.addImage(settings.logo, 'PNG', MARGIN_X + 6, currentY, 28, 22, undefined, 'FAST');
             } catch (e) {
                 console.warn("Failed to add logo", e);
             }
