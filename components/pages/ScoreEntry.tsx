@@ -636,9 +636,22 @@ const ScoreEntry: React.FC = () => {
                                                     {localScore && !isReadOnly && (
                                                         <button
                                                             onClick={() => {
+                                                                // 1. Update UI immediately
                                                                 setLocalScore('');
                                                                 setScoreModified(true);
-                                                                setHasLocalChanges(true);
+
+                                                                // 2. FORCE COMMIT the empty value to global state
+                                                                // commitScore() skips empty strings, so we must manually trigger the update here.
+                                                                const student = filteredStudents[selectedStudentIndex];
+                                                                if (student) {
+                                                                    console.log('[ScoreEntry] 🧹 Clearing score for:', student.name);
+                                                                    // Send [''] to signify cleared/empty. DataContext treats this as a change against []
+                                                                    updateStudentScores(student.id, selectedSubjectId, selectedAssessmentId, ['']);
+
+                                                                    // 3. Clean up draft state (since we just committed)
+                                                                    removeDraftScore(student.id, selectedAssessmentId);
+                                                                }
+
                                                                 scoreInputRef.current?.focus();
                                                             }}
                                                             className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-red-500 transition-colors"

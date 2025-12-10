@@ -574,7 +574,20 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 const scoreUpdates = currentScores.filter(item => {
                     if (item && typeof item === 'object' && 'id' in item) {
                         const originalItem = originalScores.find(o => o.id === item.id);
-                        if (!originalItem) return true; // New item
+                        if (!originalItem) {
+                            // NEW ITEM CHECK: Prevent "Ghost" overwrites
+                            // Exception: If the user explicitly modified this score (it's in pendingScoreChanges),
+                            // we MUST send it, even if it appears to be a "Ghost" (e.g. they cleared a stale original).
+                            const isPending = pendingScoreChanges.current.has(item.id);
+                            if (isPending) return true;
+
+                            // If it's a new item (or one we didn't know about), check if it's effectively empty.
+                            // If it is empty, DO NOT SEND IT. This prevents overwriting valid server data with empty local placeholders.
+                            const hasData = item.assessmentScores && Object.values(item.assessmentScores).some(scores => scores.some(s => s.trim() !== ''));
+                            if (!hasData) return false;
+
+                            return true; // New item with actual data -> Send it
+                        }
                         return !deepEqual(item, originalItem); // Modified item
                     }
                     return false;
@@ -623,6 +636,48 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // Clear dirty fields only for the fields that were actually saved
             fieldsToSave.forEach(field => {
                 dirtyFields.current.delete(field);
+
+                // CRITICAL: Update originalData to match the new server state
+                // This prevents the "Preview" from showing these items as changed in future saves
+                const key = field as keyof AppDataType;
+                if (transactionPayload[key]) {
+                    // For scores, we need to merge because we only sent a partial update
+                    if (key === 'scores' && Array.isArray(transactionPayload.scores)) {
+                        const updatedScores = transactionPayload.scores as Score[];
+                        const currentOriginal = (originalData.current.scores as Score[]) || [];
+
+                        // Merge strategy: Replace items with matching IDs, add new ones
+                        const newOriginalScores = [...currentOriginal];
+                        updatedScores.forEach(update => {
+                            const index = newOriginalScores.findIndex(s => s.id === update.id);
+                            if (index > -1) {
+                                newOriginalScores[index] = update;
+                            } else {
+                                newOriginalScores.push(update);
+                            }
+                        });
+                        // Handle deletes if any
+                        if (transactionDeletions.scores) {
+                            // filtering out deleted IDs 
+                            // (Wait, transactionDeletions.scores is array of IDs to delete)
+                            const deletedIds = new Set(transactionDeletions.scores);
+                            // mutation is fine here since we cloned above, but filter is cleaner
+                            // effectively: newOriginalScores = newOriginalScores.filter(...)
+                            // But we need to assign it back
+                            originalData.current.scores = newOriginalScores.filter(s => !deletedIds.has(s.id));
+                        } else {
+                            originalData.current.scores = newOriginalScores;
+                        }
+                    } else {
+                        // For other fields, we sent the FULL data (Strategy 1/2/3)
+                        // So we can just overwrite originalData with currentData[key]
+                        // Note: transactionPayload[key] might be partial? 
+                        // Actually in saveToCloud logic:
+                        // "For other fields, we currently send the full list/object."
+                        // So safe to take from currentData
+                        originalData.current[key] = currentData[key] as any;
+                    }
+                }
             });
 
             // Update hasLocalChanges based on remaining dirty fields
@@ -791,6 +846,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Normalize: Treat [''] same as []
         const cleanScores = (s: string[]) => s.filter(val => val.trim() !== '');
         const isActuallyChanged = !deepEqual(cleanScores(newScores), cleanScores(originalAssessmentScores));
+
+
 
         if (isActuallyChanged) {
             markDirty('scores');
@@ -1197,6 +1254,44 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     // Start by checking if item has an ID (most of our data types do)
                     if (item && typeof item === 'object' && 'id' in item) {
                         const originalItem = originalVal.find((o: any) => o.id === item.id);
+
+                        // Special handling for SCORES to match saveToCloud logic
+                        if (field === 'scores') {
+                            if (!originalItem) {
+                                // NEW ITEM CHECK: Prevent "Ghost" overwrites
+                                // Exception: If the user explicitly modified this score (it's in pendingScoreChanges),
+                                // we MUST send it, even if it appears to be a "Ghost" (e.g. they cleared a stale original).
+                                const isPending = pendingScoreChanges.current.has(item.id);
+                                if (isPending) return true;
+
+                                // If it's a new item (or one we didn't know about), check if it's effectively empty.
+                                // If it is empty, DO NOT SEND IT. This prevents overwriting valid server data with empty local placeholders.
+                                // @ts-ignore
+                                const hasData = item.assessmentScores && Object.values(item.assessmentScores).some(scores => Array.isArray(scores) && scores.some(s => s.trim() !== ''));
+                                if (!hasData) return false;
+                                return true;
+                            }
+
+                            // Normalize: Treat [''] same as []
+                            // We can't easily modify the item structure here for deepEqual without cloning.
+                            const cleanScores = (s: string[]) => s.filter(val => val.trim() !== '');
+                            // @ts-ignore
+                            const itemScores = item.assessmentScores || {};
+                            // @ts-ignore
+                            const origScores = originalItem.assessmentScores || {};
+
+                            // Check deep equality on cleaned scores
+                            // This is expensive but necessary for accurate preview
+                            // Simplified: Just compare the assessment keys present
+                            const allKeys = new Set([...Object.keys(itemScores), ...Object.keys(origScores)]);
+                            for (const key of allKeys) {
+                                const s1 = cleanScores(itemScores[key] || []);
+                                const s2 = cleanScores(origScores[key] || []);
+                                if (!deepEqual(s1, s2)) return true;
+                            }
+                            return false; // No changes found after normalization
+                        }
+
                         if (!originalItem) return true; // New item
                         return !deepEqual(item, originalItem); // Modified item
                     }
