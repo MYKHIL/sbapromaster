@@ -179,22 +179,25 @@ export async function exportDatabase(data: AppData): Promise<Uint8Array> {
 
     try {
         // Settings
+        const settings = data.settings;
         db.prepare(`
-            INSERT INTO Settings (SchoolName, District, Address, AcademicYear, VacationDate, ReopeningDate, AcademicTerm, LogoPath, HeadSignaturePath, HeadmasterName)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO Settings (ID, SchoolName, District, Address, AcademicYear, VacationDate, ReopeningDate, AcademicTerm, LogoPath, HeadSignaturePath, HeadmasterName)
+            VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run([
-            data.settings.schoolName, data.settings.district, data.settings.address, data.settings.academicYear,
-            data.settings.vacationDate, data.settings.reopeningDate, data.settings.academicTerm,
-            base64ToUint8Array(data.settings.logo), base64ToUint8Array(data.settings.headmasterSignature),
-            data.settings.headmasterName
+            settings.schoolName, settings.district, settings.address, settings.academicYear,
+            settings.vacationDate, settings.reopeningDate, settings.academicTerm,
+            base64ToUint8Array(settings.logo), base64ToUint8Array(settings.headmasterSignature),
+            settings.headmasterName
         ]);
 
         // Students, Subjects, TeacherSignatures, Grades, Assessments
-        data.students.forEach(s => db.prepare('INSERT INTO Student (Name, Gender, IndexNumber, Class, DateOfBirth, Picture, Age, Promotions) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run([s.name, s.gender, s.indexNumber, s.class, s.dateOfBirth, base64ToUint8Array(s.picture), s.age, null]));
-        data.subjects.forEach(s => db.prepare('INSERT INTO Subjects (Subject, Type, Facilitator, Signature, SubjectName) VALUES (?, ?, ?, ?, ?)').run([s.subject, s.type, s.facilitator, base64ToUint8Array(s.signature), null]));
-        data.classes.forEach(c => db.prepare('INSERT INTO TeacherSignature (Class, TeacherSignaturePath, TeacherName) VALUES (?, ?, ?)').run([c.name, base64ToUint8Array(c.teacherSignature), c.teacherName]));
-        data.grades.forEach(g => db.prepare('INSERT INTO Grades (Grade, MinimumValue, MaximumValue, Remarks, GradeValue) VALUES (?, ?, ?, ?, ?)').run([g.name, g.minScore.toString(), g.maxScore.toString(), g.remark, null]));
-        data.assessments.forEach(a => db.prepare('INSERT INTO Assessment (Name, Basis, TargetValue, SumTarget) VALUES (?, ?, ?, ?)').run([a.name, null, a.weight.toString(), null]));
+        // CRITICAL: Preserve IDs during export to ensure synchronization consistency
+        data.students.forEach(s => db.prepare('INSERT INTO Student (ID, Name, Gender, IndexNumber, Class, DateOfBirth, Picture, Age, Promotions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').run([s.id, s.name, s.gender, s.indexNumber, s.class, s.dateOfBirth, base64ToUint8Array(s.picture), s.age, null]));
+        data.subjects.forEach(s => db.prepare('INSERT INTO Subjects (ID, Subject, Type, Facilitator, Signature, SubjectName) VALUES (?, ?, ?, ?, ?, ?)').run([s.id, s.subject, s.type, s.facilitator, base64ToUint8Array(s.signature), null]));
+        data.classes.forEach(c => db.prepare('INSERT INTO TeacherSignature (ID, Class, TeacherSignaturePath, TeacherName) VALUES (?, ?, ?, ?)').run([c.id, c.name, base64ToUint8Array(c.teacherSignature), c.teacherName]));
+        data.grades.forEach(g => db.prepare('INSERT INTO Grades (ID, Grade, MinimumValue, MaximumValue, Remarks, GradeValue) VALUES (?, ?, ?, ?, ?, ?)').run([g.id, g.name, g.minScore.toString(), g.maxScore.toString(), g.remark, null]));
+        data.assessments.forEach(a => db.prepare('INSERT INTO Assessment (ID, Name, Basis, TargetValue, SumTarget) VALUES (?, ?, ?, ?, ?)').run([a.id, a.name, null, a.weight.toString(), null]));
+
 
         // Records (Scores)
         const studentMap = new Map(data.students.map(s => [s.id, s]));
