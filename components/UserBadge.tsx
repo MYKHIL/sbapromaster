@@ -7,12 +7,15 @@ import OnlineUsersModal from './OnlineUsersModal';
 
 const UserBadge: React.FC = () => {
     const { currentUser, logout } = useUser();
+
+    // Early return BEFORE other hooks to avoid React error #300
+    // This ensures consistent hook call order across all renders
+    if (!currentUser) return null;
+
     const { isOnline, isSyncing, queuedCount, onlineUsers, settings, saveToCloud, refreshFromCloud } = useData();
     const [showConfirm, setShowConfirm] = useState(false);
     const [showOnlineUsers, setShowOnlineUsers] = useState(false);
     const [isExpanded, setIsExpanded] = useState(true);
-
-    if (!currentUser) return null;
 
     const handleSwitchUser = () => {
         logout();
