@@ -241,50 +241,77 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             usersCount: importedUsers?.length || 0
         });
 
-        // ✅ ONLY update if imported data is ACTUALLY provided and not empty
-        if (importedSettings) {
+        // ✅ ONLY update if imported data is ACTUALLY provided, not empty, AND different from current state
+        if (importedSettings && !deepEqual(importedSettings, settings)) {
             console.log('[DataContext] ✅ Updating settings');
             setSettings(importedSettings);
             if (!isRemote) markDirty('settings');
         }
-        if (importedStudents && importedStudents.length > 0) {
+        if (importedStudents && importedStudents.length > 0 && !deepEqual(importedStudents, students)) {
             console.log('[DataContext] ✅ Updating students:', importedStudents.length);
             setStudents(importedStudents);
             if (!isRemote) markDirty('students');
         }
-        if (importedSubjects && importedSubjects.length > 0) {
+        if (importedSubjects && importedSubjects.length > 0 && !deepEqual(importedSubjects, subjects)) {
             console.log('[DataContext] ✅ Updating subjects:', importedSubjects.length);
             setSubjects(importedSubjects);
             if (!isRemote) markDirty('subjects');
         }
-        if (importedClasses && importedClasses.length > 0) {
+        if (importedClasses && importedClasses.length > 0 && !deepEqual(importedClasses, classes)) {
             console.log('[DataContext] ✅ Updating classes:', importedClasses.length);
             setClasses(importedClasses);
             if (!isRemote) markDirty('classes');
         }
-        if (importedGrades && importedGrades.length > 0) {
+        if (importedGrades && importedGrades.length > 0 && !deepEqual(importedGrades, grades)) {
             console.log('[DataContext] ✅ Updating grades:', importedGrades.length);
             setGrades(importedGrades);
             if (!isRemote) markDirty('grades');
         }
-        if (importedAssessments && importedAssessments.length > 0) {
+        if (importedAssessments && importedAssessments.length > 0 && !deepEqual(importedAssessments, assessments)) {
             console.log('[DataContext] ✅ Updating assessments:', importedAssessments.length);
             setAssessments(importedAssessments);
             if (!isRemote) markDirty('assessments');
         }
+        // SCORES: Smart Merge with Pending Data
         if (importedScores && importedScores.length > 0) {
-            console.log('[DataContext] ✅ Updating scores:', importedScores.length);
-            setScores(importedScores);
-            if (!isRemote) markDirty('scores');
+            let finalScores = importedScores;
+            // If we have pending changes, we MUST preserve them against the cloud update
+            if (isRemote && pendingScoreChanges.current.size > 0) {
+                console.log(`[DataContext] 🛡️ Smart Merge: Preserving ${pendingScoreChanges.current.size} local score edits`);
+
+                // Map Cloud scores but override with Local if pending
+                finalScores = importedScores.map(cloudScore => {
+                    if (pendingScoreChanges.current.has(cloudScore.id)) {
+                        // Keep local version (find it in current state)
+                        const local = scores.find(s => s.id === cloudScore.id);
+                        return local || cloudScore; // Fallback to cloud if local missing
+                    }
+                    return cloudScore;
+                });
+
+                // Add any Local-Only scores (newly created items not in cloud yet)
+                const cloudIds = new Set(importedScores.map(s => s.id));
+                scores.forEach(localScore => {
+                    if (pendingScoreChanges.current.has(localScore.id) && !cloudIds.has(localScore.id)) {
+                        finalScores.push(localScore);
+                    }
+                });
+            }
+
+            if (!deepEqual(finalScores, scores)) {
+                console.log(`[DataContext] ✅ Updating scores: ${finalScores.length} (Merged)`);
+                setScores(finalScores);
+                if (!isRemote) markDirty('scores');
+            }
         } else {
             console.log('[DataContext] 🚫 Skipping scores update - data is empty/undefined');
         }
-        if (importedReportData && importedReportData.length > 0) {
+        if (importedReportData && importedReportData.length > 0 && !deepEqual(importedReportData, reportData)) {
             console.log('[DataContext] ✅ Updating reportData:', importedReportData.length);
             setReportData(importedReportData);
             if (!isRemote) markDirty('reportData');
         }
-        if (importedClassData && importedClassData.length > 0) {
+        if (importedClassData && importedClassData.length > 0 && !deepEqual(importedClassData, classData)) {
             console.log('[DataContext] ✅ Updating classData:', importedClassData.length);
             setClassData(importedClassData);
             if (!isRemote) markDirty('classData');
@@ -292,7 +319,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         // Sync users if present
         SyncLogger.log(`loadImportedData: Loading users. Count: ${importedUsers?.length || 0}`);
-        if (importedUsers && importedUsers.length > 0) {
+        // CRITICAL LOOP PREVENTION: AuthOverlay syncs back to us. Check equality.
+        if (importedUsers && importedUsers.length > 0 && !deepEqual(importedUsers, users)) {
             console.log('[DataContext] ✅ Updating users:', importedUsers.length);
             setUsers(importedUsers);
             if (!isRemote) markDirty('users');
@@ -309,11 +337,36 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (!isRemote) markDirty('activeSessions');
         }
 
-        // CRITICAL: Clear dirty fields ONLY after a true CLOUD sync
         if (isRemote) {
-            console.log('[DataContext] 🧹 Clearing dirty fields after remote data load');
-            dirtyFields.current.clear();
-            setHasLocalChanges(false);
+            // FIX: SELECTIVE CLEARING of dirty fields
+            // We only clear the dirty flag for a field if we actually received data for it from the cloud.
+            // This prevents "Ghost" updates or partial syncs from wiping out valid local changes in unrelated fields.
+
+            if (importedSettings && !deepEqual(importedSettings, settings)) dirtyFields.current.delete('settings');
+            if (importedStudents && importedStudents.length > 0 && !deepEqual(importedStudents, students)) dirtyFields.current.delete('students');
+            if (importedSubjects && importedSubjects.length > 0 && !deepEqual(importedSubjects, subjects)) dirtyFields.current.delete('subjects');
+            if (importedClasses && importedClasses.length > 0 && !deepEqual(importedClasses, classes)) dirtyFields.current.delete('classes');
+            if (importedGrades && importedGrades.length > 0 && !deepEqual(importedGrades, grades)) dirtyFields.current.delete('grades');
+            if (importedAssessments && importedAssessments.length > 0 && !deepEqual(importedAssessments, assessments)) dirtyFields.current.delete('assessments');
+            if (importedScores && importedScores.length > 0) {
+                // Only clear dirty flags if we DON'T have pending local changes to preserve
+                if (pendingScoreChanges.current.size === 0) {
+                    if (!deepEqual(importedScores, scores)) {
+                        dirtyFields.current.delete('scores');
+                    }
+                } else {
+                    console.log('[DataContext] ⚠️ Retaining dirty flag for scores due to pending local changes');
+                }
+            }
+            if (importedReportData && importedReportData.length > 0 && !deepEqual(importedReportData, reportData)) dirtyFields.current.delete('reportData');
+            if (importedClassData && importedClassData.length > 0 && !deepEqual(importedClassData, classData)) dirtyFields.current.delete('classData');
+            if (importedUsers && importedUsers.length > 0 && !deepEqual(importedUsers, users)) dirtyFields.current.delete('users');
+            if (data.userLogs) dirtyFields.current.delete('userLogs');
+            if (data.activeSessions) dirtyFields.current.delete('activeSessions');
+
+            console.log('[DataContext] 🧹 Selectively cleared dirty fields after remote data load');
+            // Recalculate global dirty state
+            setHasLocalChanges(dirtyFields.current.size > 0);
 
             // Store original cloud data for smart dirty detection
             // We ONLY update originalData if it came from the cloud!
@@ -568,10 +621,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // Optimization for Scores: Only send changed items to save bandwidth
             // (The server transaction handles smart merging either way, but sending 2 items is faster than 2000)
             if (key === 'scores') {
-                const currentScores = scores;
-                const originalScores = originalData.current.scores || [];
+                const currentScores = scores as Score[];
+                const originalScores = (originalData.current.scores || []) as Score[];
                 // Compute Diff
-                const scoreUpdates = currentScores.filter(item => {
+                const scoreUpdates = currentScores.filter((item: Score) => {
                     if (item && typeof item === 'object' && 'id' in item) {
                         const originalItem = originalScores.find(o => o.id === item.id);
                         if (!originalItem) {
@@ -847,7 +900,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const cleanScores = (s: string[]) => s.filter(val => val.trim() !== '');
         const isActuallyChanged = !deepEqual(cleanScores(newScores), cleanScores(originalAssessmentScores));
 
-
+        console.log('[DataContext] 🕵️ Smart Dirty Check DEBUG:', {
+            id: scoreId,
+            new: cleanScores(newScores),
+            orig: cleanScores(originalAssessmentScores),
+            changed: isActuallyChanged,
+            originalFound: !!originalScore
+        });
 
         if (isActuallyChanged) {
             markDirty('scores');
