@@ -429,47 +429,32 @@ const ScoreEntry: React.FC = () => {
                                         <div>
                                             <div className="flex items-center justify-between mb-1">
                                                 <label className="block text-sm font-medium text-gray-700">Score</label>
-                                                <div className="flex items-center gap-1">
-                                                    <button
-                                                        onClick={() => saveToCloud()}
-                                                        disabled={!hasLocalChanges || isSyncing || !isOnline}
-                                                        className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors shadow-sm ${(!hasLocalChanges || isSyncing) ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
-                                                        title="Click here when you have finished entering all data and wait for sync to complete"
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${isSyncing ? 'animate-pulse' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                                        </svg>
-                                                        <span className="text-xs font-bold uppercase tracking-wide">Upload</span>
-                                                    </button>
-                                                    <button
-                                                        onClick={() => refreshFromCloud()}
-                                                        disabled={isSyncing || !isOnline}
-                                                        className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors shadow-sm ${isSyncing ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}
-                                                        title="Download: Click here to fetch the latest data from the cloud"
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-                                                        </svg>
-                                                        <span className="text-xs font-bold uppercase tracking-wide">Download</span>
-                                                    </button>
-
-                                                    {/* Auto-Sync Timer Label */}
-                                                    <div className="flex items-center px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
-                                                        {timeToSync !== null ? (
-                                                            <span className="text-xs font-semibold text-orange-600 animate-pulse">
-                                                                Auto-sync in: {timeToSync}s
-                                                            </span>
-                                                        ) : (
-                                                            /* Show Synced if no timer is running (implying sync is done or not needed) */
-                                                            <span className="text-xs font-medium text-green-600 flex items-center gap-1">
-                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                                </svg>
-                                                                Synced
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
+                                                <button
+                                                    onClick={() => saveToCloud(true)}
+                                                    disabled={!hasLocalChanges || isSyncing || !isOnline}
+                                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all shadow-md ${(!hasLocalChanges || isSyncing || !isOnline)
+                                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                            : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg'
+                                                        }`}
+                                                    title={!isOnline ? "You are offline" : "Save all score changes to the cloud"}
+                                                >
+                                                    {isSyncing ? (
+                                                        <>
+                                                            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                            </svg>
+                                                            <span className="text-sm font-bold">Saving...</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                                            </svg>
+                                                            <span className="text-sm font-bold">SAVE</span>
+                                                        </>
+                                                    )}
+                                                </button>
                                             </div>
                                             <div className="flex flex-col">
                                                 <div className="relative">

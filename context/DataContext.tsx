@@ -69,7 +69,7 @@ export interface DataContextType {
     updateClassData: (classId: number, data: Partial<ClassSpecificData>) => void;
     // FIX: Add function to load imported data.
     loadImportedData: (data: Partial<AppDataType>) => void;
-    saveToCloud: () => Promise<void>;
+    saveToCloud: (isManualSave?: boolean) => Promise<void>;
     refreshFromCloud: () => Promise<void>;
     schoolId: string | null;
     setSchoolId: (id: string | null) => void;
@@ -132,6 +132,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Sync pause control - used during authentication to stop all auto-save
     const isSyncPaused = React.useRef(false);
     const pendingSaveTimeout = React.useRef<number | null>(null);
+
+    // Manual-save-only fields - fields that should NOT auto-sync
+    const manualSaveOnlyFields = React.useRef<Set<keyof AppDataType>>(new Set(['scores']));
 
     // Form blocking control - used to block remote updates while forms are open
     const isFormOpen = React.useRef(false);
@@ -302,16 +305,28 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Auto-sync countdown state (in seconds)
     const [timeToSync, setTimeToSync] = useState<number | null>(null);
 
-    const markDirty = (field: keyof AppDataType) => {
+    const markDirty = (field: keyof AppDataType, requiresManualSave: boolean = false) => {
         // Only mark dirty if it's NOT a remote update
         if (!isRemoteUpdate.current) {
             dirtyFields.current.add(field);
-            setHasLocalChanges(true); // Enable Upload button globally
+
+            // Track if this field requires manual save
+            if (requiresManualSave) {
+                manualSaveOnlyFields.current.add(field);
+            }
+
+            setHasLocalChanges(true); // Enable Save button globally
 
             // RESET the auto-sync timer to 15 seconds whenever data changes
-            setTimeToSync(15);
+            // BUT only if there are non-manual-save fields dirty
+            const hasAutoSyncFields = Array.from(dirtyFields.current).some(
+                f => !manualSaveOnlyFields.current.has(f)
+            );
+            if (hasAutoSyncFields) {
+                setTimeToSync(15);
+            }
 
-            // console.log(`[DataContext] 📝 Marked dirty: ${field}`);
+            // console.log(`[DataContext] 📝 Marked dirty: ${field}, manualSave: ${requiresManualSave}`);
         }
     };
 
@@ -333,7 +348,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return () => clearTimeout(timer);
     }, [timeToSync]);
 
-    const saveToCloud = async () => {
+    const saveToCloud = async (isManualSave: boolean = false) => {
         // CRITICAL: Check if sync is paused (during authentication)
         if (isSyncPaused.current) {
             console.log("Sync is paused (likely during authentication), skipping save");
@@ -375,8 +390,25 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return;
         }
 
-        const fieldsToSave = Array.from(dirtyFields.current);
-        console.log(`[DataContext] ☁️ Syncing dirty fields: ${fieldsToSave.join(', ')}`);
+        let fieldsToSave = Array.from(dirtyFields.current);
+
+        // Filter out manual-save-only fields if this is NOT a manual save
+        if (!isManualSave) {
+            const originalCount = fieldsToSave.length;
+            fieldsToSave = fieldsToSave.filter(field => !manualSaveOnlyFields.current.has(field));
+
+            if (fieldsToSave.length === 0) {
+                console.log('[DataContext] 💤 Only manual-save fields are dirty. Skipping auto-sync.');
+                console.log('[DataContext] 💡 Use the Save button to upload these changes.');
+                return;
+            }
+
+            if (originalCount !== fieldsToSave.length) {
+                console.log(`[DataContext] ℹ️ Filtered out ${originalCount - fieldsToSave.length} manual-save-only fields from auto-sync`);
+            }
+        }
+
+        console.log(`[DataContext] ☁️ Syncing dirty fields: ${fieldsToSave.join(', ')}${isManualSave ? ' (Manual Save)' : ' (Auto-sync)'}`);
 
         // Capture CURRENT state at sync time (not stale state from when timeout started)
         SyncLogger.log(`saveToCloud: Preparing to save. Users count: ${users.length}`);
@@ -416,9 +448,18 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             console.log('[DataContext] ✅ Data saved to cloud successfully!');
             console.log('[DataContext] 🎉 Sync complete - cleared dirty fields');
 
-            // Clear dirty fields only after successful save
-            dirtyFields.current.clear();
-            setHasLocalChanges(false); // Disable Upload button
+            // Clear dirty fields only for the fields that were actually saved
+            fieldsToSave.forEach(field => {
+                dirtyFields.current.delete(field);
+                // If this was a manual save, also clear from manual-save-only tracking
+                if (isManualSave && manualSaveOnlyFields.current.has(field)) {
+                    // Keep it in manualSaveOnlyFields but remove from dirty
+                    // manualSaveOnlyFields tracks the TYPE, not the state
+                }
+            });
+
+            // Update hasLocalChanges based on remaining dirty fields
+            setHasLocalChanges(dirtyFields.current.size > 0);
 
             setIsSyncing(false);
             isSyncingRef.current = false;
@@ -638,7 +679,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const updateStudentScores = (studentId: number, subjectId: number, assessmentId: number, newScores: string[]) => {
-        markDirty('scores');
+        markDirty('scores', true); // Mark as requiring manual save
         const scoreId = `${studentId}-${subjectId}`;
 
         console.log('[DataContext] 📥 updateStudentScores called:', {
