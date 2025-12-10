@@ -17,7 +17,7 @@ const WHATSAPP_BASE_URL = 'https://wa.me/';
  */
 export const isQuotaExhaustedError = (error: any): boolean => {
     if (!error) return false;
-
+ 
     const errorMessage = error.message || error.toString() || '';
     const errorCode = error.code || '';
 
