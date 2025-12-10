@@ -624,29 +624,44 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 const currentScores = scores as Score[];
                 const originalScores = (originalData.current.scores || []) as Score[];
                 // Compute Diff
-                const scoreUpdates = currentScores.filter((item: Score) => {
-                    if (item && typeof item === 'object' && 'id' in item) {
-                        const originalItem = originalScores.find(o => o.id === item.id);
-                        if (!originalItem) {
-                            // NEW ITEM CHECK: Prevent "Ghost" overwrites
-                            // Exception: If the user explicitly modified this score (it's in pendingScoreChanges),
-                            // we MUST send it, even if it appears to be a "Ghost" (e.g. they cleared a stale original).
-                            const isPending = pendingScoreChanges.current.has(item.id);
-                            if (isPending) return true;
+                const updates: Score[] = [];
+                const explicitDeletions: string[] = [];
 
-                            // If it's a new item (or one we didn't know about), check if it's effectively empty.
-                            // If it is empty, DO NOT SEND IT. This prevents overwriting valid server data with empty local placeholders.
-                            const hasData = item.assessmentScores && Object.values(item.assessmentScores).some(scores => scores.some(s => s.trim() !== ''));
-                            if (!hasData) return false;
+                currentScores.forEach((item: Score) => {
+                    if (!item || typeof item !== 'object' || !('id' in item)) return;
 
-                            return true; // New item with actual data -> Send it
+                    const originalItem = originalScores.find(o => o.id === item.id);
+                    const isEffectivelyEmpty = !item.assessmentScores || !Object.values(item.assessmentScores).some(scores => scores.some(s => s.trim() !== ''));
+
+                    if (!originalItem) {
+                        // NEW ITEM
+                        if (isEffectivelyEmpty) {
+                            // If user added then cleared a score before sync, just ignore it.
+                            // Logic: Cloud (null) == Local (Empty). No action needed.
+                            return;
                         }
-                        return !deepEqual(item, originalItem); // Modified item
+                        // New with data -> Save
+                        updates.push(item);
+                    } else {
+                        // EXISTING ITEM
+                        if (deepEqual(item, originalItem)) return; // No change
+
+                        if (isEffectivelyEmpty) {
+                            // User cleared an existing score.
+                            // Mark for DELETION to remove the object entirely from Cloud.
+                            explicitDeletions.push(item.id);
+                        } else {
+                            // Modified with data -> Save
+                            updates.push(item);
+                        }
                     }
-                    return false;
                 });
-                if (scoreUpdates.length > 0) {
-                    transactionPayload.scores = scoreUpdates;
+
+                if (updates.length > 0) {
+                    transactionPayload.scores = updates;
+                }
+                if (explicitDeletions.length > 0) {
+                    transactionDeletions.scores = (transactionDeletions.scores || []).concat(explicitDeletions);
                 }
             } else {
                 // For other fields, we currently send the full list/object.

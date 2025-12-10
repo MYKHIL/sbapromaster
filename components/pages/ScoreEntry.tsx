@@ -11,7 +11,7 @@ import { getAvailableClasses, getAvailableSubjects } from '../../utils/permissio
 
 const ScoreEntry: React.FC = () => {
     // Destructure with default empty arrays to prevent undefined errors
-    const { students = [], subjects: allSubjects = [], assessments = [], classes: allClasses = [], getStudentScores, updateStudentScores, isOnline, isSyncing, queuedCount, saveToCloud, refreshFromCloud, hasLocalChanges, setHasLocalChanges, timeToSync, isDirty, updateDraftScore, removeDraftScore, getComputedScore, draftVersion, pendingCount, getPendingUploadData } = useData();
+    const { students = [], subjects: allSubjects = [], assessments = [], classes: allClasses = [], getStudentScores, updateStudentScores, isOnline, isSyncing, queuedCount, saveToCloud, refreshFromCloud, hasLocalChanges, setHasLocalChanges, timeToSync, isDirty, updateDraftScore, removeDraftScore, getComputedScore, draftVersion, scores, pendingCount, getPendingUploadData } = useData();
     const { currentUser } = useUser();
     const isReadOnly = currentUser?.role === 'Guest';
 
@@ -160,7 +160,7 @@ const ScoreEntry: React.FC = () => {
             setLocalScore('');
             setScoreModified(false);
         }
-    }, [selectedStudentIndex, selectedSubjectId, selectedAssessmentId, filteredStudents, draftVersion]); // Listen to draftVersion for sync
+    }, [selectedStudentIndex, selectedSubjectId, selectedAssessmentId, filteredStudents, draftVersion, scores]); // Listen to scores and draftVersion for sync
 
 
 
@@ -801,14 +801,60 @@ const ScoreEntry: React.FC = () => {
                                         <div className="p-2 bg-blue-50 text-blue-800 rounded border border-blue-200 mb-4">
                                             Showing <strong>only modified items</strong>. NOTE: These changes will be safely <strong>merged</strong> with the cloud database.
                                         </div>
-                                        {Object.entries(debugData).map(([key, value]) => (
-                                            <div key={key} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                                                <h4 className="font-bold text-blue-600 text-base mb-2 select-all">{key}</h4>
-                                                <pre className="whitespace-pre-wrap break-all text-gray-700 select-all">
-                                                    {JSON.stringify(value, null, 2)}
-                                                </pre>
-                                            </div>
-                                        ))}
+                                        {Object.entries(debugData).map(([key, value]) => {
+                                            // Helper to render readable content based on key
+                                            const renderContent = () => {
+                                                if (key === 'scores' && Array.isArray(value)) {
+                                                    return (
+                                                        <ul className="list-disc pl-5 space-y-1 text-gray-700">
+                                                            {value.map((score: any) => {
+                                                                const student = students.find(s => s.id === score.studentId);
+                                                                const subject = allSubjects.find(s => s.id === score.subjectId);
+                                                                const scoreDetails = Object.entries(score.assessmentScores || {}).map(([assessmentId, scores]) => {
+                                                                    const assessment = assessments.find(a => a.id === Number(assessmentId));
+                                                                    const scoreStr = Array.isArray(scores) ? scores.join(', ') : '';
+                                                                    return `${assessment?.name || 'Unknown Assessment'}: ${scoreStr || '(Empty)'}`;
+                                                                }).join(' | ');
+
+                                                                return (
+                                                                    <li key={score.id}>
+                                                                        <span className="font-semibold">{student?.name || 'Unknown Student'}</span>
+                                                                        <span className="text-gray-500"> - {subject?.subject || 'Unknown Subject'}</span>
+                                                                        <br />
+                                                                        <span className="text-blue-600 ml-4">{scoreDetails}</span>
+                                                                    </li>
+                                                                );
+                                                            })}
+                                                        </ul>
+                                                    );
+                                                }
+                                                if (key === 'students' && Array.isArray(value)) {
+                                                    return (
+                                                        <div className="text-gray-700">
+                                                            <p><strong>{value.length} Students Modified:</strong></p>
+                                                            <ul className="list-disc pl-5 mt-1">
+                                                                {value.slice(0, 5).map((s: any) => (
+                                                                    <li key={s.id}>{s.name} ({s.class})</li>
+                                                                ))}
+                                                                {value.length > 5 && <li>...and {value.length - 5} more</li>}
+                                                            </ul>
+                                                        </div>
+                                                    );
+                                                }
+                                                if (key === 'settings') {
+                                                    return <div className="text-gray-700">Settings updated</div>;
+                                                }
+                                                // Default fallback
+                                                return <pre className="whitespace-pre-wrap break-all text-gray-700 select-all">{JSON.stringify(value, null, 2)}</pre>;
+                                            };
+
+                                            return (
+                                                <div key={key} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                                                    <h4 className="font-bold text-blue-600 text-lg mb-2 capitalize border-b pb-1">{key}</h4>
+                                                    {renderContent()}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 ) : (
                                     <div className="flex flex-col items-center justify-center py-12 text-gray-500">
