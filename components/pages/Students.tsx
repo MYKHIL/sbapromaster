@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import CameraCapture from '../CameraCapture';
 import { useData } from '../../context/DataContext';
 import type { Student } from '../../types';
@@ -44,7 +44,9 @@ const Students: React.FC = () => {
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [itemIdToDelete, setItemIdToDelete] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedClass, setSelectedClass] = useState<string>('');
     const [isEnhancing, setIsEnhancing] = useState(false);
+    const hasSetDefaultClass = useRef(false);
 
     const inputStyles = "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500";
     const searchInputStyles = "w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
@@ -60,15 +62,34 @@ const Students: React.FC = () => {
     // Derived list of classes available for "Add Student" or filtering
     const availableClasses = useMemo(() => getAvailableClasses(currentUser, classes), [currentUser, classes]);
 
+    // Initialize default class selection to first available class (only once on mount)
+    useEffect(() => {
+        if (availableClasses.length > 0 && !hasSetDefaultClass.current) {
+            setSelectedClass(availableClasses[0].name);
+            hasSetDefaultClass.current = true;
+        }
+    }, [availableClasses]);
+
     const filteredStudents = useMemo(() => {
         const query = searchQuery.toLowerCase();
-        if (!query) return accessibleStudents;
-        return accessibleStudents.filter(student =>
-            student.name.toLowerCase().includes(query) ||
-            student.indexNumber.toLowerCase().includes(query) ||
-            student.class.toLowerCase().includes(query)
-        );
-    }, [accessibleStudents, searchQuery]);
+        let results = accessibleStudents;
+
+        // Filter by selected class
+        if (selectedClass) {
+            results = results.filter(student => student.class === selectedClass);
+        }
+
+        // Filter by search query
+        if (query) {
+            results = results.filter(student =>
+                student.name.toLowerCase().includes(query) ||
+                student.indexNumber.toLowerCase().includes(query) ||
+                student.class.toLowerCase().includes(query)
+            );
+        }
+
+        return results;
+    }, [accessibleStudents, selectedClass, searchQuery]);
 
 
 
@@ -191,6 +212,19 @@ const Students: React.FC = () => {
 
                 <div className="bg-gray-100 py-4">
                     <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                        {/* Class Filter Dropdown */}
+                        <select
+                            value={selectedClass}
+                            onChange={(e) => setSelectedClass(e.target.value)}
+                            className="w-full md:w-1/4 px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                            <option value="">All Classes</option>
+                            {availableClasses.map(cls => (
+                                <option key={cls.id} value={cls.name}>{cls.name}</option>
+                            ))}
+                        </select>
+
+                        {/* Search Input */}
                         <div className="relative w-full md:w-1/3">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
@@ -203,6 +237,8 @@ const Students: React.FC = () => {
                                 className={searchInputStyles}
                             />
                         </div>
+
+                        {/* Add Student Button */}
                         {(currentUser?.role === 'Admin' || (currentUser?.role === 'Teacher' && currentUser.allowedClasses.length > 0)) && (
                             <button onClick={handleAddNew} className="add-button flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors w-full md:w-auto justify-center">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
