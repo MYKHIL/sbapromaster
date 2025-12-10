@@ -68,7 +68,7 @@ export interface DataContextType {
     getClassData: (classId: number) => ClassSpecificData | undefined;
     updateClassData: (classId: number, data: Partial<ClassSpecificData>) => void;
     // FIX: Add function to load imported data.
-    loadImportedData: (data: Partial<AppDataType>) => void;
+    loadImportedData: (data: Partial<AppDataType>, isRemote?: boolean) => void;
     saveToCloud: (isManualSave?: boolean) => Promise<void>;
 
     // Page-specific save functions
@@ -201,15 +201,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
     }, [settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions]);
 
-    // FIX: Implement function to overwrite all data from an imported file.
-    const loadImportedData = (data: Partial<AppDataType>) => {
+    // FIX: Implement function to overwrite all data from an imported file or cloud sync
+    const loadImportedData = (data: Partial<AppDataType>, isRemote: boolean = true) => {
         // CRITICAL: Mark this as a remote update to prevent syncing back to cloud
-        // This prevents localStorage from overwriting imported/cloud data
-        isRemoteUpdate.current = true;
-        // Automatically reset after 500ms to allow all effects to settle
-        setTimeout(() => {
-            isRemoteUpdate.current = false;
-        }, 500);
+        // ONLY if it's a remote update. If it's a local file import, we WANT to mark as dirty.
+        if (isRemote) {
+            isRemoteUpdate.current = true;
+            // Automatically reset after 500ms to allow all effects to settle
+            setTimeout(() => {
+                isRemoteUpdate.current = false;
+            }, 500);
+        }
 
         // SMART MERGING: Only update state if imported data is ACTUALLY provided and not empty
         // This prevents replacing valid local data with undefined/empty cloud data
@@ -226,7 +228,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             users: importedUsers,
         } = data;
 
-        console.log('[DataContext] 📦 loadImportedData called with:', {
+        console.log(`[DataContext] 📦 loadImportedData called (isRemote=${isRemote}) with:`, {
             hasSettings: !!importedSettings,
             studentsCount: importedStudents?.length || 0,
             subjectsCount: importedSubjects?.length || 0,
@@ -241,78 +243,109 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         // ✅ ONLY update if imported data is ACTUALLY provided and not empty
         if (importedSettings) {
-            console.log('[DataContext] ✅ Updating settings from cloud');
+            console.log('[DataContext] ✅ Updating settings');
             setSettings(importedSettings);
+            if (!isRemote) markDirty('settings');
         }
         if (importedStudents && importedStudents.length > 0) {
-            console.log('[DataContext] ✅ Updating students from cloud:', importedStudents.length);
+            console.log('[DataContext] ✅ Updating students:', importedStudents.length);
             setStudents(importedStudents);
+            if (!isRemote) markDirty('students');
         }
         if (importedSubjects && importedSubjects.length > 0) {
-            console.log('[DataContext] ✅ Updating subjects from cloud:', importedSubjects.length);
+            console.log('[DataContext] ✅ Updating subjects:', importedSubjects.length);
             setSubjects(importedSubjects);
+            if (!isRemote) markDirty('subjects');
         }
         if (importedClasses && importedClasses.length > 0) {
-            console.log('[DataContext] ✅ Updating classes from cloud:', importedClasses.length);
+            console.log('[DataContext] ✅ Updating classes:', importedClasses.length);
             setClasses(importedClasses);
+            if (!isRemote) markDirty('classes');
         }
         if (importedGrades && importedGrades.length > 0) {
-            console.log('[DataContext] ✅ Updating grades from cloud:', importedGrades.length);
+            console.log('[DataContext] ✅ Updating grades:', importedGrades.length);
             setGrades(importedGrades);
+            if (!isRemote) markDirty('grades');
         }
         if (importedAssessments && importedAssessments.length > 0) {
-            console.log('[DataContext] ✅ Updating assessments from cloud:', importedAssessments.length);
+            console.log('[DataContext] ✅ Updating assessments:', importedAssessments.length);
             setAssessments(importedAssessments);
+            if (!isRemote) markDirty('assessments');
         }
         if (importedScores && importedScores.length > 0) {
-            console.log('[DataContext] ✅ Updating scores from cloud:', importedScores.length);
+            console.log('[DataContext] ✅ Updating scores:', importedScores.length);
             setScores(importedScores);
+            if (!isRemote) markDirty('scores');
         } else {
-            console.log('[DataContext] 🚫 Skipping scores update - cloud data is empty/undefined');
+            console.log('[DataContext] 🚫 Skipping scores update - data is empty/undefined');
         }
         if (importedReportData && importedReportData.length > 0) {
-            console.log('[DataContext] ✅ Updating reportData from cloud:', importedReportData.length);
+            console.log('[DataContext] ✅ Updating reportData:', importedReportData.length);
             setReportData(importedReportData);
+            if (!isRemote) markDirty('reportData');
         }
         if (importedClassData && importedClassData.length > 0) {
-            console.log('[DataContext] ✅ Updating classData from cloud:', importedClassData.length);
+            console.log('[DataContext] ✅ Updating classData:', importedClassData.length);
             setClassData(importedClassData);
+            if (!isRemote) markDirty('classData');
         }
 
         // Sync users if present
         SyncLogger.log(`loadImportedData: Loading users. Count: ${importedUsers?.length || 0}`);
         if (importedUsers && importedUsers.length > 0) {
-            console.log('[DataContext] ✅ Updating users from cloud:', importedUsers.length);
+            console.log('[DataContext] ✅ Updating users:', importedUsers.length);
             setUsers(importedUsers);
+            if (!isRemote) markDirty('users');
         } else {
-            console.log('[DataContext] 🚫 Skipping users update - cloud data is empty/undefined');
+            console.log('[DataContext] 🚫 Skipping users update - data is empty/undefined');
         }
 
-        if (data.userLogs) setUserLogs(data.userLogs);
-        if (data.activeSessions) setActiveSessions(data.activeSessions);
+        if (data.userLogs) {
+            setUserLogs(data.userLogs);
+            if (!isRemote) markDirty('userLogs');
+        }
+        if (data.activeSessions) {
+            setActiveSessions(data.activeSessions);
+            if (!isRemote) markDirty('activeSessions');
+        }
 
-        // CRITICAL: Clear dirty fields after loading data from cloud
-        // This ensures imported data doesn't trigger a false "unsaved changes" state
-        console.log('[DataContext] 🧹 Clearing dirty fields after data import');
-        dirtyFields.current.clear();
-        setHasLocalChanges(false);
+        // CRITICAL: Clear dirty fields ONLY after a true CLOUD sync
+        if (isRemote) {
+            console.log('[DataContext] 🧹 Clearing dirty fields after remote data load');
+            dirtyFields.current.clear();
+            setHasLocalChanges(false);
 
-        // Store original cloud data for smart dirty detection
-        // FIX: Use imported data for the baseline if available, otherwise fall back to current state
-        originalData.current = {
-            settings: importedSettings ?? settings,
-            students: importedStudents ?? students,
-            subjects: importedSubjects ?? subjects,
-            classes: importedClasses ?? classes,
-            grades: importedGrades ?? grades,
-            assessments: importedAssessments ?? assessments,
-            scores: importedScores ?? scores,
-            reportData: importedReportData ?? reportData,
-            classData: importedClassData ?? classData,
-            users: importedUsers ?? users,
-            userLogs: data.userLogs ?? userLogs,
-            activeSessions: data.activeSessions ?? activeSessions,
-        };
+            // Store original cloud data for smart dirty detection
+            // We ONLY update originalData if it came from the cloud!
+            // If we import a file, that file is effectively "New Local Changes" vs "Old Cloud Data"
+            originalData.current = {
+                settings: importedSettings ?? settings,
+                students: importedStudents ?? students,
+                subjects: importedSubjects ?? subjects,
+                classes: importedClasses ?? classes,
+                grades: importedGrades ?? grades,
+                assessments: importedAssessments ?? assessments,
+                scores: importedScores ?? scores,
+                reportData: importedReportData ?? reportData,
+                classData: importedClassData ?? classData,
+                users: importedUsers ?? users,
+                userLogs: data.userLogs ?? userLogs,
+                activeSessions: data.activeSessions ?? activeSessions,
+            };
+        } else {
+            console.log('[DataContext] 💾 Local file import: Marking fields as dirty for verification');
+            // We intentionally do NOT update originalData.current here.
+            // Why? Because we want the Diff Logic (saveToCloud) to compare our NEW imported data
+            // against the OLD originalData from the server, and detect EVERYTHING as "Changed".
+            // However, our Diff Logic relies on IDs. 
+            // If the imported file is identical to the server, Diff = 0.
+            // If the imported file is totally different, Diff = Huge.
+            // But wait, if we markDirty, saveToCloud will run.
+            // saveToCloud calls getPendingUploadData which uses originalData to diff.
+            // If originalData is empty (first load), it detects changes.
+            // If originalData is populated, it will diff.
+            // This is exactly what we want.
+        }
     };
 
     // CRITICAL: When schoolId changes, reset all data to prevent cross-school contamination
@@ -507,8 +540,23 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         // Construct the transactional payload
         const transactionPayload: Partial<AppDataType> = {};
+        const transactionDeletions: Record<string, string[]> = {};
 
         fieldsToSave.forEach(field => {
+            const currentVal = currentData[field];
+            // @ts-ignore
+            const originalVal = originalData.current[field];
+
+            // Check for Deletions (Array types with IDs)
+            if (Array.isArray(currentVal) && Array.isArray(originalVal)) {
+                const deletedIds = originalVal
+                    .filter((o: any) => o && o.id && !currentVal.find((c: any) => c && c.id === o.id))
+                    .map((o: any) => String(o.id));
+
+                if (deletedIds.length > 0) {
+                    transactionDeletions[field] = deletedIds;
+                }
+            }
             // Optimization for Scores: Only send changed items to save bandwidth
             // (The server transaction handles smart merging either way, but sending 2 items is faster than 2000)
             if (field === 'scores') {
@@ -557,7 +605,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (Object.keys(transactionPayload).length > 0) {
                 console.log('[DataContext] ☁️ Performing Universal Transactional Save...');
                 // Uses the new generalized transaction helper
-                await saveDataTransaction(schoolId, transactionPayload);
+                await saveDataTransaction(schoolId, transactionPayload, transactionDeletions);
             }
 
             console.log('[DataContext] ✅ Data saved to cloud successfully!');
@@ -647,7 +695,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     SyncLogger.log(`Initial data loaded. Users: ${data.users?.length || 0}, Scores: ${data.scores?.length || 0}`);
 
                     // Mark as remote update to allow processing
-                    isRemoteUpdate.current = true;
                     loadImportedData(data);
                 } else {
                     console.log('[DataContext] ⚠️ No initial data found for school');

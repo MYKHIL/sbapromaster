@@ -112,7 +112,8 @@ const DataManagement: React.FC = () => {
             const { data: importedData, diagnostics } = await importDatabase(dbFile);
 
             setFeedback({ message: 'Updating application data...', type: 'info' });
-            loadImportedData(importedData);
+            // Pass 'false' for isRemote to trigger dirty detection and cloud save
+            loadImportedData(importedData, false);
 
             const totalSkipped = diagnostics.records.skipped + diagnostics.comments.skipped;
             const totalRecords = diagnostics.records.total + diagnostics.comments.total;
@@ -205,8 +206,9 @@ const DataManagement: React.FC = () => {
         try {
             await updateUsers(schoolId, updatedUsers);
             setUsers(updatedUsers);
+            setUsers(updatedUsers);
             // FIX: Update DataContext state so saveToCloud includes the new users
-            loadImportedData({ users: updatedUsers });
+            loadImportedData({ users: updatedUsers }, false);
 
             if (shouldClose) {
                 setIsUserManagementOpen(false);

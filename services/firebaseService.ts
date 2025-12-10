@@ -199,7 +199,8 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
 // This ensures that concurrent edits to different items within arrays (or different fields) are preserved.
 export const saveDataTransaction = async (
     docId: string,
-    updates: Partial<AppDataType>
+    updates: Partial<AppDataType>,
+    deletions?: Record<string, string[]>
 ) => {
     try {
         const docRef = doc(db, "schools", docId);
@@ -213,49 +214,68 @@ export const saveDataTransaction = async (
             const currentData = sfDoc.data() as AppDataType;
             const finalUpdates: any = {};
 
-            // Iterate through each field in the updates
-            for (const [key, newValue] of Object.entries(updates)) {
+            // Collect all fields that need attention (either update or deletion)
+            const allKeys = new Set([
+                ...Object.keys(updates),
+                ...(deletions ? Object.keys(deletions) : [])
+            ]);
+
+            for (const key of allKeys) {
                 const currentVal = currentData[key as keyof AppDataType];
+                const newVal = updates[key as keyof AppDataType];
+                const deletedIds = deletions ? deletions[key] : undefined;
 
                 // Strategy 1: Smart Array Merge (for lists with unique IDs)
-                if (Array.isArray(newValue) && Array.isArray(currentVal)) {
+                // We check if it's an array based on currentVal OR newVal (in case currentVal is empty/undefined)
+                const isArrayType = (Array.isArray(currentVal) || Array.isArray(newVal));
+
+                if (isArrayType) {
                     // Check if items have IDs (safely)
-                    const hasId = newValue.length > 0 && typeof newValue[0] === 'object' && 'id' in newValue[0];
-                    // Also generic empty array check - if empty, we might just be clearing? 
-                    // No, if newValue is empty, we probably shouldn't merge empty into full.
-                    // But if local user DELETED everything, newValue is [].
-                    // However, we discussed "Adding" mode. 
-                    // For now, let's assume we use Smart Merge to PRESERVE server data.
-                    // If user wants to delete, they need a specific 'delete' action, not just saving current state.
-                    // But 'updates' comes from DataContext which sends 'what I have'.
+                    // We need to look at either existing data or new data to determine if it's an ID-based array
+                    const sampleItem = (Array.isArray(newVal) && newVal.length > 0) ? newVal[0] :
+                        (Array.isArray(currentVal) && currentVal.length > 0) ? currentVal[0] : null;
+
+                    const hasId = sampleItem && typeof sampleItem === 'object' && 'id' in sampleItem;
 
                     if (hasId) {
                         const mergedMap = new Map<string, any>();
 
                         // 1. Load Server Data first
-                        currentVal.forEach((item: any) => {
-                            if (item && item.id !== undefined) mergedMap.set(String(item.id), item);
-                        });
+                        if (Array.isArray(currentVal)) {
+                            currentVal.forEach((item: any) => {
+                                if (item && item.id !== undefined) mergedMap.set(String(item.id), item);
+                            });
+                        }
 
                         // 2. Overlay Local Updates (Last Write Wins for collision)
-                        newValue.forEach((item: any) => {
-                            if (item && item.id !== undefined) mergedMap.set(String(item.id), item);
-                        });
+                        if (Array.isArray(newVal)) {
+                            newVal.forEach((item: any) => {
+                                if (item && item.id !== undefined) mergedMap.set(String(item.id), item);
+                            });
+                        }
+
+                        // 3. Apply Deletions (Remove items that were locally deleted)
+                        if (deletedIds && Array.isArray(deletedIds)) {
+                            deletedIds.forEach(id => {
+                                mergedMap.delete(String(id));
+                            });
+                        }
 
                         finalUpdates[key] = Array.from(mergedMap.values());
                     } else {
                         // Arrays without IDs: Overwrite (fallback) or Union? 
                         // e.g. string[]. We assume overwrite for simple lists unless specific logic.
-                        finalUpdates[key] = newValue;
+                        if (newVal !== undefined) finalUpdates[key] = newVal;
                     }
                 }
                 // Strategy 2: Object Merge (for Settings, ActiveSessions)
                 else if (key === 'settings' || key === 'activeSessions') {
-                    finalUpdates[key] = { ...(currentVal || {}), ...(newValue || {}) };
+                    // Start with server data, merge updates. (Deletions not supported for object properties yet, only array items)
+                    finalUpdates[key] = { ...(currentVal || {}), ...(newVal || {}) };
                 }
-                // Strategy 3: Default Overwrite (e.g. primitives, or 'users' if we handled it differently - wait, Users has ID)
+                // Strategy 3: Default Overwrite (Primitives)
                 else {
-                    finalUpdates[key] = newValue;
+                    if (newVal !== undefined) finalUpdates[key] = newVal;
                 }
             }
 
@@ -264,7 +284,7 @@ export const saveDataTransaction = async (
                 transaction.update(docRef, finalUpdates);
             }
         });
-        console.log(`[firebaseService] Transaction successful for keys: ${Object.keys(updates).join(', ')}`);
+        console.log(`[firebaseService] Transaction successful. Keys: ${Object.keys(updates).join(', ')}. Deletions: ${deletions ? Object.keys(deletions).join(', ') : 'none'}`);
     } catch (e) {
         console.error("[firebaseService] Transaction failed: ", e);
         throw e;

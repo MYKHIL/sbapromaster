@@ -757,7 +757,7 @@ const ScoreEntry: React.FC = () => {
                                 {debugData && Object.keys(debugData).length > 0 ? (
                                     <div className="space-y-4">
                                         <div className="p-2 bg-blue-50 text-blue-800 rounded border border-blue-200 mb-4">
-                                            Showing <strong>only modified items</strong>. NOTE: The full list will be synchronized to the cloud for data integrity.
+                                            Showing <strong>only modified items</strong>. NOTE: These changes will be safely <strong>merged</strong> with the cloud database.
                                         </div>
                                         {Object.entries(debugData).map(([key, value]) => (
                                             <div key={key} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
