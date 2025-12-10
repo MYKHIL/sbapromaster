@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import CameraCapture from '../CameraCapture';
 import { useData } from '../../context/DataContext';
+import SaveButton from '../SaveButton';
 import type { Class } from '../../types';
 import ConfirmationModal from '../ConfirmationModal';
 import { enhanceImage } from '../../services/geminiService';
@@ -18,7 +19,7 @@ const EMPTY_TEACHER_FORM: Omit<Class, 'id'> = {
 const SIGNATURE_PLACEHOLDER = 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTUwIDUwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0yIDI1LjVDMiAyNS41IDE1LjUgMTUuNSAyOS41IDI4QzQzLjUgNDAuNSA1MyAyNS41IDY2LjUgMjAuNUM4MCAxNS41IDg4LjUgMjkgMTAwIDI5QzExMS41IDI5IDEyMyAxNS41IDEzNyAyOS41IiBzdHJva2U9IiM5Y2EzYWYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+';
 
 const Teachers: React.FC = () => {
-    const { classes, addClass, updateClass, deleteClass } = useData();
+    const { classes, addClass, updateClass, deleteClass, saveClasses, isDirty, isSyncing, isOnline } = useData();
     const { currentUser } = useUser();
     const isAdmin = currentUser?.role === 'Admin';
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -174,6 +175,19 @@ const Teachers: React.FC = () => {
                                 </svg>
                                 Add New Teacher/Class
                             </button>
+                        )}
+
+                        {/* Save Button */}
+                        {(isAdmin || currentUser?.role === 'Teacher') && (
+                            <div className="w-full md:w-auto">
+                                <SaveButton
+                                    onSave={saveClasses}
+                                    isDirty={isDirty('classes')}
+                                    isSyncing={isSyncing}
+                                    isOnline={isOnline}
+                                    label="Save Changes"
+                                />
+                            </div>
                         )}
                     </div>
                 </div>

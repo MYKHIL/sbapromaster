@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
+import React, { createContext, useContext, ReactNode, useState, useEffect, useRef } from 'react';
 import { saveUserDatabase, subscribeToSchoolData, AppDataType, updateHeartbeat, logUserActivity, getSchoolData } from '../services/firebaseService';
 import * as SyncLogger from '../services/syncLogger';
 import useLocalStorage from '../hooks/useLocalStorage';
@@ -63,13 +63,24 @@ export interface DataContextType {
     getStudentScores: (studentId: number, subjectId: number, assessmentId: number) => string[];
     // Report Data
     getReportData: (studentId: number) => ReportSpecificData | undefined;
-    updateReportData: (studentId: number, data: Partial<Omit<ReportSpecificData, 'totalSchoolDays'>>) => void;
+    updateReportData: (studentId: number, data: Partial<Omit<ReportSpecificData, 'totalSchoolDays'>>) => void; 
     // Class Data
     getClassData: (classId: number) => ClassSpecificData | undefined;
     updateClassData: (classId: number, data: Partial<ClassSpecificData>) => void;
     // FIX: Add function to load imported data.
     loadImportedData: (data: Partial<AppDataType>) => void;
     saveToCloud: (isManualSave?: boolean) => Promise<void>;
+
+    // Page-specific save functions
+    saveSettings: () => Promise<void>;
+    saveStudents: () => Promise<void>;
+    saveTeachers: () => Promise<void>;
+    saveSubjects: () => Promise<void>;
+    saveClasses: () => Promise<void>;
+    saveGrades: () => Promise<void>;
+    saveAssessments: () => Promise<void>;
+    saveScores: () => Promise<void>;
+
     refreshFromCloud: () => Promise<void>;
     schoolId: string | null;
     setSchoolId: (id: string | null) => void;
@@ -90,7 +101,14 @@ export interface DataContextType {
     // UI Feedback
     hasLocalChanges: boolean;
     setHasLocalChanges: (hasChanges: boolean) => void;
-    timeToSync: number | null; // Seconds remaining until auto-sync
+    isDirty: (...fields: (keyof AppDataType)[]) => boolean; // Check if specific fields have unsaved changes
+
+    // Draft score synchronization
+    updateDraftScore: (studentId: number, assessmentId: number, value: string) => void;
+    removeDraftScore: (studentId: number, assessmentId: number) => void;
+    getComputedScore: (studentId: number, assessmentId: number, subjectId: number) => string;
+    draftVersion: number; // Increment to trigger re-renders of inputs
+    pendingCount: number;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -129,12 +147,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Sync lock to prevent concurrent syncs
     const isSyncingRef = React.useRef(false);
 
-    // Sync pause control - used during authentication to stop all auto-save
+    // Sync pause control - used during authentication to stop all saves
     const isSyncPaused = React.useRef(false);
-    const pendingSaveTimeout = React.useRef<number | null>(null);
-
-    // Manual-save-only fields - fields that should NOT auto-sync
-    const manualSaveOnlyFields = React.useRef<Set<keyof AppDataType>>(new Set(['scores']));
 
     // Form blocking control - used to block remote updates while forms are open
     const isFormOpen = React.useRef(false);
@@ -154,6 +168,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Track overall local changes for UI feedback (e.g. enabling Upload button)
     const [hasLocalChanges, setHasLocalChanges] = useState(false);
+
+    // Track original cloud data to compare against current state
+    const originalData = React.useRef<Partial<AppDataType>>({});
+
+    // Track pending (uncommitted) score changes - fields that have been modified but not saved
+    const pendingScoreChanges = React.useRef<Set<string>>(new Set()); // Format: "studentId-assessmentId"
 
     // FIX: Use a Ref to hold the latest state for saveToCloud to access during retries
     // This prevents the "stale closure" bug where a postponed save uses old data
@@ -267,6 +287,26 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         if (data.userLogs) setUserLogs(data.userLogs);
         if (data.activeSessions) setActiveSessions(data.activeSessions);
+
+        // CRITICAL: Clear dirty fields after loading data from cloud
+        // This ensures imported data doesn't trigger a false "unsaved changes" state
+        console.log('[DataContext] 🧹 Clearing dirty fields after data import');
+        dirtyFields.current.clear();
+        setHasLocalChanges(false);
+
+        // Store original cloud data for smart dirty detection
+        originalData.current = {
+            settings,
+            students,
+            subjects,
+            classes,
+            grades,
+            assessments,
+            scores,
+            reportData,
+            classData,
+            users,
+        };
     };
 
     // CRITICAL: When schoolId changes, reset all data to prevent cross-school contamination
@@ -290,6 +330,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // setUsers([]);
             setUserLogs([]);
             setActiveSessions({});
+
+            // CRITICAL: Clear dirty fields to prevent stale save state
+            dirtyFields.current.clear();
+            pendingScoreChanges.current.clear();
+            setHasLocalChanges(false);
+
+            // Clear original data on logout
+            originalData.current = {};
         }
         previousSchoolId.current = schoolId;
     }, [schoolId]);
@@ -302,51 +350,75 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // write sizes and potential conflicts.
     const dirtyFields = React.useRef<Set<keyof AppDataType>>(new Set());
 
-    // Auto-sync countdown state (in seconds)
-    const [timeToSync, setTimeToSync] = useState<number | null>(null);
+    // Deep comparison helper to check if two values are equal
+    const deepEqual = (a: any, b: any): boolean => {
+        if (a === b) return true;
+        if (a == null || b == null) return false;
+        if (typeof a !== typeof b) return false;
 
-    const markDirty = (field: keyof AppDataType, requiresManualSave: boolean = false) => {
+        // For arrays
+        if (Array.isArray(a) && Array.isArray(b)) {
+            if (a.length !== b.length) return false;
+            return JSON.stringify(a) === JSON.stringify(b);
+        }
+
+        // For objects
+        if (typeof a === 'object' && typeof b === 'object') {
+            return JSON.stringify(a) === JSON.stringify(b);
+        }
+
+        return false;
+    };
+
+    const markDirty = (field: keyof AppDataType) => {
         // Only mark dirty if it's NOT a remote update
         if (!isRemoteUpdate.current) {
             dirtyFields.current.add(field);
-
-            // Track if this field requires manual save
-            if (requiresManualSave) {
-                manualSaveOnlyFields.current.add(field);
-            }
-
             setHasLocalChanges(true); // Enable Save button globally
-
-            // RESET the auto-sync timer to 15 seconds whenever data changes
-            // BUT only if there are non-manual-save fields dirty
-            const hasAutoSyncFields = Array.from(dirtyFields.current).some(
-                f => !manualSaveOnlyFields.current.has(f)
-            );
-            if (hasAutoSyncFields) {
-                setTimeToSync(15);
-            }
-
-            // console.log(`[DataContext] 📝 Marked dirty: ${field}, manualSave: ${requiresManualSave}`);
         }
     };
 
-    // Auto-sync countdown effect
-    useEffect(() => {
-        if (timeToSync === null) return;
+    // Check if current data actually differs from original cloud data
+    const recheckDirtyStatus = (field: keyof AppDataType, currentValue: any) => {
+        const originalValue = originalData.current[field];
 
-        if (timeToSync === 0) {
-            // Timer expired, trigger sync
-            saveToCloud();
-            setTimeToSync(null); // Stop timer
-            return;
+        // If values are the same, remove from dirty
+        if (deepEqual(currentValue, originalValue)) {
+            dirtyFields.current.delete(field);
+            // Update hasLocalChanges based on remaining dirty fields
+            setHasLocalChanges(dirtyFields.current.size > 0);
+        } else {
+            // Values differ, ensure it's marked dirty
+            markDirty(field);
         }
+    };
 
-        const timer = setTimeout(() => {
-            setTimeToSync(prev => (prev !== null && prev > 0) ? prev - 1 : null);
-        }, 1000);
+    // Reactive effect to auto-recheck dirty status when data changes
+    React.useEffect(() => {
+        // Skip if we don't have original data loaded yet
+        if (Object.keys(originalData.current).length === 0) return;
 
-        return () => clearTimeout(timer);
-    }, [timeToSync]);
+        // Recheck each field in dirtyFields to see if it's still actually different
+        const fieldsToCheck: (keyof AppDataType)[] = ['settings', 'students', 'subjects', 'classes', 'grades', 'assessments'];
+
+        for (const field of fieldsToCheck) {
+            if (dirtyFields.current.has(field)) {
+                let currentValue;
+                switch (field) {
+                    case 'settings': currentValue = settings; break;
+                    case 'students': currentValue = students; break;
+                    case 'subjects': currentValue = subjects; break;
+                    case 'classes': currentValue = classes; break;
+                    case 'grades': currentValue = grades; break;
+                    case 'assessments': currentValue = assessments; break;
+                    default: continue;
+                }
+                recheckDirtyStatus(field, currentValue);
+            }
+        }
+    }, [settings, students, subjects, classes, grades, assessments]);
+
+    // AUTO-SYNC REMOVED: All saves are now manual and page-specific
 
     const saveToCloud = async (isManualSave: boolean = false) => {
         // CRITICAL: Check if sync is paused (during authentication)
@@ -366,8 +438,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return;
         }
 
-        // CRITICAL: Stop auto-sync timer immediately on manual/triggered save
-        setTimeToSync(null);
+        // Manual save triggered
 
         // CRITICAL: Don't sync if user was active very recently (within last 500ms)
         // This prevents syncing mid-keystroke or mid-interaction
@@ -390,25 +461,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return;
         }
 
-        let fieldsToSave = Array.from(dirtyFields.current);
-
-        // Filter out manual-save-only fields if this is NOT a manual save
-        if (!isManualSave) {
-            const originalCount = fieldsToSave.length;
-            fieldsToSave = fieldsToSave.filter(field => !manualSaveOnlyFields.current.has(field));
-
-            if (fieldsToSave.length === 0) {
-                console.log('[DataContext] 💤 Only manual-save fields are dirty. Skipping auto-sync.');
-                console.log('[DataContext] 💡 Use the Save button to upload these changes.');
-                return;
-            }
-
-            if (originalCount !== fieldsToSave.length) {
-                console.log(`[DataContext] ℹ️ Filtered out ${originalCount - fieldsToSave.length} manual-save-only fields from auto-sync`);
-            }
-        }
-
-        console.log(`[DataContext] ☁️ Syncing dirty fields: ${fieldsToSave.join(', ')}${isManualSave ? ' (Manual Save)' : ' (Auto-sync)'}`);
+        const fieldsToSave = Array.from(dirtyFields.current);
+        console.log(`[DataContext] ☁️ Syncing dirty fields: ${fieldsToSave.join(', ')} (Manual Save)`);
 
         // Capture CURRENT state at sync time (not stale state from when timeout started)
         SyncLogger.log(`saveToCloud: Preparing to save. Users count: ${users.length}`);
@@ -451,11 +505,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // Clear dirty fields only for the fields that were actually saved
             fieldsToSave.forEach(field => {
                 dirtyFields.current.delete(field);
-                // If this was a manual save, also clear from manual-save-only tracking
-                if (isManualSave && manualSaveOnlyFields.current.has(field)) {
-                    // Keep it in manualSaveOnlyFields but remove from dirty
-                    // manualSaveOnlyFields tracks the TYPE, not the state
-                }
             });
 
             // Update hasLocalChanges based on remaining dirty fields
@@ -488,7 +537,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
             isSyncingRef.current = true;
             setIsSyncing(true);
-            setTimeToSync(null); // Stop auto-sync timer
             console.log('[DataContext] 📥 Manual refresh initiated - fetching data from cloud...');
 
             const data = await getSchoolData(schoolId);
@@ -516,119 +564,40 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     // Real-time sync listener
+    // INITIAL DATA LOAD ONLY (Auto-Sync Disabled by User Request)
+    // We fetch data once when the school loads, but do NOT listen for real-time updates.
     useEffect(() => {
         if (!schoolId) return;
 
-        const unsubscribe = subscribeToSchoolData(schoolId, (data) => {
-            console.log('[DataContext] 🔔 Remote update received from cloud:', {
-                hasScores: !!data.scores,
-                scoresCount: data.scores?.length || 0,
-                hasUsers: !!data.users,
-                usersCount: data.users?.length || 0,
-                hasStudents: !!data.students,
-                studentsCount: data.students?.length || 0,
-                timestamp: new Date().toISOString()
-            });
+        const fetchInitialData = async () => {
+            try {
+                console.log('[DataContext] 📥 Fetching initial data from cloud (Auto-Sync Disabled)...');
+                const data = await getSchoolData(schoolId);
+                if (data) {
+                    console.log('[DataContext] ✅ Initial data received via one-time fetch');
+                    SyncLogger.log(`Initial data loaded. Users: ${data.users?.length || 0}, Scores: ${data.scores?.length || 0}`);
 
-            // CRITICAL: Block remote updates if a form is actively open
-            if (isFormOpen.current) {
-                console.log('[DataContext] 🚫 Blocking remote update - form is actively open');
-                return;
+                    // Mark as remote update to allow processing
+                    isRemoteUpdate.current = true;
+                    loadImportedData(data);
+                } else {
+                    console.log('[DataContext] ⚠️ No initial data found for school');
+                }
+            } catch (error) {
+                console.error('[DataContext] ❌ Failed to fetch initial data:', error);
+                // Do not show modal on initial load failure to allow offline usage if needed?
+                // Or maybe just log it.
             }
+        };
 
-            // Intelligent Sync:
-            // If the user has interacted locally within the last 60 seconds,
-            // we ignore the remote update to prevent overwriting their active work.
-            // This also effectively ignores the "echo" from our own saves.
-            // Extended to 60s because rapid remote updates after 10s were clearing buffered inputs.
-            const timeSinceLastLocalUpdate = Date.now() - lastLocalUpdate.current;
-            if (timeSinceLastLocalUpdate < 60000) {
-                console.log(`[DataContext] 🚫 Skipping remote update - local activity ${timeSinceLastLocalUpdate}ms ago (echo filter)`);
-                return;
-            }
-
-            // CRITICAL: Reject stale remote data
-            // Only accept remote updates that have MORE scores than we have locally.
-            // This prevents old Firebase snapshots from wiping out fresh local entries.
-            const remoteScoresCount = data.scores?.length || 0;
-            const localScoresCount = scores.length;
-
-            if (remoteScoresCount < localScoresCount) {
-                console.log(`[DataContext] 🚫 Rejecting stale remote data - remote has ${remoteScoresCount} scores, local has ${localScoresCount} scores`);
-                return;
-            }
-
-            // If counts are equal, check if remote data is actually different
-            if (remoteScoresCount === localScoresCount) {
-                console.log(`[DataContext] ℹ️ Remote and local have same score count (${remoteScoresCount}). Allowing update if content differs (handled by loadImportedData).`);
-                // We DO NOT return here anymore. 
-                // The echo filter (timeSinceLastLocalUpdate < 60000) above handles the "my own save" case.
-                // If we passed the echo filter, this matching-count update is likely an EDIT from another device.
-            }
-
-            console.log('[DataContext] ✅ Processing remote update - applying cloud data');
-            SyncLogger.log(`Received remote update from cloud. Users count in update: ${data.users?.length || 0}`);
-            isRemoteUpdate.current = true;
-            loadImportedData(data);
-        });
-
-        return () => unsubscribe();
+        fetchInitialData();
+        // No cleanup needed/subscription to unsubscribe
     }, [schoolId]);
 
     // Track initial mount to prevent auto-save before data is loaded from cloud
     const isInitialMount = React.useRef(true);
 
-    // Background sync effect (Debounced Auto-Save)
-    useEffect(() => {
-        if (!schoolId) return;
-
-        // CRITICAL: Skip auto-save on initial mount to prevent syncing empty arrays before data loads from cloud
-        if (isInitialMount.current) {
-            console.log("Skipping auto-save on initial mount - waiting for data to load from cloud");
-            isInitialMount.current = false;
-            return;
-        }
-
-        // CRITICAL: If this change came from a remote update, skip the entire effect
-        if (isRemoteUpdate.current) {
-            console.log("Skipping save due to remote update");
-            // Do NOT reset isRemoteUpdate.current here - let the timeout handle it
-            // distinct from the batching issue.
-            return;
-        }
-
-        // It's a local update, mark the timestamp
-        lastLocalUpdate.current = Date.now();
-
-        // Clear any existing timeout first
-        if (pendingSaveTimeout.current) {
-            clearTimeout(pendingSaveTimeout.current);
-            pendingSaveTimeout.current = null;
-        }
-
-        // Skip if sync is paused
-        if (isSyncPaused.current) {
-            console.log("Skipping auto-save schedule - sync is paused");
-            return;
-        }
-
-        pendingSaveTimeout.current = setTimeout(() => {
-            pendingSaveTimeout.current = null;
-            console.log('[DataContext] ⏰ Auto-sync timer triggered (5 seconds since last change)');
-            console.log('[DataContext] 🔄 Initiating cloud sync...');
-            // saveToCloud will capture CURRENT state when it runs
-            saveToCloud();
-        }, 5000); // Auto-save 5 seconds after the last change (increased from 2s to reduce mid-entry syncs)
-
-        console.log('[DataContext] ⏱️ Auto-sync scheduled: Will sync to cloud in 5 seconds if no further changes');
-
-        return () => {
-            if (pendingSaveTimeout.current) {
-                clearTimeout(pendingSaveTimeout.current);
-                pendingSaveTimeout.current = null;
-            }
-        };
-    }, [schoolId, settings, students, subjects, classes, grades, assessments, scores, reportData, classData]);
+    // AUTO-SYNC REMOVED: All saves are now manual via page-specific save buttons
 
     // Helper to wrap state setters with dirty marking
     const createCrud = <T extends { id: number }>(
@@ -679,7 +648,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const updateStudentScores = (studentId: number, subjectId: number, assessmentId: number, newScores: string[]) => {
-        markDirty('scores', true); // Mark as requiring manual save
+        markDirty('scores');
         const scoreId = `${studentId}-${subjectId}`;
 
         console.log('[DataContext] 📥 updateStudentScores called:', {
@@ -791,6 +760,61 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         markDirty('settings');
         setSettings(prev => ({ ...prev, ...updates }));
     };
+
+    // -------------------------------------------------------------------------
+    // PAGE-SPECIFIC SAVE FUNCTIONS
+    // -------------------------------------------------------------------------
+
+    const savePageData = async (field: keyof AppDataType, data: any) => {
+        if (!schoolId) {
+            console.log(`No school ID, skipping ${field} save.`);
+            return;
+        }
+
+        if (!isDirty(field)) {
+            console.log(`[savePageData] No changes to ${field}, skipping save.`);
+            return;
+        }
+
+        if (isSyncingRef.current) {
+            console.log(`[savePageData] Sync already in progress for ${field}`);
+            return;
+        }
+
+        try {
+            isSyncingRef.current = true;
+            setIsSyncing(true);
+            console.log(`[savePageData] ☁️ Saving ${field} to cloud...`);
+
+            const payload: Partial<AppDataType> = {
+                [field]: data
+            };
+
+            await saveUserDatabase(schoolId, payload);
+
+            // Clear dirty flag for this field
+            dirtyFields.current.delete(field);
+            setHasLocalChanges(dirtyFields.current.size > 0);
+
+            console.log(`[savePageData] ✅ ${field} saved successfully!`);
+            setIsSyncing(false);
+            isSyncingRef.current = false;
+        } catch (error) {
+            console.error(`[savePageData] ❌ Failed to save ${field}:`, error);
+            showDatabaseError(error);
+            setIsSyncing(false);
+            isSyncingRef.current = false;
+        }
+    };
+
+    const saveSettings = () => savePageData('settings', settings);
+    const saveStudents = () => savePageData('students', students);
+    const saveTeachers = () => savePageData('users', users);
+    const saveSubjects = () => savePageData('subjects', subjects);
+    const saveClasses = () => savePageData('classes', classes);
+    const saveGrades = () => savePageData('grades', grades);
+    const saveAssessments = () => savePageData('assessments', assessments);
+    const saveScores = () => savePageData('scores', scores);
 
 
     // Process offline queue when coming back online
@@ -941,16 +965,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Sync control functions
     const pauseSync = () => {
-        console.log('[DataContext] Sync PAUSED - clearing all pending saves');
+        console.log('[DataContext] Sync PAUSED');
         isSyncPaused.current = true;
-
-        // Clear any pending save timeout
-        if (pendingSaveTimeout.current) {
-            clearTimeout(pendingSaveTimeout.current);
-            pendingSaveTimeout.current = null;
-        }
-
-        // Also clear the sync lock to allow fresh start
         isSyncingRef.current = false;
     };
 
@@ -973,6 +989,52 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const allowRemoteUpdates = () => {
         console.log('[DataContext] Allowing remote updates - form closed');
         isFormOpen.current = false;
+    };
+
+    // Helper to check if specific fields are dirty
+    const isDirty = (...fields: (keyof AppDataType)[]) => {
+        return fields.some(field => dirtyFields.current.has(field));
+    };
+
+    // Draft Score State
+    const draftScores = useRef<Map<string, string>>(new Map());
+    const [draftVersion, setDraftVersion] = useState(0); // Used to force updates in subscribers
+    const [pendingCount, setPendingCount] = useState(0);
+
+    // Update the draft value for a score (marks it as dirty)
+    const updateDraftScore = (studentId: number, assessmentId: number, value: string) => {
+        const key = `${studentId}-${assessmentId}`;
+        draftScores.current.set(key, value);
+
+        // Update derived state
+        setPendingCount(draftScores.current.size);
+        setHasLocalChanges(true);
+        // Notify subscribers (inputs) that drafts have changed
+        setDraftVersion(prev => prev + 1);
+    };
+
+    // Remove a score from draft (marks it as clean/reverted or saved)
+    const removeDraftScore = (studentId: number, assessmentId: number) => {
+        const key = `${studentId}-${assessmentId}`;
+        if (draftScores.current.delete(key)) {
+            // Only update if it actually existed
+            setPendingCount(draftScores.current.size);
+            if (draftScores.current.size === 0 && dirtyFields.current.size === 0) {
+                setHasLocalChanges(false);
+            }
+            setDraftVersion(prev => prev + 1);
+        }
+    };
+
+    // Get the score to display: prefer draft, fallback to saved
+    const getComputedScore = (studentId: number, assessmentId: number, subjectId: number): string => {
+        const draftKey = `${studentId}-${assessmentId}`;
+        if (draftScores.current.has(draftKey)) {
+            return draftScores.current.get(draftKey) || '';
+        }
+        // Fallback to saved data
+        const savedScores = getStudentScores(studentId, subjectId, assessmentId);
+        return savedScores[0] || '';
     };
 
     const value: DataContextType = {
@@ -1009,6 +1071,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         updateClassData,
         loadImportedData,
         saveToCloud,
+        saveSettings,
+        saveStudents,
+        saveTeachers,
+        saveSubjects,
+        saveClasses,
+        saveGrades,
+        saveAssessments,
+        saveScores,
         refreshFromCloud,
         schoolId,
         setSchoolId,
@@ -1031,8 +1101,48 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         sendHeartbeat,
         hasLocalChanges,
         setHasLocalChanges,
-        timeToSync,
+
+        isDirty,
+        updateDraftScore,
+        removeDraftScore,
+        getComputedScore,
+        draftVersion,
+        pendingCount,
     };
+
+    // Initialize originalData from local storage on load/schoolId change
+    // This ensures that on F5 reload, we have a baseline for "clean" state
+    // Clear drafts ONLY when school changes
+    useEffect(() => {
+        draftScores.current.clear();
+        setDraftVersion(0);
+        setPendingCount(0);
+    }, [schoolId]);
+
+    // Initialize originalData from local storage on load/schoolId change
+    // This ensures that on F5 reload, we have a baseline for "clean" state
+    useEffect(() => {
+        if (schoolId && Object.keys(originalData.current).length === 0) {
+            // Only initialize if we have data (and didn't just log out)
+            // But wait, settings etc are initialized by hooks.
+            // We'll assume if settings.schoolName exists, we have loaded something.
+            if (settings && settings.schoolName) {
+                console.log('[DataContext] 🔄 Initializing tracking baseline from persistent storage');
+                originalData.current = {
+                    settings,
+                    students,
+                    subjects,
+                    classes,
+                    grades,
+                    assessments,
+                    scores,
+                    reportData,
+                    classData,
+                    users
+                };
+            }
+        }
+    }, [schoolId, settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users]);
 
     return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };

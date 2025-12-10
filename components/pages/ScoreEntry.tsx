@@ -11,7 +11,7 @@ import { getAvailableClasses, getAvailableSubjects } from '../../utils/permissio
 
 const ScoreEntry: React.FC = () => {
     // Destructure with default empty arrays to prevent undefined errors
-    const { students = [], subjects: allSubjects = [], assessments = [], classes: allClasses = [], getStudentScores, updateStudentScores, isOnline, isSyncing, queuedCount, saveToCloud, refreshFromCloud, hasLocalChanges, setHasLocalChanges, timeToSync } = useData();
+    const { students = [], subjects: allSubjects = [], assessments = [], classes: allClasses = [], getStudentScores, updateStudentScores, isOnline, isSyncing, queuedCount, saveToCloud, refreshFromCloud, hasLocalChanges, setHasLocalChanges, timeToSync, isDirty, updateDraftScore, removeDraftScore, getComputedScore, draftVersion, pendingCount } = useData();
     const { currentUser } = useUser();
     const isReadOnly = currentUser?.role === 'Guest';
 
@@ -148,21 +148,21 @@ const ScoreEntry: React.FC = () => {
     useEffect(() => {
         const student = filteredStudents[selectedStudentIndex];
         if (student) {
-            const scores = getStudentScores(student.id, selectedSubjectId, selectedAssessmentId);
-            // Only update if user hasn't modified the score
-            if (!scoreModified) {
-                setLocalScore(scores[0] || '');
-            }
-            // If score was modified but now matches saved value, clear the modification flag
-            else if (scores[0] === localScore) {
-                setScoreModified(false);
-            }
+            // Get computed score (draft > saved)
+            const score = getComputedScore(student.id, selectedAssessmentId, selectedSubjectId);
+            setLocalScore(score);
+
+            // Check if modified from SAVED
+            const saved = getStudentScores(student.id, selectedSubjectId, selectedAssessmentId)[0] || '';
+            const isDraftDifferent = score !== saved;
+            setScoreModified(isDraftDifferent);
         } else {
-            if (!scoreModified) {
-                setLocalScore('');
-            }
+            setLocalScore('');
+            setScoreModified(false);
         }
-    }, [selectedStudentIndex, selectedSubjectId, selectedAssessmentId, filteredStudents]); // Removed localScore, scoreModified, and getStudentScores to prevent infinite loop/reset
+    }, [selectedStudentIndex, selectedSubjectId, selectedAssessmentId, filteredStudents, draftVersion]); // Listen to draftVersion for sync
+
+
 
 
     const commitScore = () => {
@@ -259,6 +259,10 @@ const ScoreEntry: React.FC = () => {
         // Update local score to formatted version and clear modification flag
         setLocalScore(finalScore);
         setScoreModified(false);
+
+        // Unregister pending change / remove from draft
+        removeDraftScore(student.id, assessment.id);
+
         console.log('[ScoreEntry - Mobile] ✅ Score committed successfully');
     };
 
@@ -315,7 +319,45 @@ const ScoreEntry: React.FC = () => {
     return (
         <ReadOnlyWrapper allowedRoles={['Admin', 'Teacher']}>
             <div className="space-y-6">
-                <h1 className="text-3xl font-bold text-gray-800">Score Entry</h1>
+                <div className="flex items-center justify-between">
+                    <h1 className="text-3xl font-bold text-gray-800">Score Entry</h1>
+
+                    {/* Save Button - Desktop View */}
+                    <div className="hidden lg:block">
+                        <button
+                            onClick={() => saveToCloud(true)}
+                            disabled={!isDirty('scores') && pendingCount === 0 || isSyncing || !isOnline}
+                            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg transition-all shadow-md ${(!isDirty('scores') && pendingCount === 0 || isSyncing || !isOnline)
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg'
+                                }`}
+                            title={
+                                !isOnline
+                                    ? "You are offline"
+                                    : (!isDirty('scores') && pendingCount === 0)
+                                        ? "No unsaved scores"
+                                        : "Save unsaved changes to the cloud"
+                            }
+                        >
+                            {isSyncing ? (
+                                <>
+                                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span className="text-sm font-bold">Saving...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                    </svg>
+                                    <span className="text-sm font-bold">Save Changes</span>
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </div>
 
                 <div className="bg-gray-100 py-4 sticky top-20 lg:top-0 z-20 shadow-md transition-all duration-300">
                     <div className="flex flex-col gap-4 p-4 bg-white rounded-xl shadow-md border border-gray-200">
@@ -332,6 +374,37 @@ const ScoreEntry: React.FC = () => {
                                 <span className="text-sm font-bold text-gray-700">Compact View</span>
                             </label>
                         </div>
+
+                        {/* Save Button for Mobile Table View (!Compact) */}
+                        {!useMobileView && (
+                            <div className="lg:hidden mb-4">
+                                <button
+                                    onClick={() => saveToCloud(true)}
+                                    disabled={!isDirty('scores') && pendingCount === 0 || isSyncing || !isOnline}
+                                    className={`w-full flex justify-center items-center gap-2 px-4 py-3 rounded-lg transition-all shadow-md font-bold text-lg ${(!isDirty('scores') && pendingCount === 0 || isSyncing || !isOnline)
+                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                        : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg'
+                                        }`}
+                                >
+                                    {isSyncing ? (
+                                        <>
+                                            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            <span>Saving...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                            </svg>
+                                            <span>Save Changes</span>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        )}
 
                         <div className="flex flex-col sm:flex-row gap-4">
                             <div className="flex-1">
@@ -431,12 +504,18 @@ const ScoreEntry: React.FC = () => {
                                                 <label className="block text-sm font-medium text-gray-700">Score</label>
                                                 <button
                                                     onClick={() => saveToCloud(true)}
-                                                    disabled={!hasLocalChanges || isSyncing || !isOnline}
-                                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all shadow-md ${(!hasLocalChanges || isSyncing || !isOnline)
-                                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                                            : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg'
+                                                    disabled={!isDirty('scores') && pendingCount === 0 || isSyncing || !isOnline}
+                                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all shadow-md ${(!isDirty('scores') && pendingCount === 0 || isSyncing || !isOnline)
+                                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                        : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg'
                                                         }`}
-                                                    title={!isOnline ? "You are offline" : "Save all score changes to the cloud"}
+                                                    title={
+                                                        !isOnline
+                                                            ? "You are offline"
+                                                            : (!isDirty('scores') && pendingCount === 0)
+                                                                ? "No unsaved scores"
+                                                                : "Save unsaved changes to the cloud"
+                                                    }
                                                 >
                                                     {isSyncing ? (
                                                         <>
@@ -451,7 +530,7 @@ const ScoreEntry: React.FC = () => {
                                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                                                             </svg>
-                                                            <span className="text-sm font-bold">SAVE</span>
+                                                            <span className="text-sm font-bold">Save Changes</span>
                                                         </>
                                                     )}
                                                 </button>
@@ -476,8 +555,13 @@ const ScoreEntry: React.FC = () => {
                                                                 previousValue: localScore
                                                             });
                                                             setLocalScore(filtered);
-                                                            setScoreModified(true); // Mark as modified when user types
-                                                            setHasLocalChanges(true); // Enable Upload button globally
+                                                            setScoreModified(true);
+
+                                                            // Update global draft
+                                                            const student = filteredStudents[selectedStudentIndex];
+                                                            if (student) {
+                                                                updateDraftScore(student.id, selectedAssessmentId, filtered);
+                                                            }
                                                         }}
                                                         onBlur={commitScore}
                                                         onKeyDown={(e) => {

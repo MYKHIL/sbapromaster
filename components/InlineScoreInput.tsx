@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useData } from '../context/DataContext';
 import type { Student, Assessment } from '../types';
 import { MULTI_SCORE_ENTRY_ENABLED } from '../constants';
@@ -43,29 +43,38 @@ const formatScore = (score: number): string => {
 
 
 const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId, assessments, onOpenModal, readOnly, index }) => {
-    const { getStudentScores, updateStudentScores, setHasLocalChanges } = useData();
+    const { getStudentScores, updateStudentScores, setHasLocalChanges, updateDraftScore, removeDraftScore, getComputedScore, draftVersion } = useData();
 
     const [inlineValues, setInlineValues] = useState<{ [key: number]: string }>({});
     const [errors, setErrors] = useState<{ [key: number]: string | undefined }>({});
     const [modifiedFields, setModifiedFields] = useState<Set<number>>(new Set()); // Track which fields user has modified
+    const originalValues = useRef<{ [key: number]: string }>({}); // Track original values for comparison
 
     useEffect(() => {
         const initialValues: { [key: number]: string } = {};
         assessments.forEach(assessment => {
-            const scores = getStudentScores(student.id, subjectId, assessment.id);
-            if (scores.length <= 1) {
-                // Only update if user hasn't modified this field
-                if (!modifiedFields.has(assessment.id)) {
-                    initialValues[assessment.id] = scores[0] || '';
-                } else {
-                    // Keep user's unsaved input
-                    initialValues[assessment.id] = inlineValues[assessment.id] || '';
-                }
+            // Get the computed score (draft > saved)
+            const val = getComputedScore(student.id, assessment.id, subjectId);
+
+            // Should we update? Only if meaningful change to avoid cursor jumps?
+            // Since we control local state, we can just sync.
+            // But checking if it matches current state prevents redundant updates
+            if (inlineValues[assessment.id] !== val) {
+                initialValues[assessment.id] = val;
+            }
+            // Store ORIGINAL saved value (not draft) for comparison
+            const savedScores = getStudentScores(student.id, subjectId, assessment.id);
+            const savedVal = savedScores[0] || '';
+            if (originalValues.current[assessment.id] === undefined || originalValues.current[assessment.id] !== savedVal) {
+                originalValues.current[assessment.id] = savedVal;
             }
         });
-        setInlineValues(initialValues);
+
+        // Merge with existing values to keep untouched fields stable? 
+        // No, we want to overwrite if draftVersion changes (meaning someone else updated it)
+        setInlineValues(prev => ({ ...prev, ...initialValues }));
         setErrors({});
-    }, [student, subjectId, assessments]); // Removed inlineValues, modifiedFields, and getStudentScores to prevent infinite loop/reset
+    }, [student, subjectId, assessments, draftVersion]); // Listen to draftVersion for external changes
 
     const handleValueChange = (assessmentId: number, value: string) => {
         const filteredValue = value.replace(/[^0-9/.]/g, '');
@@ -83,8 +92,28 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
         });
 
         setInlineValues(prev => ({ ...prev, [assessmentId]: filteredValue }));
-        setModifiedFields(prev => new Set(prev).add(assessmentId)); // Mark as modified
-        setHasLocalChanges(true); // Enable Upload button globally
+
+        // Check against original value
+        const originalVal = originalValues.current[assessmentId] || '';
+        // Consider empty string and '0' as potentially equivalent if needed, but for now strict string equality
+        // Or better: normalized comparison
+        const isActuallyChanged = filteredValue !== originalVal;
+
+        if (isActuallyChanged) {
+            setModifiedFields(prev => new Set(prev).add(assessmentId)); // Mark as modified
+            // Update global draft
+            updateDraftScore(student.id, assessmentId, filteredValue);
+        } else {
+            // Reverted to original
+            setModifiedFields(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(assessmentId);
+                return newSet;
+            });
+            // Remove from global draft (it matches saved)
+            removeDraftScore(student.id, assessmentId);
+        }
+
         if (errors[assessmentId]) {
             setErrors(prev => ({ ...prev, [assessmentId]: undefined }));
         }
@@ -112,12 +141,18 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
                 studentName: student.name
             });
             updateStudentScores(student.id, subjectId, assessment.id, []);
+
+            // Update original value to empty string since we just saved an empty/cleared score
+            originalValues.current[assessmentId] = '';
+
             // Clear modification flag after save
             setModifiedFields(prev => {
                 const newSet = new Set(prev);
                 newSet.delete(assessmentId);
                 return newSet;
             });
+            // Unregister pending change / remove from draft
+            removeDraftScore(student.id, assessmentId);
             return;
         }
 
@@ -165,6 +200,10 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
         }
 
         const finalScore = `${Number(convertedScore.toFixed(1))}/${basis}`;
+
+        // Update original value to the new saved value
+        originalValues.current[assessmentId] = finalScore;
+
         console.log('[InlineScoreInput] ✅ Score validated and formatted:', {
             studentId: student.id,
             studentName: student.name,
@@ -185,6 +224,9 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
             newSet.delete(assessmentId);
             return newSet;
         });
+
+
+
         console.log('[InlineScoreInput] ✅ Score committed successfully');
     };
 
