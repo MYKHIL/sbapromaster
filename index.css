@@ -36,3 +36,25 @@ code {
 .read-only-mode button.delete-button {
   display: none;
 }
+
+/* Print styles for PDF generation - force A4 size */
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  .printable-report-card {
+    width: 210mm !important;
+    height: 297mm !important;
+    min-height: 297mm !important;
+    max-height: 297mm !important;
+    page-break-after: always;
+    overflow: hidden !important;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+  }
+}

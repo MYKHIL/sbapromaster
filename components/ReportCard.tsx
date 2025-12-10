@@ -133,7 +133,7 @@ const ReportCard: React.FC<{ student: Student }> = ({ student }) => {
     );
 
     return (
-        <div className="printable-report-card w-[200mm] h-[287mm] bg-white text-[13pt] text-black p-6 shadow-lg font-['Times_New_Roman'] flex flex-col border-4 border-black relative">
+        <div className="printable-report-card w-[200mm] min-h-[287mm] bg-white text-[13pt] text-black p-6 shadow-lg font-['Times_New_Roman'] flex flex-col border-4 border-black relative">
 
             <header className="flex items-center justify-between py-2 border-b-2 border-black flex-shrink-0">
                 {settings.logo ? (
@@ -199,7 +199,7 @@ const ReportCard: React.FC<{ student: Student }> = ({ student }) => {
                 )}
             </section>
 
-            <section className="mt-4 flex-grow flex flex-col justify-center overflow-hidden">
+            <section className="mt-4 flex-shrink-0">
                 <div>
                     <h2 className="text-center font-bold text-lg mb-1">ACADEMIC PERFORMANCE</h2>
                     <div className="w-full">

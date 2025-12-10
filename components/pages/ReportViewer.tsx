@@ -254,7 +254,7 @@ const ReportViewer: React.FC = () => {
         </div>
       )}
 
-      <div className="pt-8 overflow-x-auto pb-20">
+      <div className="pt-8 overflow-x-auto pb-8">
         <div
           ref={reportContainerRef}
           className="space-y-12 w-full transition-transform duration-200 ease-in-out"
@@ -279,7 +279,7 @@ const ReportViewer: React.FC = () => {
           )}
         </div>
       </div>
-      {SHOW_PDF_DOWNLOAD_BUTTON && generatedReports.length > 0 && (
+      {SHOW_PDF_DOWNLOAD_BUTTON && generatedReports.length > 0 && !selectedStudentForPanel && (
         <div className="fixed bottom-6 right-6 z-20 flex flex-col items-center gap-4">
           <button
             onClick={handleDownloadPdf}

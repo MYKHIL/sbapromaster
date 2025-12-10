@@ -411,8 +411,13 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                                 <div className="relative">
                                     <input
                                         type="text"
+                                        inputMode="decimal"
                                         value={academicYear}
-                                        onChange={(e) => setAcademicYear(e.target.value)}
+                                        onChange={(e) => {
+                                            // Reject alphabetic characters
+                                            const value = e.target.value.replace(/[a-zA-Z]/g, '');
+                                            setAcademicYear(value);
+                                        }}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                                         placeholder="e.g. 2023/2024"
                                         required
