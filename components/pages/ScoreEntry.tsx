@@ -844,6 +844,70 @@ const ScoreEntry: React.FC = () => {
                                                 if (key === 'settings') {
                                                     return <div className="text-gray-700">Settings updated</div>;
                                                 }
+                                                if (key === 'classes' && Array.isArray(value)) {
+                                                    return (
+                                                        <div className="text-gray-700">
+                                                            <p><strong>{value.length} Classes Modified:</strong></p>
+                                                            <ul className="list-disc pl-5 mt-1">
+                                                                {value.slice(0, 5).map((c: any) => (
+                                                                    <li key={c.id}>{c.className} (Grade {c.classLevel})</li>
+                                                                ))}
+                                                                {value.length > 5 && <li>...and {value.length - 5} more</li>}
+                                                            </ul>
+                                                        </div>
+                                                    );
+                                                }
+                                                if (key === 'subjects' && Array.isArray(value)) {
+                                                    return (
+                                                        <div className="text-gray-700">
+                                                            <p><strong>{value.length} Subjects Modified:</strong></p>
+                                                            <ul className="list-disc pl-5 mt-1">
+                                                                {value.slice(0, 5).map((s: any) => (
+                                                                    <li key={s.id}>{s.subject} ({s.code})</li>
+                                                                ))}
+                                                                {value.length > 5 && <li>...and {value.length - 5} more</li>}
+                                                            </ul>
+                                                        </div>
+                                                    );
+                                                }
+                                                if (key === 'assessments' && Array.isArray(value)) {
+                                                    return (
+                                                        <div className="text-gray-700">
+                                                            <p><strong>{value.length} Assessments Modified:</strong></p>
+                                                            <ul className="list-disc pl-5 mt-1">
+                                                                {value.slice(0, 5).map((a: any) => (
+                                                                    <li key={a.id}>{a.title || a.name} - Weight: {a.weight}</li>
+                                                                ))}
+                                                                {value.length > 5 && <li>...and {value.length - 5} more</li>}
+                                                            </ul>
+                                                        </div>
+                                                    );
+                                                }
+                                                if (key === 'users' && Array.isArray(value)) {
+                                                    return (
+                                                        <div className="text-gray-700">
+                                                            <p><strong>{value.length} Users Modified:</strong></p>
+                                                            <ul className="list-disc pl-5 mt-1">
+                                                                {value.slice(0, 5).map((u: any) => (
+                                                                    <li key={u.uid}>{u.email} ({u.role})</li>
+                                                                ))}
+                                                                {value.length > 5 && <li>...and {value.length - 5} more</li>}
+                                                            </ul>
+                                                        </div>
+                                                    );
+                                                }
+                                                if (key === 'activeSessions' && typeof value === 'object') {
+                                                    return <div className="text-gray-700">Active Sessions updated ({Object.keys(value).length} entries)</div>;
+                                                }
+                                                if (key === 'userLogs' && Array.isArray(value)) {
+                                                    return <div className="text-gray-700">User Logs updated ({value.length} new entries)</div>;
+                                                }
+                                                if (key === 'reportData') {
+                                                    return <div className="text-gray-700">Report Data updated</div>;
+                                                }
+                                                if (key === 'classData') {
+                                                    return <div className="text-gray-700">Class Analysis Data updated</div>;
+                                                }
                                                 // Default fallback
                                                 return <pre className="whitespace-pre-wrap break-all text-gray-700 select-all">{JSON.stringify(value, null, 2)}</pre>;
                                             };
