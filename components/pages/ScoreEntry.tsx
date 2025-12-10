@@ -11,7 +11,7 @@ import { getAvailableClasses, getAvailableSubjects } from '../../utils/permissio
 
 const ScoreEntry: React.FC = () => {
     // Destructure with default empty arrays to prevent undefined errors
-    const { students = [], subjects: allSubjects = [], assessments = [], classes: allClasses = [], getStudentScores, updateStudentScores, isOnline, isSyncing, queuedCount, saveToCloud, refreshFromCloud, hasLocalChanges, setHasLocalChanges, timeToSync, isDirty, updateDraftScore, removeDraftScore, getComputedScore, draftVersion, pendingCount } = useData();
+    const { students = [], subjects: allSubjects = [], assessments = [], classes: allClasses = [], getStudentScores, updateStudentScores, isOnline, isSyncing, queuedCount, saveToCloud, refreshFromCloud, hasLocalChanges, setHasLocalChanges, timeToSync, isDirty, updateDraftScore, removeDraftScore, getComputedScore, draftVersion, pendingCount, getPendingUploadData } = useData();
     const { currentUser } = useUser();
     const isReadOnly = currentUser?.role === 'Guest';
 
@@ -316,6 +316,16 @@ const ScoreEntry: React.FC = () => {
 
     const selectStyles = "w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500";
 
+    // Debug Modal State
+    const [isDebugModalOpen, setIsDebugModalOpen] = useState(false);
+    const [debugData, setDebugData] = useState<any>(null);
+
+    const handleShowDebugData = () => {
+        const data = getPendingUploadData();
+        setDebugData(data);
+        setIsDebugModalOpen(true);
+    };
+
     return (
         <ReadOnlyWrapper allowedRoles={['Admin', 'Teacher']}>
             <div className="space-y-6">
@@ -323,7 +333,17 @@ const ScoreEntry: React.FC = () => {
                     <h1 className="text-3xl font-bold text-gray-800">Score Entry</h1>
 
                     {/* Save Button - Desktop View */}
-                    <div className="hidden lg:block">
+                    <div className="hidden lg:flex items-center gap-2">
+                        <button
+                            onClick={handleShowDebugData}
+                            className="p-2.5 text-gray-500 hover:text-blue-600 bg-gray-100 hover:bg-blue-50 rounded-lg transition-colors border border-gray-200"
+                            title="Preview data to be saved"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                        </button>
                         <button
                             onClick={() => saveToCloud(true)}
                             disabled={!isDirty('scores') && pendingCount === 0 || isSyncing || !isOnline}
@@ -377,7 +397,16 @@ const ScoreEntry: React.FC = () => {
 
                         {/* Save Button for Mobile Table View (!Compact) */}
                         {!useMobileView && (
-                            <div className="lg:hidden mb-4">
+                            <div className="lg:hidden mb-4 flex gap-2">
+                                <button
+                                    onClick={handleShowDebugData}
+                                    className="px-4 py-3 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 border border-gray-200 transition-colors"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                </button>
                                 <button
                                     onClick={() => saveToCloud(true)}
                                     disabled={!isDirty('scores') && pendingCount === 0 || isSyncing || !isOnline}
@@ -502,38 +531,49 @@ const ScoreEntry: React.FC = () => {
                                         <div>
                                             <div className="flex items-center justify-between mb-1">
                                                 <label className="block text-sm font-medium text-gray-700">Score</label>
-                                                <button
-                                                    onClick={() => saveToCloud(true)}
-                                                    disabled={!isDirty('scores') && pendingCount === 0 || isSyncing || !isOnline}
-                                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all shadow-md ${(!isDirty('scores') && pendingCount === 0 || isSyncing || !isOnline)
-                                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                                        : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg'
-                                                        }`}
-                                                    title={
-                                                        !isOnline
-                                                            ? "You are offline"
-                                                            : (!isDirty('scores') && pendingCount === 0)
-                                                                ? "No unsaved scores"
-                                                                : "Save unsaved changes to the cloud"
-                                                    }
-                                                >
-                                                    {isSyncing ? (
-                                                        <>
-                                                            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                            </svg>
-                                                            <span className="text-sm font-bold">Saving...</span>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                                                            </svg>
-                                                            <span className="text-sm font-bold">Save Changes</span>
-                                                        </>
-                                                    )}
-                                                </button>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={handleShowDebugData}
+                                                        className="p-2 text-gray-500 hover:text-blue-600 bg-white hover:bg-blue-50 rounded-lg transition-colors border border-gray-200 shadow-sm"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                        </svg>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => saveToCloud(true)}
+                                                        disabled={!isDirty('scores') && pendingCount === 0 || isSyncing || !isOnline}
+                                                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all shadow-md ${(!isDirty('scores') && pendingCount === 0 || isSyncing || !isOnline)
+                                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                            : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg'
+                                                            }`}
+                                                        title={
+                                                            !isOnline
+                                                                ? "You are offline"
+                                                                : (!isDirty('scores') && pendingCount === 0)
+                                                                    ? "No unsaved scores"
+                                                                    : "Save unsaved changes to the cloud"
+                                                        }
+                                                    >
+                                                        {isSyncing ? (
+                                                            <>
+                                                                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                                </svg>
+                                                                <span className="text-sm font-bold">Saving...</span>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                                                </svg>
+                                                                <span className="text-sm font-bold">Save Changes</span>
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                </div>
                                             </div>
                                             <div className="flex flex-col">
                                                 <div className="relative">
@@ -691,6 +731,65 @@ const ScoreEntry: React.FC = () => {
                         />
                     )
                 }
+
+                {/* Debug Data Modal */}
+                {isDebugModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+                            <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50 rounded-t-xl">
+                                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4V7m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                                    </svg>
+                                    Data Payload Preview
+                                </h3>
+                                <button
+                                    onClick={() => setIsDebugModalOpen(false)}
+                                    className="p-2 hover:bg-gray-200 rounded-full transition-colors"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <div className="p-6 overflow-auto bg-gray-50 font-mono text-xs sm:text-sm">
+                                {debugData && Object.keys(debugData).length > 0 ? (
+                                    <div className="space-y-4">
+                                        <div className="p-2 bg-blue-50 text-blue-800 rounded border border-blue-200 mb-4">
+                                            Showing <strong>only modified items</strong>. NOTE: The full list will be synchronized to the cloud for data integrity.
+                                        </div>
+                                        {Object.entries(debugData).map(([key, value]) => (
+                                            <div key={key} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                                                <h4 className="font-bold text-blue-600 text-base mb-2 select-all">{key}</h4>
+                                                <pre className="whitespace-pre-wrap break-all text-gray-700 select-all">
+                                                    {JSON.stringify(value, null, 2)}
+                                                </pre>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        <p className="text-lg font-medium">No changes detected</p>
+                                        <p className="text-sm">There is nothing to save at this moment.</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="p-4 border-t border-gray-200 bg-gray-50 rounded-b-xl flex justify-end">
+                                <button
+                                    onClick={() => setIsDebugModalOpen(false)}
+                                    className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </ReadOnlyWrapper >
     );

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect, useRef } from 'react';
-import { saveUserDatabase, subscribeToSchoolData, AppDataType, updateHeartbeat, logUserActivity, getSchoolData } from '../services/firebaseService';
+import { saveUserDatabase, subscribeToSchoolData, AppDataType, updateHeartbeat, logUserActivity, getSchoolData, saveDataTransaction } from '../services/firebaseService';
 import * as SyncLogger from '../services/syncLogger';
 import useLocalStorage from '../hooks/useLocalStorage';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
@@ -63,7 +63,7 @@ export interface DataContextType {
     getStudentScores: (studentId: number, subjectId: number, assessmentId: number) => string[];
     // Report Data
     getReportData: (studentId: number) => ReportSpecificData | undefined;
-    updateReportData: (studentId: number, data: Partial<Omit<ReportSpecificData, 'totalSchoolDays'>>) => void; 
+    updateReportData: (studentId: number, data: Partial<Omit<ReportSpecificData, 'totalSchoolDays'>>) => void;
     // Class Data
     getClassData: (classId: number) => ClassSpecificData | undefined;
     updateClassData: (classId: number, data: Partial<ClassSpecificData>) => void;
@@ -102,6 +102,9 @@ export interface DataContextType {
     hasLocalChanges: boolean;
     setHasLocalChanges: (hasChanges: boolean) => void;
     isDirty: (...fields: (keyof AppDataType)[]) => boolean; // Check if specific fields have unsaved changes
+
+    // Debug
+    getPendingUploadData: () => Partial<AppDataType>;
 
     // Draft score synchronization
     updateDraftScore: (studentId: number, assessmentId: number, value: string) => void;
@@ -295,17 +298,20 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setHasLocalChanges(false);
 
         // Store original cloud data for smart dirty detection
+        // FIX: Use imported data for the baseline if available, otherwise fall back to current state
         originalData.current = {
-            settings,
-            students,
-            subjects,
-            classes,
-            grades,
-            assessments,
-            scores,
-            reportData,
-            classData,
-            users,
+            settings: importedSettings ?? settings,
+            students: importedStudents ?? students,
+            subjects: importedSubjects ?? subjects,
+            classes: importedClasses ?? classes,
+            grades: importedGrades ?? grades,
+            assessments: importedAssessments ?? assessments,
+            scores: importedScores ?? scores,
+            reportData: importedReportData ?? reportData,
+            classData: importedClassData ?? classData,
+            users: importedUsers ?? users,
+            userLogs: data.userLogs ?? userLogs,
+            activeSessions: data.activeSessions ?? activeSessions,
         };
     };
 
@@ -359,12 +365,24 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // For arrays
         if (Array.isArray(a) && Array.isArray(b)) {
             if (a.length !== b.length) return false;
-            return JSON.stringify(a) === JSON.stringify(b);
+            for (let i = 0; i < a.length; i++) {
+                if (!deepEqual(a[i], b[i])) return false;
+            }
+            return true;
         }
 
         // For objects
         if (typeof a === 'object' && typeof b === 'object') {
-            return JSON.stringify(a) === JSON.stringify(b);
+            const keysA = Object.keys(a).sort();
+            const keysB = Object.keys(b).sort();
+
+            if (keysA.length !== keysB.length) return false;
+
+            for (let i = 0; i < keysA.length; i++) {
+                if (keysA[i] !== keysB[i]) return false;
+                if (!deepEqual(a[keysA[i]], b[keysA[i]])) return false;
+            }
+            return true;
         }
 
         return false;
@@ -399,7 +417,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (Object.keys(originalData.current).length === 0) return;
 
         // Recheck each field in dirtyFields to see if it's still actually different
-        const fieldsToCheck: (keyof AppDataType)[] = ['settings', 'students', 'subjects', 'classes', 'grades', 'assessments'];
+        // FIX: Include all fields to ensure robust dirty checking
+        const fieldsToCheck: (keyof AppDataType)[] = [
+            'settings', 'students', 'subjects', 'classes', 'grades', 'assessments',
+            'scores', 'reportData', 'classData', 'users', 'userLogs', 'activeSessions'
+        ];
 
         for (const field of fieldsToCheck) {
             if (dirtyFields.current.has(field)) {
@@ -411,12 +433,18 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     case 'classes': currentValue = classes; break;
                     case 'grades': currentValue = grades; break;
                     case 'assessments': currentValue = assessments; break;
+                    case 'scores': currentValue = scores; break;
+                    case 'reportData': currentValue = reportData; break;
+                    case 'classData': currentValue = classData; break;
+                    case 'users': currentValue = users; break;
+                    case 'userLogs': currentValue = userLogs; break;
+                    case 'activeSessions': currentValue = activeSessions; break;
                     default: continue;
                 }
                 recheckDirtyStatus(field, currentValue);
             }
         }
-    }, [settings, students, subjects, classes, grades, assessments]);
+    }, [settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions]);
 
     // AUTO-SYNC REMOVED: All saves are now manual and page-specific
 
@@ -477,19 +505,47 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Use stateRef to get the ABSOLUTE LATEST data at the moment of execution
         const currentData = stateRef.current;
 
-        // Construct the payload with ONLY the dirty fields
-        const payload: Partial<AppDataType> = {};
+        // Construct the transactional payload
+        const transactionPayload: Partial<AppDataType> = {};
 
-        // Always ensure we have valid objects for the dirty keys
         fieldsToSave.forEach(field => {
-            // @ts-ignore - Dynamic access is safe here because we iterate known keys
-            payload[field] = currentData[field];
+            // Optimization for Scores: Only send changed items to save bandwidth
+            // (The server transaction handles smart merging either way, but sending 2 items is faster than 2000)
+            if (field === 'scores') {
+                const currentScores = scores;
+                const originalScores = originalData.current.scores || [];
+                // Compute Diff
+                const scoreUpdates = currentScores.filter(item => {
+                    if (item && typeof item === 'object' && 'id' in item) {
+                        const originalItem = originalScores.find(o => o.id === item.id);
+                        if (!originalItem) return true; // New item
+                        return !deepEqual(item, originalItem); // Modified item
+                    }
+                    return false;
+                });
+                if (scoreUpdates.length > 0) {
+                    transactionPayload.scores = scoreUpdates;
+                }
+            } else {
+                // For other fields, we currently send the full list/object.
+                // The 'saveDataTransaction' will handle the smart merge on the server side 
+                // to prevent overwrites.
+                // @ts-ignore
+                transactionPayload[field] = currentData[field];
+            }
         });
 
         // Check network status
         if (!isOnline) {
             console.log("Offline - adding to queue");
-            offlineQueue.addToQueue(payload); // Queue the partial payload
+            // Offline queue fallback
+            const fullPayload: Partial<AppDataType> = {};
+            fieldsToSave.forEach(field => {
+                // @ts-ignore
+                fullPayload[field] = currentData[field];
+            });
+
+            offlineQueue.addToQueue(fullPayload);
             setQueuedCount(offlineQueue.getQueueSize());
             return;
         }
@@ -497,9 +553,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
             isSyncingRef.current = true;
             setIsSyncing(true);
-            console.log('[DataContext] ☁️ Uploading partial data to cloud database...');
-            await saveUserDatabase(schoolId, payload);
+
+            if (Object.keys(transactionPayload).length > 0) {
+                console.log('[DataContext] ☁️ Performing Universal Transactional Save...');
+                // Uses the new generalized transaction helper
+                await saveDataTransaction(schoolId, transactionPayload);
+            }
+
             console.log('[DataContext] ✅ Data saved to cloud successfully!');
+
+
             console.log('[DataContext] 🎉 Sync complete - cleared dirty fields');
 
             // Clear dirty fields only for the fields that were actually saved
@@ -519,8 +582,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             showDatabaseError(error);
 
             console.log('[DataContext] 📦 Adding to offline queue for retry when online');
-            // Add to queue on failure
-            offlineQueue.addToQueue(payload);
+            // Re-construct full payload for queue fallback
+            const fullPayload: Partial<AppDataType> = {};
+            fieldsToSave.forEach(field => {
+                // @ts-ignore
+                fullPayload[field] = currentData[field];
+            });
+
+            offlineQueue.addToQueue(fullPayload);
             setQueuedCount(offlineQueue.getQueueSize());
             setIsSyncing(false);
             isSyncingRef.current = false;
@@ -648,8 +717,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const updateStudentScores = (studentId: number, subjectId: number, assessmentId: number, newScores: string[]) => {
-        markDirty('scores');
         const scoreId = `${studentId}-${subjectId}`;
+
+        // FIX: Check if scores actually changed to prevent false dirty flags
+        // Access 'scores' from closure which is fresh on every render
+        const existingScore = scores.find(s => s.id === scoreId);
+        const currentScores = existingScore?.assessmentScores?.[assessmentId] || [];
+
+        if (deepEqual(currentScores, newScores)) {
+            // console.log('[DataContext] updateStudentScores: No change detected, skipping update');
+            return;
+        }
+
+        markDirty('scores');
 
         console.log('[DataContext] 📥 updateStudentScores called:', {
             studentId,
@@ -996,6 +1076,44 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return fields.some(field => dirtyFields.current.has(field));
     };
 
+    const getPendingUploadData = (): Partial<AppDataType> => {
+        if (dirtyFields.current.size === 0) {
+            return {};
+        }
+
+        const fieldsToSave = Array.from(dirtyFields.current);
+        const currentData = stateRef.current;
+        const payload: Partial<AppDataType> = {};
+
+        fieldsToSave.forEach(field => {
+            // @ts-ignore
+            const currentVal = currentData[field];
+            const originalVal = originalData.current[field];
+
+            // Perform smart diff for arrays to only show changed items in preview
+            if (Array.isArray(currentVal) && Array.isArray(originalVal)) {
+                // @ts-ignore
+                payload[field] = currentVal.filter(item => {
+                    // Start by checking if item has an ID (most of our data types do)
+                    if (item && typeof item === 'object' && 'id' in item) {
+                        const originalItem = originalVal.find((o: any) => o.id === item.id);
+                        if (!originalItem) return true; // New item
+                        return !deepEqual(item, originalItem); // Modified item
+                    }
+                    // Fallback for non-ID arrays (if any): simple inclusion check is too expensive/inaccurate
+                    // so we default to showing it if it's not deep equal to the whole original array?
+                    // actually if we stick to ID check it handles 99% of our cases.
+                    return true;
+                });
+            } else {
+                // @ts-ignore
+                payload[field] = currentVal;
+            }
+        });
+
+        return payload;
+    };
+
     // Draft Score State
     const draftScores = useRef<Map<string, string>>(new Map());
     const [draftVersion, setDraftVersion] = useState(0); // Used to force updates in subscribers
@@ -1103,6 +1221,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setHasLocalChanges,
 
         isDirty,
+        getPendingUploadData,
         updateDraftScore,
         removeDraftScore,
         getComputedScore,

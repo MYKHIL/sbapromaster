@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, onSnapshot } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, onSnapshot, runTransaction } from "firebase/firestore";
 import type { SchoolSettings, Student, Subject, Class, Grade, Assessment, Score, ReportSpecificData, ClassSpecificData, User, DeviceCredential, UserLog, OnlineUser } from '../types';
 
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -195,7 +195,83 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
     }
 };
 
-// Helper to save/update the database
+// Helper to save/update the database with safe transactional merging for ALL fields
+// This ensures that concurrent edits to different items within arrays (or different fields) are preserved.
+export const saveDataTransaction = async (
+    docId: string,
+    updates: Partial<AppDataType>
+) => {
+    try {
+        const docRef = doc(db, "schools", docId);
+
+        await runTransaction(db, async (transaction) => {
+            const sfDoc = await transaction.get(docRef);
+            if (!sfDoc.exists()) {
+                throw new Error("Document does not exist!");
+            }
+
+            const currentData = sfDoc.data() as AppDataType;
+            const finalUpdates: any = {};
+
+            // Iterate through each field in the updates
+            for (const [key, newValue] of Object.entries(updates)) {
+                const currentVal = currentData[key as keyof AppDataType];
+
+                // Strategy 1: Smart Array Merge (for lists with unique IDs)
+                if (Array.isArray(newValue) && Array.isArray(currentVal)) {
+                    // Check if items have IDs (safely)
+                    const hasId = newValue.length > 0 && typeof newValue[0] === 'object' && 'id' in newValue[0];
+                    // Also generic empty array check - if empty, we might just be clearing? 
+                    // No, if newValue is empty, we probably shouldn't merge empty into full.
+                    // But if local user DELETED everything, newValue is [].
+                    // However, we discussed "Adding" mode. 
+                    // For now, let's assume we use Smart Merge to PRESERVE server data.
+                    // If user wants to delete, they need a specific 'delete' action, not just saving current state.
+                    // But 'updates' comes from DataContext which sends 'what I have'.
+
+                    if (hasId) {
+                        const mergedMap = new Map<string, any>();
+
+                        // 1. Load Server Data first
+                        currentVal.forEach((item: any) => {
+                            if (item && item.id !== undefined) mergedMap.set(String(item.id), item);
+                        });
+
+                        // 2. Overlay Local Updates (Last Write Wins for collision)
+                        newValue.forEach((item: any) => {
+                            if (item && item.id !== undefined) mergedMap.set(String(item.id), item);
+                        });
+
+                        finalUpdates[key] = Array.from(mergedMap.values());
+                    } else {
+                        // Arrays without IDs: Overwrite (fallback) or Union? 
+                        // e.g. string[]. We assume overwrite for simple lists unless specific logic.
+                        finalUpdates[key] = newValue;
+                    }
+                }
+                // Strategy 2: Object Merge (for Settings, ActiveSessions)
+                else if (key === 'settings' || key === 'activeSessions') {
+                    finalUpdates[key] = { ...(currentVal || {}), ...(newValue || {}) };
+                }
+                // Strategy 3: Default Overwrite (e.g. primitives, or 'users' if we handled it differently - wait, Users has ID)
+                else {
+                    finalUpdates[key] = newValue;
+                }
+            }
+
+            // Only perform update if we have data
+            if (Object.keys(finalUpdates).length > 0) {
+                transaction.update(docRef, finalUpdates);
+            }
+        });
+        console.log(`[firebaseService] Transaction successful for keys: ${Object.keys(updates).join(', ')}`);
+    } catch (e) {
+        console.error("[firebaseService] Transaction failed: ", e);
+        throw e;
+    }
+};
+
+// Start of existing saveUserDatabase (leave as is for non-critical legacy saves)
 export const saveUserDatabase = async (docId: string, data: Partial<AppDataType>) => {
     try {
         // docId is expected to be the full document ID (sanitized)
