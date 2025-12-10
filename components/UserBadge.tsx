@@ -55,7 +55,7 @@ const UserBadge: React.FC = () => {
 
     return (
         <>
-            <div className="fixed top-6 right-4 z-[60] flex flex-col items-end gap-2">
+            <div className="fixed top-6 right-4 z-[60]">
                 {/* User Info Badge */}
                 <div
                     className={`flex flex-col gap-2 px-3 py-2 rounded-2xl shadow-lg border backdrop-blur-sm bg-opacity-95 transition-all duration-300 ${getRoleColor(currentUser.role)}`}
@@ -134,66 +134,67 @@ const UserBadge: React.FC = () => {
 
                     {/* Sync Controls - Below Name (when expanded) */}
                     {isExpanded && (
-                        <div className="flex items-center justify-center gap-2 pt-1 border-t border-white border-opacity-20">
-                            {/* Upload Button */}
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    saveToCloud();
-                                }}
-                                disabled={isSyncing || !isOnline}
-                                className={`p-1.5 rounded-full hover:bg-white/50 transition-colors ${isSyncing ? 'opacity-50 cursor-not-allowed' : 'text-blue-700'}`}
-                                title="Upload: Click here when finished entering data and wait for sync to complete"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${isSyncing ? 'animate-pulse' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                </svg>
-                            </button>
+                        <>
+                            <div className="flex items-center justify-center gap-2 pt-1 border-t border-white border-opacity-20">
+                                {/* Upload Button */}
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        saveToCloud();
+                                    }}
+                                    disabled={isSyncing || !isOnline}
+                                    className={`p-1.5 rounded-full hover:bg-white/50 transition-colors ${isSyncing ? 'opacity-50 cursor-not-allowed' : 'text-blue-700'}`}
+                                    title="Upload: Click here when finished entering data and wait for sync to complete"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${isSyncing ? 'animate-pulse' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                    </svg>
+                                </button>
 
-                            {/* Download Button */}
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    refreshFromCloud();
-                                }}
-                                disabled={isSyncing || !isOnline}
-                                className={`p-1.5 rounded-full hover:bg-white/50 transition-colors ${isSyncing ? 'opacity-50 cursor-not-allowed' : 'text-green-700'}`}
-                                title="Download from Cloud"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-                                </svg>
-                            </button>
+                                {/* Download Button */}
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        refreshFromCloud();
+                                    }}
+                                    disabled={isSyncing || !isOnline}
+                                    className={`p-1.5 rounded-full hover:bg-white/50 transition-colors ${isSyncing ? 'opacity-50 cursor-not-allowed' : 'text-green-700'}`}
+                                    title="Download from Cloud"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                                    </svg>
+                                </button>
 
-                            {/* Network Indicator */}
-                            <NetworkIndicator isOnline={isOnline} isSyncing={isSyncing} queuedCount={queuedCount} />
-                        </div>
+                                {/* Network Indicator */}
+                                <NetworkIndicator isOnline={isOnline} isSyncing={isSyncing} queuedCount={queuedCount} />
+                            </div>
+
+                            {/* Switch Account Button */}
+                            <button
+                                onClick={() => setShowConfirm(true)}
+                                className="flex items-center justify-center gap-2 px-3 py-2 mt-2 rounded-full bg-white/30 hover:bg-white/50 transition-colors w-full text-sm font-medium"
+                                title="Switch Account"
+                            >
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-4 w-4"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+                                    />
+                                </svg>
+                                <span>Switch Account</span>
+                            </button>
+                        </>
                     )}
                 </div>
-
-                {/* Switch User Button */}
-                <button
-                    onClick={() => setShowConfirm(true)}
-                    className="flex items-center justify-center gap-2 px-3 py-2 rounded-full shadow-lg bg-white border border-gray-200 hover:bg-gray-50 transition-colors"
-                    title="Switch Account"
-                    aria-label="Switch Account"
-                >
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 w-4 text-gray-600"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-                        />
-                    </svg>
-                    <span className="text-xs font-medium text-gray-700 lg:hidden">Switch Account</span>
-                </button>
             </div>
 
             {/* Confirmation Modal */}
