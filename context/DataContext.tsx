@@ -429,6 +429,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
+    const unmarkDirty = (field: keyof AppDataType) => {
+        if (dirtyFields.current.has(field)) {
+            // console.log(`[DataContext] ⚪ Unmark Dirty: ${field}`);
+            dirtyFields.current.delete(field);
+            setHasLocalChanges(dirtyFields.current.size > 0);
+        }
+    };
+
     // Check if current data actually differs from original cloud data
     const recheckDirtyStatus = (field: keyof AppDataType, currentValue: any) => {
         const originalValue = originalData.current[field];
@@ -775,7 +783,53 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return;
         }
 
-        markDirty('scores');
+        // SMART DIRTY CHECK
+        // Instead of blindly marking dirty, we check if this change actually differs from the cloud state
+        const originalScore = originalData.current.scores?.find(s => s.id === scoreId);
+        const originalAssessmentScores = originalScore?.assessmentScores?.[assessmentId] || [];
+
+        // Normalize: Treat [''] same as []
+        const cleanScores = (s: string[]) => s.filter(val => val.trim() !== '');
+        const isActuallyChanged = !deepEqual(cleanScores(newScores), cleanScores(originalAssessmentScores));
+
+        if (isActuallyChanged) {
+            markDirty('scores');
+            pendingScoreChanges.current.add(scoreId);
+        } else {
+            // Current item matches original.
+            // We technically could unmark 'scores', but only if NO OTHER scores are different.
+            // We will attempt to check our local Pending Set to be smart.
+            // If pendingScoreChanges only contains this ScoreId (or is empty), we can unmark.
+            // BUT pendingScoreChanges is just a set of "touched" items, not necessarily dirty ones.
+
+            // To be absolutely correct without iterating effectively everything:
+            // We can check if pendingScoreChanges has only 1 item (this one).
+            // If so, and this one is clean -> unmark.
+            // If pendingScoreChanges has multiple, we'd have to check all of them.
+
+            // Let's iterate pendingScoreChanges. Typically user changes < 50 items in a session.
+            // This is fast enough.
+            pendingScoreChanges.current.delete(scoreId); // This one is clean now.
+
+            let anyOtherDirty = false;
+            for (const otherScoreId of pendingScoreChanges.current) {
+                // Re-verify if other touched scores are still dirty
+                const s = scores.find(x => x.id === otherScoreId);
+                if (s) {
+                    const orig = originalData.current.scores?.find(o => o.id === otherScoreId);
+                    // Note: We need to check ALL assessments for that score, not just current assessmentId.
+                    // Score object contains assessmentScores map.
+                    if (!deepEqual(s.assessmentScores, orig?.assessmentScores || {})) {
+                        anyOtherDirty = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!anyOtherDirty) {
+                unmarkDirty('scores');
+            }
+        }
 
         console.log('[DataContext] 📥 updateStudentScores called:', {
             studentId,
