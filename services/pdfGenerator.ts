@@ -188,7 +188,7 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
             if (!d) return '';
             try {
                 const dt = new Date(d);
-                return `${getOrdinal(dt.getDate())} ${dt.toLocaleString('en-GB', { month: 'short' })}, ${dt.getFullYear()}`;
+                return `${getOrdinal(dt.getDate())} ${dt.toLocaleString('en-GB', { month: 'short' })}, ${dt.getFullYear()}`; 
             } catch { return d; }
         };
         addUnderlinedField("Vacation Date", fmtDate(settings.vacationDate), leftColX, currentY, colWidth * 1.5, 25);
