@@ -8,6 +8,7 @@ import { useReportCardData } from '../../hooks/useReportCardData';
 import { SHOW_PDF_DOWNLOAD_BUTTON } from '../../constants';
 import { useUser } from '../../context/UserContext';
 import { getAvailableClasses } from '../../utils/permissions';
+import PdfErrorModal from '../PdfErrorModal';
 
 const PerformanceSummaryFetcher: React.FC<{ student: Student, children: (summary: string) => React.ReactNode }> = ({ student, children }) => {
   const { performanceSummary } = useReportCardData(student);
@@ -33,6 +34,7 @@ const ReportViewer: React.FC = () => {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
+  const [pdfError, setPdfError] = useState<any>(null);
 
   const reportContainerRef = useRef<HTMLDivElement>(null);
 
@@ -129,6 +131,7 @@ const ReportViewer: React.FC = () => {
   const handleDownloadPdf = async () => {
     if (generatedReports.length === 0) return;
     setIsGeneratingPdf(true);
+    setPdfError(null); // Clear any previous errors
 
     // Give UI time to update
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -140,7 +143,7 @@ const ReportViewer: React.FC = () => {
       await generateReportsPDF(generatedReports, data);
     } catch (e) {
       console.error("Failed to generate PDF", e);
-      alert("An error occurred while generating the PDF details. Please check the console.");
+      setPdfError(e); // Show error modal with detailed information
     } finally {
       setIsGeneratingPdf(false);
     }
@@ -271,6 +274,13 @@ const ReportViewer: React.FC = () => {
           </button>
         </div>
       )}
+
+      {/* PDF Error Modal */}
+      <PdfErrorModal
+        error={pdfError}
+        isOpen={!!pdfError}
+        onClose={() => setPdfError(null)}
+      />
     </div>
   );
 };

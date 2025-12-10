@@ -13,6 +13,7 @@ import DataManagement from './components/pages/DataManagement';
 import ScoreSummary from './components/pages/ScoreSummary';
 import { DataProvider, useData } from './context/DataContext';
 import { UserProvider, useUser } from './context/UserContext';
+import { DatabaseErrorProvider, useDatabaseError } from './context/DatabaseErrorContext';
 import type { Page } from './types';
 import UserBadge from './components/UserBadge';
 import MaintenancePage from './components/MaintenancePage';
@@ -20,6 +21,8 @@ import { TeacherPageRedirect } from './components/TeacherPageRedirect';
 import { SyncOverlayConnected } from './components/SyncOverlayConnected';
 import { SITE_ACTIVE } from './constants';
 import GreetingToast from './components/GreetingToast';
+import DatabaseErrorModal from './components/DatabaseErrorModal';
+import BrowserCompatibilityModal from './components/BrowserCompatibilityModal';
 
 // This helper is now only used for pages that need to persist state.
 const PageWrapper: React.FC<{ name: Page; currentPage: Page; children: React.ReactNode }> = ({ name, currentPage, children }) => {
@@ -56,6 +59,12 @@ const GreetingWrapper: React.FC<{ currentPage: Page }> = ({ currentPage }) => {
   return <GreetingToast currentUser={currentUser} currentPage={currentPage} />;
 };
 
+// Wrapper to consume context for DatabaseErrorModal
+const DatabaseErrorModalWrapper: React.FC = () => {
+  const { error, clearError } = useDatabaseError();
+  return <DatabaseErrorModal error={error} onClose={clearError} isOpen={!!error} />;
+};
+
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>(() => {
     // Try to load last visited page from localStorage
@@ -82,29 +91,35 @@ const App: React.FC = () => {
   }
 
   return (
-    <DataProvider>
-      <UserProvider>
-        <AuthOverlay>
-          <SyncOverlayConnected />
-          {/* PageVisitLogger removed to prevent excessive logging */}
-          <GreetingWrapper currentPage={currentPage} />
-          <TeacherPageRedirect currentPage={currentPage} setCurrentPage={setCurrentPage} />
-          <UserBadge />
-          <div className="flex h-screen overflow-hidden bg-gray-50">
-            <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
-            <main className="flex-1 p-4 pt-20 md:p-6 md:pt-20 lg:p-10 overflow-auto">
-              {/* Data Management is always rendered but its visibility is toggled to preserve state. */}
-              <PageWrapper name="Data Management" currentPage={currentPage}>
-                <DataManagement />
-              </PageWrapper>
+    <>
+      <BrowserCompatibilityModal />
+      <DatabaseErrorProvider>
+        <DataProvider>
+          <UserProvider>
+            <AuthOverlay>
+              <SyncOverlayConnected />
+              <DatabaseErrorModalWrapper />
+              {/* PageVisitLogger removed to prevent excessive logging */}
+              <GreetingWrapper currentPage={currentPage} />
+              <TeacherPageRedirect currentPage={currentPage} setCurrentPage={setCurrentPage} />
+              <UserBadge />
+              <div className="flex h-screen overflow-hidden bg-gray-50">
+                <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
+                <main className="flex-1 p-4 pt-20 md:p-6 md:pt-20 lg:p-10 overflow-auto">
+                  {/* Data Management is always rendered but its visibility is toggled to preserve state. */}
+                  <PageWrapper name="Data Management" currentPage={currentPage}>
+                    <DataManagement />
+                  </PageWrapper>
 
-              {/* All other pages are rendered conditionally, causing them to remount on navigation. */}
-              {currentPage !== 'Data Management' && <ActivePage page={currentPage} />}
-            </main>
-          </div>
-        </AuthOverlay>
-      </UserProvider>
-    </DataProvider>
+                  {/* All other pages are rendered conditionally, causing them to remount on navigation. */}
+                  {currentPage !== 'Data Management' && <ActivePage page={currentPage} />}
+                </main>
+              </div>
+            </AuthOverlay>
+          </UserProvider>
+        </DataProvider>
+      </DatabaseErrorProvider>
+    </>
   );
 };
 

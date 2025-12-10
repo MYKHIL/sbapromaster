@@ -197,15 +197,21 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
 
 // Helper to save/update the database
 export const saveUserDatabase = async (docId: string, data: Partial<AppDataType>) => {
-    // docId is expected to be the full document ID (sanitized)
-    const docRef = doc(db, "schools", docId);
-    // We use setDoc with merge: true to avoid overwriting the entire document if we only want to update parts,
-    // but here we likely want to save the whole state. However, we must preserve 'password' and 'Access' if they are not in 'data'.
-    // The 'data' passed from DataContext might not have password/Access if we don't store them in state.
-    // So we should use { merge: true } carefully.
-    // Actually, if we pass the full AppDataType from DataContext, we need to make sure we don't accidentally overwrite password/Access with undefined if they are missing.
-    // Best approach: merge: true
-    await setDoc(docRef, data, { merge: true });
+    try {
+        // docId is expected to be the full document ID (sanitized)
+        const docRef = doc(db, "schools", docId);
+        // We use setDoc with merge: true to avoid overwriting the entire document if we only want to update parts,
+        // but here we likely want to save the whole state. However, we must preserve 'password' and 'Access' if they are not in 'data'.
+        // The 'data' passed from DataContext might not have password/Access if we don't store them in state.
+        // So we should use { merge: true } carefully.
+        // Actually, if we pass the full AppDataType from DataContext, we need to make sure we don't accidentally overwrite password/Access with undefined if they are missing.
+        // Best approach: merge: true
+        await setDoc(docRef, data, { merge: true });
+    } catch (error: any) {
+        console.error('[firebaseService] Error saving to database:', error);
+        // Re-throw the error so it can be caught and handled by the caller
+        throw error;
+    }
 };
 
 // Helper to subscribe to real-time updates
@@ -228,6 +234,8 @@ export const subscribeToSchoolData = (docId: string, callback: (data: AppDataTyp
         }
     }, (error) => {
         console.error("Real-time sync error:", error);
+        // Error will be handled by the subscription caller
+        throw error;
     });
 };
 
@@ -237,8 +245,13 @@ export const subscribeToSchoolData = (docId: string, callback: (data: AppDataTyp
  * Update the users array in the school database
  */
 export const updateUsers = async (docId: string, users: User[]) => {
-    const docRef = doc(db, "schools", docId);
-    await setDoc(docRef, { users }, { merge: true });
+    try {
+        const docRef = doc(db, "schools", docId);
+        await setDoc(docRef, { users }, { merge: true });
+    } catch (error: any) {
+        console.error('[firebaseService] Error updating users:', error);
+        throw error;
+    }
 };
 
 /**
@@ -261,44 +274,59 @@ export const getUserById = async (docId: string, userId: number): Promise<User |
  * Update device credentials in the database
  */
 export const updateDeviceCredentials = async (docId: string, deviceCredentials: DeviceCredential[]) => {
-    const docRef = doc(db, "schools", docId);
-    await setDoc(docRef, { deviceCredentials }, { merge: true });
+    try {
+        const docRef = doc(db, "schools", docId);
+        await setDoc(docRef, { deviceCredentials }, { merge: true });
+    } catch (error: any) {
+        console.error('[firebaseService] Error updating device credentials:', error);
+        throw error;
+    }
 };
 
 /**
  * Log a user activity
  */
 export const logUserActivity = async (docId: string, log: UserLog) => {
-    const docRef = doc(db, "schools", docId);
-    const docSnap = await getDoc(docRef);
-    if (!docSnap.exists()) return;
+    try {
+        const docRef = doc(db, "schools", docId);
+        const docSnap = await getDoc(docRef);
+        if (!docSnap.exists()) return;
 
-    const data = docSnap.data() as AppDataType;
-    const logs = data.userLogs || [];
+        const data = docSnap.data() as AppDataType;
+        const logs = data.userLogs || [];
 
-    // Optional: limit logs
-    if (logs.length > 500) logs.shift(); // Keep last 500
+        // Optional: limit logs
+        if (logs.length > 500) logs.shift(); // Keep last 500
 
-    logs.push(log);
+        logs.push(log);
 
-    await setDoc(docRef, { userLogs: logs }, { merge: true });
+        await setDoc(docRef, { userLogs: logs }, { merge: true });
+    } catch (error: any) {
+        console.error('[firebaseService] Error logging user activity:', error);
+        throw error;
+    }
 };
 
 /**
  * Update user heartbeat
  */
 export const updateHeartbeat = async (docId: string, userId: number) => {
-    // We can't use simple dot notation for dynamic keys in setDoc with merge efficiently without a map
-    // So we read-update-write activeSessions map
-    const docRef = doc(db, "schools", docId);
-    const docSnap = await getDoc(docRef);
-    if (!docSnap.exists()) return;
+    try {
+        // We can't use simple dot notation for dynamic keys in setDoc with merge efficiently without a map
+        // So we read-update-write activeSessions map
+        const docRef = doc(db, "schools", docId);
+        const docSnap = await getDoc(docRef);
+        if (!docSnap.exists()) return;
 
-    const data = docSnap.data() as AppDataType;
-    const activeSessions = data.activeSessions || {};
-    activeSessions[userId.toString()] = new Date().toISOString();
+        const data = docSnap.data() as AppDataType;
+        const activeSessions = data.activeSessions || {};
+        activeSessions[userId.toString()] = new Date().toISOString();
 
-    await setDoc(docRef, { activeSessions }, { merge: true });
+        await setDoc(docRef, { activeSessions }, { merge: true });
+    } catch (error: any) {
+        console.error('[firebaseService] Error updating heartbeat:', error);
+        throw error;
+    }
 };
 
 /**

@@ -163,13 +163,14 @@ const AssessmentTypes: React.FC = () => {
                         <table className="w-full text-left">
                             <thead>
                                 <tr className="bg-gray-50 border-b">
+                                    <th className="p-4 font-semibold text-gray-600">#</th>
                                     <th className="p-4 font-semibold text-gray-600">Assessment Name</th>
                                     <th className="p-4 font-semibold text-gray-600">Weight (%)</th>
                                     <th className="p-4 font-semibold text-gray-600">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {reorderableAssessments.map((assessment) => {
+                                {reorderableAssessments.map((assessment, index) => {
                                     const isDragging = draggedItem?.id === assessment.id;
                                     const isDragTarget = dragOverItem?.id === assessment.id;
                                     return (
@@ -183,6 +184,7 @@ const AssessmentTypes: React.FC = () => {
                                             onDrop={handleDrop}
                                             className={`border-b transition-colors ${isDragging ? 'opacity-30 bg-gray-200' : 'hover:bg-gray-50'} ${isDragTarget && !isDragging ? 'bg-blue-100' : ''}`}
                                         >
+                                            <td className="p-4 text-gray-600 font-semibold">{index + 1}</td>
                                             <td className="p-4 font-medium text-gray-900 flex items-center">
                                                 {isAdmin && (
                                                     <span className="cursor-move mr-3 text-gray-400 hover:text-gray-700" title="Drag to reorder">
@@ -213,6 +215,7 @@ const AssessmentTypes: React.FC = () => {
                                 })}
                                 {examAssessment && (
                                     <tr key={examAssessment.id} className="border-b bg-gray-50 hover:bg-gray-50">
+                                        <td className="p-4 text-gray-600 font-semibold">{reorderableAssessments.length + 1}</td>
                                         <td className="p-4 font-medium text-gray-900 flex items-center">
                                             <span className="w-5 mr-3"></span> {/* Spacer for alignment */}
                                             {examAssessment.name} <span className="ml-2 text-xs text-gray-500 font-normal">(Locked)</span>
@@ -243,11 +246,16 @@ const AssessmentTypes: React.FC = () => {
 
                 {/* Mobile Card View */}
                 <div className="lg:hidden space-y-4">
-                    {assessments.map((assessment) => (
+                    {assessments.map((assessment, index) => (
                         <div key={assessment.id} className="bg-white p-4 rounded-xl shadow-md border border-gray-200 flex justify-between items-center">
-                            <div>
-                                <p className="font-bold text-gray-800">{assessment.name}</p>
-                                <p className="text-sm text-gray-600">Weight: {assessment.weight}%</p>
+                            <div className="flex items-center gap-3">
+                                <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                    <span className="text-blue-700 font-bold text-sm">{index + 1}</span>
+                                </div>
+                                <div>
+                                    <p className="font-bold text-gray-800">{assessment.name}</p>
+                                    <p className="text-sm text-gray-600">Weight: {assessment.weight}%</p>
+                                </div>
                             </div>
                             <div className="flex space-x-2 flex-shrink-0">
                                 {isAdmin && (

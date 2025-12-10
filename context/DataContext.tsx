@@ -4,6 +4,7 @@ import * as SyncLogger from '../services/syncLogger';
 import useLocalStorage from '../hooks/useLocalStorage';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { offlineQueue } from '../services/offlineQueue';
+import { useDatabaseError } from './DatabaseErrorContext';
 import type { Student, Subject, Class, Grade, Assessment, Score, SchoolSettings, ReportSpecificData, ClassSpecificData, User, UserLog, OnlineUser } from '../types';
 import {
     INITIAL_SETTINGS,
@@ -96,6 +97,9 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 
 
 export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+    // Database error handler
+    const { showError: showDatabaseError } = useDatabaseError();
+
     // CRITICAL: Get schoolId first (non-namespaced)
     const [schoolId, setSchoolId] = useLocalStorage<string | null>('sba-school-id', null);
 
@@ -420,6 +424,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             isSyncingRef.current = false;
         } catch (error) {
             console.error('[DataContext] ❌ Failed to save data to cloud:', error);
+
+            // Show database error modal for critical errors
+            showDatabaseError(error);
+
             console.log('[DataContext] 📦 Adding to offline queue for retry when online');
             // Add to queue on failure
             offlineQueue.addToQueue(payload);
@@ -457,6 +465,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
         } catch (error) {
             console.error('[DataContext] ❌ Failed to refresh data from cloud:', error);
+
+            // Show database error modal for critical errors
+            showDatabaseError(error);
         } finally {
             setIsSyncing(false);
             isSyncingRef.current = false;
@@ -777,6 +788,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 })
                 .catch(error => {
                     console.error('Error syncing current state:', error);
+
+                    // Show database error modal
+                    showDatabaseError(error);
+
                     // Keep queue as is, will retry on next online event
                     setIsSyncing(false);
                 });

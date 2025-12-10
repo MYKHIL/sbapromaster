@@ -163,6 +163,7 @@ const GradingSystem: React.FC = () => {
                         <table className="w-full text-left">
                             <thead>
                                 <tr className="bg-gray-50 border-b">
+                                    <th className="p-4 font-semibold text-gray-600">#</th>
                                     <th className="p-4 font-semibold text-gray-600">Grade</th>
                                     <th className="p-4 font-semibold text-gray-600">Score Range</th>
                                     <th className="p-4 font-semibold text-gray-600">Remark</th>
@@ -170,8 +171,9 @@ const GradingSystem: React.FC = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {[...grades].sort((a, b) => b.minScore - a.minScore).map((grade) => (
+                                {[...grades].sort((a, b) => b.minScore - a.minScore).map((grade, index) => (
                                     <tr key={grade.id} className="border-b hover:bg-gray-50">
+                                        <td className="p-4 text-gray-600 font-semibold">{index + 1}</td>
                                         <td className="p-4 font-medium text-gray-900">{grade.name}</td>
                                         <td className="p-4 text-gray-900">{grade.minScore}% - {grade.maxScore}%</td>
                                         <td className="p-4 text-gray-900">{grade.remark}</td>
@@ -196,11 +198,16 @@ const GradingSystem: React.FC = () => {
 
                 {/* Mobile Card View */}
                 <div className="lg:hidden space-y-4">
-                    {[...grades].sort((a, b) => b.minScore - a.minScore).map((grade) => (
+                    {[...grades].sort((a, b) => b.minScore - a.minScore).map((grade, index) => (
                         <div key={grade.id} className="bg-white p-4 rounded-xl shadow-md border border-gray-200 flex justify-between items-center">
-                            <div>
-                                <p className="font-bold text-gray-800">{grade.name} <span className="font-normal text-gray-600">({grade.minScore}% - {grade.maxScore}%)</span></p>
-                                <p className="text-sm text-gray-600">{grade.remark}</p>
+                            <div className="flex items-center gap-3">
+                                <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                    <span className="text-blue-700 font-bold text-sm">{index + 1}</span>
+                                </div>
+                                <div>
+                                    <p className="font-bold text-gray-800">{grade.name} <span className="font-normal text-gray-600">({grade.minScore}% - {grade.maxScore}%)</span></p>
+                                    <p className="text-sm text-gray-600">{grade.remark}</p>
+                                </div>
                             </div>
                             <div className="flex space-x-2 flex-shrink-0">
                                 {isAdmin && (

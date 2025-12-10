@@ -256,6 +256,7 @@ const Students: React.FC = () => {
                         <table className="w-full text-left">
                             <thead>
                                 <tr className="bg-gray-50 border-b">
+                                    <th className="p-4 font-semibold text-gray-600">#</th>
                                     <th className="p-4 font-semibold text-gray-600">Photo</th>
                                     <th className="p-4 font-semibold text-gray-600">Index Number</th>
                                     <th className="p-4 font-semibold text-gray-600">Name</th>
@@ -266,10 +267,11 @@ const Students: React.FC = () => {
                             </thead>
                             <tbody>
                                 {filteredStudents.length > 0 ? (
-                                    filteredStudents.map((student) => {
+                                    filteredStudents.map((student, index) => {
                                         const canManage = canManageStudentsInClass(currentUser, student.class);
                                         return (
                                             <tr key={student.id} className="border-b hover:bg-gray-50">
+                                                <td className="p-4 text-gray-600 font-semibold">{index + 1}</td>
                                                 <td className="p-2">
                                                     <img src={student.picture || USER_PLACEHOLDER} alt={student.name} className="h-10 w-10 rounded-full object-cover bg-gray-200" />
                                                 </td>
@@ -298,7 +300,7 @@ const Students: React.FC = () => {
                                     })
                                 ) : (
                                     <tr>
-                                        <td colSpan={6} className="text-center p-8 text-gray-500">
+                                        <td colSpan={7} className="text-center p-8 text-gray-500">
                                             No students found matching your search.
                                         </td>
                                     </tr>
@@ -311,12 +313,15 @@ const Students: React.FC = () => {
                 {/* Mobile Card View */}
                 <div className="lg:hidden space-y-4">
                     {filteredStudents.length > 0 ? (
-                        filteredStudents.map(student => {
+                        filteredStudents.map((student, index) => {
                             const canManage = canManageStudentsInClass(currentUser, student.class);
                             return (
                                 <div key={student.id} className="bg-white p-4 rounded-xl shadow-md border border-gray-200">
                                     <div className="flex items-start justify-between">
                                         <div className="flex items-center space-x-4">
+                                            <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                                <span className="text-blue-700 font-bold text-sm">{index + 1}</span>
+                                            </div>
                                             <img src={student.picture || USER_PLACEHOLDER} alt={student.name} className="h-12 w-12 rounded-full object-cover bg-gray-200" />
                                             <div>
                                                 <p className="font-bold text-gray-800">{student.name}</p>
