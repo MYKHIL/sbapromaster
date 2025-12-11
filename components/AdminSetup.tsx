@@ -116,6 +116,31 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         updateUser(index, 'allowedSubjects', allSelected ? [] : [...subjectNames]);
     };
 
+    const toggleClassSubject = (userIndex: number, className: string, subjectName: string) => {
+        const user = users[userIndex];
+        const classSubjects = user.classSubjects || {};
+        const currentSubjects = classSubjects[className] || [];
+
+        const newSubjects = currentSubjects.includes(subjectName)
+            ? currentSubjects.filter(s => s !== subjectName)
+            : [...currentSubjects, subjectName];
+
+        const newClassSubjects = { ...classSubjects, [className]: newSubjects };
+        updateUser(userIndex, 'classSubjects', newClassSubjects);
+    };
+
+    const copySubjectsToAllClasses = (userIndex: number, sourceClass: string) => {
+        const user = users[userIndex];
+        const sourceSubjects = user.classSubjects?.[sourceClass] || [];
+        const classSubjects = user.classSubjects || {};
+
+        (user.allowedClasses || []).forEach(className => {
+            classSubjects[className] = [...sourceSubjects];
+        });
+
+        updateUser(userIndex, 'classSubjects', classSubjects);
+    };
+
     const handleSubmit = async () => {
         setError(null);
 
@@ -151,6 +176,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                 role: u.role || 'Teacher',  // Ensure role is defined
                 allowedClasses: u.role === 'Admin' ? classNames : (u.allowedClasses || []),
                 allowedSubjects: u.role === 'Admin' ? subjectNames : (u.allowedSubjects || []),
+                classSubjects: u.role === 'Admin' ? {} : (u.classSubjects || {}),  // Include classSubjects mapping
                 passwordHash: mode === 'setup' && index === 0
                     ? await hashPassword(adminPassword)
                     : (u.passwordHash || ''),  // Empty string instead of undefined
@@ -183,6 +209,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                     role: updatedUser.role!,
                     allowedClasses: updatedUser.role === 'Admin' ? classNames : (updatedUser.allowedClasses || []),
                     allowedSubjects: updatedUser.role === 'Admin' ? subjectNames : (updatedUser.allowedSubjects || []),
+                    classSubjects: updatedUser.role === 'Admin' ? {} : (updatedUser.classSubjects || {}),  // Include classSubjects mapping
                 }
                 : u
         );
@@ -270,6 +297,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                 role: newUser.role!,
                 allowedClasses: newUser.role === 'Admin' ? classNames : (newUser.allowedClasses || []),
                 allowedSubjects: newUser.role === 'Admin' ? subjectNames : (newUser.allowedSubjects || []),
+                classSubjects: newUser.role === 'Admin' ? {} : (newUser.classSubjects || {}),  // Include classSubjects mapping
                 passwordHash: '',
             };
 
@@ -556,30 +584,57 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                             </div>
                                         </div>
 
-                                        <div>
-                                            <div className="flex justify-between items-center mb-2">
-                                                <label className="block text-sm font-medium text-gray-700">Allowed Subjects</label>
-                                                <button
-                                                    onClick={() => toggleAllSubjects(index)}
-                                                    className="text-xs text-blue-600 hover:text-blue-800"
-                                                >
-                                                    {(user.allowedSubjects || []).length === subjectNames.length ? 'Deselect All' : 'Select All'}
-                                                </button>
-                                            </div>
-                                            <div className="flex flex-wrap gap-2">
-                                                {subjectNames.map(subjectName => (
-                                                    <button
-                                                        key={subjectName}
-                                                        onClick={() => toggleSubject(index, subjectName)}
-                                                        className={`px-3 py-1 text-sm rounded-full transition ${(user.allowedSubjects || []).includes(subjectName)
-                                                            ? 'bg-green-600 text-white'
-                                                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                                            }`}
-                                                    >
-                                                        {subjectName}
-                                                    </button>
-                                                ))}
-                                            </div>
+                                        <div className="mb-4">
+                                            <label className="block text-sm font-medium text-gray-700 mb-3">
+                                                Classes & Subjects Assignment
+                                            </label>
+
+                                            {(user.allowedClasses || []).length === 0 ? (
+                                                <p className="text-sm text-gray-500 italic">Select classes above to assign subjects</p>
+                                            ) : (
+                                                <div className="space-y-3 max-h-80 overflow-y-auto">
+                                                    {(user.allowedClasses || []).map(className => (
+                                                        <div key={className} className="border border-gray-200 rounded-lg p-3 bg-white">
+                                                            <div className="flex justify-between items-center mb-2">
+                                                                <h5 className="font-medium text-gray-800 text-sm">{className}</h5>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => copySubjectsToAllClasses(index, className)}
+                                                                    className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                                                                    title="Copy this class's subjects to all classes"
+                                                                >
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                                    </svg>
+                                                                    Copy to All
+                                                                </button>
+                                                            </div>
+
+                                                            <div className="flex flex-wrap gap-2">
+                                                                {subjectNames.map(subjectName => {
+                                                                    const classSubjects = user.classSubjects || {};
+                                                                    const subjects = classSubjects[className] || [];
+                                                                    const isSelected = subjects.includes(subjectName);
+
+                                                                    return (
+                                                                        <button
+                                                                            key={subjectName}
+                                                                            type="button"
+                                                                            onClick={() => toggleClassSubject(index, className, subjectName)}
+                                                                            className={`px-2 py-1 text-xs rounded transition ${isSelected
+                                                                                ? 'bg-green-600 text-white'
+                                                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                                                }`}
+                                                                        >
+                                                                            {subjectName}
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     </>
                                 )}

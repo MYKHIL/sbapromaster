@@ -7,7 +7,7 @@ import ScoreManagementModal from '../ScoreManagementModal';
 import { NetworkIndicator } from '../NetworkIndicator';
 import type { Student, Assessment } from '../../types';
 
-import { getAvailableClasses, getAvailableSubjects } from '../../utils/permissions';
+import { getAvailableClasses, getSubjectsForUserAndClass } from '../../utils/permissions';
 
 const ScoreEntry: React.FC = () => {
     // Destructure with default empty arrays to prevent undefined errors
@@ -17,18 +17,23 @@ const ScoreEntry: React.FC = () => {
 
     // Filter available data based on permissions
     const classes = useMemo(() => getAvailableClasses(currentUser, allClasses), [currentUser, allClasses]);
-    const subjects = useMemo(() => getAvailableSubjects(currentUser, allSubjects), [currentUser, allSubjects]);
 
-    // Safe initialization for selectedClass
+    // Safe initialization for selectedClass (must be before subjects useMemo)
     const [selectedClass, setSelectedClass] = useState<string>(() => {
         try {
             const saved = localStorage.getItem('scoreEntry_selectedClass');
-            if (saved && classes.find(c => c.name === saved)) return saved;
-            return classes.length > 0 ? classes[0].name : '';
+            if (saved && allClasses.find(c => c.name === saved)) return saved;
+            return allClasses.length > 0 ? allClasses[0].name : '';
         } catch (e) {
             return '';
         }
     });
+
+    // Filter subjects based on selected class (per-class mapping)
+    const subjects = useMemo(() => {
+        if (!selectedClass) return allSubjects; // Show all when "All Classes" selected
+        return getSubjectsForUserAndClass(currentUser, selectedClass, allSubjects);
+    }, [currentUser, selectedClass, allSubjects]);
 
     // Safe initialization for selectedSubjectId
     const [selectedSubjectId, setSelectedSubjectId] = useState<number>(() => {

@@ -21,10 +21,11 @@ interface ClassSummary {
     classId: number;
     className: string;
     subjects: SubjectSummary[];
+    totalPercentage: number;
 }
 
 const ScoreSummary: React.FC = () => {
-    const { students, subjects, classes, assessments, getStudentScores, refreshFromCloud, isSyncing, isOnline } = useData();
+    const { students, subjects, classes, assessments, getStudentScores, refreshFromCloud, isSyncing, isOnline, users } = useData();
     const { currentUser } = useUser();
 
     // State to toggle specific class view details
@@ -48,17 +49,56 @@ const ScoreSummary: React.FC = () => {
                 return {
                     classId: cls.id,
                     className: cls.name,
-                    subjects: []
+                    subjects: [],
+                    totalPercentage: 0
                 };
             }
 
-            const subjectSummaries: SubjectSummary[] = subjects.map(sub => {
+            // STRATEGY: Use classSubjects mapping if available, otherwise fall back to score-based filtering
+
+            // Step 1: Find subjects assigned via classSubjects mapping
+            const mappedSubjects = new Set<number>();
+            if (users && users.length > 0) {
+                users
+                    .filter(user => user.role !== 'Guest')
+                    .forEach(user => {
+                        const classSubjects = user.classSubjects?.[cls.name];
+                        if (classSubjects && classSubjects.length > 0) {
+                            classSubjects.forEach(subjectName => {
+                                const subject = subjects.find(s => s.subject === subjectName);
+                                if (subject) mappedSubjects.add(subject.id);
+                            });
+                        }
+                    });
+            }
+
+            // Step 2: Find subjects that have existing score data for students in this class
+            const subjectsWithScores = new Set<number>();
+            classStudents.forEach(student => {
+                subjects.forEach(sub => {
+                    // Check if this subject has any scores for this student
+                    assessments.forEach(assessment => {
+                        const score = getStudentScores(student.id, sub.id, assessment.id);
+                        if (score && score.length > 0 && score[0] !== '') {
+                            subjectsWithScores.add(sub.id);
+                        }
+                    });
+                });
+            });
+
+            // Step 3: Combine mapped subjects AND subjects with scores
+            // This ensures we show both teacher-assigned subjects AND subjects with existing data (admin-entered)
+            const relevantSubjects = new Set([...mappedSubjects, ...subjectsWithScores]);
+
+            const filteredSubjects = relevantSubjects.size > 0
+                ? subjects.filter(sub => relevantSubjects.has(sub.id))
+                : subjects;
+
+            const subjectSummaries: SubjectSummary[] = filteredSubjects.map(sub => {
                 let completedCount = 0;
                 const missingEntries: MissingEntry[] = [];
 
                 // Calculate expected assessments (students * assessments)
-                // Filter out assessments that might not apply if your system has subject-specific assessments
-                // For now assuming all assessments apply to all subjects as per previous logic
                 const totalAssessmentsExpected = classStudents.length * assessments.length;
 
                 classStudents.forEach(student => {
@@ -91,13 +131,19 @@ const ScoreSummary: React.FC = () => {
                 };
             });
 
+            // Calculate overall percentage for the class
+            const totalExpected = subjectSummaries.reduce((sum, sub) => sum + sub.totalAssessmentsExpected, 0);
+            const totalCompleted = subjectSummaries.reduce((sum, sub) => sum + sub.completedAssessments, 0);
+            const totalPercentage = totalExpected > 0 ? Math.round((totalCompleted / totalExpected) * 100) : 0;
+
             return {
                 classId: cls.id,
                 className: cls.name,
-                subjects: subjectSummaries
+                subjects: subjectSummaries,
+                totalPercentage
             };
         });
-    }, [classes, students, subjects, assessments, getStudentScores]);
+    }, [classes, students, subjects, assessments, getStudentScores, users]);
 
     // Mobile View: Selected Class State
     const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
@@ -253,7 +299,17 @@ const ClassScoreCard: React.FC<{
         <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden flex flex-col h-full">
             <div className="bg-gray-50 p-4 border-b border-gray-100 flex justify-between items-center">
                 <h2 className="text-lg font-bold text-gray-800">{clsSummary.className}</h2>
-                <span className="text-sm text-gray-500">{clsSummary.subjects.length > 0 ? `${clsSummary.subjects[0].totalStudents} Students` : 'No Students'}</span>
+                <div className="flex items-center gap-3">
+                    {clsSummary.subjects.length > 0 && (
+                        <span className={`px-2 py-1 text-xs rounded-full font-medium ${clsSummary.totalPercentage === 100
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-blue-100 text-blue-700'
+                            }`}>
+                            {clsSummary.totalPercentage}% Complete
+                        </span>
+                    )}
+                    <span className="text-sm text-gray-500">{clsSummary.subjects.length > 0 ? `${clsSummary.subjects[0].totalStudents} Students` : 'No Students'}</span>
+                </div>
             </div>
 
             <div className="p-4 space-y-4 flex-1 overflow-y-auto max-h-[500px]">

@@ -26,6 +26,32 @@ export const getAvailableSubjects = (user: User | null, allSubjects: Subject[]):
 };
 
 /**
+ * Returns subjects available to a user for a specific class.
+ * Uses classSubjects mapping if available, falls back to allowedSubjects.
+ * Admin: All subjects.
+ * Teacher/Guest: Only subjects mapped to the class in classSubjects, or allowedSubjects if no mapping exists.
+ */
+export const getSubjectsForUserAndClass = (
+    user: User | null,
+    className: string,
+    allSubjects: Subject[]
+): Subject[] => {
+    if (!user) return [];
+    if (user.role === 'Admin') return allSubjects;
+
+    // Check if user has class-subject mapping for this specific class
+    const classSubjects = user.classSubjects?.[className];
+
+    if (classSubjects && classSubjects.length > 0) {
+        // Use specific mapping for this class
+        return allSubjects.filter(s => classSubjects.includes(s.subject));
+    }
+
+    // Fallback to global allowedSubjects (backward compatibility)
+    return allSubjects.filter(s => user.allowedSubjects.includes(s.subject));
+};
+
+/**
  * Checks if a user has permission to manage (Add/Edit/Delete) students in a specific class.
  * Admin: Always true.
  * Teacher: True if class is in allowedClasses.

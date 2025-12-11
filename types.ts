@@ -97,6 +97,7 @@ export interface User {
   role: UserRole;
   allowedClasses: string[]; // Class names the user has access to
   allowedSubjects: string[]; // Subject names the user has access to
+  classSubjects?: { [className: string]: string[] }; // Optional: class -> subjects mapping
   passwordHash: string; // Hashed password
 }
 
