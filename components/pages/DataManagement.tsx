@@ -488,30 +488,32 @@ const DataManagement: React.FC = () => {
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-4">
-                    <div>
-                        <h3 className="font-semibold text-gray-800">Import Data</h3>
-                        <p className="text-sm text-gray-500 mb-2">Load data from an .sdlx database file. <strong className="text-red-600">This will overwrite all current data.</strong></p>
-                        <input
-                            type="file"
-                            accept=".sdlx"
-                            onChange={handleFileSelect}
-                            disabled={!!processingAction}
-                            ref={fileInputRef}
-                            style={{ display: 'none' }}
-                            aria-hidden="true"
-                        />
-                        <button onClick={handleImportClick} disabled={!!processingAction} className={buttonStyles}>
-                            {processingAction === 'import' ? (
-                                <>
-                                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                    Processing...
-                                </>
-                            ) : 'Import Database File'}
-                        </button>
-                    </div>
+                    {currentUser?.role === 'Admin' && (
+                        <div>
+                            <h3 className="font-semibold text-gray-800">Import Data</h3>
+                            <p className="text-sm text-gray-500 mb-2">Load data from an .sdlx database file. <strong className="text-red-600">This will overwrite all current data.</strong></p>
+                            <input
+                                type="file"
+                                accept=".sdlx"
+                                onChange={handleFileSelect}
+                                disabled={!!processingAction}
+                                ref={fileInputRef}
+                                style={{ display: 'none' }}
+                                aria-hidden="true"
+                            />
+                            <button onClick={handleImportClick} disabled={!!processingAction} className={buttonStyles}>
+                                {processingAction === 'import' ? (
+                                    <>
+                                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Processing...
+                                    </>
+                                ) : 'Import Database File'}
+                            </button>
+                        </div>
+                    )}
                     <div>
                         <h3 className="font-semibold text-gray-800">Export Data</h3>
                         <p className="text-sm text-gray-500 mb-2">Save all current data to an .sdlx database file as a backup.</p>

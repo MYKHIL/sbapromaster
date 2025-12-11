@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, ReactNode, useState, useEffect, useRef, useMemo } from 'react';
 import { saveUserDatabase, subscribeToSchoolData, AppDataType, updateHeartbeat, logUserActivity, getSchoolData, saveDataTransaction } from '../services/firebaseService';
 import * as SyncLogger from '../services/syncLogger';
 import useLocalStorage from '../hooks/useLocalStorage';
@@ -171,6 +171,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Track overall local changes for UI feedback (e.g. enabling Upload button)
     const [hasLocalChanges, setHasLocalChanges] = useState(false);
+    // Force re-renders when dirty state changes (since dirtyFields is a ref)
+    const [dirtyVersion, setDirtyVersion] = useState(0);
 
     // Track original cloud data to compare against current state
     const originalData = React.useRef<Partial<AppDataType>>({});
@@ -479,6 +481,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (!isRemoteUpdate.current) {
             dirtyFields.current.add(field);
             setHasLocalChanges(true); // Enable Save button globally
+            setDirtyVersion(v => v + 1); // Force re-render
         }
     };
 
@@ -487,6 +490,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // console.log(`[DataContext] ⚪ Unmark Dirty: ${field}`);
             dirtyFields.current.delete(field);
             setHasLocalChanges(dirtyFields.current.size > 0);
+            setDirtyVersion(v => v + 1); // Force re-render
         }
     };
 
@@ -499,6 +503,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             dirtyFields.current.delete(field);
             // Update hasLocalChanges based on remaining dirty fields
             setHasLocalChanges(dirtyFields.current.size > 0);
+            setDirtyVersion(v => v + 1); // Force re-render
         } else {
             // Values differ, ensure it's marked dirty
             markDirty(field);
@@ -1386,7 +1391,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Draft Score State
     const draftScores = useRef<Map<string, string>>(new Map());
     const [draftVersion, setDraftVersion] = useState(0); // Used to force updates in subscribers
-    const [pendingCount, setPendingCount] = useState(0);
 
     // Update the draft value for a score (marks it as dirty)
     const updateDraftScore = (studentId: number, assessmentId: number, value: string) => {
@@ -1394,7 +1398,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         draftScores.current.set(key, value);
 
         // Update derived state
-        setPendingCount(draftScores.current.size);
         setHasLocalChanges(true);
         // Notify subscribers (inputs) that drafts have changed
         setDraftVersion(prev => prev + 1);
@@ -1405,13 +1408,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const key = `${studentId}-${assessmentId}`;
         if (draftScores.current.delete(key)) {
             // Only update if it actually existed
-            setPendingCount(draftScores.current.size);
             if (draftScores.current.size === 0 && dirtyFields.current.size === 0) {
                 setHasLocalChanges(false);
             }
             setDraftVersion(prev => prev + 1);
         }
     };
+
+    // CRITICAL FIX: Compute pending count from actual payload data, not just draft inputs
+    // This ensures the save button shows the actual number of scores that will be uploaded
+    const pendingCount = useMemo(() => {
+        const payload = getPendingUploadData();
+        return (payload.scores as Score[] | undefined)?.length || 0;
+    }, [dirtyVersion, scores]);
 
     // Get the score to display: prefer draft, fallback to saved
     const getComputedScore = (studentId: number, assessmentId: number, subjectId: number): string => {
@@ -1504,33 +1513,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     useEffect(() => {
         draftScores.current.clear();
         setDraftVersion(0);
-        setPendingCount(0);
     }, [schoolId]);
 
-    // Initialize originalData from local storage on load/schoolId change
-    // This ensures that on F5 reload, we have a baseline for "clean" state
-    useEffect(() => {
-        if (schoolId && Object.keys(originalData.current).length === 0) {
-            // Only initialize if we have data (and didn't just log out)
-            // But wait, settings etc are initialized by hooks.
-            // We'll assume if settings.schoolName exists, we have loaded something.
-            if (settings && settings.schoolName) {
-                console.log('[DataContext] 🔄 Initializing tracking baseline from persistent storage');
-                originalData.current = {
-                    settings,
-                    students,
-                    subjects,
-                    classes,
-                    grades,
-                    assessments,
-                    scores,
-                    reportData,
-                    classData,
-                    users
-                };
-            }
-        }
-    }, [schoolId, settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users]);
+    // CRITICAL FIX: Do NOT initialize originalData from localStorage!
+    // This was causing the "first change not detected" bug.
+    // originalData should ONLY be set when cloud data is loaded via loadImportedData(),
+    // which happens during initial cloud fetch and manual refresh.
+    // If originalData is empty and user makes a change, markDirty will still work because
+    // the smart dirty check in updateStudentScores (line 916-921) compares against
+    // originalData.current.scores which will be undefined/empty, thus detecting the change.
 
     return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };

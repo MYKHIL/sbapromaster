@@ -165,6 +165,8 @@ const ScoreEntry: React.FC = () => {
 
 
 
+
+
     const commitScore = () => {
         const student = filteredStudents[selectedStudentIndex];
         if (!student) return;
@@ -328,22 +330,24 @@ const ScoreEntry: React.FC = () => {
 
     return (
         <ReadOnlyWrapper allowedRoles={['Admin', 'Teacher']}>
-            <div className="space-y-6">
+            <div className="space-y-6 pt-14">
                 <div className="flex items-center justify-between">
                     <h1 className="text-3xl font-bold text-gray-800">Score Entry</h1>
 
                     {/* Save Button - Desktop View */}
                     <div className="hidden lg:flex items-center gap-2">
-                        <button
-                            onClick={() => refreshFromCloud()}
-                            disabled={isSyncing || !isOnline}
-                            className={`p-2.5 text-gray-500 hover:text-green-600 bg-gray-100 hover:bg-green-50 rounded-lg transition-colors border border-gray-200 ${(isSyncing || !isOnline) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            title="Refresh data from cloud"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${isSyncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                        </button>
+                        {currentUser?.role === 'Admin' && (
+                            <button
+                                onClick={() => refreshFromCloud()}
+                                disabled={isSyncing || !isOnline}
+                                className={`p-2.5 text-gray-500 hover:text-green-600 bg-gray-100 hover:bg-green-50 rounded-lg transition-colors border border-gray-200 ${(isSyncing || !isOnline) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                title="Refresh data from cloud (Admin Only)"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${isSyncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                            </button>
+                        )}
                         <button
                             onClick={handleShowDebugData}
                             className="p-2.5 text-gray-500 hover:text-blue-600 bg-gray-100 hover:bg-blue-50 rounded-lg transition-colors border border-gray-200"
@@ -382,7 +386,7 @@ const ScoreEntry: React.FC = () => {
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                                     </svg>
-                                    <span className="text-sm font-bold">Save Changes</span>
+                                    <span className="text-sm font-bold">Save Changes {pendingCount > 0 ? `(${pendingCount})` : ''}</span>
                                 </>
                             )}
                         </button>
@@ -408,15 +412,17 @@ const ScoreEntry: React.FC = () => {
                         {/* Save Button for Mobile Table View (!Compact) */}
                         {!useMobileView && (
                             <div className="lg:hidden mb-4 flex gap-2">
-                                <button
-                                    onClick={() => refreshFromCloud()}
-                                    disabled={isSyncing || !isOnline}
-                                    className={`px-4 py-3 bg-gray-100 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-lg border border-gray-200 transition-colors ${(isSyncing || !isOnline) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 ${isSyncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                    </svg>
-                                </button>
+                                {currentUser?.role === 'Admin' && (
+                                    <button
+                                        onClick={() => refreshFromCloud()}
+                                        disabled={isSyncing || !isOnline}
+                                        className={`px-4 py-3 bg-gray-100 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-lg border border-gray-200 transition-colors ${(isSyncing || !isOnline) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 ${isSyncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                        </svg>
+                                    </button>
+                                )}
                                 <button
                                     onClick={handleShowDebugData}
                                     className="px-4 py-3 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 border border-gray-200 transition-colors"
@@ -551,16 +557,18 @@ const ScoreEntry: React.FC = () => {
                                             <div className="flex items-center justify-between mb-1">
                                                 <label className="block text-sm font-medium text-gray-700">Score</label>
                                                 <div className="flex items-center gap-2">
-                                                    <button
-                                                        onClick={() => refreshFromCloud()}
-                                                        disabled={isSyncing || !isOnline}
-                                                        className={`p-2 text-gray-500 hover:text-green-600 bg-white hover:bg-green-50 rounded-lg transition-colors border border-gray-200 shadow-sm ${(isSyncing || !isOnline) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                        title="Refresh data from cloud"
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${isSyncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                                        </svg>
-                                                    </button>
+                                                    {currentUser?.role === 'Admin' && (
+                                                        <button
+                                                            onClick={() => refreshFromCloud()}
+                                                            disabled={isSyncing || !isOnline}
+                                                            className={`p-2 text-gray-500 hover:text-green-600 bg-white hover:bg-green-50 rounded-lg transition-colors border border-gray-200 shadow-sm ${(isSyncing || !isOnline) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                            title="Refresh data from cloud (Admin Only)"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${isSyncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                            </svg>
+                                                        </button>
+                                                    )}
                                                     <button
                                                         onClick={handleShowDebugData}
                                                         className="p-2 text-gray-500 hover:text-blue-600 bg-white hover:bg-blue-50 rounded-lg transition-colors border border-gray-200 shadow-sm"
@@ -598,7 +606,7 @@ const ScoreEntry: React.FC = () => {
                                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                                                                 </svg>
-                                                                <span className="text-sm font-bold">Save Changes</span>
+                                                                <span className="text-sm font-bold">Save Changes {pendingCount > 0 ? `(${pendingCount})` : ''}</span>
                                                             </>
                                                         )}
                                                     </button>

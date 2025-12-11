@@ -181,7 +181,7 @@ const Teachers: React.FC = () => {
                         {(isAdmin || currentUser?.role === 'Teacher') && (
                             <div className="w-full md:w-auto">
                                 <SaveButton
-                                    onSave={saveClasses}
+                                    onClick={saveClasses}
                                     isDirty={isDirty('classes')}
                                     isSyncing={isSyncing}
                                     isOnline={isOnline}
