@@ -35,8 +35,10 @@ const ReportViewer: React.FC = () => {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
   const [pdfError, setPdfError] = useState<any>(null);
+  const [showScrollIndicator, setShowScrollIndicator] = useState(false);
 
   const reportContainerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [contentSize, setContentSize] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
@@ -46,6 +48,27 @@ const ReportViewer: React.FC = () => {
         height: reportContainerRef.current.scrollHeight
       });
     }
+  }, [generatedReports]);
+
+  // Track scroll position to show/hide indicator
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const isScrollable = container.scrollWidth > container.clientWidth;
+      const isAtEnd = container.scrollLeft + container.clientWidth >= container.scrollWidth - 10;
+      setShowScrollIndicator(isScrollable && !isAtEnd && generatedReports.length > 1);
+    };
+
+    handleScroll(); // Initial check
+    container.addEventListener('scroll', handleScroll);
+    window.addEventListener('resize', handleScroll);
+
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+    };
   }, [generatedReports]);
 
 
@@ -98,20 +121,37 @@ const ReportViewer: React.FC = () => {
 
 
 
-  // Initialize zoom based on screen width
+  // Initialize zoom based on screen size to fit one report card (both width and height)
   useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 768) {
-        setZoomLevel(0.5);
-      } else {
-        setZoomLevel(1);
-      }
+    const calculateOptimalZoom = () => {
+      // A4 report card dimensions: ~800px width x ~1130px height (210mm x 297mm at 96dpi)
+      const reportCardWidth = 800;
+      const reportCardHeight = 1130;
+
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
+      // Account for UI elements: header (~200px), padding, margins
+      const availableWidth = viewportWidth - 100;
+      const availableHeight = viewportHeight - 250;
+
+      // Calculate zoom to fit both dimensions
+      const zoomByWidth = availableWidth / reportCardWidth;
+      const zoomByHeight = availableHeight / reportCardHeight;
+
+      // Use the smaller zoom to ensure entire card fits
+      const calculatedZoom = Math.min(1, zoomByWidth, zoomByHeight);
+
+      // Ensure zoom doesn't go below 0.25 for readability
+      const finalZoom = Math.max(0.25, calculatedZoom);
+
+      setZoomLevel(finalZoom);
     };
 
-    window.addEventListener('resize', handleResize);
-    handleResize(); // Initial check
+    window.addEventListener('resize', calculateOptimalZoom);
+    calculateOptimalZoom(); // Initial check
 
-    return () => window.removeEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', calculateOptimalZoom);
   }, []);
 
   const handleClassChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -237,7 +277,12 @@ const ReportViewer: React.FC = () => {
         </div>
       )}
 
-      <div className="pt-8 overflow-auto pb-8 min-h-[600px]">
+      <div
+        ref={scrollContainerRef}
+        className="pt-8 overflow-auto pb-8 min-h-[600px] relative"
+        onClick={() => showScrollIndicator && setShowScrollIndicator(false)}
+        onTouchStart={() => showScrollIndicator && setShowScrollIndicator(false)}
+      >
         <div
           style={{
             width: contentSize.width ? contentSize.width * zoomLevel : 'auto',
@@ -266,6 +311,22 @@ const ReportViewer: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* Horizontal Scroll Indicator */}
+        {showScrollIndicator && (
+          <div
+            className="fixed right-0 bottom-32 z-10 animate-pulse cursor-pointer"
+            onClick={() => setShowScrollIndicator(false)}
+            onTouchStart={() => setShowScrollIndicator(false)}
+          >
+            <div className="bg-blue-600 text-white px-4 py-3 rounded-l-full shadow-lg flex items-center gap-2 hover:bg-blue-700 transition-colors">
+              <span className="text-sm font-semibold">Scroll for more →</span>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 animate-bounce-horizontal" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </div>
+        )}
       </div>
       {SHOW_PDF_DOWNLOAD_BUTTON && generatedReports.length > 0 && (selectedStudentForPanel ? isPanelCollapsed : true) && (
         <div className="fixed bottom-6 right-6 z-20 flex flex-col items-center gap-4">

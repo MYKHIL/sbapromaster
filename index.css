@@ -21,16 +21,18 @@ code {
 @keyframes fadeIn {
   from {
     opacity: 0;
+    transform: translateY(20px);
   }
 
   to {
     opacity: 1;
+    transform: translateY(0);
   }
 }
 
 @keyframes slideUp {
   from {
-    transform: translateY(20px);
+    transform: translateY(100%);
     opacity: 0;
   }
 
@@ -38,6 +40,22 @@ code {
     transform: translateY(0);
     opacity: 1;
   }
+}
+
+@keyframes bounce-horizontal {
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  50% {
+    transform: translateX(10px);
+  }
+}
+
+.animate-bounce-horizontal {
+  animation: bounce-horizontal 1s ease-in-out infinite;
 }
 
 .animate-fadeIn {
