@@ -238,7 +238,8 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             setUsers(users);
 
             // FIX: Update DataContext state so saveToCloud doesn't overwrite with empty users
-            loadImportedData({ users });
+            // Pass false to mark users as dirty (local change)
+            loadImportedData({ users }, false);
 
             // Auto-login the admin user
             if (adminPassword && users.length > 0) {
@@ -302,8 +303,9 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
         );
         await updateUsers(currentSchoolId, updatedUsers);
 
-        // FIX: Update DataContext state
-        loadImportedData({ users: updatedUsers });
+        // FIX: Update DataContext state and mark as dirty
+        // Pass false to mark users as dirty (local change)
+        loadImportedData({ users: updatedUsers }, false);
 
         // Save device credential
         saveDeviceCredential(currentSchoolId, userId);
