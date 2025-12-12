@@ -39,6 +39,10 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
     const userListRef = React.useRef<HTMLDivElement>(null);
     // Ref for main modal to ensure new forms are visible
     const modalRef = React.useRef<HTMLDivElement>(null);
+    // Ref for the scrollable existing users list container
+    const existingUsersListRef = React.useRef<HTMLDivElement>(null);
+    // State to preserve scroll position when opening/closing forms
+    const [savedScrollPosition, setSavedScrollPosition] = useState<number>(0);
 
     // Auto-scroll to bottom when users are added
     useEffect(() => {
@@ -73,6 +77,10 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
     };
 
     const addNewUser = () => {
+        // Save current scroll position before opening add form
+        if (existingUsersListRef.current) {
+            setSavedScrollPosition(existingUsersListRef.current.scrollTop);
+        }
         setUsers([...users, { role: 'Teacher' as UserRole, allowedClasses: [], allowedSubjects: [] }]);
     };
 
@@ -188,6 +196,10 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
     };
 
     const handleEditUser = (user: User) => {
+        // Save current scroll position before opening edit form
+        if (existingUsersListRef.current) {
+            setSavedScrollPosition(existingUsersListRef.current.scrollTop);
+        }
         setEditingUserId(user.id);
         setUsers([{ ...user }]);
     };
@@ -219,6 +231,12 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         setUsers([]);
         setError(null);
 
+        // Restore scroll position after updating user
+        setTimeout(() => {
+            if (existingUsersListRef.current) {
+                existingUsersListRef.current.scrollTop = savedScrollPosition;
+            }
+        }, 0);
 
         // Removed auto-save. Changes are batched until close.
         if (mode === 'management') {
@@ -325,6 +343,13 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         setUsers([]);
         setEditingUserId(null);
         setError(null);
+
+        // Restore scroll position after closing form
+        setTimeout(() => {
+            if (existingUsersListRef.current) {
+                existingUsersListRef.current.scrollTop = savedScrollPosition;
+            }
+        }, 0);
     };
 
     return (
@@ -447,7 +472,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                 + Add New User
                             </button>
                         </div>
-                        <div className="space-y-2 max-h-80 overflow-y-auto pr-2">
+                        <div ref={existingUsersListRef} className="space-y-2 max-h-80 overflow-y-auto pr-2">
                             {existingUsers.map((user, index) => (
                                 <div key={user.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                     <div className="flex items-center gap-3">
