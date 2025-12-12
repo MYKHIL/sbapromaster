@@ -87,6 +87,7 @@ export interface DataContextType {
     // Network status
     isOnline: boolean;
     isSyncing: boolean;
+    isFetching: boolean;
     queuedCount: number;
     // Sync control
     pauseSync: () => void;
@@ -145,6 +146,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Network and sync state
     const isOnline = useNetworkStatus();
     const [isSyncing, setIsSyncing] = useState(false);
+    const [isFetching, setIsFetching] = useState(false);
     const [queuedCount, setQueuedCount] = useState(offlineQueue.getQueueSize());
 
     // Sync lock to prevent concurrent syncs
@@ -734,8 +736,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // NEW: Fetch latest data from cloud to ensure UI is up-to-date and to confirm sync
             // This satisfies the requirement: "after a save action, the system should download the latest data"
             console.log('[DataContext] 🔄 Auto-refreshing data from cloud...');
-            // We pass true to isRemote so it handles the "remote update" logic correctly
-            await refreshFromCloud();
+            // CRITICAL: Pass true to ignore the sync lock since WE are holding the lock
+            await refreshFromCloud(true);
 
             console.log('[DataContext] 🎉 Sync & Refresh complete - cleared dirty fields');
 
@@ -812,9 +814,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
-    const refreshFromCloud = async () => {
+    const refreshFromCloud = async (ignoreSyncLock: boolean = false) => {
         if (!schoolId) return;
-        if (isSyncingRef.current) {
+        if (isSyncingRef.current && !ignoreSyncLock) {
             console.log("Sync already in progress, skipping manual refresh");
             return;
         }
@@ -1563,6 +1565,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Network status
         isOnline,
         isSyncing,
+        isFetching,
         queuedCount,
         // Sync control
         pauseSync,
