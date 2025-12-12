@@ -21,7 +21,9 @@ const ReportViewer: React.FC = () => {
   const { currentUser, isAuthenticated } = useUser();
   const [selectedClassId, setSelectedClassId] = useState<number | ''>(() => {
     const saved = localStorage.getItem('reportViewer_selectedClassId');
-    return saved ? Number(saved) : (classes[0]?.id || '');
+    if (saved) return Number(saved);
+    // Default to first accessible class if available
+    return '';
   });
   const [selectedStudentId, setSelectedStudentId] = useState<number | 'all'>(() => {
     const saved = localStorage.getItem('reportViewer_selectedStudentId');
@@ -85,6 +87,15 @@ const ReportViewer: React.FC = () => {
   const accessibleClasses = useMemo(() => {
     return getAvailableClasses(currentUser, classes);
   }, [classes, currentUser]);
+
+  // Auto-select first accessible class if none is selected
+  useEffect(() => {
+    if (!selectedClassId && accessibleClasses.length > 0) {
+      const firstClassId = accessibleClasses[0].id;
+      setSelectedClassId(firstClassId);
+      localStorage.setItem('reportViewer_selectedClassId', String(firstClassId));
+    }
+  }, [accessibleClasses, selectedClassId]);
 
   // Check if user can edit comments/data for a specific class
   const canEditClass = (className: string) => {
@@ -217,8 +228,11 @@ const ReportViewer: React.FC = () => {
                 onChange={handleClassChange}
                 className="w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="">-- Select Class --</option>
-                {accessibleClasses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {accessibleClasses.length === 0 ? (
+                  <option value="">-- No Classes Available --</option>
+                ) : (
+                  accessibleClasses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)
+                )}
               </select>
             </div>
 
