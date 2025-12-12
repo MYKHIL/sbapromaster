@@ -15,6 +15,7 @@ import { DataProvider, useData } from './context/DataContext';
 import { UserProvider, useUser } from './context/UserContext';
 import { DatabaseErrorProvider, useDatabaseError } from './context/DatabaseErrorContext';
 import type { Page } from './types';
+import GlobalActionBar from './components/GlobalActionBar';
 import UserBadge from './components/UserBadge';
 import MaintenancePage from './components/MaintenancePage';
 import { TeacherPageRedirect } from './components/TeacherPageRedirect';
@@ -103,6 +104,7 @@ const App: React.FC = () => {
               <GreetingWrapper currentPage={currentPage} />
               <TeacherPageRedirect currentPage={currentPage} setCurrentPage={setCurrentPage} />
               <UserBadge />
+              <GlobalActionBar currentPage={currentPage} />
               <div className="flex h-screen overflow-hidden bg-gray-50">
                 <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
                 <main className="flex-1 p-4 pt-20 md:p-6 md:pt-20 lg:p-10 overflow-auto">

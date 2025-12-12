@@ -3,16 +3,15 @@
  Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
   Gemini API key not found. AI features will be disabled.
 (anonymous) @ geminiService.ts:4
- [SyncLogger] Log initialized: SyncLog_2025-12-10T21-36-54.txt
+ [SyncLogger] Log initialized: SyncLog_2025-12-12T02-00-27.txt
  [SyncLogger] Logs will be saved to browser when you call downloadLog()
  [SYNC_LOG] AuthOverlay component mounted
  [AuthOverlay] Pausing sync - authentication in progress
  [SYNC_LOG] Pausing sync - authentication in progress
  [DataContext] Sync PAUSED
  [DataContext] 📥 Fetching initial data from cloud (Auto-Sync Disabled)...
- [DataContext] 🔄 Initializing tracking baseline from persistent storage
  [SYNC_LOG] AuthOverlay component unmounting
- [SyncLogger] Log initialized: SyncLog_2025-12-10T21-36-54.txt
+ [SyncLogger] Log initialized: SyncLog_2025-12-12T02-00-27.txt
  [SyncLogger] Logs will be saved to browser when you call downloadLog()
  [SYNC_LOG] AuthOverlay component mounted
  [AuthOverlay] Pausing sync - authentication in progress
@@ -23,853 +22,361 @@
  [SYNC_LOG] Pausing sync - authentication in progress
  [DataContext] Sync PAUSED
  [DataContext] ✅ Initial data received via one-time fetch
- [SYNC_LOG] Initial data loaded. Users: 18, Scores: 557
+ [SYNC_LOG] Initial data loaded. Users: 17, Scores: 730
  [DataContext] 📦 loadImportedData called (isRemote=true) with: Object
  [DataContext] ✅ Updating settings
- [DataContext] ✅ Updating students: 174
- [DataContext] ✅ Updating subjects: 14
- [DataContext] ✅ Updating classes: 11
- [DataContext] ✅ Updating grades: 9
- [DataContext] ✅ Updating assessments: 5
- [DataContext] ✅ Updating scores: 557
- [DataContext] ✅ Updating reportData: 8
- [DataContext] ✅ Updating classData: 4
- [SYNC_LOG] loadImportedData: Loading users. Count: 18
- [DataContext] ✅ Updating users: 18
- [SYNC_LOG] setUsers called. Current count: 0, New count: 18
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
  [SYNC_LOG] Stack trace: Error
-    at setUsers (DataContext.tsx?t=1765401838492:50:36)
-    at loadImportedData (DataContext.tsx?t=1765401838492:167:7)
-    at fetchInitialData (DataContext.tsx?t=1765401838492:494:11)
- [DataContext] 🧹 Clearing dirty fields after remote data load
+    at setUsers (DataContext.tsx?t=1765504699197:50:36)
+    at loadImportedData (DataContext.tsx?t=1765504699197:200:7)
+    at fetchInitialData (DataContext.tsx?t=1765504699197:580:11)
+ [DataContext] 🧹 Selectively cleared dirty fields after remote data load
  [DataContext] ✅ Initial data received via one-time fetch
- [SYNC_LOG] Initial data loaded. Users: 18, Scores: 557
+ [SYNC_LOG] Initial data loaded. Users: 17, Scores: 730
  [DataContext] 📦 loadImportedData called (isRemote=true) with: Object
  [DataContext] ✅ Updating settings
- [DataContext] ✅ Updating students: 174
- [DataContext] ✅ Updating subjects: 14
- [DataContext] ✅ Updating classes: 11
- [DataContext] ✅ Updating grades: 9
- [DataContext] ✅ Updating assessments: 5
- [DataContext] ✅ Updating scores: 557
- [DataContext] ✅ Updating reportData: 8
- [DataContext] ✅ Updating classData: 4
- [SYNC_LOG] loadImportedData: Loading users. Count: 18
- [DataContext] ✅ Updating users: 18
- [SYNC_LOG] setUsers called. Current count: 0, New count: 18
+ [SYNC_LOG] loadImportedData: Loading users. Count: 17
+ [DataContext] ✅ Updating users: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
  [SYNC_LOG] Stack trace: Error
-    at setUsers (DataContext.tsx?t=1765401838492:50:36)
-    at loadImportedData (DataContext.tsx?t=1765401838492:167:7)
-    at fetchInitialData (DataContext.tsx?t=1765401838492:494:11)
- [DataContext] 🧹 Clearing dirty fields after remote data load
+    at setUsers (DataContext.tsx?t=1765504699197:50:36)
+    at loadImportedData (DataContext.tsx?t=1765504699197:200:7)
+    at fetchInitialData (DataContext.tsx?t=1765504699197:580:11)
+ [DataContext] 🧹 Selectively cleared dirty fields after remote data load
  [AuthOverlay] Pausing sync - authentication in progress
- [SYNC_LOG] Pausing sync - authentication in progress
- [DataContext] Sync PAUSED
- Syncing users from DataContext to UserContext
- [AuthOverlay] Pausing sync - authentication in progress
- [SYNC_LOG] Pausing sync - authentication in progress
- [DataContext] Sync PAUSED
- [SYNC_LOG] School login successful. DocId: ayirebida_2025-2026_First-Term
- [SYNC_LOG] Users from result.data: 18
- [DataContext] 📦 loadImportedData called (isRemote=true) with: Object
- [DataContext] ✅ Updating settings
- [DataContext] ✅ Updating students: 174
- [DataContext] ✅ Updating subjects: 14
- [DataContext] ✅ Updating classes: 11
- [DataContext] ✅ Updating grades: 9
- [DataContext] ✅ Updating assessments: 5
- [DataContext] ✅ Updating scores: 557
- [DataContext] ✅ Updating reportData: 8
- [DataContext] ✅ Updating classData: 4
- [SYNC_LOG] loadImportedData: Loading users. Count: 18
- [DataContext] ✅ Updating users: 18
- [SYNC_LOG] setUsers called. Current count: 18, New count: 18
- [SYNC_LOG] Stack trace: Error
-    at setUsers (DataContext.tsx?t=1765401838492:50:36)
-    at loadImportedData (DataContext.tsx?t=1765401838492:167:7)
-    at handleSchoolLogin (AuthOverlay.tsx?t=1765401838492:113:7)
- [DataContext] 🧹 Clearing dirty fields after remote data load
- [SYNC_LOG] Setting users from login result. Count: 18
- [DataContext] Sync RESUMED
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
- [ScoreEntry - Mobile] User input: Object
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
- [ScoreEntry - Mobile] commitScore called: Object
- [ScoreEntry - Mobile] Direct score: Object
- [ScoreEntry - Mobile] ✅ Score validated and formatted: Object
- [ScoreEntry - Mobile] 💾 Calling updateStudentScores (saving to local cache)...
- [DataContext] 📥 updateStudentScores called: Object
- [ScoreEntry - Mobile] ✅ Score committed successfully
- [DataContext] 🔄 Updating existing score entry
- [DataContext] ✅ Score saved to local cache (React state)
- [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
- [DataContext] 🔄 Updating existing score entry
- [DataContext] ✅ Score saved to local cache (React state)
- [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
- [DataContext] 📥 Manual refresh initiated - fetching data from cloud...
- [DataContext] ✅ Data fetched successfully, applying updates...
- [DataContext] 📦 loadImportedData called (isRemote=true) with: Object
- [DataContext] ✅ Updating settings
- [DataContext] ✅ Updating students: 174
- [DataContext] ✅ Updating subjects: 14
- [DataContext] ✅ Updating classes: 11
- [DataContext] ✅ Updating grades: 9
- [DataContext] ✅ Updating assessments: 5
- [DataContext] ✅ Updating scores: 557
- [DataContext] ✅ Updating reportData: 8
- [DataContext] ✅ Updating classData: 4
- [SYNC_LOG] loadImportedData: Loading users. Count: 18
- [DataContext] ✅ Updating users: 18
- [SYNC_LOG] setUsers called. Current count: 18, New count: 18
- [SYNC_LOG] Stack trace: Error
-    at setUsers (DataContext.tsx?t=1765401838492:50:36)
-    at loadImportedData (DataContext.tsx?t=1765401838492:167:7)
-    at refreshFromCloud (DataContext.tsx?t=1765401838492:471:9)
- [DataContext] 🧹 Clearing dirty fields after remote data load
- [DataContext] 🎉 Manual refresh complete
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
- [ScoreEntry - Mobile] commitScore called: Object
- [ScoreEntry - Mobile] Fraction conversion: Object
- [ScoreEntry - Mobile] ✅ Score validated and formatted: Object
- [ScoreEntry - Mobile] 💾 Calling updateStudentScores (saving to local cache)...
- [ScoreEntry - Mobile] ✅ Score committed successfully
- [ScoreEntry] 🧹 Clearing score for: Aburam Stephen
- [DataContext] 📥 updateStudentScores called: Object
- [DataContext] 🔄 Updating existing score entry
- [DataContext] ✅ Score saved to local cache (React state)
- [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
- [DataContext] 🔄 Updating existing score entry
- [DataContext] ✅ Score saved to local cache (React state)
- [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
- [ScoreEntry - Mobile] commitScore called: Object
- [ScoreEntry - Mobile] Empty score - clearing: Object
- [DataContext] 📥 updateStudentScores called: Object
- [DataContext] 🔄 Updating existing score entry
- [DataContext] ✅ Score saved to local cache (React state)
- [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
- [DataContext] 🔄 Updating existing score entry
- [DataContext] ✅ Score saved to local cache (React state)
- [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
- [ScoreEntry - Mobile] User input: Object
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
- [ScoreEntry - Mobile] commitScore called: Object
- [ScoreEntry - Mobile] Direct score: Object
- [ScoreEntry - Mobile] ✅ Score validated and formatted: Object
- [ScoreEntry - Mobile] 💾 Calling updateStudentScores (saving to local cache)...
- [DataContext] 📥 updateStudentScores called: Object
- [ScoreEntry - Mobile] ✅ Score committed successfully
- [DataContext] 🔄 Updating existing score entry
- [DataContext] ✅ Score saved to local cache (React state)
- [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
- [DataContext] 🔄 Updating existing score entry
- [DataContext] ✅ Score saved to local cache (React state)
- [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
- [ScoreEntry - Mobile] User input: Object
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
- [ScoreEntry - Mobile] commitScore called: Object
- [ScoreEntry - Mobile] Direct score: Object
- [ScoreEntry - Mobile] ✅ Score validated and formatted: Object
- [ScoreEntry - Mobile] 💾 Calling updateStudentScores (saving to local cache)...
- [DataContext] 📥 updateStudentScores called: Object
- [ScoreEntry - Mobile] ✅ Score committed successfully
- [DataContext] 🔄 Updating existing score entry
- [DataContext] ✅ Score saved to local cache (React state)
- [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
- [DataContext] 🔄 Updating existing score entry
- [DataContext] ✅ Score saved to local cache (React state)
- [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
- [DataContext] 📥 Manual refresh initiated - fetching data from cloud...
- [DataContext] ✅ Data fetched successfully, applying updates...
- [DataContext] 📦 loadImportedData called (isRemote=true) with: Object
- [DataContext] ✅ Updating settings
- [DataContext] ✅ Updating students: 174
- [DataContext] ✅ Updating subjects: 14
- [DataContext] ✅ Updating classes: 11
- [DataContext] ✅ Updating grades: 9
- [DataContext] ✅ Updating assessments: 5
- [DataContext] ✅ Updating scores: 557
- [DataContext] ✅ Updating reportData: 8
- [DataContext] ✅ Updating classData: 4
- [SYNC_LOG] loadImportedData: Loading users. Count: 18
- [DataContext] ✅ Updating users: 18
- [SYNC_LOG] setUsers called. Current count: 18, New count: 18
- [SYNC_LOG] Stack trace: Error
-    at setUsers (DataContext.tsx?t=1765401838492:50:36)
-    at loadImportedData (DataContext.tsx?t=1765401838492:167:7)
-    at refreshFromCloud (DataContext.tsx?t=1765401838492:471:9)
- [DataContext] 🧹 Clearing dirty fields after remote data load
- [DataContext] 🎉 Manual refresh complete
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
- [ScoreEntry - Mobile] User input: Object
- [ScoreEntry - Mobile] User input: Object
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
- [ScoreEntry - Mobile] User input: Object
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
- [ScoreEntry - Mobile] commitScore called: Object
- [ScoreEntry - Mobile] Direct score: Object
- [ScoreEntry - Mobile] ✅ Score validated and formatted: Object
- [ScoreEntry - Mobile] 💾 Calling updateStudentScores (saving to local cache)...
- [DataContext] 📥 updateStudentScores called: Object
- [ScoreEntry - Mobile] ✅ Score committed successfully
- [DataContext] 🔄 Updating existing score entry
- [DataContext] ✅ Score saved to local cache (React state)
- [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
- [DataContext] 🔄 Updating existing score entry
- [DataContext] ✅ Score saved to local cache (React state)
- [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
- [ScoreEntry] 🧹 Clearing score for: Aboagye Domena Peter
- [DataContext] 📥 updateStudentScores called: Object
- [DataContext] 🔄 Updating existing score entry
- [DataContext] ✅ Score saved to local cache (React state)
- [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
- [DataContext] 🔄 Updating existing score entry
- [DataContext] ✅ Score saved to local cache (React state)
- [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
- [ScoreEntry - Mobile] User input: Object
- [ScoreEntry - Mobile] User input: Object
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
- [ScoreEntry - Mobile] User input: Object
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
- [ScoreEntry - Mobile] User input: Object
- [ScoreEntry - Mobile] User input: Object
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
- [ScoreEntry - Mobile] commitScore called: Object
- [ScoreEntry - Mobile] Direct score: Object
- [ScoreEntry - Mobile] ✅ Score validated and formatted: Object
- [ScoreEntry - Mobile] 💾 Calling updateStudentScores (saving to local cache)...
- [DataContext] 📥 updateStudentScores called: Object
- [ScoreEntry - Mobile] ✅ Score committed successfully
- [DataContext] 🔄 Updating existing score entry
- [DataContext] ✅ Score saved to local cache (React state)
- [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
- [DataContext] 🔄 Updating existing score entry
- [DataContext] ✅ Score saved to local cache (React state)
- [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
- [SYNC_LOG] AuthOverlay component unmounting
- [SyncLogger] Log initialized: SyncLog_2025-12-10T21-42-32.txt
- [SyncLogger] Logs will be saved to browser when you call downloadLog()
- [SYNC_LOG] AuthOverlay component mounted
- [AuthOverlay] Pausing sync - authentication in progress
- [SYNC_LOG] Pausing sync - authentication in progress
- [DataContext] Sync PAUSED
- Syncing users from DataContext to UserContext
- [SYNC_LOG] AuthOverlay component unmounting
- [SyncLogger] Log initialized: SyncLog_2025-12-10T21-42-32.txt
- [SyncLogger] Logs will be saved to browser when you call downloadLog()
- [SYNC_LOG] AuthOverlay component mounted
- [AuthOverlay] Pausing sync - authentication in progress
- [SYNC_LOG] Pausing sync - authentication in progress
- [DataContext] Sync PAUSED
- Syncing users from DataContext to UserContext
- [AuthOverlay] Pausing sync - authentication in progress
- [SYNC_LOG] Pausing sync - authentication in progress
- [DataContext] Sync PAUSED
- [SYNC_LOG] School login successful. DocId: ayirebida_2025-2026_First-Term
- [SYNC_LOG] Users from result.data: 18
- [DataContext] 📦 loadImportedData called (isRemote=true) with: Object
- [DataContext] ✅ Updating settings
- [DataContext] ✅ Updating students: 174
- [DataContext] ✅ Updating subjects: 14
- [DataContext] ✅ Updating classes: 11
- [DataContext] ✅ Updating grades: 9
- [DataContext] ✅ Updating assessments: 5
- [DataContext] ✅ Updating scores: 557
- [DataContext] ✅ Updating reportData: 8
- [DataContext] ✅ Updating classData: 4
- [SYNC_LOG] loadImportedData: Loading users. Count: 18
- [DataContext] ✅ Updating users: 18
- [SYNC_LOG] setUsers called. Current count: 18, New count: 18
- [SYNC_LOG] Stack trace: Error
-    at setUsers (DataContext.tsx?t=1765402946265:50:36)
-    at loadImportedData (DataContext.tsx?t=1765402946265:167:7)
-    at handleSchoolLogin (AuthOverlay.tsx?t=1765402946265:113:7)
- [DataContext] 🧹 Clearing dirty fields after remote data load
- [SYNC_LOG] Setting users from login result. Count: 18
- [DataContext] Sync RESUMED
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
- [ScoreEntry - Mobile] User input: Object
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
- [ScoreEntry - Mobile] commitScore called: Object
- [ScoreEntry - Mobile] Direct score: Object
- [ScoreEntry - Mobile] ✅ Score validated and formatted: Object
- [ScoreEntry - Mobile] 💾 Calling updateStudentScores (saving to local cache)...
- [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
- [DataContext] 📥 updateStudentScores called: Object
- [ScoreEntry - Mobile] ✅ Score committed successfully
- [DataContext] 🔄 Updating existing score entry
- [DataContext] ✅ Score saved to local cache (React state)
- [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
- [DataContext] 🔄 Updating existing score entry
- [DataContext] ✅ Score saved to local cache (React state)
- [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
- [ScoreEntry - Mobile] commitScore called: Object
- [ScoreEntry - Mobile] Fraction conversion: Object
- [ScoreEntry - Mobile] ✅ Score validated and formatted: Object
- [ScoreEntry - Mobile] 💾 Calling updateStudentScores (saving to local cache)...
- [ScoreEntry - Mobile] ✅ Score committed successfully
- [ScoreEntry] 🧹 Clearing score for: Aburam Stephen
- [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
- [DataContext] 📥 updateStudentScores called: Object
- [DataContext] 🔄 Updating existing score entry
- [DataContext] ✅ Score saved to local cache (React state)
- [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
- [DataContext] 🔄 Updating existing score entry
- [DataContext] ✅ Score saved to local cache (React state)
- [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
- [ScoreEntry - Mobile] User input: Object
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
- [ScoreEntry - Mobile] User input: Object
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
- [ScoreEntry - Mobile] User input: Object
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
- [ScoreEntry - Mobile] commitScore called: Object
- [ScoreEntry - Mobile] Direct score: Object
- [ScoreEntry - Mobile] ✅ Score validated and formatted: Object
- [ScoreEntry - Mobile] 💾 Calling updateStudentScores (saving to local cache)...
- [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
- [DataContext] 📥 updateStudentScores called: Object
- [ScoreEntry - Mobile] ✅ Score committed successfully
- [DataContext] 🔄 Updating existing score entry
- [DataContext] ✅ Score saved to local cache (React state)
- [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
- [DataContext] 🔄 Updating existing score entry
- [DataContext] ✅ Score saved to local cache (React state)
- [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
- [ScoreEntry - Mobile] User input: Object
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
- [ScoreEntry - Mobile] commitScore called: Object
- [ScoreEntry - Mobile] Fraction conversion: Object
- [ScoreEntry - Mobile] ✅ Score validated and formatted: Object
- [ScoreEntry - Mobile] 💾 Calling updateStudentScores (saving to local cache)...
- [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
- [DataContext] 📥 updateStudentScores called: Object
- [ScoreEntry - Mobile] ✅ Score committed successfully
- [DataContext] 🔄 Updating existing score entry
- [DataContext] ✅ Score saved to local cache (React state)
- [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
- [DataContext] 🔄 Updating existing score entry
- [DataContext] ✅ Score saved to local cache (React state)
- [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
- [ScoreEntry - Mobile] User input: Object
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
- [ScoreEntry - Mobile] commitScore called: Object
- [ScoreEntry - Mobile] Fraction conversion: Object
- [ScoreEntry - Mobile] ✅ Score validated and formatted: Object
- [ScoreEntry - Mobile] 💾 Calling updateStudentScores (saving to local cache)...
- [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
- [DataContext] 📥 updateStudentScores called: Object
- [ScoreEntry - Mobile] ✅ Score committed successfully
- [DataContext] 🔄 Updating existing score entry
- [DataContext] ✅ Score saved to local cache (React state)
- [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
- [DataContext] 🔄 Updating existing score entry
- [DataContext] ✅ Score saved to local cache (React state)
- [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-ScoreEntry.tsx:617 [ScoreEntry - Mobile] User input: Object
-react-dom_client.js?v=1deca45e:3529  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-react-dom_client.js?v=1deca45e:3529  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-ScoreEntry.tsx:617 [ScoreEntry - Mobile] User input: Object
-ScoreEntry.tsx:617 [ScoreEntry - Mobile] User input: Object
-react-dom_client.js?v=1deca45e:3529  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-ScoreEntry.tsx:175 [ScoreEntry - Mobile] commitScore called: Object
-ScoreEntry.tsx:221 [ScoreEntry - Mobile] Fraction conversion: Object
-ScoreEntry.tsx:245 [ScoreEntry - Mobile] ✅ Score validated and formatted: Object
-ScoreEntry.tsx:256 [ScoreEntry - Mobile] 💾 Calling updateStudentScores (saving to local cache)...
-DataContext.tsx:850 [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
-DataContext.tsx:897 [DataContext] 📥 updateStudentScores called: Object
-ScoreEntry.tsx:266 [ScoreEntry - Mobile] ✅ Score committed successfully
-DataContext.tsx:912 [DataContext] 🔄 Updating existing score entry
-DataContext.tsx:939 [DataContext] ✅ Score saved to local cache (React state)
-DataContext.tsx:940 [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
-DataContext.tsx:912 [DataContext] 🔄 Updating existing score entry
-DataContext.tsx:939 [DataContext] ✅ Score saved to local cache (React state)
-DataContext.tsx:940 [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
-react-dom_client.js?v=1deca45e:3529  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-react-dom_client.js?v=1deca45e:3529  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-react-dom_client.js?v=1deca45e:3529  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-react-dom_client.js?v=1deca45e:3529  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-react-dom_client.js?v=1deca45e:3529  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-react-dom_client.js?v=1deca45e:3529  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-react-dom_client.js?v=1deca45e:3529  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-react-dom_client.js?v=1deca45e:3529  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-react-dom_client.js?v=1deca45e:3529  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-react-dom_client.js?v=1deca45e:3529  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
-react-dom_client.js?v=1deca45e:3529  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom_client.js?v=1deca45e:3529
+syncLogger.ts:59 [SYNC_LOG] Pausing sync - authentication in progress
+DataContext.tsx:1312 [DataContext] Sync PAUSED
+AuthOverlay.tsx:219 Syncing users from DataContext to UserContext
+AuthOverlay.tsx:65 [AuthOverlay] Pausing sync - authentication in progress
+syncLogger.ts:59 [SYNC_LOG] Pausing sync - authentication in progress
+DataContext.tsx:1312 [DataContext] Sync PAUSED
+AuthOverlay.tsx:137 [SYNC_LOG] School login successful. DocId: ayirebida_2025-2026_First-Term
+AuthOverlay.tsx:138 [SYNC_LOG] Users from result.data: 17
+DataContext.tsx:246 [DataContext] 📦 loadImportedData called (isRemote=true) with: Object
+syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users. Count: 17
+DataContext.tsx:343 [DataContext] 🚫 Skipping users update - data is empty/undefined
+DataContext.tsx:382 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
+AuthOverlay.tsx:147 [SYNC_LOG] Setting users from login result. Count: 17
+DataContext.tsx:1318 [DataContext] Sync RESUMED
+react-dom-client.development.js:4631  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+getRootForUpdatedFiber @ react-dom-client.development.js:4631
+react-dom-client.development.js:4631  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+getRootForUpdatedFiber @ react-dom-client.development.js:4631
+react-dom-client.development.js:4631  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+getRootForUpdatedFiber @ react-dom-client.development.js:4631
+react-dom-client.development.js:4631  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+getRootForUpdatedFiber @ react-dom-client.development.js:4631
+react-dom-client.development.js:4631  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+getRootForUpdatedFiber @ react-dom-client.development.js:4631
+react-dom-client.development.js:4631  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+getRootForUpdatedFiber @ react-dom-client.development.js:4631
+react-dom-client.development.js:4631  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+getRootForUpdatedFiber @ react-dom-client.development.js:4631
+react-dom-client.development.js:4631  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+getRootForUpdatedFiber @ react-dom-client.development.js:4631
+react-dom-client.development.js:4631  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+getRootForUpdatedFiber @ react-dom-client.development.js:4631
+react-dom-client.development.js:4631  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+getRootForUpdatedFiber @ react-dom-client.development.js:4631
+react-dom-client.development.js:4631  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+getRootForUpdatedFiber @ react-dom-client.development.js:4631
+react-dom-client.development.js:4631  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+getRootForUpdatedFiber @ react-dom-client.development.js:4631
+react-dom-client.development.js:4631  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+getRootForUpdatedFiber @ react-dom-client.development.js:4631
+react-dom-client.development.js:4631  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+getRootForUpdatedFiber @ react-dom-client.development.js:4631
+react-dom-client.development.js:4631  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+getRootForUpdatedFiber @ react-dom-client.development.js:4631
+DataContext.tsx:1260  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+getRootForUpdatedFiber @ react-dom-client.development.js:4631
+enqueueConcurrentHookUpdate @ react-dom-client.development.js:4584
+dispatchSetStateInternal @ react-dom-client.development.js:9167
+dispatchSetState @ react-dom-client.development.js:9127
+sendHeartbeat @ DataContext.tsx:1260
+(anonymous) @ UserContext.tsx:42
+react_stack_bottom_frame @ react-dom-client.development.js:25989
+runWithFiberInDEV @ react-dom-client.development.js:871
+commitHookEffectListMount @ react-dom-client.development.js:13249
+commitHookPassiveMountEffects @ react-dom-client.development.js:13336
+commitPassiveMountOnFiber @ react-dom-client.development.js:15484
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15519
+flushPassiveEffects @ react-dom-client.development.js:18432
+(anonymous) @ react-dom-client.development.js:17923
+performWorkUntilDeadline @ scheduler.development.js:45
+DataContext.tsx:1260  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+getRootForUpdatedFiber @ react-dom-client.development.js:4631
+enqueueConcurrentHookUpdate @ react-dom-client.development.js:4584
+dispatchSetStateInternal @ react-dom-client.development.js:9167
+dispatchSetState @ react-dom-client.development.js:9127
+sendHeartbeat @ DataContext.tsx:1260
+(anonymous) @ UserContext.tsx:42
+react_stack_bottom_frame @ react-dom-client.development.js:25989
+runWithFiberInDEV @ react-dom-client.development.js:871
+commitHookEffectListMount @ react-dom-client.development.js:13249
+commitHookPassiveMountEffects @ react-dom-client.development.js:13336
+commitPassiveMountOnFiber @ react-dom-client.development.js:15484
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15519
+flushPassiveEffects @ react-dom-client.development.js:18432
+(anonymous) @ react-dom-client.development.js:17923
+performWorkUntilDeadline @ scheduler.development.js:45
+DataContext.tsx:1260  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+getRootForUpdatedFiber @ react-dom-client.development.js:4631
+enqueueConcurrentHookUpdate @ react-dom-client.development.js:4584
+dispatchSetStateInternal @ react-dom-client.development.js:9167
+dispatchSetState @ react-dom-client.development.js:9127
+sendHeartbeat @ DataContext.tsx:1260
+(anonymous) @ UserContext.tsx:42
+react_stack_bottom_frame @ react-dom-client.development.js:25989
+runWithFiberInDEV @ react-dom-client.development.js:871
+commitHookEffectListMount @ react-dom-client.development.js:13249
+commitHookPassiveMountEffects @ react-dom-client.development.js:13336
+commitPassiveMountOnFiber @ react-dom-client.development.js:15484
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15519
+flushPassiveEffects @ react-dom-client.development.js:18432
+(anonymous) @ react-dom-client.development.js:17923
+performWorkUntilDeadline @ scheduler.development.js:45
+DataContext.tsx:1260  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+getRootForUpdatedFiber @ react-dom-client.development.js:4631
+enqueueConcurrentHookUpdate @ react-dom-client.development.js:4584
+dispatchSetStateInternal @ react-dom-client.development.js:9167
+dispatchSetState @ react-dom-client.development.js:9127
+sendHeartbeat @ DataContext.tsx:1260
+(anonymous) @ UserContext.tsx:42
+react_stack_bottom_frame @ react-dom-client.development.js:25989
+runWithFiberInDEV @ react-dom-client.development.js:871
+commitHookEffectListMount @ react-dom-client.development.js:13249
+commitHookPassiveMountEffects @ react-dom-client.development.js:13336
+commitPassiveMountOnFiber @ react-dom-client.development.js:15484
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15519
+flushPassiveEffects @ react-dom-client.development.js:18432
+(anonymous) @ react-dom-client.development.js:17923
+performWorkUntilDeadline @ scheduler.development.js:45
+DataContext.tsx:1260  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+getRootForUpdatedFiber @ react-dom-client.development.js:4631
+enqueueConcurrentHookUpdate @ react-dom-client.development.js:4584
+dispatchSetStateInternal @ react-dom-client.development.js:9167
+dispatchSetState @ react-dom-client.development.js:9127
+sendHeartbeat @ DataContext.tsx:1260
+(anonymous) @ UserContext.tsx:42
+react_stack_bottom_frame @ react-dom-client.development.js:25989
+runWithFiberInDEV @ react-dom-client.development.js:871
+commitHookEffectListMount @ react-dom-client.development.js:13249
+commitHookPassiveMountEffects @ react-dom-client.development.js:13336
+commitPassiveMountOnFiber @ react-dom-client.development.js:15484
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15519
+flushPassiveEffects @ react-dom-client.development.js:18432
+(anonymous) @ react-dom-client.development.js:17923
+performWorkUntilDeadline @ scheduler.development.js:45
+DataContext.tsx:1260  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+getRootForUpdatedFiber @ react-dom-client.development.js:4631
+enqueueConcurrentHookUpdate @ react-dom-client.development.js:4584
+dispatchSetStateInternal @ react-dom-client.development.js:9167
+dispatchSetState @ react-dom-client.development.js:9127
+sendHeartbeat @ DataContext.tsx:1260
+(anonymous) @ UserContext.tsx:42
+react_stack_bottom_frame @ react-dom-client.development.js:25989
+runWithFiberInDEV @ react-dom-client.development.js:871
+commitHookEffectListMount @ react-dom-client.development.js:13249
+commitHookPassiveMountEffects @ react-dom-client.development.js:13336
+commitPassiveMountOnFiber @ react-dom-client.development.js:15484
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15519
+flushPassiveEffects @ react-dom-client.development.js:18432
+(anonymous) @ react-dom-client.development.js:17923
+performWorkUntilDeadline @ scheduler.development.js:45
+DataContext.tsx:1260  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+getRootForUpdatedFiber @ react-dom-client.development.js:4631
+enqueueConcurrentHookUpdate @ react-dom-client.development.js:4584
+dispatchSetStateInternal @ react-dom-client.development.js:9167
+dispatchSetState @ react-dom-client.development.js:9127
+sendHeartbeat @ DataContext.tsx:1260
+(anonymous) @ UserContext.tsx:42
+react_stack_bottom_frame @ react-dom-client.development.js:25989
+runWithFiberInDEV @ react-dom-client.development.js:871
+commitHookEffectListMount @ react-dom-client.development.js:13249
+commitHookPassiveMountEffects @ react-dom-client.development.js:13336
+commitPassiveMountOnFiber @ react-dom-client.development.js:15484
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15519
+flushPassiveEffects @ react-dom-client.development.js:18432
+(anonymous) @ react-dom-client.development.js:17923
+performWorkUntilDeadline @ scheduler.development.js:45
+DataContext.tsx:1260  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+getRootForUpdatedFiber @ react-dom-client.development.js:4631
+enqueueConcurrentHookUpdate @ react-dom-client.development.js:4584
+dispatchSetStateInternal @ react-dom-client.development.js:9167
+dispatchSetState @ react-dom-client.development.js:9127
+sendHeartbeat @ DataContext.tsx:1260
+(anonymous) @ UserContext.tsx:42
+react_stack_bottom_frame @ react-dom-client.development.js:25989
+runWithFiberInDEV @ react-dom-client.development.js:871
+commitHookEffectListMount @ react-dom-client.development.js:13249
+commitHookPassiveMountEffects @ react-dom-client.development.js:13336
+commitPassiveMountOnFiber @ react-dom-client.development.js:15484
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15519
+flushPassiveEffects @ react-dom-client.development.js:18432
+(anonymous) @ react-dom-client.development.js:17923
+performWorkUntilDeadline @ scheduler.development.js:45
+DataContext.tsx:1260  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+getRootForUpdatedFiber @ react-dom-client.development.js:4631
+enqueueConcurrentHookUpdate @ react-dom-client.development.js:4584
+dispatchSetStateInternal @ react-dom-client.development.js:9167
+dispatchSetState @ react-dom-client.development.js:9127
+sendHeartbeat @ DataContext.tsx:1260
+(anonymous) @ UserContext.tsx:42
+react_stack_bottom_frame @ react-dom-client.development.js:25989
+runWithFiberInDEV @ react-dom-client.development.js:871
+commitHookEffectListMount @ react-dom-client.development.js:13249
+commitHookPassiveMountEffects @ react-dom-client.development.js:13336
+commitPassiveMountOnFiber @ react-dom-client.development.js:15484
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15519
+flushPassiveEffects @ react-dom-client.development.js:18432
+(anonymous) @ react-dom-client.development.js:17923
+performWorkUntilDeadline @ scheduler.development.js:45
+DataContext.tsx:1260  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+getRootForUpdatedFiber @ react-dom-client.development.js:4631
+enqueueConcurrentHookUpdate @ react-dom-client.development.js:4584
+dispatchSetStateInternal @ react-dom-client.development.js:9167
+dispatchSetState @ react-dom-client.development.js:9127
+sendHeartbeat @ DataContext.tsx:1260
+(anonymous) @ UserContext.tsx:42
+react_stack_bottom_frame @ react-dom-client.development.js:25989
+runWithFiberInDEV @ react-dom-client.development.js:871
+commitHookEffectListMount @ react-dom-client.development.js:13249
+commitHookPassiveMountEffects @ react-dom-client.development.js:13336
+commitPassiveMountOnFiber @ react-dom-client.development.js:15484
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15519
+flushPassiveEffects @ react-dom-client.development.js:18432
+(anonymous) @ react-dom-client.development.js:17923
+performWorkUntilDeadline @ scheduler.development.js:45

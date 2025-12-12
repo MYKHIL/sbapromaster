@@ -4,6 +4,7 @@ import { useUser } from '../../context/UserContext';
 import ReadOnlyWrapper from '../ReadOnlyWrapper';
 import InlineScoreInput from '../InlineScoreInput';
 import ScoreManagementModal from '../ScoreManagementModal';
+import PreviewDataModal from '../PreviewDataModal';
 import { NetworkIndicator } from '../NetworkIndicator';
 import type { Student, Assessment } from '../../types';
 
@@ -11,9 +12,89 @@ import { getAvailableClasses, getSubjectsForUserAndClass } from '../../utils/per
 
 const ScoreEntry: React.FC = () => {
     // Destructure with default empty arrays to prevent undefined errors
-    const { students = [], subjects: allSubjects = [], assessments = [], classes: allClasses = [], getStudentScores, updateStudentScores, isOnline, isSyncing, queuedCount, saveToCloud, refreshFromCloud, hasLocalChanges, setHasLocalChanges, timeToSync, isDirty, updateDraftScore, removeDraftScore, getComputedScore, draftVersion, scores, pendingCount, getPendingUploadData } = useData();
+    const { students = [], subjects: allSubjects = [], assessments = [], classes: allClasses = [], getStudentScores, updateStudentScores, isOnline, isSyncing, queuedCount, hasLocalChanges, setHasLocalChanges, timeToSync, isDirty, updateDraftScore, removeDraftScore, getComputedScore, draftVersion, scores, saveToCloud, refreshFromCloud, pendingCount, getPendingUploadData } = useData();
     const { currentUser } = useUser();
     const isReadOnly = currentUser?.role === 'Guest';
+
+    // Debug Modal State
+    const [isDebugModalOpen, setIsDebugModalOpen] = useState(false);
+    const [debugData, setDebugData] = useState<any>(null);
+
+    const handleShowDebugData = () => {
+        const data = getPendingUploadData();
+        setDebugData(data);
+        setIsDebugModalOpen(true);
+    };
+
+    const handleCloseDebugModal = () => {
+        setIsDebugModalOpen(false);
+        setDebugData(null);
+    };
+
+    const MobileControls = ({ className = "" }: { className?: string }) => (
+        <div className="flex flex-col items-end">
+            <div className={`flex items-center gap-2 ${className}`}>
+                {/* Preview Button */}
+                {pendingCount > 0 && (
+                    <button
+                        onClick={handleShowDebugData}
+                        className="p-1.5 text-gray-500 hover:text-blue-600 bg-gray-100 hover:bg-blue-50 rounded-lg transition-colors border border-gray-200"
+                        title="Preview changes"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                    </button>
+                )}
+
+                {/* Refresh Button */}
+                <button
+                    onClick={() => refreshFromCloud()}
+                    disabled={isSyncing || !isOnline}
+                    className={`p-1.5 text-gray-500 hover:text-green-600 bg-gray-100 hover:bg-green-50 rounded-lg transition-colors border border-gray-200 ${(isSyncing || !isOnline) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    title="Refresh"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${isSyncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                </button>
+
+                {/* Save Button */}
+                <button
+                    onClick={() => saveToCloud(true)}
+                    disabled={pendingCount === 0 || isSyncing || !isOnline}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all shadow-sm ${(pendingCount === 0 || isSyncing || !isOnline)
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                        }`}
+                    title="Save"
+                >
+                    {isSyncing ? (
+                        <>
+                            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span className="text-sm font-bold">Saving...</span>
+                        </>
+                    ) : (
+                        <>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                            </svg>
+                            <span className="text-sm font-bold">Save {pendingCount > 0 ? `(${pendingCount})` : ''}</span>
+                        </>
+                    )}
+                </button>
+            </div>
+            {pendingCount > 0 && (
+                <div className="text-[10px] font-bold text-amber-600 text-right mt-1 px-1 leading-tight max-w-[250px] animate-pulse">
+                    Please SAVE when you complete all modifications
+                </div>
+            )}
+        </div>
+    );
 
     // Filter available data based on permissions
     const classes = useMemo(() => getAvailableClasses(currentUser, allClasses), [currentUser, allClasses]);
@@ -323,15 +404,7 @@ const ScoreEntry: React.FC = () => {
 
     const selectStyles = "w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500";
 
-    // Debug Modal State
-    const [isDebugModalOpen, setIsDebugModalOpen] = useState(false);
-    const [debugData, setDebugData] = useState<any>(null);
 
-    const handleShowDebugData = () => {
-        const data = getPendingUploadData();
-        setDebugData(data);
-        setIsDebugModalOpen(true);
-    };
 
     return (
         <ReadOnlyWrapper allowedRoles={['Admin', 'Teacher']}>
@@ -339,71 +412,15 @@ const ScoreEntry: React.FC = () => {
                 <div className="flex items-center justify-between">
                     <h1 className="text-3xl font-bold text-gray-800">Score Entry</h1>
 
-                    {/* Save Button - Desktop View */}
-                    <div className="hidden lg:flex items-center gap-2">
-                        {currentUser?.role === 'Admin' && (
-                            <button
-                                onClick={() => refreshFromCloud()}
-                                disabled={isSyncing || !isOnline}
-                                className={`p-2.5 text-gray-500 hover:text-green-600 bg-gray-100 hover:bg-green-50 rounded-lg transition-colors border border-gray-200 ${(isSyncing || !isOnline) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                title="Refresh data from cloud (Admin Only)"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${isSyncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                </svg>
-                            </button>
-                        )}
-                        <button
-                            onClick={handleShowDebugData}
-                            className="p-2.5 text-gray-500 hover:text-blue-600 bg-gray-100 hover:bg-blue-50 rounded-lg transition-colors border border-gray-200"
-                            title="Preview data to be saved"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                        </button>
-                        <button
-                            onClick={() => saveToCloud(true)}
-                            disabled={!isDirty('scores') && pendingCount === 0 || isSyncing || !isOnline}
-                            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg transition-all shadow-md ${(!isDirty('scores') && pendingCount === 0 || isSyncing || !isOnline)
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg'
-                                }`}
-                            title={
-                                !isOnline
-                                    ? "You are offline"
-                                    : (!isDirty('scores') && pendingCount === 0)
-                                        ? "No unsaved scores"
-                                        : "Save unsaved changes to the cloud"
-                            }
-                        >
-                            {isSyncing ? (
-                                <>
-                                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                    <span className="text-sm font-bold">Saving...</span>
-                                </>
-                            ) : (
-                                <>
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                                    </svg>
-                                    <span className="text-sm font-bold">Save Changes {pendingCount > 0 ? `(${pendingCount})` : ''}</span>
-                                </>
-                            )}
-                        </button>
-                    </div>
+                    {/* Save Button - Desktop View (Moved to GlobalActionBar) */}
                 </div>
 
                 <div className="bg-gray-100 py-4 sticky top-20 lg:top-0 z-20 shadow-md transition-all duration-300">
                     <div className="flex flex-col gap-4 p-4 bg-white rounded-xl shadow-md border border-gray-200">
 
                         {/* Mobile View Toggle - Top */}
-                        <div className="lg:hidden flex items-center pb-2 border-b border-gray-100 mb-2">
-                            <label className="flex items-center space-x-2 cursor-pointer select-none w-full">
+                        <div className="lg:hidden flex items-center justify-between pb-2 border-b border-gray-100 mb-2">
+                            <label className="flex items-center space-x-2 cursor-pointer select-none">
                                 <input
                                     type="checkbox"
                                     checked={useMobileView}
@@ -412,58 +429,10 @@ const ScoreEntry: React.FC = () => {
                                 />
                                 <span className="text-sm font-bold text-gray-700">Compact View</span>
                             </label>
+                            {!useMobileView && <MobileControls />}
                         </div>
 
-                        {/* Save Button for Mobile Table View (!Compact) */}
-                        {!useMobileView && (
-                            <div className="lg:hidden mb-4 flex gap-2">
-                                {currentUser?.role === 'Admin' && (
-                                    <button
-                                        onClick={() => refreshFromCloud()}
-                                        disabled={isSyncing || !isOnline}
-                                        className={`px-4 py-3 bg-gray-100 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-lg border border-gray-200 transition-colors ${(isSyncing || !isOnline) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 ${isSyncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                        </svg>
-                                    </button>
-                                )}
-                                <button
-                                    onClick={handleShowDebugData}
-                                    className="px-4 py-3 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 border border-gray-200 transition-colors"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                    </svg>
-                                </button>
-                                <button
-                                    onClick={() => saveToCloud(true)}
-                                    disabled={!isDirty('scores') && pendingCount === 0 || isSyncing || !isOnline}
-                                    className={`w-full flex justify-center items-center gap-2 px-4 py-3 rounded-lg transition-all shadow-md font-bold text-lg ${(!isDirty('scores') && pendingCount === 0 || isSyncing || !isOnline)
-                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                        : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg'
-                                        }`}
-                                >
-                                    {isSyncing ? (
-                                        <>
-                                            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                            </svg>
-                                            <span>Saving...</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                                            </svg>
-                                            <span>Save Changes</span>
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-                        )}
+                        {/* Save Button for Mobile Table View (!Compact) (Moved to GlobalActionBar) */}
 
                         <div className="flex flex-col sm:flex-row gap-4">
                             <div className="flex-1">
@@ -561,61 +530,7 @@ const ScoreEntry: React.FC = () => {
                                         <div>
                                             <div className="flex items-center justify-between mb-1">
                                                 <label className="block text-sm font-medium text-gray-700">Score</label>
-                                                <div className="flex items-center gap-2">
-                                                    {currentUser?.role === 'Admin' && (
-                                                        <button
-                                                            onClick={() => refreshFromCloud()}
-                                                            disabled={isSyncing || !isOnline}
-                                                            className={`p-2 text-gray-500 hover:text-green-600 bg-white hover:bg-green-50 rounded-lg transition-colors border border-gray-200 shadow-sm ${(isSyncing || !isOnline) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                            title="Refresh data from cloud (Admin Only)"
-                                                        >
-                                                            <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${isSyncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                                            </svg>
-                                                        </button>
-                                                    )}
-                                                    <button
-                                                        onClick={handleShowDebugData}
-                                                        className="p-2 text-gray-500 hover:text-blue-600 bg-white hover:bg-blue-50 rounded-lg transition-colors border border-gray-200 shadow-sm"
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                                        </svg>
-                                                    </button>
-                                                    <button
-                                                        onClick={() => saveToCloud(true)}
-                                                        disabled={!isDirty('scores') && pendingCount === 0 || isSyncing || !isOnline}
-                                                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all shadow-md ${(!isDirty('scores') && pendingCount === 0 || isSyncing || !isOnline)
-                                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                                            : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg'
-                                                            }`}
-                                                        title={
-                                                            !isOnline
-                                                                ? "You are offline"
-                                                                : (!isDirty('scores') && pendingCount === 0)
-                                                                    ? "No unsaved scores"
-                                                                    : "Save unsaved changes to the cloud"
-                                                        }
-                                                    >
-                                                        {isSyncing ? (
-                                                            <>
-                                                                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                                </svg>
-                                                                <span className="text-sm font-bold">Saving...</span>
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                                                                </svg>
-                                                                <span className="text-sm font-bold">Save Changes {pendingCount > 0 ? `(${pendingCount})` : ''}</span>
-                                                            </>
-                                                        )}
-                                                    </button>
-                                                </div>
+                                                <MobileControls />
                                             </div>
                                             <div className="flex flex-col">
                                                 <div className="relative">
@@ -787,175 +702,19 @@ const ScoreEntry: React.FC = () => {
                     )
                 }
 
-                {/* Debug Data Modal */}
-                {isDebugModalOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
-                            <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50 rounded-t-xl">
-                                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4V7m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
-                                    </svg>
-                                    Data Payload Preview
-                                </h3>
-                                <button
-                                    onClick={() => setIsDebugModalOpen(false)}
-                                    className="p-2 hover:bg-gray-200 rounded-full transition-colors"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
-                            </div>
+            </div >
 
-                            <div className="p-6 overflow-auto bg-gray-50 font-mono text-xs sm:text-sm">
-                                {debugData && Object.keys(debugData).length > 0 ? (
-                                    <div className="space-y-4">
-                                        <div className="p-2 bg-blue-50 text-blue-800 rounded border border-blue-200 mb-4">
-                                            Showing <strong>only modified items</strong>. NOTE: These changes will be safely <strong>merged</strong> with the cloud database.
-                                        </div>
-                                        {Object.entries(debugData).map(([key, value]) => {
-                                            // Helper to render readable content based on key
-                                            const renderContent = () => {
-                                                if (key === 'scores' && Array.isArray(value)) {
-                                                    return (
-                                                        <ul className="list-disc pl-5 space-y-1 text-gray-700">
-                                                            {value.map((score: any) => {
-                                                                const student = students.find(s => s.id === score.studentId);
-                                                                const subject = allSubjects.find(s => s.id === score.subjectId);
-                                                                const scoreDetails = Object.entries(score.assessmentScores || {}).map(([assessmentId, scores]) => {
-                                                                    const assessment = assessments.find(a => a.id === Number(assessmentId));
-                                                                    const scoreStr = Array.isArray(scores) ? scores.join(', ') : '';
-                                                                    return `${assessment?.name || 'Unknown Assessment'}: ${scoreStr || '(Empty)'}`;
-                                                                }).join(' | ');
+            <PreviewDataModal
+                isOpen={isDebugModalOpen}
+                onClose={handleCloseDebugModal}
+                debugData={debugData}
+                pendingCount={pendingCount}
+                onSave={() => saveToCloud(true)}
+                isSyncing={isSyncing}
+                isOnline={isOnline}
+                hasLocalChanges={hasLocalChanges}
+            />
 
-                                                                return (
-                                                                    <li key={score.id}>
-                                                                        <span className="font-semibold">{student?.name || 'Unknown Student'}</span>
-                                                                        <span className="text-gray-500"> - {subject?.subject || 'Unknown Subject'}</span>
-                                                                        <br />
-                                                                        <span className="text-blue-600 ml-4">{scoreDetails}</span>
-                                                                    </li>
-                                                                );
-                                                            })}
-                                                        </ul>
-                                                    );
-                                                }
-                                                if (key === 'students' && Array.isArray(value)) {
-                                                    return (
-                                                        <div className="text-gray-700">
-                                                            <p><strong>{value.length} Students Modified:</strong></p>
-                                                            <ul className="list-disc pl-5 mt-1">
-                                                                {value.slice(0, 5).map((s: any) => (
-                                                                    <li key={s.id}>{s.name} ({s.class})</li>
-                                                                ))}
-                                                                {value.length > 5 && <li>...and {value.length - 5} more</li>}
-                                                            </ul>
-                                                        </div>
-                                                    );
-                                                }
-                                                if (key === 'settings') {
-                                                    return <div className="text-gray-700">Settings updated</div>;
-                                                }
-                                                if (key === 'classes' && Array.isArray(value)) {
-                                                    return (
-                                                        <div className="text-gray-700">
-                                                            <p><strong>{value.length} Classes Modified:</strong></p>
-                                                            <ul className="list-disc pl-5 mt-1">
-                                                                {value.slice(0, 5).map((c: any) => (
-                                                                    <li key={c.id}>{c.className} (Grade {c.classLevel})</li>
-                                                                ))}
-                                                                {value.length > 5 && <li>...and {value.length - 5} more</li>}
-                                                            </ul>
-                                                        </div>
-                                                    );
-                                                }
-                                                if (key === 'subjects' && Array.isArray(value)) {
-                                                    return (
-                                                        <div className="text-gray-700">
-                                                            <p><strong>{value.length} Subjects Modified:</strong></p>
-                                                            <ul className="list-disc pl-5 mt-1">
-                                                                {value.slice(0, 5).map((s: any) => (
-                                                                    <li key={s.id}>{s.subject} ({s.code})</li>
-                                                                ))}
-                                                                {value.length > 5 && <li>...and {value.length - 5} more</li>}
-                                                            </ul>
-                                                        </div>
-                                                    );
-                                                }
-                                                if (key === 'assessments' && Array.isArray(value)) {
-                                                    return (
-                                                        <div className="text-gray-700">
-                                                            <p><strong>{value.length} Assessments Modified:</strong></p>
-                                                            <ul className="list-disc pl-5 mt-1">
-                                                                {value.slice(0, 5).map((a: any) => (
-                                                                    <li key={a.id}>{a.title || a.name} - Weight: {a.weight}</li>
-                                                                ))}
-                                                                {value.length > 5 && <li>...and {value.length - 5} more</li>}
-                                                            </ul>
-                                                        </div>
-                                                    );
-                                                }
-                                                if (key === 'users' && Array.isArray(value)) {
-                                                    return (
-                                                        <div className="text-gray-700">
-                                                            <p><strong>{value.length} Users Modified:</strong></p>
-                                                            <ul className="list-disc pl-5 mt-1">
-                                                                {value.slice(0, 5).map((u: any) => (
-                                                                    <li key={u.uid}>{u.email} ({u.role})</li>
-                                                                ))}
-                                                                {value.length > 5 && <li>...and {value.length - 5} more</li>}
-                                                            </ul>
-                                                        </div>
-                                                    );
-                                                }
-                                                if (key === 'activeSessions' && typeof value === 'object') {
-                                                    return <div className="text-gray-700">Active Sessions updated ({Object.keys(value).length} entries)</div>;
-                                                }
-                                                if (key === 'userLogs' && Array.isArray(value)) {
-                                                    return <div className="text-gray-700">User Logs updated ({value.length} new entries)</div>;
-                                                }
-                                                if (key === 'reportData') {
-                                                    return <div className="text-gray-700">Report Data updated</div>;
-                                                }
-                                                if (key === 'classData') {
-                                                    return <div className="text-gray-700">Class Analysis Data updated</div>;
-                                                }
-                                                // Default fallback
-                                                return <pre className="whitespace-pre-wrap break-all text-gray-700 select-all">{JSON.stringify(value, null, 2)}</pre>;
-                                            };
-
-                                            return (
-                                                <div key={key} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                                                    <h4 className="font-bold text-blue-600 text-lg mb-2 capitalize border-b pb-1">{key}</h4>
-                                                    {renderContent()}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                ) : (
-                                    <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                        </svg>
-                                        <p className="text-lg font-medium">No changes detected</p>
-                                        <p className="text-sm">There is nothing to save at this moment.</p>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="p-4 border-t border-gray-200 bg-gray-50 rounded-b-xl flex justify-end">
-                                <button
-                                    onClick={() => setIsDebugModalOpen(false)}
-                                    className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-                                >
-                                    Close
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
         </ReadOnlyWrapper >
     );
 };

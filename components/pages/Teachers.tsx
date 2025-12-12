@@ -178,17 +178,7 @@ const Teachers: React.FC = () => {
                         )}
 
                         {/* Save Button */}
-                        {(isAdmin || currentUser?.role === 'Teacher') && (
-                            <div className="w-full md:w-auto">
-                                <SaveButton
-                                    onClick={saveClasses}
-                                    isDirty={isDirty('classes')}
-                                    isSyncing={isSyncing}
-                                    isOnline={isOnline}
-                                    label="Save Changes"
-                                />
-                            </div>
-                        )}
+                        {/* Save Button Removed - Using Global Action Bar */}
                     </div>
                 </div>
 

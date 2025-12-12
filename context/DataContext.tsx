@@ -175,7 +175,20 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [dirtyVersion, setDirtyVersion] = useState(0);
 
     // Track original cloud data to compare against current state
-    const originalData = React.useRef<Partial<AppDataType>>({});
+    const originalData = React.useRef<Partial<AppDataType>>({
+        settings: INITIAL_SETTINGS,
+        students: INITIAL_STUDENTS,
+        subjects: INITIAL_SUBJECTS,
+        classes: INITIAL_CLASSES,
+        grades: INITIAL_GRADES,
+        assessments: INITIAL_ASSESSMENTS,
+        scores: INITIAL_SCORES,
+        reportData: INITIAL_REPORT_DATA,
+        classData: INITIAL_CLASS_DATA,
+        users: [],
+        userLogs: [],
+        activeSessions: {}
+    });
 
     // Track pending (uncommitted) score changes - fields that have been modified but not saved
     const pendingScoreChanges = React.useRef<Set<string>>(new Set()); // Format: "studentId-assessmentId"
@@ -183,7 +196,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // FIX: Use a Ref to hold the latest state for saveToCloud to access during retries
     // This prevents the "stale closure" bug where a postponed save uses old data
     const stateRef = React.useRef<AppDataType>({
-        settings, students: [], subjects: [], classes: [], grades: [], assessments: [], scores: [], reportData: [], classData: [], users: [], userLogs: [], activeSessions: {}
+        settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions
     });
 
     useEffect(() => {
@@ -374,18 +387,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // We ONLY update originalData if it came from the cloud!
             // If we import a file, that file is effectively "New Local Changes" vs "Old Cloud Data"
             originalData.current = {
-                settings: importedSettings ?? settings,
-                students: importedStudents ?? students,
-                subjects: importedSubjects ?? subjects,
-                classes: importedClasses ?? classes,
-                grades: importedGrades ?? grades,
-                assessments: importedAssessments ?? assessments,
-                scores: importedScores ?? scores,
-                reportData: importedReportData ?? reportData,
-                classData: importedClassData ?? classData,
-                users: importedUsers ?? users,
-                userLogs: data.userLogs ?? userLogs,
-                activeSessions: data.activeSessions ?? activeSessions,
+                ...originalData.current,
+                ...(importedSettings && { settings: importedSettings }),
+                ...(importedStudents && { students: importedStudents }),
+                ...(importedSubjects && { subjects: importedSubjects }),
+                ...(importedClasses && { classes: importedClasses }),
+                ...(importedGrades && { grades: importedGrades }),
+                ...(importedAssessments && { assessments: importedAssessments }),
+                ...(importedScores && { scores: importedScores }),
+                ...(importedReportData && { reportData: importedReportData }),
+                ...(importedClassData && { classData: importedClassData }),
+                ...(importedUsers && { users: importedUsers }),
+                ...(data.userLogs && { userLogs: data.userLogs }),
+                ...(data.activeSessions && { activeSessions: data.activeSessions }),
             };
         } else {
             console.log('[DataContext] 💾 Local file import: Marking fields as dirty for verification');
@@ -476,39 +490,52 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return false;
     };
 
-    const markDirty = (field: keyof AppDataType) => {
-        // Only mark dirty if it's NOT a remote update
-        if (!isRemoteUpdate.current) {
-            dirtyFields.current.add(field);
-            setHasLocalChanges(true); // Enable Save button globally
-            setDirtyVersion(v => v + 1); // Force re-render
-        }
-    };
+    // Keep stateRef in sync with latest state for save operations
+    useEffect(() => {
+        stateRef.current = {
+            settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions
+        };
+    }, [settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions]);
 
-    const unmarkDirty = (field: keyof AppDataType) => {
+    const markDirty = React.useCallback((field: keyof AppDataType, force: boolean = false) => {
+        // Only mark dirty if it's NOT a remote update OR forced (manual user action)
+        if (force || !isRemoteUpdate.current) {
+            // Prevent infinite loops and unnecessary re-renders: Only update if NOT already dirty
+            if (!dirtyFields.current.has(field)) {
+                dirtyFields.current.add(field);
+                setHasLocalChanges(true); // Enable Save button globally
+                setDirtyVersion(v => v + 1); // Force re-render
+            }
+        }
+    }, []);
+
+    const unmarkDirty = React.useCallback((field: keyof AppDataType) => {
         if (dirtyFields.current.has(field)) {
             // console.log(`[DataContext] ⚪ Unmark Dirty: ${field}`);
             dirtyFields.current.delete(field);
             setHasLocalChanges(dirtyFields.current.size > 0);
             setDirtyVersion(v => v + 1); // Force re-render
         }
-    };
+    }, []);
 
     // Check if current data actually differs from original cloud data
-    const recheckDirtyStatus = (field: keyof AppDataType, currentValue: any) => {
+    const recheckDirtyStatus = React.useCallback((field: keyof AppDataType, currentValue: any) => {
         const originalValue = originalData.current[field];
+        const isEqual = deepEqual(currentValue, originalValue);
 
         // If values are the same, remove from dirty
-        if (deepEqual(currentValue, originalValue)) {
-            dirtyFields.current.delete(field);
-            // Update hasLocalChanges based on remaining dirty fields
-            setHasLocalChanges(dirtyFields.current.size > 0);
-            setDirtyVersion(v => v + 1); // Force re-render
+        if (isEqual) {
+            if (dirtyFields.current.has(field)) {
+                dirtyFields.current.delete(field);
+                // Update hasLocalChanges based on remaining dirty fields
+                setHasLocalChanges(dirtyFields.current.size > 0);
+                setDirtyVersion(v => v + 1); // Force re-render
+            }
         } else {
             // Values differ, ensure it's marked dirty
             markDirty(field);
         }
-    };
+    }, [markDirty]);
 
     // Reactive effect to auto-recheck dirty status when data changes
     React.useEffect(() => {
@@ -672,7 +699,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 // For other fields, we currently send the full list/object.
                 // The 'saveDataTransaction' will handle the smart merge on the server side 
                 // to prevent overwrites.
-                transactionPayload[key] = currentData[key] as any;
+                // Cast to any to avoid "Type 'any' is not assignable to type 'never'" error
+                (transactionPayload as any)[key] = currentData[key];
             }
         });
 
@@ -683,7 +711,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const fullPayload: Partial<AppDataType> = {};
             fieldsToSave.forEach(field => {
                 const key = field as keyof AppDataType;
-                fullPayload[key] = currentData[key] as any;
+                (fullPayload as any)[key] = currentData[key];
             });
 
             offlineQueue.addToQueue(fullPayload);
@@ -703,8 +731,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             console.log('[DataContext] ✅ Data saved to cloud successfully!');
 
+            // NEW: Fetch latest data from cloud to ensure UI is up-to-date and to confirm sync
+            // This satisfies the requirement: "after a save action, the system should download the latest data"
+            console.log('[DataContext] 🔄 Auto-refreshing data from cloud...');
+            // We pass true to isRemote so it handles the "remote update" logic correctly
+            await refreshFromCloud();
 
-            console.log('[DataContext] 🎉 Sync complete - cleared dirty fields');
+            console.log('[DataContext] 🎉 Sync & Refresh complete - cleared dirty fields');
 
             // Clear dirty fields only for the fields that were actually saved
             fieldsToSave.forEach(field => {
@@ -794,13 +827,21 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const data = await getSchoolData(schoolId);
             if (data) {
                 console.log('[DataContext] ✅ Data fetched successfully, applying updates...');
+
+                // CRITICAL: Explicitly clear pending score changes tracker so that 
+                // loadImportedData allows overwriting local scores with server data
+                pendingScoreChanges.current.clear();
+
                 // Mark as manual remote update
                 isRemoteUpdate.current = true;
                 loadImportedData(data);
                 console.log('[DataContext] 🎉 Manual refresh complete');
-                // Creating a manual refresh clears dirty flags to avoid conflicts? 
-                // Actually, if we just fetched from cloud, our local state is now same as cloud.
+
+                // CRITICAL: Clear all local drafts and effectively "reset" the UI state
+                draftScores.current.clear();
                 dirtyFields.current.clear();
+                setHasLocalChanges(false);
+                setDraftVersion(v => v + 1); // Force inputs to re-read from the new (clean) state
             } else {
                 console.log('[DataContext] ⚠️ No data found for this school ID');
             }
@@ -857,15 +898,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         fieldKey: keyof AppDataType
     ) => ({
         add: (item: Omit<T, 'id'>) => {
-            markDirty(fieldKey);
+            markDirty(fieldKey, true);
             setItems(prev => [...prev, { ...item, id: Date.now() } as T]);
         },
         update: (updatedItem: T) => {
-            markDirty(fieldKey);
+            markDirty(fieldKey, true);
             setItems(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item));
         },
         delete: (id: number) => {
-            markDirty(fieldKey);
+            markDirty(fieldKey, true);
             setItems(prev => prev.filter(item => item.id !== id));
         },
     });
@@ -877,7 +918,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Custom Assessment CRUD to handle exam ordering
     const addAssessment = (assessment: Omit<Assessment, 'id'>) => {
-        markDirty('assessments');
+        markDirty('assessments', true);
         const newAssessment = { ...assessment, id: Date.now() };
         setAssessments(prev => {
             const examIndex = prev.findIndex(a => a.name.toLowerCase().includes('exam'));
@@ -890,11 +931,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
     };
     const updateAssessment = (updatedAssessment: Assessment) => {
-        markDirty('assessments');
+        markDirty('assessments', true);
         setAssessments(prev => prev.map(item => item.id === updatedAssessment.id ? updatedAssessment : item));
     };
     const deleteAssessment = (id: number) => {
-        markDirty('assessments');
+        markDirty('assessments', true);
         setAssessments(prev => prev.filter(item => item.id !== id));
     };
 
@@ -929,7 +970,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
 
         if (isActuallyChanged) {
-            markDirty('scores');
+            markDirty('scores', true);
             pendingScoreChanges.current.add(scoreId);
         } else {
             // Current item matches original.
@@ -1011,6 +1052,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             console.log('[DataContext] ✅ Score saved to local cache (React state)');
             console.log('[DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook');
+
+            // CRITICAL: Increment draftVersion to notify all listeners (inputs) that data has changed
+            // This ensures InlineScoreInput re-reads the new "saved" value
+            setDraftVersion(v => v + 1);
+
             return updatedScores;
         });
     };
@@ -1026,7 +1072,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const updateReportData = (studentId: number, data: Partial<Omit<ReportSpecificData, 'totalSchoolDays'>>) => {
-        markDirty('reportData');
+        markDirty('reportData', true);
         setReportData(prev => {
             const existingIndex = prev.findIndex(d => d.studentId === studentId);
             if (existingIndex > -1) {
@@ -1054,7 +1100,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const updateClassData = (classId: number, data: Partial<ClassSpecificData>) => {
-        markDirty('classData');
+        markDirty('classData', true);
         setClassData(prev => {
             const existingIndex = prev.findIndex(d => d.classId === classId);
             if (existingIndex > -1) {
@@ -1073,7 +1119,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const updateSettings = (updates: Partial<SchoolSettings>) => {
-        markDirty('settings');
+        markDirty('settings', true);
         setSettings(prev => ({ ...prev, ...updates }));
     };
 
@@ -1106,7 +1152,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 [field]: data
             };
 
-            await saveUserDatabase(schoolId, payload);
+            // Use transaction for all saves to ensure consistency
+            await saveDataTransaction(schoolId, payload);
 
             // Clear dirty flag for this field
             dirtyFields.current.delete(field);
@@ -1223,7 +1270,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Solution: We expose a function `sendHeartbeat(userId)` and let UserContext call it.
     }, []);
 
-    const sendHeartbeat = async (userId: number) => {
+    const sendHeartbeat = React.useCallback(async (userId: number) => {
         if (schoolId) {
             // OPTIMIZATION: Update local state and let auto-sync handle the write
             // This avoids a separate READ + WRITE operation every minute
@@ -1237,9 +1284,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             markDirty('activeSessions');
             // await updateHeartbeat(schoolId, userId); // Removed direct call
         }
-    };
+    }, [schoolId, markDirty]);
 
-    const logUserAction = async (userId: number, userName: string, role: string, action: 'Login' | 'Logout') => {
+    const logUserAction = React.useCallback(async (userId: number, userName: string, role: string, action: 'Login' | 'Logout') => {
         if (!schoolId) return;
 
         // ONLY log 'Login' actions as per user request to reduce writes
@@ -1271,11 +1318,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (newLogs.length > 500) newLogs.shift();
             return newLogs;
         });
+
         markDirty('userLogs');
 
         // We do NOT call the direct firebase service anymore.
         // await logUserActivity(schoolId, log);
-    };
+    }, [schoolId, markDirty]);
 
     // Removed logPageVisit to prevent excessive logging
 
@@ -1312,14 +1360,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return fields.some(field => dirtyFields.current.has(field));
     };
 
-    const getPendingUploadData = (): Partial<AppDataType> => {
+    const getPendingUploadData = (): any => {
         if (dirtyFields.current.size === 0) {
             return {};
         }
 
         const fieldsToSave = Array.from(dirtyFields.current);
-        const currentData = stateRef.current;
-        const payload: Partial<AppDataType> = {};
+        // Use current state variables directly instead of Ref to ensure Render-Cycle freshness
+        // This fixes the "First Edit" lag where the Ref wasn't updated yet during the render cycle
+        const currentData: AppDataType = {
+            settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions
+        };
+        const payload: any = {};
+        const deletions: any = {};
 
         fieldsToSave.forEach(field => {
             // @ts-ignore
@@ -1328,8 +1381,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             // Perform smart diff for arrays to only show changed items in preview
             if (Array.isArray(currentVal) && Array.isArray(originalVal)) {
+
+                // 1. Check for Deletions
+                const deletedItems = originalVal.filter((o: any) => o && o.id && !currentVal.find((c: any) => c && c.id === o.id));
+                if (deletedItems.length > 0) {
+                    deletions[field] = deletedItems;
+                }
+
+                // 2. Check for Adds/Updates
                 // @ts-ignore
-                payload[field] = currentVal.filter(item => {
+                const updates = currentVal.filter(item => {
                     // Start by checking if item has an ID (most of our data types do)
                     if (item && typeof item === 'object' && 'id' in item) {
                         const originalItem = originalVal.find((o: any) => o.id === item.id);
@@ -1340,7 +1401,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                                 // NEW ITEM CHECK: Prevent "Ghost" overwrites
                                 // Exception: If the user explicitly modified this score (it's in pendingScoreChanges),
                                 // we MUST send it, even if it appears to be a "Ghost" (e.g. they cleared a stale original).
-                                const isPending = pendingScoreChanges.current.has(item.id);
+                                const isPending = pendingScoreChanges.current.has(String(item.id));
                                 if (isPending) return true;
 
                                 // If it's a new item (or one we didn't know about), check if it's effectively empty.
@@ -1374,16 +1435,23 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         if (!originalItem) return true; // New item
                         return !deepEqual(item, originalItem); // Modified item
                     }
-                    // Fallback for non-ID arrays (if any): simple inclusion check is too expensive/inaccurate
-                    // so we default to showing it if it's not deep equal to the whole original array?
-                    // actually if we stick to ID check it handles 99% of our cases.
+                    // Fallback for non-ID arrays (if any)
                     return true;
                 });
+
+                if (updates.length > 0) {
+                    payload[field] = updates;
+                }
+
             } else {
                 // @ts-ignore
                 payload[field] = currentVal;
             }
         });
+
+        if (Object.keys(deletions).length > 0) {
+            payload._deletions = deletions;
+        }
 
         return payload;
     };
@@ -1417,10 +1485,24 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // CRITICAL FIX: Compute pending count from actual payload data, not just draft inputs
     // This ensures the save button shows the actual number of scores that will be uploaded
+    // UPDATE: Now counts ALL pending changes (students, subjects, etc.), not just scores.
     const pendingCount = useMemo(() => {
         const payload = getPendingUploadData();
-        return (payload.scores as Score[] | undefined)?.length || 0;
-    }, [dirtyVersion, scores]);
+        let count = 0;
+        Object.keys(payload).forEach(key => {
+            // IGNORE activeSessions and userLogs for the pending count
+            // These change automatically (heartbeats, nav logs) and shouldn't trigger "Unsaved Changes" UI
+            if (key === 'activeSessions' || key === 'userLogs') return;
+
+            const val = payload[key as keyof AppDataType];
+            if (Array.isArray(val)) {
+                count += val.length;
+            } else if (val && typeof val === 'object' && Object.keys(val).length > 0) {
+                count += 1;
+            }
+        });
+        return count;
+    }, [dirtyVersion, settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions]);
 
     // Get the score to display: prefer draft, fallback to saved
     const getComputedScore = (studentId: number, assessmentId: number, subjectId: number): string => {

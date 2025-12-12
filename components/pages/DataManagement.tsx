@@ -11,7 +11,7 @@ import type { User } from '../../types';
 
 const DataManagement: React.FC = () => {
     const dataContext = useData();
-    const { settings, loadImportedData, saveToCloud, schoolId } = dataContext;
+    const { settings, loadImportedData, saveToCloud, schoolId, markDirty } = dataContext;
     const { currentUser, users, setUsers } = useUser();
     const [processingAction, setProcessingAction] = useState<'import' | 'export' | 'generate_wpf' | 'share' | null>(null);
     const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' | 'info' | 'warning'; details?: string[]; detailsTitle?: string; } | null>(null);
@@ -202,21 +202,24 @@ const DataManagement: React.FC = () => {
             return;
         }
 
-        setFeedback({ message: 'Saving user management changes...', type: 'info' });
+        setFeedback({ message: 'Applying changes...', type: 'info' });
         try {
-            await updateUsers(schoolId, updatedUsers);
+            // Update local UserContext
             setUsers(updatedUsers);
-            setUsers(updatedUsers);
-            // FIX: Update DataContext state so saveToCloud includes the new users
+
+            // Update DataContext state (this marks dirty via loadImportedData logic)
+            // We pass isRemote=false to trigger dirty detection
             loadImportedData({ users: updatedUsers }, false);
 
             if (shouldClose) {
                 setIsUserManagementOpen(false);
             }
-            setFeedback({ message: 'User management changes saved successfully!', type: 'success' });
+            setFeedback({ message: 'User changes applied locally. Click SAVE in the top bar to persist.', type: 'success' });
+            // Clear feedback after 4 seconds
+            setTimeout(() => setFeedback(null), 4000);
         } catch (error) {
-            console.error('Failed to save users:', error);
-            setFeedback({ message: 'Failed to save user changes', type: 'error' });
+            console.error('Failed to update users:', error);
+            setFeedback({ message: 'Failed to update user changes', type: 'error' });
         }
     };
 

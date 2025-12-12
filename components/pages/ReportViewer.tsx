@@ -37,6 +37,16 @@ const ReportViewer: React.FC = () => {
   const [pdfError, setPdfError] = useState<any>(null);
 
   const reportContainerRef = useRef<HTMLDivElement>(null);
+  const [contentSize, setContentSize] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    if (reportContainerRef.current) {
+      setContentSize({
+        width: reportContainerRef.current.scrollWidth,
+        height: reportContainerRef.current.scrollHeight
+      });
+    }
+  }, [generatedReports]);
 
 
 
@@ -227,29 +237,34 @@ const ReportViewer: React.FC = () => {
         </div>
       )}
 
-      <div className="pt-8 overflow-x-auto pb-8">
+      <div className="pt-8 overflow-auto pb-8 min-h-[600px]">
         <div
-          ref={reportContainerRef}
-          className="space-y-12 w-full transition-transform duration-200 ease-in-out"
           style={{
-            transform: `scale(${zoomLevel})`,
-            transformOrigin: 'top left', // Align to left
-            width: zoomLevel < 1 ? `${100 / zoomLevel}%` : '100%' // Compensate width when scaling
+            width: contentSize.width ? contentSize.width * zoomLevel : 'auto',
+            height: contentSize.height ? contentSize.height * zoomLevel : 'auto',
           }}
         >
-          {generatedReports.length > 0 ? (
-            generatedReports.map(student => (
-              <div key={student.id} className="report-container">
-                <ReportCard student={student} />
+          <div
+            ref={reportContainerRef}
+            className="flex flex-row gap-12 w-max transition-transform duration-200 ease-in-out origin-top-left"
+            style={{
+              transform: `scale(${zoomLevel})`,
+            }}
+          >
+            {generatedReports.length > 0 ? (
+              generatedReports.map(student => (
+                <div key={student.id} className="report-container">
+                  <ReportCard student={student} />
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-20 bg-white rounded-lg shadow-md border min-w-[800px]">
+                <h2 className="text-xl text-gray-500">
+                  Please select a class to view reports.
+                </h2>
               </div>
-            ))
-          ) : (
-            <div className="text-center py-20 bg-white rounded-lg shadow-md border">
-              <h2 className="text-xl text-gray-500">
-                Please select a class to view reports.
-              </h2>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
       {SHOW_PDF_DOWNLOAD_BUTTON && generatedReports.length > 0 && (selectedStudentForPanel ? isPanelCollapsed : true) && (

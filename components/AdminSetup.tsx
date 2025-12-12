@@ -688,7 +688,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                             }}
                             className="flex-1 py-3 px-4 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition"
                         >
-                            Save & Close
+                            Apply Changes
                         </button>
                     )}
                     {mode === 'management' && users.length > 0 && (
