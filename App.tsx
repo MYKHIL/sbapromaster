@@ -23,7 +23,7 @@ import { SyncOverlayConnected } from './components/SyncOverlayConnected';
 import { SITE_ACTIVE } from './constants';
 import GreetingToast from './components/GreetingToast';
 import DatabaseErrorModal from './components/DatabaseErrorModal';
-import BrowserCompatibilityModal from './components/BrowserCompatibilityModal';
+
 
 // This helper is now only used for pages that need to persist state.
 const PageWrapper: React.FC<{ name: Page; currentPage: Page; children: React.ReactNode }> = ({ name, currentPage, children }) => {
@@ -93,7 +93,6 @@ const App: React.FC = () => {
 
   return (
     <>
-      <BrowserCompatibilityModal />
       <DatabaseErrorProvider>
         <DataProvider>
           <UserProvider>

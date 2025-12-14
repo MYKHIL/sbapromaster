@@ -154,13 +154,27 @@ const ReportCard: React.FC<{ student: Student }> = ({ student }) => {
             <section className="flex justify-between items-start mt-1 text-sm gap-x-4 flex-shrink-0">
                 <div className="flex-grow">
                     {/* Row 1: Name */}
-                    <div className="flex items-baseline py-0.5">
-                        <span className="font-bold whitespace-nowrap pr-2 text-black">Name:</span>
-                        <div className="relative w-full h-6 border-b border-dotted border-black text-black overflow-hidden font-bold text-lg -mb-1">
-                            <div className="absolute bottom-0 left-0 right-0">
-                                {student.name ? <FitText maxFontSize={18} minFontSize={14} mode="single">{student.name}</FitText> : <span className="invisible">.</span>}
+                    {/* Row 1: Name & Promoted To */}
+                    <div className="flex items-baseline py-0.5 w-full">
+                        <div className={`flex items-baseline ${settings.isPromotionTerm ? 'flex-grow min-w-0 mr-4' : 'w-full'}`}>
+                            <span className="font-bold whitespace-nowrap pr-2 text-black">Name:</span>
+                            <div className="relative w-full h-6 border-b border-dotted border-black text-black overflow-hidden font-bold text-lg -mb-1">
+                                <div className="absolute bottom-0 left-0 right-0">
+                                    {student.name ? <FitText maxFontSize={18} minFontSize={14} mode="single">{student.name}</FitText> : <span className="invisible">.</span>}
+                                </div>
                             </div>
                         </div>
+
+                        {settings.isPromotionTerm && (
+                            <div className="flex items-baseline flex-shrink-0 w-1/3">
+                                <span className="font-bold whitespace-nowrap pr-2 text-black">Promoted To:</span>
+                                <div className="relative w-full h-6 border-b border-dotted border-black text-black overflow-hidden font-bold text-lg -mb-1">
+                                    <div className="absolute bottom-0 left-0 right-0">
+                                        <FitText maxFontSize={18} minFontSize={14} mode="single">{reportData?.promotedTo || ''}</FitText>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="mt-1 space-y-1">

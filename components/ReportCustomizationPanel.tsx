@@ -466,7 +466,7 @@ const InputWithOptions: React.FC<{
 };
 
 const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ student, performanceSummary, onCollapseChange, classId }) => {
-    const { getReportData, updateReportData, getClassData, updateClassData } = useData();
+    const { getReportData, updateReportData, getClassData, updateClassData, settings } = useData();
     const [data, setData] = useState<Partial<Omit<ReportSpecificData, 'totalSchoolDays'>>>({ attendance: '', conduct: '', interest: '', attitude: '', teacherRemark: '' });
     const [originalData, setOriginalData] = useState<Partial<Omit<ReportSpecificData, 'totalSchoolDays'>>>({});
     const [totalDays, setTotalDays] = useState('');
@@ -581,20 +581,13 @@ const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ stu
                 bg-white/95 backdrop-blur-sm border-gray-200 z-20 transition-transform duration-500 ease-in-out
                 lg:fixed lg:top-28 lg:right-6 lg:w-96 lg:p-6 lg:rounded-xl lg:shadow-2xl lg:border lg:transform-none lg:left-auto lg:bottom-auto
                 fixed bottom-0 inset-x-0 w-full p-4 rounded-t-2xl shadow-2xl border-t
-                ${isCollapsed ? 'lg:translate-x-[calc(100%-2.5rem)] translate-y-[calc(100%-4rem)]' : 'lg:translate-x-0 translate-y-0'}
+                ${ // Mobile only: collapse logic
+                isCollapsed ? 'translate-y-[calc(100%-4rem)] lg:translate-x-0 lg:translate-y-0' : 'translate-y-0'
+                }
             `}
-            onMouseEnter={() => window.innerWidth >= 1024 && setIsCollapsed(false)}
-            onMouseLeave={() => window.innerWidth >= 1024 && setIsCollapsed(true)}
+        // Removed onMouseEnter/Leave to keep it permanently visible on desktop
         >
-            {/* Desktop Collapse Handle */}
-            <button
-                onClick={() => setIsCollapsed(false)}
-                className={`hidden lg:flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full w-10 h-24 bg-white/80 backdrop-blur-sm border-l border-t border-b border-gray-200 rounded-l-lg items-center justify-center text-gray-600 hover:bg-white transition-opacity duration-300 ${isCollapsed ? 'opacity-100' : 'opacity-0 pointer-events-none'
-                    }`}
-                aria-label="Expand panel"
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg>
-            </button>
+            {/* Desktop Collapse Handle REMOVED */}
 
             {/* Mobile Collapse Handle */}
             <div className="lg:hidden w-full flex justify-center pb-2 cursor-pointer touch-none" onClick={() => setIsCollapsed(!isCollapsed)}>
@@ -611,7 +604,7 @@ const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ stu
             )}
 
             {/* Content Container */}
-            <div className={`transition-opacity duration-300 ${isCollapsed && window.innerWidth >= 1024 ? 'opacity-0' : 'opacity-100'}`}>
+            <div className={`transition-opacity duration-300 ${isCollapsed ? 'lg:opacity-100 opacity-100' : 'opacity-100'}`}>
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="text-xl font-bold text-gray-800">Performance Comments for {student.name}</h3>
                     <button
@@ -640,6 +633,19 @@ const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ stu
                             placeholder="e.g. 180"
                         />
                     </div>
+                    {settings.isPromotionTerm && (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Promoted To</label>
+                            <input
+                                type="text"
+                                name="promotedTo"
+                                value={data.promotedTo || ''}
+                                onChange={handleChange}
+                                className={inputStyles}
+                                placeholder="e.g. JHS 2"
+                            />
+                        </div>
+                    )}
                     <InputWithOptions
                         label="Days Attended"
                         name="attendance"

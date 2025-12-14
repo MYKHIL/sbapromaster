@@ -9,6 +9,9 @@ import { useUser } from '../../context/UserContext';
 import ReadOnlyWrapper from '../ReadOnlyWrapper';
 import { getAvailableClasses, canManageStudentsInClass } from '../../utils/permissions';
 import { compressImage } from '../../utils/imageUtils';
+import { generateIndexNumber } from '../../utils/indexNumberGenerator';
+import { getNextAvailableCounter } from '../../utils/indexNumberCounter';
+import { sortClassesByName } from '../../utils/classSort';
 
 const EMPTY_STUDENT_FORM: Omit<Student, 'id'> = {
     name: '',
@@ -37,7 +40,7 @@ const calculateAge = (dobString: string): string => {
 
 
 const Students: React.FC = () => {
-    const { students, classes, addStudent, updateStudent, deleteStudent, saveStudents, isDirty, isSyncing, isOnline } = useData();
+    const { students, classes, addStudent, updateStudent, deleteStudent, saveStudents, isDirty, isSyncing, isOnline, settings, updateSettings } = useData();
     const { currentUser, isAuthenticated } = useUser();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentStudent, setCurrentStudent] = useState<Student | Omit<Student, 'id'> | null>(null);
@@ -60,7 +63,7 @@ const Students: React.FC = () => {
     }, [students, currentUser, isAuthenticated]);
 
     // Derived list of classes available for "Add Student" or filtering
-    const availableClasses = useMemo(() => getAvailableClasses(currentUser, classes), [currentUser, classes]);
+    const availableClasses = useMemo(() => sortClassesByName(getAvailableClasses(currentUser, classes)), [currentUser, classes]);
 
     // Initialize default class selection to first available class (only once on mount)
     useEffect(() => {
@@ -192,58 +195,102 @@ const Students: React.FC = () => {
         e.preventDefault();
         if (!currentStudent) return;
 
-        if (!currentStudent.name.trim() || !currentStudent.indexNumber.trim() || !currentStudent.class) {
-            alert("Please ensure Name, Index Number, and Class are filled out.");
-            return;
+        // Check auto-assignment mode
+        const isAutoAssignMode = settings.autoAssignIndexNumbers;
+
+        if (isAutoAssignMode) {
+            // In auto-assign mode, only name and class are required
+            if (!currentStudent.name.trim() || !currentStudent.class) {
+                alert("Please ensure Name and Class are filled out.");
+                return;
+            }
+        } else {
+            // In manual mode, index number is also required
+            if (!currentStudent.name.trim() || !currentStudent.indexNumber.trim() || !currentStudent.class) {
+                alert("Please ensure Name, Index Number, and Class are filled out.");
+                return;
+            }
         }
 
         if ('id' in currentStudent) {
+            // Editing existing student
             updateStudent(currentStudent);
         } else {
-            addStudent(currentStudent);
+            // Adding new student
+            let studentToAdd = { ...currentStudent };
+
+            // Auto-generate index number if enabled
+            if (isAutoAssignMode) {
+                // Find the class object for class-specific config
+                const classObj = classes.find(c => c.name === studentToAdd.class);
+
+                // Get the next available counter (checks existing students to avoid duplicates)
+                const nextCounter = getNextAvailableCounter(students, settings, classObj);
+
+                // Generate the index number using the next available counter
+                studentToAdd.indexNumber = generateIndexNumber(settings, classObj, nextCounter);
+
+                // Increment the appropriate counter
+                if (settings.indexNumberPerClass && classObj) {
+                    // Update class counter
+                    const updatedClasses = classes.map(c =>
+                        c.id === classObj.id
+                            ? { ...c, indexNumberCounter: (c.indexNumberCounter || 1) + 1 }
+                            : c
+                    );
+                    // You'll need to update classes via DataContext
+                    // For now, update settings with global counter
+                    updateSettings({ indexNumberGlobalCounter: nextCounter + 1 });
+                } else {
+                    // Update global counter
+                    updateSettings({ indexNumberGlobalCounter: nextCounter + 1 });
+                }
+            }
+
+            addStudent(studentToAdd);
         }
         handleCloseModal();
     };
 
     return (
-        <ReadOnlyWrapper allowedRoles={['Admin', 'Teacher']}>
-            <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                    <h1 className="text-3xl font-bold text-gray-800">Manage Students</h1>
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <h1 className="text-3xl font-bold text-gray-800">Manage Students</h1>
 
-                    {/* Save Button */}
-                    {/* Save Button Removed - Using Global Action Bar */}
-                </div>
+                {/* Save Button */}
+                {/* Save Button Removed - Using Global Action Bar */}
+            </div>
 
-                <div className="bg-gray-100 py-4">
-                    <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                        {/* Class Filter Dropdown */}
-                        <select
-                            value={selectedClass}
-                            onChange={(e) => setSelectedClass(e.target.value)}
-                            className="w-full md:w-1/4 px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                            <option value="">All Classes</option>
-                            {availableClasses.map(cls => (
-                                <option key={cls.id} value={cls.name}>{cls.name}</option>
-                            ))}
-                        </select>
+            <div className="bg-gray-100 py-4">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                    {/* Class Filter Dropdown */}
+                    <select
+                        value={selectedClass}
+                        onChange={(e) => setSelectedClass(e.target.value)}
+                        className="w-full md:w-1/4 px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                        <option value="">All Classes</option>
+                        {availableClasses.map(cls => (
+                            <option key={cls.id} value={cls.name}>{cls.name}</option>
+                        ))}
+                    </select>
 
-                        {/* Search Input */}
-                        <div className="relative w-full md:w-1/3">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                            </div>
-                            <input
-                                type="text"
-                                placeholder="Search by name, index no, or class..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className={searchInputStyles}
-                            />
+                    {/* Search Input */}
+                    <div className="relative w-full md:w-1/3">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                         </div>
+                        <input
+                            type="text"
+                            placeholder="Search by name, index no, or class..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className={searchInputStyles}
+                        />
+                    </div>
 
-                        {/* Add Student Button */}
+                    {/* Add Student Button */}
+                    <ReadOnlyWrapper allowedRoles={['Admin', 'Teacher']}>
                         {(currentUser?.role === 'Admin' || (currentUser?.role === 'Teacher' && currentUser.allowedClasses.length > 0)) && (
                             <button onClick={handleAddNew} className="add-button flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors w-full md:w-auto justify-center">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -252,10 +299,12 @@ const Students: React.FC = () => {
                                 Add New Student
                             </button>
                         )}
-                    </div>
+                    </ReadOnlyWrapper>
                 </div>
+            </div>
 
-                {/* Desktop Table View */}
+            {/* Desktop Table View */}
+            <ReadOnlyWrapper allowedRoles={['Admin', 'Teacher']}>
                 <div className="hidden lg:block bg-white p-6 rounded-xl shadow-md border border-gray-200">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
@@ -354,96 +403,112 @@ const Students: React.FC = () => {
                         </div>
                     )}
                 </div>
+            </ReadOnlyWrapper>
 
-                {isModalOpen && currentStudent && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                        <div className="bg-white p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-lg m-4 overflow-y-auto max-h-[90vh]">
-                            <h2 className="text-2xl font-bold mb-6 text-gray-800">{'id' in currentStudent ? 'Edit Student' : 'Add New Student'}</h2>
-                            <form onSubmit={handleSubmit} className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Student Photo</label>
-                                    <div className="mt-1 flex items-center space-x-4">
-                                        <img src={currentStudent.picture || USER_PLACEHOLDER} alt="Preview" className="h-20 w-20 rounded-full object-cover bg-gray-200" />
-                                        <div className="space-y-2">
-                                            <input
-                                                type="file"
-                                                accept="image/*"
-                                                onChange={handleFileChange}
-                                                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                                            />
-                                            <CameraCapture onCapture={handleCameraCapture} />
-                                            {currentStudent.picture && (
-                                                <button type="button" onClick={handleClearImage} className="text-red-500 text-sm hover:underline">
-                                                    Remove Photo
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-                                    {AI_FEATURES_ENABLED && (
-                                        <div className="mt-2">
-                                            <button type="button" onClick={handleEnhanceImage} disabled={!currentStudent.picture || isEnhancing} className="flex items-center text-sm bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full font-semibold hover:bg-indigo-200 disabled:bg-gray-200 disabled:text-gray-500 transition-colors">
-                                                {isEnhancing ? 'Enhancing...' : '✨ Enhance Photo with AI'}
+            {isModalOpen && currentStudent && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+                    <div className="bg-white p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-lg m-4 overflow-y-auto max-h-[90vh]">
+                        <h2 className="text-2xl font-bold mb-6 text-gray-800">{'id' in currentStudent ? 'Edit Student' : 'Add New Student'}</h2>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Student Photo</label>
+                                <div className="mt-1 flex items-center space-x-4">
+                                    <img src={currentStudent.picture || USER_PLACEHOLDER} alt="Preview" className="h-20 w-20 rounded-full object-cover bg-gray-200" />
+                                    <div className="space-y-2">
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleFileChange}
+                                            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                        />
+                                        <CameraCapture onCapture={handleCameraCapture} />
+                                        {currentStudent.picture && (
+                                            <button type="button" onClick={handleClearImage} className="text-red-500 text-sm hover:underline">
+                                                Remove Photo
                                             </button>
-                                        </div>
+                                        )}
+                                    </div>
+                                </div>
+                                {AI_FEATURES_ENABLED && (
+                                    <div className="mt-2">
+                                        <button type="button" onClick={handleEnhanceImage} disabled={!currentStudent.picture || isEnhancing} className="flex items-center text-sm bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full font-semibold hover:bg-indigo-200 disabled:bg-gray-200 disabled:text-gray-500 transition-colors">
+                                            {isEnhancing ? 'Enhancing...' : '✨ Enhance Photo with AI'}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Name</label>
+                                <input type="text" name="name" value={currentStudent.name} onChange={handleChange} className={inputStyles} placeholder="Full Name" required />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">
+                                    Index Number
+                                    {settings.autoAssignIndexNumbers && (
+                                        <span className="ml-2 text-xs text-blue-600">
+                                            {('id' in currentStudent) ? '(Locked)' : '(Auto-generated)'}
+                                        </span>
                                     )}
-                                </div>
+                                </label>
+                                <input
+                                    type="text"
+                                    name="indexNumber"
+                                    value={currentStudent.indexNumber}
+                                    onChange={handleChange}
+                                    className={`${inputStyles} ${settings.autoAssignIndexNumbers ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                                    placeholder={settings.autoAssignIndexNumbers && !('id' in currentStudent) ? 'Will be auto-generated' : 'Index Number'}
+                                    disabled={settings.autoAssignIndexNumbers}
+                                    required={!settings.autoAssignIndexNumbers}
+                                />
+                            </div>
 
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Class</label>
+                                <select name="class" value={currentStudent.class} onChange={handleChange} className={inputStyles} required>
+                                    <option value="">Select Class</option>
+                                    {availableClasses.map((cls) => (
+                                        <option key={cls.id} value={cls.name}>{cls.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Gender</label>
+                                <select name="gender" value={currentStudent.gender} onChange={handleChange} className={inputStyles}>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                </select>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700">Name</label>
-                                    <input type="text" name="name" value={currentStudent.name} onChange={handleChange} className={inputStyles} placeholder="Full Name" required />
+                                    <label className="block text-sm font-medium text-gray-700">Date of Birth</label>
+                                    <input type="date" name="dateOfBirth" value={currentStudent.dateOfBirth} onChange={handleChange} className={inputStyles} />
                                 </div>
-
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700">Index Number</label>
-                                    <input type="text" name="indexNumber" value={currentStudent.indexNumber} onChange={handleChange} className={inputStyles} placeholder="Index Number" required />
+                                    <label className="block text-sm font-medium text-gray-700">Age</label>
+                                    <input type="text" name="age" value={currentStudent.age} readOnly className={`${inputStyles} bg-gray-50`} placeholder="Auto-calc" />
                                 </div>
+                            </div>
 
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Class</label>
-                                    <select name="class" value={currentStudent.class} onChange={handleChange} className={inputStyles} required>
-                                        <option value="">Select Class</option>
-                                        {availableClasses.map((cls) => (
-                                            <option key={cls.id} value={cls.name}>{cls.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Gender</label>
-                                    <select name="gender" value={currentStudent.gender} onChange={handleChange} className={inputStyles}>
-                                        <option value="Male">Male</option>
-                                        <option value="Female">Female</option>
-                                    </select>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700">Date of Birth</label>
-                                        <input type="date" name="dateOfBirth" value={currentStudent.dateOfBirth} onChange={handleChange} className={inputStyles} />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700">Age</label>
-                                        <input type="text" name="age" value={currentStudent.age} readOnly className={`${inputStyles} bg-gray-50`} placeholder="Auto-calc" />
-                                    </div>
-                                </div>
-
-                                <div className="flex justify-end space-x-3 pt-4">
-                                    <button type="button" onClick={handleCloseModal} className="px-4 py-2 border rounded-md text-gray-700 hover:bg-gray-50">Cancel</button>
-                                    <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 shadow-md transform active:scale-95 transition-transform">Save</button>
-                                </div>
-                            </form>
-                        </div>
+                            <div className="flex justify-end space-x-3 pt-4">
+                                <button type="button" onClick={handleCloseModal} className="px-4 py-2 border rounded-md text-gray-700 hover:bg-gray-50">Cancel</button>
+                                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 shadow-md transform active:scale-95 transition-transform">Save</button>
+                            </div>
+                        </form>
                     </div>
-                )}
+                </div>
+            )}
 
-                <ConfirmationModal
-                    isOpen={isConfirmOpen}
-                    onClose={() => setIsConfirmOpen(false)}
-                    onConfirm={handleConfirmDelete}
-                    title="Delete Student"
-                    message="Are you sure you want to delete this student? This action cannot be undone."
-                />
-            </div>
-        </ReadOnlyWrapper>
+            <ConfirmationModal
+                isOpen={isConfirmOpen}
+                onClose={() => setIsConfirmOpen(false)}
+                onConfirm={handleConfirmDelete}
+                title="Delete Student"
+                message="Are you sure you want to delete this student? This action cannot be undone."
+            />
+        </div>
     );
 };
 

@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
 import ReadOnlyWrapper from '../ReadOnlyWrapper';
+import { sortClassesByName } from '../../utils/classSort';
 
 interface MissingEntry {
     studentName: string;
@@ -41,7 +42,7 @@ const ScoreSummary: React.FC = () => {
     const summaryData = useMemo(() => {
         if (!classes || !students || !assessments || !subjects) return [];
 
-        return classes.map(cls => {
+        return sortClassesByName(classes).map(cls => {
             const classStudents = students.filter(s => s.class === cls.name);
 
             // If no students in class, return basic info

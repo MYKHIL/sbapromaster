@@ -446,6 +446,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             pendingScoreChanges.current.clear();
             setHasLocalChanges(false);
 
+            // Clear draft scores to prevent stale UI state
+            draftScores.current.clear();
+            setDraftVersion(0);
+
             // Clear original data on logout
             originalData.current = {};
         }

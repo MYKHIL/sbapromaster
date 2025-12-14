@@ -9,6 +9,8 @@ import { SHOW_PDF_DOWNLOAD_BUTTON } from '../../constants';
 import { useUser } from '../../context/UserContext';
 import { getAvailableClasses } from '../../utils/permissions';
 import PdfErrorModal from '../PdfErrorModal';
+import ReadOnlyWrapper from '../ReadOnlyWrapper';
+import { sortClassesByName } from '../../utils/classSort';
 
 const PerformanceSummaryFetcher: React.FC<{ student: Student, children: (summary: string) => React.ReactNode }> = ({ student, children }) => {
   const { performanceSummary } = useReportCardData(student);
@@ -35,6 +37,7 @@ const ReportViewer: React.FC = () => {
   const [showPanel, setShowPanel] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isGeneratingAllPdf, setIsGeneratingAllPdf] = useState(false);
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
   const [pdfError, setPdfError] = useState<any>(null);
   const [showScrollIndicator, setShowScrollIndicator] = useState(false);
@@ -77,21 +80,32 @@ const ReportViewer: React.FC = () => {
 
   const studentsInClass = useMemo(() => {
     if (!selectedClassId) return [];
+    // Find in ALL classes first
     const selectedClass = classes.find(c => c.id === selectedClassId);
-    if (!selectedClass) return [];
-    return students.filter(s => s.class === selectedClass.name);
+    if (!selectedClass) {
+      console.warn('[ReportViewer] Selected class ID not found:', selectedClassId);
+      return [];
+    }
+    const filtered = students.filter(s => s.class === selectedClass.name);
+    console.log('[ReportViewer] Students in class:', selectedClass.name, filtered.length);
+    return filtered;
   }, [students, classes, selectedClassId]);
 
 
   // Filter classes based on user permissions
   const accessibleClasses = useMemo(() => {
-    return getAvailableClasses(currentUser, classes);
+    return sortClassesByName(getAvailableClasses(currentUser, classes));
   }, [classes, currentUser]);
 
-  // Auto-select first accessible class if none is selected
+  // Auto-select first accessible class if none is selected OR if selected class is not accessible
   useEffect(() => {
-    if (!selectedClassId && accessibleClasses.length > 0) {
+    if (accessibleClasses.length === 0) return;
+
+    const isSelectedAccessible = selectedClassId && accessibleClasses.some(c => c.id === selectedClassId);
+
+    if (!selectedClassId || !isSelectedAccessible) {
       const firstClassId = accessibleClasses[0].id;
+      console.log('[ReportViewer] Auto-selecting class:', firstClassId);
       setSelectedClassId(firstClassId);
       localStorage.setItem('reportViewer_selectedClassId', String(firstClassId));
     }
@@ -210,6 +224,40 @@ const ReportViewer: React.FC = () => {
     }
   };
 
+  const handleDownloadAllPdf = async () => {
+    if (accessibleClasses.length <= 1) return;
+    setIsGeneratingAllPdf(true);
+    setPdfError(null);
+
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    try {
+      const { generateReportsPDF } = await import('../../services/pdfGenerator');
+
+      // Collect students from all accessible classes (preserving class sort order)
+      const allStudentsToPrint: Student[] = [];
+      accessibleClasses.forEach(cls => {
+        const classStudents = students.filter(s => s.class === cls.name);
+        // Sort students by name within class for cleaner output
+        classStudents.sort((a, b) => a.name.localeCompare(b.name));
+        allStudentsToPrint.push(...classStudents);
+      });
+
+      if (allStudentsToPrint.length === 0) {
+        // Should effectively never happen unless classes are empty
+        console.warn("No students found in accessible classes");
+        return;
+      }
+
+      await generateReportsPDF(allStudentsToPrint, data);
+    } catch (e) {
+      console.error("Failed to generate All Classes PDF", e);
+      setPdfError(e);
+    } finally {
+      setIsGeneratingAllPdf(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-6">
@@ -256,12 +304,14 @@ const ReportViewer: React.FC = () => {
       {selectedStudentForPanel && selectedClassId && (
         <PerformanceSummaryFetcher student={selectedStudentForPanel}>
           {(summary) => (
-            <ReportCustomizationPanel
-              student={selectedStudentForPanel}
-              performanceSummary={summary}
-              onCollapseChange={setIsPanelCollapsed}
-              classId={Number(selectedClassId)}
-            />
+            <ReadOnlyWrapper allowedRoles={['Admin', 'Teacher']}>
+              <ReportCustomizationPanel
+                student={selectedStudentForPanel}
+                performanceSummary={summary}
+                onCollapseChange={setIsPanelCollapsed}
+                classId={Number(selectedClassId)}
+              />
+            </ReadOnlyWrapper>
           )}
         </PerformanceSummaryFetcher>
       )}
@@ -342,8 +392,8 @@ const ReportViewer: React.FC = () => {
           </div>
         )}
       </div>
-      {SHOW_PDF_DOWNLOAD_BUTTON && generatedReports.length > 0 && (selectedStudentForPanel ? isPanelCollapsed : true) && (
-        <div className="fixed bottom-6 right-6 z-20 flex flex-col items-center gap-4">
+      {SHOW_PDF_DOWNLOAD_BUTTON && generatedReports.length > 0 && (
+        <div className={`fixed bottom-6 z-20 flex-col items-center gap-4 transition-all duration-300 ${(selectedStudentForPanel && !isPanelCollapsed) ? 'hidden lg:flex' : 'flex'} ${selectedStudentForPanel ? 'lg:right-[27rem] right-6' : 'right-6'}`}>
           <button
             onClick={handleDownloadPdf}
             disabled={isGeneratingPdf}
@@ -362,6 +412,29 @@ const ReportViewer: React.FC = () => {
               </>
             )}
           </button>
+
+          {/* Download All Button - Only if multiple classes accessible */}
+          {accessibleClasses.length > 1 && (
+            <button
+              onClick={handleDownloadAllPdf}
+              disabled={isGeneratingAllPdf || isGeneratingPdf}
+              className="flex items-center bg-blue-600 text-white px-5 py-3 rounded-full shadow-lg hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:scale-100"
+              aria-label="Download All Classes Reports"
+              title="Download reports for all your available classes"
+            >
+              {isGeneratingAllPdf ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                  <span>Generating All...</span>
+                </>
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                  <span className="ml-2 font-semibold hidden sm:inline">Download Reports from All {accessibleClasses.length} Classes</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
       )}
 

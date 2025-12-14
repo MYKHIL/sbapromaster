@@ -497,6 +497,15 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 variant="info"
                 confirmText="Register"
             />
+
+            {/* Browser Recommendation - Non-obtrusive */}
+            {!navigator.userAgent.match(/Chrome|Edg/) && (
+                <div className="absolute bottom-4 left-0 right-0 text-center px-4 animate-fade-in text-white/80 text-xs">
+                    <p className="bg-black/40 backdrop-blur-md inline-block px-4 py-2 rounded-full border border-white/10 shadow-lg">
+                        ℹ️ For the best experience, we recommend using <a href="https://www.google.com/chrome/" target="_blank" rel="noopener noreferrer" className="text-yellow-300 hover:underline font-bold">Google Chrome</a>.
+                    </p>
+                </div>
+            )}
         </div>
     );
 };

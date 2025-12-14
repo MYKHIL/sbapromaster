@@ -150,24 +150,24 @@ const Teachers: React.FC = () => {
     };
 
     return (
-        <ReadOnlyWrapper allowedRoles={['Admin', 'Teacher']}>
-            <div className="space-y-6">
-                <h1 className="text-3xl font-bold text-gray-800">Manage Teachers &amp; Classes</h1>
+        <div className="space-y-6">
+            <h1 className="text-3xl font-bold text-gray-800">Manage Teachers &amp; Classes</h1>
 
-                <div className="bg-gray-100 py-4">
-                    <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                        <div className="relative w-full md:w-1/3">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                            </div>
-                            <input
-                                type="text"
-                                placeholder="Search by class or teacher name..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className={searchInputStyles}
-                            />
+            <div className="bg-gray-100 py-4">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div className="relative w-full md:w-1/3">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                         </div>
+                        <input
+                            type="text"
+                            placeholder="Search by class or teacher name..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className={searchInputStyles}
+                        />
+                    </div>
+                    <ReadOnlyWrapper allowedRoles={['Admin', 'Teacher']}>
                         {isAdmin && (
                             <button onClick={handleAddNew} className="add-button flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors w-full md:w-auto justify-center">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -176,13 +176,15 @@ const Teachers: React.FC = () => {
                                 Add New Teacher/Class
                             </button>
                         )}
+                    </ReadOnlyWrapper>
 
-                        {/* Save Button */}
-                        {/* Save Button Removed - Using Global Action Bar */}
-                    </div>
+                    {/* Save Button */}
+                    {/* Save Button Removed - Using Global Action Bar */}
                 </div>
+            </div>
 
-                {/* Desktop Table View */}
+            {/* Desktop Table View */}
+            <ReadOnlyWrapper allowedRoles={['Admin', 'Teacher']}>
                 <div className="hidden lg:block bg-white p-6 rounded-xl shadow-md border border-gray-200">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
@@ -261,92 +263,91 @@ const Teachers: React.FC = () => {
                         </div>
                     )}
                 </div>
+            </ReadOnlyWrapper>
 
-                {isModalOpen && currentClassData && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                        <div className="bg-white p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-lg m-4">
-                            <h2 className="text-2xl font-bold mb-6 text-gray-800">{'id' in currentClassData ? 'Edit Teacher/Class' : 'Add New Teacher/Class'}</h2>
-                            <form onSubmit={handleSubmit} className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Class Name</label>
-                                    <input
-                                        type="text"
-                                        name="name"
-                                        value={currentClassData.name}
-                                        onChange={handleChange}
-                                        required
-                                        className={inputStyles}
-                                        disabled={!isAdmin && 'id' in currentClassData} // Disable editing class name for non-admins if editing
-                                    />
-                                    {/* Clarification for teachers why this is disabled */}
-                                    {!isAdmin && 'id' in currentClassData && (
-                                        <p className="text-xs text-gray-500 mt-1">Class assignment cannot be changed.</p>
-                                    )}
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Teacher's Name</label>
-                                    <input type="text" name="teacherName" value={currentClassData.teacherName} onChange={handleChange} required className={inputStyles} />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Teacher's Signature</label>
-                                    <div className="mt-1 flex items-center space-x-4">
-                                        <img src={currentClassData.teacherSignature || SIGNATURE_PLACEHOLDER} alt="Signature Preview" className="h-12 w-36 object-contain border p-1 rounded-md bg-gray-50" />
-                                        <div className="space-y-2 w-full">
-                                            <input type="file" accept="image/*" onChange={handleFileChange} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
-                                            <CameraCapture onCapture={handleCameraCapture} label="Take Signature Photo" />
-                                            {currentClassData.teacherSignature && (
-                                                <button
-                                                    type="button"
-                                                    onClick={handleClearImage}
-                                                    className="flex items-center px-3 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors text-sm font-medium w-full justify-center"
-                                                >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                    </svg>
-                                                    Clear Signature
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-                                    {AI_FEATURES_ENABLED && (
-                                        <div className="mt-2">
+            {isModalOpen && currentClassData && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+                    <div className="bg-white p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-lg m-4">
+                        <h2 className="text-2xl font-bold mb-6 text-gray-800">{'id' in currentClassData ? 'Edit Teacher/Class' : 'Add New Teacher/Class'}</h2>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Class Name</label>
+                                <input
+                                    type="text"
+                                    name="name"
+                                    value={currentClassData.name}
+                                    onChange={handleChange}
+                                    required
+                                    className={inputStyles}
+                                    disabled={!isAdmin && 'id' in currentClassData} // Disable editing class name for non-admins if editing
+                                />
+                                {/* Clarification for teachers why this is disabled */}
+                                {!isAdmin && 'id' in currentClassData && (
+                                    <p className="text-xs text-gray-500 mt-1">Class assignment cannot be changed.</p>
+                                )}
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Teacher's Name</label>
+                                <input type="text" name="teacherName" value={currentClassData.teacherName} onChange={handleChange} required className={inputStyles} />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Teacher's Signature</label>
+                                <div className="mt-1 flex items-center space-x-4">
+                                    <img src={currentClassData.teacherSignature || SIGNATURE_PLACEHOLDER} alt="Signature Preview" className="h-12 w-36 object-contain border p-1 rounded-md bg-gray-50" />
+                                    <div className="space-y-2 w-full">
+                                        <input type="file" accept="image/*" onChange={handleFileChange} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                                        <CameraCapture onCapture={handleCameraCapture} label="Take Signature Photo" />
+                                        {currentClassData.teacherSignature && (
                                             <button
                                                 type="button"
-                                                onClick={handleEnhanceImage}
-                                                disabled={!currentClassData.teacherSignature || isEnhancing}
-                                                className="flex items-center text-sm bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full font-semibold hover:bg-indigo-200 disabled:bg-gray-200 disabled:text-gray-500 transition-colors"
+                                                onClick={handleClearImage}
+                                                className="flex items-center px-3 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors text-sm font-medium w-full justify-center"
                                             >
-                                                {isEnhancing ? (
-                                                    <>
-                                                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                        </svg>
-                                                        Enhancing...
-                                                    </>
-                                                ) : '✨ Enhance Image'}
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                                Clear Signature
                                             </button>
-                                        </div>
-                                    )}
+                                        )}
+                                    </div>
                                 </div>
-                                <div className="flex justify-end pt-4 space-x-2">
-                                    <button type="button" onClick={handleCloseModal} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancel</button>
-                                    <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save</button>
-                                </div>
-                            </form>
-                        </div>
+                                {AI_FEATURES_ENABLED && (
+                                    <div className="mt-2">
+                                        <button
+                                            type="button"
+                                            onClick={handleEnhanceImage}
+                                            disabled={!currentClassData.teacherSignature || isEnhancing}
+                                            className="flex items-center text-sm bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full font-semibold hover:bg-indigo-200 disabled:bg-gray-200 disabled:text-gray-500 transition-colors"
+                                        >
+                                            {isEnhancing ? (
+                                                <>
+                                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                    Enhancing...
+                                                </>
+                                            ) : '✨ Enhance Image'}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex justify-end pt-4 space-x-2">
+                                <button type="button" onClick={handleCloseModal} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancel</button>
+                                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save</button>
+                            </div>
+                        </form>
                     </div>
-                )}
-                <ConfirmationModal
-                    isOpen={isConfirmOpen}
-                    onClose={() => setIsConfirmOpen(false)}
-                    onConfirm={handleConfirmDelete}
-                    title="Delete Teacher/Class"
-                    message="Are you sure you want to delete this entry? This action cannot be undone."
-                />
-            </div>
-        </ReadOnlyWrapper>
+                </div>
+            )}
+            <ConfirmationModal
+                isOpen={isConfirmOpen}
+                onClose={() => setIsConfirmOpen(false)}
+                onConfirm={handleConfirmDelete}
+                title="Delete Teacher/Class"
+                message="Are you sure you want to delete this entry? This action cannot be undone."
+            />
+        </div>
     );
 };
-
 export default Teachers;

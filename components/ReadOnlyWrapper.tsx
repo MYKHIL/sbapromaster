@@ -32,10 +32,11 @@ const ReadOnlyWrapper: React.FC<ReadOnlyWrapperProps> = ({
     const { currentUser, isAuthenticated } = useUser();
 
     // If global lock is on, ONLY admins can edit.
-    // Even if the user has a role in allowedRoles, the lock overrides it unless they are Admin.
+    // Use isReadOnly flag from user profile
     const isLocked = settings.isDataEntryLocked;
+    const isUserReadOnly = currentUser?.isReadOnly || false;
 
-    const canEdit = isAuthenticated && currentUser && (
+    const canEdit = isAuthenticated && currentUser && !isUserReadOnly && (
         currentUser.role === 'Admin' || (!isLocked && allowedRoles.includes(currentUser.role))
     ) && (requiresAdmin ? currentUser.role === 'Admin' : true);
 
@@ -47,9 +48,25 @@ const ReadOnlyWrapper: React.FC<ReadOnlyWrapperProps> = ({
         userRole: currentUser?.role || null,
     };
 
+    // Use fieldset when read-only to automatically disable all native inputs and buttons
+    // We add simple reset styles to avoid breaking layout as much as possible
+    if (!canEdit) {
+        return (
+            <PermissionContext.Provider value={permissionValue}>
+                <fieldset
+                    disabled={true}
+                    className="read-only-mode w-full border-none p-0 m-0 min-w-0 block"
+                    style={{ inheritParams: 'none' } as any} // Helper for some CSS-in-JS issues? No, just standard valid props
+                >
+                    {children}
+                </fieldset>
+            </PermissionContext.Provider>
+        );
+    }
+
     return (
         <PermissionContext.Provider value={permissionValue}>
-            <div className={!canEdit ? 'read-only-mode' : ''}>
+            <div className="">
                 {children}
             </div>
         </PermissionContext.Provider>

@@ -77,7 +77,8 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
         const classSpecificData = classInfo ? getClassData(classInfo.id) : undefined;
 
         const totalSchoolDays = classSpecificData?.totalSchoolDays || '-';
-        const numOnRoll = students.filter(s => s.class === student.class).length;
+        // CRITICAL FIX: Use data.students (all students) instead of students (only those being printed)
+        const numOnRoll = data.students.filter(s => s.class === student.class).length;
 
         // --- BORDER ---
         doc.setDrawColor(0);
@@ -87,11 +88,12 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
         // --- HEADER ---
         let currentY = MARGIN_Y + CONTENT_MARGIN;
 
-        // Logo
+        // Logo - aligned to top of school name
         if (settings.logo) {
             try {
-                // Reduced width from 35mm to 28mm to prevent overlap with school name
-                doc.addImage(settings.logo, 'PNG', MARGIN_X + 6, currentY, 28, 22, undefined, 'FAST');
+                // Align logo to same Y position as school name starts
+                // Increased height from 22 to 26 to stretch it slightly
+                doc.addImage(settings.logo, 'PNG', MARGIN_X + 6, currentY + 1, 28, 26, undefined, 'FAST');
             } catch (e) {
                 console.warn("Failed to add logo", e);
             }
@@ -103,7 +105,8 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
         doc.setFont('times', 'bold');
         doc.setFontSize(22);
 
-        let textY = currentY + 8;
+        // Align text to top - no offset
+        let textY = currentY + 7;
 
         // Dynamic School Name
         // Max width 130mm to avoid logo overlap (Logo is ~41mm wide from left)
@@ -148,11 +151,24 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
         const leftColX = MARGIN_X + 6;
         const rightColX = MARGIN_X + CARD_WIDTH - 6;
         const photoWidth = 30;
-        const infoWidth = CARD_WIDTH - 12 - photoWidth - 5; // Space for info
+        const hasPhoto = !!student.picture;
+        const infoWidth = hasPhoto ? (CARD_WIDTH - 12 - photoWidth - 5) : (CARD_WIDTH - 12); // Expand if no photo
 
         // Name
-        // Name
-        addUnderlinedField("Name", student.name, leftColX, currentY, infoWidth, 15, 'left', true, 14);
+        // Name & Promoted To
+        if (settings.isPromotionTerm) {
+            const promotedTo = reportSpecificData?.promotedTo || '';
+            const colGap = 4;
+            // Split layout: Name gets roughly 65%, Promoted To gets rest
+            // Adjust label width for "Promoted To" which is longer than "Name"
+            const nameWidth = (infoWidth - colGap) * 0.65;
+            const promoWidth = (infoWidth - colGap) * 0.35;
+
+            addUnderlinedField("Name", student.name, leftColX, currentY, nameWidth, 15, 'left', true, 14);
+            addUnderlinedField("Promoted To", promotedTo, leftColX + nameWidth + colGap, currentY, promoWidth, 28, 'left', true, 14);
+        } else {
+            addUnderlinedField("Name", student.name, leftColX, currentY, infoWidth, 15, 'left', true, 14);
+        }
 
         currentY += 8;
         const colGap = 4;
@@ -179,7 +195,7 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
         const aggStr = reportCalcData.aggregateScore > 0 ? reportCalcData.aggregateScore.toString() : '-';
         addUnderlinedField("Aggregate", aggStr, leftColX + colWidth + colGap, currentY, colWidth, 18);
 
-        const posStr = `${getOrdinal(reportCalcData.overallPosition)} out of ${numOnRoll}`;
+        const posStr = `${getOrdinal(reportCalcData.overallPosition)} out of ${numOnRoll} ${numOnRoll === 1 ? 'student' : 'students'}`;
         addUnderlinedField("Position", posStr, leftColX + (colWidth + colGap) * 2, currentY, colWidth, 16);
 
         // Row 4 (Dates)
@@ -188,17 +204,21 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
             if (!d) return '';
             try {
                 const dt = new Date(d);
-                return `${getOrdinal(dt.getDate())} ${dt.toLocaleString('en-GB', { month: 'short' })}, ${dt.getFullYear()}`; 
+                // Use full month name instead of short
+                return `${getOrdinal(dt.getDate())} ${dt.toLocaleString('en-GB', { month: 'long' })}, ${dt.getFullYear()}`;
             } catch { return d; }
         };
         addUnderlinedField("Vacation Date", fmtDate(settings.vacationDate), leftColX, currentY, colWidth * 1.5, 25);
         addUnderlinedField("Reopening Date", fmtDate(settings.reopeningDate), leftColX + (colWidth * 1.5) + colGap, currentY, colWidth * 1.5, 28);
 
-        // Photo
+        // Photo - aligned to top of student name
         if (student.picture) {
             try {
-                doc.rect(rightColX - photoWidth, MARGIN_Y + 45, photoWidth, 36); // Photo border
-                doc.addImage(student.picture, 'PNG', rightColX - photoWidth, MARGIN_Y + 45, photoWidth, 36, undefined, 'FAST');
+                // currentY is at "Vacation Date" row (Row 4)
+                // Name row was 4 rows back (4 * 8mm = 32mm)
+                const photoY = currentY - 32;
+                doc.rect(rightColX - photoWidth, photoY, photoWidth, 36); // Photo border
+                doc.addImage(student.picture, 'PNG', rightColX - photoWidth, photoY, photoWidth, 36, undefined, 'FAST');
             } catch (e) {
                 console.warn("Failed to add student picture", e);
             }
@@ -210,7 +230,7 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
         const numCols = 4;
         const itemsPerCol = Math.ceil(sortedGrades.length / numCols);
         const gradingKeyRowsHeight = itemsPerCol * 4;
-        const gradingKeyHeaderHeight = 8;
+        const gradingKeyHeaderHeight = 12; // Increased space for header
         const gradingKeyTotalHeight = gradingKeyHeaderHeight + gradingKeyRowsHeight; // no padding
 
         const remarksHeight = 35; // Approx
@@ -321,15 +341,31 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
         doc.setFontSize(8);
         doc.setFont('times', 'normal');
 
+        // Center and middle the grading key items within the black box
+        const totalContentHeight = Math.ceil(sortedGrades.length / numCols) * 4;
+        const verticalOffset = (gradingKeyRowsHeight - totalContentHeight) / 2;
+
+        // Center the entire grid block horizontally
+        // Estimate width of one grading item "A+ 80-100% Excellent" -> approx 40mm
+        const itemWidth = 42;
+
+        // Calculate actually used columns to properly center
+        const actualNumCols = Math.ceil(sortedGrades.length / itemsPerCol);
+        const totalGridWidth = actualNumCols * itemWidth;
+        const gridStartX = centerX - (totalGridWidth / 2);
+
         for (let c = 0; c < numCols; c++) {
             const colItems = sortedGrades.slice(c * itemsPerCol, (c + 1) * itemsPerCol);
-            let gy = currentY;
+            let gy = currentY + verticalOffset;
             colItems.forEach(g => {
+                // Calculate absolute X for this column
+                const colX = gridStartX + (c * itemWidth);
+
                 doc.setFont('times', 'bold');
-                doc.text(g.name, tableX + (c * colW) + 2, gy);
+                doc.text(g.name, colX, gy); // Grade Letter
                 doc.setFont('times', 'normal');
-                doc.text(`${g.minScore}-${g.maxScore}%`, tableX + (c * colW) + 12, gy);
-                doc.text(g.remark, tableX + (c * colW) + 28, gy);
+                doc.text(`${g.minScore}-${g.maxScore}%`, colX + 10, gy); // Range
+                doc.text(g.remark, colX + 26, gy); // Remark
                 gy += 4;
             });
         }

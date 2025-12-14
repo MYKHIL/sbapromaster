@@ -80,28 +80,28 @@ const Subjects: React.FC = () => {
     };
 
     return (
-        <ReadOnlyWrapper allowedRoles={['Admin']}>
-            <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                    <h1 className="text-3xl font-bold text-gray-800">Manage Subjects</h1>
-                    {/* Save Button Removed - Using Global Action Bar */}
-                </div>
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <h1 className="text-3xl font-bold text-gray-800">Manage Subjects</h1>
+                {/* Save Button Removed - Using Global Action Bar */}
+            </div>
 
-                <div className="bg-gray-100 py-4">
-                    <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                        <div className="relative w-full md:w-1/3">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                            </div>
-                            <input
-                                type="text"
-                                placeholder="Search by subject or type..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className={searchInputStyles}
-                            />
+            <div className="bg-gray-100 py-4">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div className="relative w-full md:w-1/3">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                         </div>
+                        <input
+                            type="text"
+                            placeholder="Search by subject or type..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className={searchInputStyles}
+                        />
+                    </div>
 
+                    <ReadOnlyWrapper allowedRoles={['Admin']}>
                         {isAdmin && (
                             <button onClick={handleAddNew} className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors w-full md:w-auto justify-center">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -110,10 +110,12 @@ const Subjects: React.FC = () => {
                                 Add New Subject
                             </button>
                         )}
-                    </div>
+                    </ReadOnlyWrapper>
                 </div>
+            </div>
 
-                {/* Desktop Table View */}
+            {/* Desktop Table View */}
+            <ReadOnlyWrapper allowedRoles={['Admin']}>
                 <div className="hidden lg:block bg-white p-6 rounded-xl shadow-md border border-gray-200">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
@@ -202,41 +204,41 @@ const Subjects: React.FC = () => {
                         </div>
                     )}
                 </div>
+            </ReadOnlyWrapper>
 
 
-                {isModalOpen && currentSubject && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                        <div className="bg-white p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-lg m-4">
-                            <h2 className="text-2xl font-bold mb-6 text-gray-800">{'id' in currentSubject ? 'Edit Subject' : 'Add New Subject'}</h2>
-                            <form onSubmit={handleSubmit} className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Subject Name</label>
-                                    <input type="text" name="subject" value={currentSubject.subject} onChange={handleChange} required className={inputStyles} />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Type</label>
-                                    <select name="type" value={currentSubject.type} onChange={handleChange} className={inputStyles}>
-                                        <option>Core</option>
-                                        <option>Elective</option>
-                                    </select>
-                                </div>
-                                <div className="flex justify-end pt-4 space-x-2">
-                                    <button type="button" onClick={handleCloseModal} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancel</button>
-                                    <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save</button>
-                                </div>
-                            </form>
-                        </div>
+            {isModalOpen && currentSubject && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+                    <div className="bg-white p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-lg m-4">
+                        <h2 className="text-2xl font-bold mb-6 text-gray-800">{'id' in currentSubject ? 'Edit Subject' : 'Add New Subject'}</h2>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Subject Name</label>
+                                <input type="text" name="subject" value={currentSubject.subject} onChange={handleChange} required className={inputStyles} />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Type</label>
+                                <select name="type" value={currentSubject.type} onChange={handleChange} className={inputStyles}>
+                                    <option>Core</option>
+                                    <option>Elective</option>
+                                </select>
+                            </div>
+                            <div className="flex justify-end pt-4 space-x-2">
+                                <button type="button" onClick={handleCloseModal} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancel</button>
+                                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save</button>
+                            </div>
+                        </form>
                     </div>
-                )}
-                <ConfirmationModal
-                    isOpen={isConfirmOpen}
-                    onClose={() => setIsConfirmOpen(false)}
-                    onConfirm={handleConfirmDelete}
-                    title="Delete Subject"
-                    message="Are you sure you want to delete this subject? This action cannot be undone."
-                />
-            </div>
-        </ReadOnlyWrapper >
+                </div>
+            )}
+            <ConfirmationModal
+                isOpen={isConfirmOpen}
+                onClose={() => setIsConfirmOpen(false)}
+                onConfirm={handleConfirmDelete}
+                title="Delete Subject"
+                message="Are you sure you want to delete this subject? This action cannot be undone."
+            />
+        </div>
     );
 };
 

@@ -35,6 +35,11 @@ export interface Class {
   name: string;
   teacherName: string;
   teacherSignature: string; // base64 string
+
+  // Index Number Configuration (when per-class mode is enabled)
+  indexNumberPrefix?: string; // Class-specific prefix (e.g., "JHS1-")
+  indexNumberSuffix?: string; // Class-specific suffix (e.g., "-A")
+  indexNumberCounter?: number; // Current counter for this class
 }
 
 export interface Grade {
@@ -72,6 +77,16 @@ export interface SchoolSettings {
   logo: string; // base64 string
   headmasterSignature: string; // base64 string
   isDataEntryLocked?: boolean; // If true, non-admins cannot add/edit/delete
+
+  // Index Number Auto-Assignment Configuration
+  autoAssignIndexNumbers?: boolean; // If true, index numbers will be auto-assigned
+  indexNumberGlobalPrefix?: string; // Global prefix for all index numbers (e.g., "0220009")
+  indexNumberGlobalSuffix?: string; // Global suffix for all index numbers (e.g., "25")
+  indexNumberCounterDigits?: number; // Number of digits for counter (default: 3)
+  indexNumberPerClass?: boolean; // If true, each class has its own counter
+  indexNumberAutoSort?: boolean; // If true, sort students alphabetically before assigning
+  indexNumberGlobalCounter?: number; // Global counter when not using per-class counters
+  isPromotionTerm?: boolean; // If true, enables the promotion field in reports
 }
 
 export interface ReportSpecificData {
@@ -81,6 +96,7 @@ export interface ReportSpecificData {
   interest: string;
   attitude: string;
   teacherRemark: string;
+  promotedTo?: string; // Optional field for promotion status (e.g. "JHS 2")
 }
 
 export interface ClassSpecificData {
@@ -99,6 +115,7 @@ export interface User {
   allowedSubjects: string[]; // Subject names the user has access to
   classSubjects?: { [className: string]: string[] }; // Optional: class -> subjects mapping
   passwordHash: string; // Hashed password
+  isReadOnly?: boolean; // If true, user cannot edit anything regardless of role
 }
 
 export interface DeviceCredential {

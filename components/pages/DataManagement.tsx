@@ -1,17 +1,271 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
-import { updateUsers } from '../../services/firebaseService';
+import { updateUsers, createDocumentId, saveUserDatabase, getSchoolData, type AppDataType } from '../../services/firebaseService';
 import { exportDatabase, importDatabase } from '../../services/databaseService';
 import { generateWpfProject } from '../../services/wpfProjectGenerator';
 import ConfirmationModal from '../ConfirmationModal';
 import AdminSetup from '../AdminSetup';
 import { DEV_TOOLS_ENABLED, WHATSAPP_DEVELOPER_NUMBER } from '../../constants';
 import type { User } from '../../types';
+import { generateIndexNumber, validateIndexNumberPattern } from '../../utils/indexNumberGenerator';
+import IndexNumberConfig from '../IndexNumberConfig';
+
+
+interface FeedbackState {
+    message: string;
+    type: 'success' | 'error' | 'info' | 'warning';
+    details?: string[];
+    detailsTitle?: string;
+}
+
+interface CreateTermModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    setFeedback: (feedback: FeedbackState | null) => void;
+}
+
+const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setFeedback }) => {
+    const dataContext = useData();
+    const { settings, schoolId } = dataContext;
+    const { users } = useUser();
+
+    const [newYear, setNewYear] = useState('');
+    const [newTerm, setNewTerm] = useState('');
+    const [password, setPassword] = useState('');
+    const [maintainPassword, setMaintainPassword] = useState(true);
+    const [showPassword, setShowPassword] = useState(false);
+    const [isFetchingPwd, setIsFetchingPwd] = useState(false);
+    const [isCreating, setIsCreating] = useState(false);
+
+    useEffect(() => {
+        if (isOpen) {
+
+            let term = '';
+            const current = (settings.academicTerm || '').toLowerCase().trim();
+
+            if (current === 'first term') term = 'Second Term';
+            else if (current === 'second term') term = 'Third Term';
+            else if (current === 'third term') term = 'First Term';
+            else term = 'First Term';
+            setNewTerm(term);
+
+            if (settings.isPromotionTerm) {
+                const nextYear = settings.academicYear.replace(/\d+/g, (m) => (parseInt(m) + 1).toString().padStart(m.length, '0'));
+                setNewYear(nextYear);
+            } else {
+                setNewYear(settings.academicYear);
+            }
+
+            setPassword('');
+            setMaintainPassword(true);
+            setShowPassword(false);
+        }
+    }, [isOpen, settings]);
+
+    useEffect(() => {
+        const fetchPwd = async () => {
+            if (maintainPassword && schoolId) {
+                setIsFetchingPwd(true);
+                try {
+                    const data = await getSchoolData(schoolId);
+                    if (data?.password) setPassword(data.password);
+                } catch (e) {
+                    setFeedback({ message: 'Could not fetch current password.', type: 'error' });
+                    setMaintainPassword(false);
+                } finally {
+                    setIsFetchingPwd(false);
+                }
+            }
+        };
+        if (maintainPassword && !password) fetchPwd();
+    }, [maintainPassword, schoolId, password, setFeedback]);
+
+    if (!isOpen) return null;
+
+    const handleCreate = async () => {
+        if (!newYear || !newTerm || !password) {
+            setFeedback({ message: 'Please fill in all fields.', type: 'error' });
+            return;
+        }
+
+        setIsCreating(true);
+        try {
+            // 1. Prepare Data for New Term
+            const newStudents = dataContext.students.map(s => {
+                // Promotion Logic
+                if (settings.isPromotionTerm) {
+                    const report = dataContext.reportData.find(r => r.studentId === s.id);
+                    if (report?.promotedTo) {
+                        return { ...s, class: report.promotedTo }; // Update class to promoted class
+                    }
+                }
+                // If not promoted, stay in current class (repeat)
+                return s;
+            });
+
+            const newSettings = {
+                ...settings,
+                academicYear: newYear,
+                academicTerm: newTerm,
+                isPromotionTerm: false // Reset promotion settings for the new term
+            };
+
+            // Create the sanitized ID for the new document
+            // Use the existing school ID prefix (e.g. 'ayirebida') to maintain login consistency
+            const schoolPrefix = schoolId ? schoolId.split('_')[0] : settings.schoolName;
+            const newDocId = createDocumentId(schoolPrefix, newSettings.academicYear, newSettings.academicTerm);
+
+            // Full data payload
+            const newData: AppDataType = {
+                settings: newSettings,
+                students: newStudents,
+                subjects: dataContext.subjects,
+                classes: dataContext.classes,
+                grades: dataContext.grades,
+                assessments: dataContext.assessments,
+                scores: [], // Clear scores
+                reportData: [], // Clear comments/remarks
+                classData: [], // Clear class stats
+                users: users, // Copy existing users access
+                password: password,
+                Access: true, // Enable access immediately
+                activeSessions: {}, // Reset sessions
+                userLogs: [] // Reset logs
+            };
+
+            // 2. Save to Firebase
+            await saveUserDatabase(newDocId, newData);
+
+            // 3. Switch to New Term
+            dataContext.setSchoolId(newDocId);
+            setFeedback({ message: 'New term created! Switching to ' + newDocId, type: 'success' });
+
+            // Close modal
+            onClose();
+
+            // Optional: Force reload if context doesn't auto-refresh completely
+            setTimeout(() => window.location.reload(), 1500);
+
+        } catch (error: any) {
+            console.error("Failed to create term:", error);
+            setFeedback({ message: 'Failed to create term: ' + error.message, type: 'error' });
+        } finally {
+            setIsCreating(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 animate-fade-in-scale">
+            <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md m-4">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Create New Term</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                    This will create a new database for the next term. Students, Classes, and Subjects will be copied.
+                    <strong>Scores and Remarks will be cleared.</strong> If promotion is enabled, students will be moved to their new classes.
+                </p>
+
+                <div className="space-y-4">
+                    <div>
+                        <label htmlFor="newAcademicYear" className="block text-sm font-medium text-gray-700">New Academic Year</label>
+                        <input
+                            id="newAcademicYear"
+                            type="text"
+                            value={newYear}
+                            onChange={e => setNewYear(e.target.value)}
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="e.g. 2024 - 2025"
+                        />
+                    </div>
+                    <div>
+                        <label htmlFor="newTerm" className="block text-sm font-medium text-gray-700">New Term</label>
+                        <select
+                            id="newTerm"
+                            value={newTerm}
+                            onChange={e => setNewTerm(e.target.value)}
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                        >
+                            <option value="">Select Term...</option>
+                            <option value="First Term">First Term</option>
+                            <option value="Second Term">Second Term</option>
+                            <option value="Third Term">Third Term</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700">Set Password for New Term</label>
+                        <div className="mt-1 relative rounded-md shadow-sm">
+                            <input
+                                id="newPassword"
+                                type={showPassword ? "text" : "password"}
+                                value={password}
+                                onChange={e => setPassword(e.target.value)}
+                                className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-10"
+                                placeholder="Enter password"
+                                disabled={maintainPassword && isFetchingPwd}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600"
+                                aria-label={showPassword ? "Hide password" : "Show password"}
+                            >
+                                {showPassword ? (
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                        <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                                    </svg>
+                                ) : (
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
+                                        <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.742L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.064 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
+                                    </svg>
+                                )}
+                            </button>
+                        </div>
+                        <div className="flex items-center mt-2 space-x-2">
+                            <input
+                                type="checkbox"
+                                id="maintainPassword"
+                                checked={maintainPassword}
+                                onChange={(e) => setMaintainPassword(e.target.checked)}
+                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <label htmlFor="maintainPassword" className="text-sm text-gray-600 select-none cursor-pointer">
+                                Maintain current school password
+                            </label>
+                            {isFetchingPwd && (
+                                <svg className="animate-spin h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="mt-6 flex flex-row-reverse gap-3">
+                    <button
+                        onClick={handleCreate}
+                        disabled={isCreating || isFetchingPwd}
+                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 flex items-center"
+                    >
+                        {isCreating && <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
+                        Create & Switch
+                    </button>
+                    <button
+                        onClick={onClose}
+                        className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const DataManagement: React.FC = () => {
     const dataContext = useData();
-    const { settings, loadImportedData, saveToCloud, schoolId, markDirty } = dataContext;
+    const { settings, loadImportedData, saveToCloud, schoolId, updateSettings } = dataContext;
     const { currentUser, users, setUsers } = useUser();
     const [processingAction, setProcessingAction] = useState<'import' | 'export' | 'generate_wpf' | 'share' | null>(null);
     const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' | 'info' | 'warning'; details?: string[]; detailsTitle?: string; } | null>(null);
@@ -36,6 +290,7 @@ const DataManagement: React.FC = () => {
 
     // State for user management
     const [isUserManagementOpen, setIsUserManagementOpen] = useState(false);
+    const [isCreateTermModalOpen, setIsCreateTermModalOpen] = useState(false);
 
 
     const buttonStyles = "flex items-center justify-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-wait";
@@ -429,6 +684,8 @@ const DataManagement: React.FC = () => {
         );
     }
 
+
+
     const ReadyToShareModal = () => {
         if (!isReadyToShareModalOpen) return null;
 
@@ -479,138 +736,186 @@ const DataManagement: React.FC = () => {
 
 
     return (
-        <div className="max-w-4xl mx-auto space-y-8">
+        <div className="max-w-7xl mx-auto space-y-8 animate-fade-in">
             <h1 className="text-3xl font-bold text-gray-800">Data Management</h1>
 
             <FeedbackPanel />
+            <CreateTermModal isOpen={isCreateTermModalOpen} onClose={() => setIsCreateTermModalOpen(false)} setFeedback={setFeedback} />
 
-            <div className="bg-white p-8 rounded-xl shadow-md border border-gray-200 space-y-6">
-                <h2 className="text-xl font-bold text-gray-700 border-b pb-2">Import & Export</h2>
-                <p className="text-gray-600">
-                    You can back up all your school's data into a single `.sdlx` file. This file can be stored securely and used to restore your data on this or another computer.
-                </p>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* LEFT COLUMN: Operations & Admin */}
+                <div className="space-y-8">
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-4">
+                    {/* 1. Academic Session Card */}
                     {currentUser?.role === 'Admin' && (
-                        <div>
-                            <h3 className="font-semibold text-gray-800">Import Data</h3>
-                            <p className="text-sm text-gray-500 mb-2">Load data from an .sdlx database file. <strong className="text-red-600">This will overwrite all current data.</strong></p>
-                            <input
-                                type="file"
-                                accept=".sdlx"
-                                onChange={handleFileSelect}
-                                disabled={!!processingAction}
-                                ref={fileInputRef}
-                                style={{ display: 'none' }}
-                                aria-hidden="true"
-                            />
-                            <button onClick={handleImportClick} disabled={!!processingAction} className={buttonStyles}>
-                                {processingAction === 'import' ? (
-                                    <>
-                                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+                            <div className="flex items-center mb-4">
+                                <div className="p-2 bg-blue-100 rounded-lg mr-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                </div>
+                                <h2 className="text-xl font-bold text-gray-800">Academic Session</h2>
+                            </div>
+
+                            <div className="space-y-6">
+                                {/* Start New Term */}
+                                <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg border border-gray-100">
+                                    <div>
+                                        <h3 className="font-semibold text-gray-800">Next Term Setup</h3>
+                                        <p className="text-sm text-gray-500 mt-1">Prepare for the upcoming academic term.</p>
+                                    </div>
+                                    <button
+                                        onClick={() => setIsCreateTermModalOpen(true)}
+                                        className="bg-purple-600 text-white px-4 py-2 rounded-lg shadow hover:bg-purple-700 transition-colors text-sm font-semibold flex items-center"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                                         </svg>
-                                        Processing...
-                                    </>
-                                ) : 'Import Database File'}
-                            </button>
+                                        Start New Term
+                                    </button>
+                                </div>
+
+                                {/* Promotion Toggle */}
+                                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
+                                    <div>
+                                        <h3 className="font-semibold text-gray-800">Promotion Mode</h3>
+                                        <p className="text-sm text-gray-500 mt-1">Enable "Promoted To" field on reports.</p>
+                                    </div>
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={settings.isPromotionTerm || false}
+                                            onChange={(e) => updateSettings({ isPromotionTerm: e.target.checked })}
+                                            className="sr-only peer"
+                                        />
+                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                     )}
-                    <div>
-                        <h3 className="font-semibold text-gray-800">Export Data</h3>
-                        <p className="text-sm text-gray-500 mb-2">Save all current data to an .sdlx database file as a backup.</p>
-                        <button onClick={handleExport} disabled={!!processingAction} className={buttonStyles}>
-                            {processingAction === 'export' ? (
-                                <>
-                                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                    Processing...
-                                </>
-                            ) : 'Download Database File'}
-                        </button>
-                    </div>
-                    <div>
-                        <h3 className="font-semibold text-gray-800">Share Backup</h3>
-                        <p className="text-sm text-gray-500 mb-2">Share the database file with a contact via WhatsApp.</p>
-                        <button
-                            onClick={() => setIsShareModalOpen(true)}
-                            disabled={!!processingAction}
-                            className="flex items-center justify-center bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-wait"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 16 16">
-                                <path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z" />
-                            </svg>
-                            Share Database File
-                        </button>
-                    </div>
-                </div>
-            </div>
 
-            {currentUser && currentUser.role === 'Admin' && (
-                <div className="bg-white p-8 rounded-xl shadow-md border border-gray-200 space-y-6">
-                    <h2 className="text-xl font-bold text-gray-700 border-b pb-2">User Management</h2>
-                    <p className="text-gray-600">
-                        Manage user accounts, roles, and permissions for your school.
-                    </p>
-
-                    <div className="pt-4">
-                        <button
-                            onClick={() => setIsUserManagementOpen(true)}
-                            className="flex items-center justify-center bg-purple-600 text-white px-6 py-3 rounded-lg shadow hover:bg-purple-700 transition-colors"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                            </svg>
-                            Manage Users
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {DEV_TOOLS_ENABLED && (
-                <div className="bg-white p-8 rounded-xl shadow-md border border-gray-200 space-y-6">
-                    <h2 className="text-xl font-bold text-gray-700 border-b pb-2">Developer Tools</h2>
-                    <p className="text-gray-600">
-                        Generate developer assets to recreate this application on other platforms.
-                    </p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
-                        <div>
-                            <h3 className="font-semibold text-gray-800">WPF App Recreation Prompt</h3>
-                            <p className="text-sm text-gray-500 mb-2">Downloads a comprehensive .txt file with instructions for an AI to build a WPF version of SBA Pro Master.</p>
-                            <button onClick={generateWpfPrompt} disabled={!!processingAction} className={buttonStyles}>
-                                Download Prompt (.txt)
-                            </button>
+                    {/* 2. System Administration Card */}
+                    <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+                        <div className="flex items-center mb-6">
+                            <div className="p-2 bg-gray-100 rounded-lg mr-3">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                            </div>
+                            <h2 className="text-xl font-bold text-gray-800">System Administration</h2>
                         </div>
-                        <div>
-                            <h3 className="font-semibold text-gray-800">WPF Project Source Code</h3>
-                            <p className="text-sm text-gray-500 mb-2">Generates all C# and XAML source code for the WPF application and bundles it into a downloadable .zip file.</p>
-                            <button onClick={handleGenerateWpfProject} disabled={!!processingAction} className={buttonStyles}>
-                                {processingAction === 'generate_wpf' ? (
-                                    <>
-                                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+
+                        <div className="space-y-6">
+                            {/* Access Control */}
+                            {currentUser?.role === 'Admin' && (
+                                <div className="pb-6 border-b border-gray-100">
+                                    <h3 className="font-semibold text-gray-800 mb-2">Access Control</h3>
+                                    <button
+                                        onClick={() => setIsUserManagementOpen(true)}
+                                        className="w-full flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors group"
+                                    >
+                                        <div className="flex items-center">
+                                            <div className="bg-blue-50 p-2 rounded-full mr-3 group-hover:bg-blue-100 transition-colors">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                                                </svg>
+                                            </div>
+                                            <span className="text-gray-700 font-medium">Manage Users & Permissions</span>
+                                        </div>
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                                         </svg>
-                                        Generating...
-                                    </>
-                                ) : 'Generate Project (.zip)'}
-                            </button>
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Data Operations */}
+                            <div>
+                                <h3 className="font-semibold text-gray-800 mb-3">Data Backup & Recovery</h3>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {/* Import - Only Admin */}
+                                    {currentUser?.role === 'Admin' && (
+                                        <>
+                                            <input
+                                                type="file"
+                                                accept=".sdlx"
+                                                onChange={handleFileSelect}
+                                                className="hidden"
+                                                ref={fileInputRef}
+                                            />
+                                            <button
+                                                onClick={handleImportClick}
+                                                disabled={processingAction !== null}
+                                                className="flex flex-col items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-orange-50 hover:border-orange-200 transition-all text-center group"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-orange-500 mb-1 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                                </svg>
+                                                <span className="text-xs font-semibold text-gray-700">Import Data</span>
+                                            </button>
+                                        </>
+                                    )}
+
+                                    {/* Export */}
+                                    <button
+                                        onClick={handleExport}
+                                        disabled={processingAction !== null}
+                                        className="flex flex-col items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-200 transition-all text-center group"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-600 mb-1 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                        </svg>
+                                        <span className="text-xs font-semibold text-gray-700">Export Backup</span>
+                                    </button>
+
+                                    {/* Share */}
+                                    <button
+                                        onClick={() => setIsShareModalOpen(true)}
+                                        disabled={processingAction !== null}
+                                        className="col-span-2 flex items-center justify-center p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-all text-center group"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
+                                        </svg>
+                                        <span className="text-sm font-semibold text-gray-700">Share via WhatsApp</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {DEV_TOOLS_ENABLED && (
+                                <div className="pt-4 border-t border-gray-100">
+                                    <button onClick={handleGenerateWpfProject} className="w-full py-2 text-xs text-indigo-600 hover:text-indigo-800 underline">
+                                        Generate WPF Project (Dev)
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
-            )}
 
-            <div className="p-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 rounded-md">
-                <h4 className="font-bold">Important Notice</h4>
-                <ul className="list-disc list-inside mt-2 text-sm">
-                    <li>Always keep your backup file in a safe place.</li>
-                    <li>Importing a file will replace everything, including settings, students, scores, and report card data.</li>
-                    <li>Ensure you are importing a valid `.sdlx` file generated by this application. A partially successful import may indicate inconsistencies in your backup file.</li>
-                </ul>
+                {/* RIGHT COLUMN: Configuration */}
+                <div className="space-y-8">
+                    {/* Index Number Config (Renders its own card) */}
+                    {currentUser && currentUser.role === 'Admin' && (
+                        <IndexNumberConfig />
+                    )}
+                </div>
             </div>
+
+
+
+
+
+
+
+
+
+
+
+
             <ConfirmationModal
                 isOpen={isConfirmModalOpen}
                 onClose={handleCancelImport}

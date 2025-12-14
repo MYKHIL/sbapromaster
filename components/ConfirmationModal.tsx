@@ -6,21 +6,36 @@ interface ConfirmationModalProps {
   onConfirm: () => void;
   title: string;
   message: React.ReactNode;
-  variant?: 'danger' | 'info';
+  variant?: 'danger' | 'info' | 'warning';
   confirmText?: string;
+  cancelText?: string;
+  additionalAction?: () => void;
+  additionalActionText?: string;
 }
 
-const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, onConfirm, title, message, variant = 'danger', confirmText }) => {
+const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+  message,
+  variant = 'danger',
+  confirmText,
+  cancelText,
+  additionalAction,
+  additionalActionText
+}) => {
   if (!isOpen) return null;
 
   const isDanger = variant === 'danger';
+  const isWarning = variant === 'warning';
 
   const theme = {
-    iconBg: isDanger ? 'bg-red-100' : 'bg-blue-100',
-    iconColor: isDanger ? 'text-red-600' : 'text-blue-600',
-    buttonBg: isDanger ? 'bg-red-600' : 'bg-blue-600',
-    buttonHoverBg: isDanger ? 'hover:bg-red-700' : 'hover:bg-blue-700',
-    buttonFocusRing: isDanger ? 'focus:ring-red-500' : 'focus:ring-blue-500',
+    iconBg: isDanger ? 'bg-red-100' : isWarning ? 'bg-orange-100' : 'bg-blue-100',
+    iconColor: isDanger ? 'text-red-600' : isWarning ? 'text-orange-600' : 'text-blue-600',
+    buttonBg: isDanger ? 'bg-red-600' : isWarning ? 'bg-orange-600' : 'bg-blue-600',
+    buttonHoverBg: isDanger ? 'hover:bg-red-700' : isWarning ? 'hover:bg-orange-700' : 'hover:bg-blue-700',
+    buttonFocusRing: isDanger ? 'focus:ring-red-500' : isWarning ? 'focus:ring-orange-500' : 'focus:ring-blue-500',
   };
 
   const icon = isDanger ? (
@@ -55,12 +70,21 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, 
           >
             {confirmText || (isDanger ? 'Delete' : 'Confirm')}
           </button>
+          {additionalAction && additionalActionText && (
+            <button
+              type="button"
+              className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+              onClick={additionalAction}
+            >
+              {additionalActionText}
+            </button>
+          )}
           <button
             type="button"
             className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm"
             onClick={onClose}
           >
-            Cancel
+            {cancelText || 'Cancel'}
           </button>
         </div>
       </div>

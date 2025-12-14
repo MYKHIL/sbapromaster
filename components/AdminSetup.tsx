@@ -149,6 +149,28 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         updateUser(userIndex, 'classSubjects', classSubjects);
     };
 
+    // For existing users (Management Mode)
+    const toggleExistingUserReadOnly = (userId: number) => {
+        const updatedUsers = existingUsers.map(u =>
+            u.id === userId ? { ...u, isReadOnly: !u.isReadOnly } : u
+        );
+        setExistingUsers(updatedUsers);
+        if (mode === 'management' && onUpdate) {
+            onUpdate(updatedUsers);
+        }
+    };
+
+    const toggleAllReadOnly = (isReadOnly: boolean) => {
+        const updatedUsers = existingUsers.map(u => ({ ...u, isReadOnly }));
+        setExistingUsers(updatedUsers);
+        if (mode === 'management' && onUpdate) {
+            onUpdate(updatedUsers);
+        }
+    };
+
+    // Calculate if all users are read-only for the bulk checkbox
+    const allReadOnly = existingUsers.length > 0 && existingUsers.every(u => u.isReadOnly);
+
     const handleSubmit = async () => {
         setError(null);
 
@@ -472,6 +494,21 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                 + Add New User
                             </button>
                         </div>
+
+                        {/* Global Read-Only Toggle */}
+                        <div className="flex items-center space-x-2 mb-4 px-1">
+                            <input
+                                type="checkbox"
+                                id="global-readonly"
+                                checked={allReadOnly}
+                                onChange={(e) => toggleAllReadOnly(e.target.checked)}
+                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <label htmlFor="global-readonly" className="text-sm font-medium text-gray-700">
+                                Set All Users to Read-Only Mode (Disable Editing)
+                            </label>
+                        </div>
+
                         <div ref={existingUsersListRef} className="space-y-2 max-h-80 overflow-y-auto pr-2">
                             {existingUsers.map((user, index) => (
                                 <div key={user.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -479,12 +516,26 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                         <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
                                             {index + 1}
                                         </span>
-                                        <div>
-                                            <span className="font-medium">{user.name}</span>
-                                            <span className="ml-3 text-sm text-gray-600">({user.role})</span>
+                                        <div className="flex flex-col">
+                                            <div>
+                                                <span className="font-medium">{user.name}</span>
+                                                <span className="ml-3 text-sm text-gray-600">({user.role})</span>
+                                            </div>
+                                            {user.isReadOnly && (
+                                                <span className="text-xs text-red-600 font-semibold mt-0.5">Read-Only</span>
+                                            )}
                                         </div>
                                     </div>
-                                    <div className="flex gap-2">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center mr-2" title="Toggle Read-Only Mode">
+                                            <input
+                                                type="checkbox"
+                                                checked={!!user.isReadOnly}
+                                                onChange={() => toggleExistingUserReadOnly(user.id)}
+                                                className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded cursor-pointer"
+                                            />
+                                            <span className="ml-1 text-xs text-gray-500">Lock</span>
+                                        </div>
                                         <button
                                             onClick={() => setResetConfirmUserId(user.id)}
                                             className="px-3 py-1 text-sm bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200 transition"
