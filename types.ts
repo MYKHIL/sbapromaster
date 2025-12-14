@@ -9,7 +9,8 @@ export type Page =
   | 'Assessment Types'
   | 'School Setup'
   | 'Data Management'
-  | 'Score Summary';
+  | 'Score Summary'
+  | 'Student Progress';
 
 export interface Student {
   id: number;
@@ -86,6 +87,7 @@ export interface SchoolSettings {
   indexNumberPerClass?: boolean; // If true, each class has its own counter
   indexNumberAutoSort?: boolean; // If true, sort students alphabetically before assigning
   indexNumberGlobalCounter?: number; // Global counter when not using per-class counters
+  allowStudentProgressView?: boolean; // Allow non-admins to view student progress page
   isPromotionTerm?: boolean; // If true, enables the promotion field in reports
 }
 

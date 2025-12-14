@@ -33,43 +33,44 @@ export const INITIAL_SETTINGS: SchoolSettings = {
   indexNumberGlobalCounter: 1,
 };
 
-export const INITIAL_STUDENTS: Student[] = [
-  { id: 1, name: 'John Doe', indexNumber: 'S001', gender: 'Male', class: 'JHS 1', dateOfBirth: '2010-05-15', age: '14', picture: '' },
-  { id: 2, name: 'Jane Smith', indexNumber: 'S002', gender: 'Female', class: 'JHS 1', dateOfBirth: '2010-08-20', age: '13', picture: '' },
-];
+export const INITIAL_STUDENTS: Student[] = [];
 
 export const INITIAL_SUBJECTS: Subject[] = [
-  { id: 1, subject: 'Mathematics', type: 'Core', facilitator: '', signature: '' },
-  { id: 2, subject: 'English Language', type: 'Core', facilitator: '', signature: '' },
-  { id: 3, subject: 'Integrated Science', type: 'Core', facilitator: '', signature: '' },
+  { id: 1, subject: 'English Language', type: 'Core', facilitator: '', signature: '' },
+  { id: 2, subject: 'Science', type: 'Core', facilitator: '', signature: '' },
+  { id: 3, subject: 'Mathematics', type: 'Core', facilitator: '', signature: '' },
   { id: 4, subject: 'Social Studies', type: 'Core', facilitator: '', signature: '' },
-  { id: 5, subject: 'French', type: 'Elective', facilitator: '', signature: '' },
+  { id: 5, subject: 'Computing', type: 'Elective', facilitator: '', signature: '' },
+  { id: 6, subject: 'Career Technology', type: 'Elective', facilitator: '', signature: '' },
+  { id: 7, subject: 'Creative Arts & Design', type: 'Elective', facilitator: '', signature: '' },
+  { id: 8, subject: 'Religious & Moral Education', type: 'Elective', facilitator: '', signature: '' },
+  { id: 9, subject: 'Ghanaian Language', type: 'Elective', facilitator: '', signature: '' },
+  { id: 10, subject: 'Creative Arts', type: 'Elective', facilitator: '', signature: '' },
+  { id: 11, subject: 'OWOP', type: 'Elective', facilitator: '', signature: '' },
+  { id: 12, subject: 'Numeracy', type: 'Core', facilitator: '', signature: '' },
+  { id: 13, subject: 'Language & Literacy', type: 'Core', facilitator: '', signature: '' },
 ];
 
-export const INITIAL_CLASSES: Class[] = [
-  { id: 1, name: 'JHS 1', teacherName: 'Mr. Emmanuel Quarshie', teacherSignature: '' },
-  { id: 2, name: 'JHS 2', teacherName: 'Mrs. Alberta Mensah', teacherSignature: '' },
-];
+export const INITIAL_CLASSES: Class[] = [];
 
 export const INITIAL_GRADES: Grade[] = [
-  { id: 1, name: 'A+', minScore: 80, maxScore: 100, remark: 'Excellent' },
-  { id: 2, name: 'A', minScore: 75, maxScore: 79, remark: 'Very Good' },
-  { id: 3, name: 'B+', minScore: 70, maxScore: 74, remark: 'Good' },
-  { id: 4, name: 'B', minScore: 65, maxScore: 69, remark: 'Credit' },
-  { id: 5, 'name': 'C+', minScore: 60, maxScore: 64, remark: 'Credit' },
-  { id: 6, 'name': 'C', minScore: 55, maxScore: 59, remark: 'Pass' },
-  { id: 7, name: 'D+', minScore: 50, maxScore: 54, remark: 'Pass' },
-  { id: 8, name: 'D', minScore: 45, maxScore: 49, remark: 'Weak Pass' },
-  { id: 9, name: 'E', minScore: 40, maxScore: 44, remark: 'Weak Pass' },
-  { id: 10, name: 'F', minScore: 0, maxScore: 39, remark: 'Fail' },
+  { id: 1, name: '1', minScore: 80, maxScore: 100, remark: 'Excellent' },
+  { id: 2, name: '2', minScore: 70, maxScore: 79.9, remark: 'Very Good' },
+  { id: 3, name: '3', minScore: 65, maxScore: 69.9, remark: 'Good' },
+  { id: 4, name: '4', minScore: 60, maxScore: 64.9, remark: 'High Average' },
+  { id: 5, name: '5', minScore: 55, maxScore: 59.9, remark: 'Average' },
+  { id: 6, name: '6', minScore: 50, maxScore: 54.9, remark: 'Pass' },
+  { id: 7, name: '7', minScore: 40, maxScore: 49.9, remark: 'Weak Pass' },
+  { id: 8, name: '8', minScore: 35, maxScore: 39.9, remark: 'Lower' },
+  { id: 9, name: '9', minScore: 0, maxScore: 34.9, remark: 'Lowest' },
 ];
 
 export const INITIAL_ASSESSMENTS: Assessment[] = [
-  { id: 1, name: 'Class Test 1', weight: 10 },
-  { id: 2, name: 'Class Test 2', weight: 10 },
-  { id: 3, name: 'Group Work', weight: 15 },
-  { id: 4, name: 'Project Work', weight: 15 },
-  { id: 5, name: 'End of Term Exam', weight: 50 },
+  { id: 1, name: 'Class Exercise', weight: 10 },
+  { id: 2, name: 'Class Test', weight: 15 },
+  { id: 3, name: 'Assignment', weight: 10 },
+  { id: 4, name: 'Group Work', weight: 15 },
+  { id: 5, name: 'Exam', weight: 50 },
 ];
 
 export const INITIAL_SCORES: Score[] = [];

@@ -317,29 +317,32 @@ const ReportViewer: React.FC = () => {
       )}
 
 
-      {!selectedStudentForPanel && (
-        <div className="fixed bottom-6 left-6 z-30 flex items-center bg-white p-2 rounded-full shadow-lg border border-gray-200 space-x-2 opacity-50 hover:opacity-100 transition-opacity duration-300">
-          <button
-            onClick={() => setZoomLevel(prev => Math.max(0.25, prev - 0.1))}
-            className="p-2 hover:bg-gray-100 rounded-full text-gray-600 focus:outline-none"
-            title="Zoom Out"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-            </svg>
-          </button>
-          <span className="text-sm font-medium w-12 text-center">{Math.round(zoomLevel * 100)}%</span>
-          <button
-            onClick={() => setZoomLevel(prev => Math.min(2, prev + 0.1))}
-            className="p-2 hover:bg-gray-100 rounded-full text-gray-600 focus:outline-none"
-            title="Zoom In"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-          </button>
-        </div>
-      )}
+      <div className={`fixed left-6 z-30 items-center bg-white p-2 rounded-full shadow-lg border border-gray-200 space-x-2 opacity-50 hover:opacity-100 transition-opacity duration-300 ${selectedStudentForPanel
+          ? isPanelCollapsed
+            ? 'flex bottom-24 lg:bottom-6' // Mobile: Above collapsed panel. Desktop: Standard.
+            : 'hidden lg:flex lg:bottom-6' // Mobile: Hidden. Desktop: Standard.
+          : 'flex bottom-6'                // No student: Standard.
+        }`}>
+        <button
+          onClick={() => setZoomLevel(prev => Math.max(0.25, prev - 0.1))}
+          className="p-2 hover:bg-gray-100 rounded-full text-gray-600 focus:outline-none"
+          title="Zoom Out"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+          </svg>
+        </button>
+        <span className="text-sm font-medium w-12 text-center">{Math.round(zoomLevel * 100)}%</span>
+        <button
+          onClick={() => setZoomLevel(prev => Math.min(2, prev + 0.1))}
+          className="p-2 hover:bg-gray-100 rounded-full text-gray-600 focus:outline-none"
+          title="Zoom In"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
+      </div>
 
       <div
         ref={scrollContainerRef}

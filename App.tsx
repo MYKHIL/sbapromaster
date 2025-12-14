@@ -11,6 +11,7 @@ import GradingSystem from './components/pages/GradingSystem';
 import AssessmentTypes from './components/pages/AssessmentTypes';
 import DataManagement from './components/pages/DataManagement';
 import ScoreSummary from './components/pages/ScoreSummary';
+import StudentProgress from './components/pages/StudentProgress';
 import { DataProvider, useData } from './context/DataContext';
 import { UserProvider, useUser } from './context/UserContext';
 import { DatabaseErrorProvider, useDatabaseError } from './context/DatabaseErrorContext';
@@ -46,6 +47,7 @@ const ActivePage: React.FC<{ page: Page }> = ({ page }) => {
     case 'Assessment Types': return <AssessmentTypes />;
     case 'Score Entry': return <ScoreEntry />;
     case 'Score Summary': return <ScoreSummary />;
+    case 'Student Progress': return <StudentProgress />;
     case 'Report Viewer': return <ReportViewer />;
     // Data Management is handled separately to preserve its state
     default: return null;

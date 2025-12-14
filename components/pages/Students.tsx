@@ -262,7 +262,7 @@ const Students: React.FC = () => {
             </div>
 
             <div className="bg-gray-100 py-4">
-                <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                <div className="flex flex-col md:flex-row justify-start items-center gap-4">
                     {/* Class Filter Dropdown */}
                     <select
                         value={selectedClass}

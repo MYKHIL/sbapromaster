@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, onSnapshot, runTransaction } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, onSnapshot, runTransaction, query, where, documentId } from "firebase/firestore";
 import type { SchoolSettings, Student, Subject, Class, Grade, Assessment, Score, ReportSpecificData, ClassSpecificData, User, DeviceCredential, UserLog, OnlineUser } from '../types';
 
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -439,6 +439,38 @@ export const getSchoolData = async (docId: string): Promise<AppDataType | null> 
         return null;
     } catch (e) {
         console.error("Error fetching school data:", e);
+        throw e;
+    }
+};
+
+
+/**
+ * Fetch all historical terms for a school
+ */
+export const getSchoolHistory = async (schoolName: string): Promise<AppDataType[]> => {
+    try {
+        const sanitizedSchoolName = sanitizeSchoolName(schoolName);
+        const prefix = sanitizedSchoolName + '_';
+
+        // Query for documents starting with schoolName_
+        const schoolsRef = collection(db, "schools");
+        const q = query(
+            schoolsRef,
+            where(documentId(), '>=', prefix),
+            where(documentId(), '<', prefix + '\uf8ff')
+        );
+
+        const querySnapshot = await getDocs(q);
+        const historyData: AppDataType[] = [];
+
+        querySnapshot.forEach((doc) => {
+            historyData.push(doc.data() as AppDataType);
+        });
+
+        return historyData;
+
+    } catch (e) {
+        console.error("Error fetching school history:", e);
         throw e;
     }
 };

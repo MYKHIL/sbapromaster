@@ -798,6 +798,7 @@ const DataManagement: React.FC = () => {
 
                     {/* 2. System Administration Card */}
                     <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+
                         <div className="flex items-center mb-6">
                             <div className="p-2 bg-gray-100 rounded-lg mr-3">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -829,6 +830,27 @@ const DataManagement: React.FC = () => {
                                             <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                                         </svg>
                                     </button>
+                                </div>
+                            )}
+
+                            {/* Student Progress Visibility Toggle */}
+                            {currentUser?.role === 'Admin' && (
+                                <div className="pb-6 border-b border-gray-100">
+                                    <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50">
+                                        <div>
+                                            <h3 className="font-semibold text-gray-800 text-sm">Student Progress View</h3>
+                                            <p className="text-xs text-gray-500 mt-1">Allow non-admin users to view progress page</p>
+                                        </div>
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={settings.allowStudentProgressView || false}
+                                                onChange={(e) => updateSettings({ allowStudentProgressView: e.target.checked })}
+                                                className="sr-only peer"
+                                            />
+                                            <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                                        </label>
+                                    </div>
                                 </div>
                             )}
 
