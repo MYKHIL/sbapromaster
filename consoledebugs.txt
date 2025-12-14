@@ -1,382 +1,65 @@
-  cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation
-(anonymous) @ (index):64
- Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
-  Gemini API key not found. AI features will be disabled.
-(anonymous) @ geminiService.ts:4
- [SyncLogger] Log initialized: SyncLog_2025-12-12T02-00-27.txt
- [SyncLogger] Logs will be saved to browser when you call downloadLog()
- [SYNC_LOG] AuthOverlay component mounted
- [AuthOverlay] Pausing sync - authentication in progress
- [SYNC_LOG] Pausing sync - authentication in progress
- [DataContext] Sync PAUSED
- [DataContext] 📥 Fetching initial data from cloud (Auto-Sync Disabled)...
- [SYNC_LOG] AuthOverlay component unmounting
- [SyncLogger] Log initialized: SyncLog_2025-12-12T02-00-27.txt
- [SyncLogger] Logs will be saved to browser when you call downloadLog()
- [SYNC_LOG] AuthOverlay component mounted
- [AuthOverlay] Pausing sync - authentication in progress
- [SYNC_LOG] Pausing sync - authentication in progress
- [DataContext] Sync PAUSED
- [DataContext] 📥 Fetching initial data from cloud (Auto-Sync Disabled)...
- [AuthOverlay] Pausing sync - authentication in progress
- [SYNC_LOG] Pausing sync - authentication in progress
- [DataContext] Sync PAUSED
- [DataContext] ✅ Initial data received via one-time fetch
- [SYNC_LOG] Initial data loaded. Users: 17, Scores: 730
- [DataContext] 📦 loadImportedData called (isRemote=true) with: Object
- [DataContext] ✅ Updating settings
- [SYNC_LOG] loadImportedData: Loading users. Count: 17
- [DataContext] ✅ Updating users: 17
- [SYNC_LOG] setUsers called. Current count: 0, New count: 17
- [SYNC_LOG] Stack trace: Error
-    at setUsers (DataContext.tsx?t=1765504699197:50:36)
-    at loadImportedData (DataContext.tsx?t=1765504699197:200:7)
-    at fetchInitialData (DataContext.tsx?t=1765504699197:580:11)
- [DataContext] 🧹 Selectively cleared dirty fields after remote data load
- [DataContext] ✅ Initial data received via one-time fetch
- [SYNC_LOG] Initial data loaded. Users: 17, Scores: 730
- [DataContext] 📦 loadImportedData called (isRemote=true) with: Object
- [DataContext] ✅ Updating settings
- [SYNC_LOG] loadImportedData: Loading users. Count: 17
- [DataContext] ✅ Updating users: 17
- [SYNC_LOG] setUsers called. Current count: 0, New count: 17
- [SYNC_LOG] Stack trace: Error
-    at setUsers (DataContext.tsx?t=1765504699197:50:36)
-    at loadImportedData (DataContext.tsx?t=1765504699197:200:7)
-    at fetchInitialData (DataContext.tsx?t=1765504699197:580:11)
- [DataContext] 🧹 Selectively cleared dirty fields after remote data load
- [AuthOverlay] Pausing sync - authentication in progress
-syncLogger.ts:59 [SYNC_LOG] Pausing sync - authentication in progress
-DataContext.tsx:1312 [DataContext] Sync PAUSED
-AuthOverlay.tsx:219 Syncing users from DataContext to UserContext
-AuthOverlay.tsx:65 [AuthOverlay] Pausing sync - authentication in progress
-syncLogger.ts:59 [SYNC_LOG] Pausing sync - authentication in progress
-DataContext.tsx:1312 [DataContext] Sync PAUSED
-AuthOverlay.tsx:137 [SYNC_LOG] School login successful. DocId: ayirebida_2025-2026_First-Term
-AuthOverlay.tsx:138 [SYNC_LOG] Users from result.data: 17
-DataContext.tsx:246 [DataContext] 📦 loadImportedData called (isRemote=true) with: Object
-syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users. Count: 17
-DataContext.tsx:343 [DataContext] 🚫 Skipping users update - data is empty/undefined
-DataContext.tsx:382 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
-AuthOverlay.tsx:147 [SYNC_LOG] Setting users from login result. Count: 17
-DataContext.tsx:1318 [DataContext] Sync RESUMED
-react-dom-client.development.js:4631  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom-client.development.js:4631
-react-dom-client.development.js:4631  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom-client.development.js:4631
-react-dom-client.development.js:4631  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom-client.development.js:4631
-react-dom-client.development.js:4631  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom-client.development.js:4631
-react-dom-client.development.js:4631  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom-client.development.js:4631
-react-dom-client.development.js:4631  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom-client.development.js:4631
-react-dom-client.development.js:4631  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom-client.development.js:4631
-react-dom-client.development.js:4631  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom-client.development.js:4631
-react-dom-client.development.js:4631  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom-client.development.js:4631
-react-dom-client.development.js:4631  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom-client.development.js:4631
-react-dom-client.development.js:4631  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom-client.development.js:4631
-react-dom-client.development.js:4631  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom-client.development.js:4631
-react-dom-client.development.js:4631  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom-client.development.js:4631
-react-dom-client.development.js:4631  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom-client.development.js:4631
-react-dom-client.development.js:4631  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom-client.development.js:4631
-DataContext.tsx:1260  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom-client.development.js:4631
-enqueueConcurrentHookUpdate @ react-dom-client.development.js:4584
-dispatchSetStateInternal @ react-dom-client.development.js:9167
-dispatchSetState @ react-dom-client.development.js:9127
-sendHeartbeat @ DataContext.tsx:1260
-(anonymous) @ UserContext.tsx:42
-react_stack_bottom_frame @ react-dom-client.development.js:25989
-runWithFiberInDEV @ react-dom-client.development.js:871
-commitHookEffectListMount @ react-dom-client.development.js:13249
-commitHookPassiveMountEffects @ react-dom-client.development.js:13336
-commitPassiveMountOnFiber @ react-dom-client.development.js:15484
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15519
-flushPassiveEffects @ react-dom-client.development.js:18432
-(anonymous) @ react-dom-client.development.js:17923
-performWorkUntilDeadline @ scheduler.development.js:45
-DataContext.tsx:1260  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom-client.development.js:4631
-enqueueConcurrentHookUpdate @ react-dom-client.development.js:4584
-dispatchSetStateInternal @ react-dom-client.development.js:9167
-dispatchSetState @ react-dom-client.development.js:9127
-sendHeartbeat @ DataContext.tsx:1260
-(anonymous) @ UserContext.tsx:42
-react_stack_bottom_frame @ react-dom-client.development.js:25989
-runWithFiberInDEV @ react-dom-client.development.js:871
-commitHookEffectListMount @ react-dom-client.development.js:13249
-commitHookPassiveMountEffects @ react-dom-client.development.js:13336
-commitPassiveMountOnFiber @ react-dom-client.development.js:15484
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15519
-flushPassiveEffects @ react-dom-client.development.js:18432
-(anonymous) @ react-dom-client.development.js:17923
-performWorkUntilDeadline @ scheduler.development.js:45
-DataContext.tsx:1260  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom-client.development.js:4631
-enqueueConcurrentHookUpdate @ react-dom-client.development.js:4584
-dispatchSetStateInternal @ react-dom-client.development.js:9167
-dispatchSetState @ react-dom-client.development.js:9127
-sendHeartbeat @ DataContext.tsx:1260
-(anonymous) @ UserContext.tsx:42
-react_stack_bottom_frame @ react-dom-client.development.js:25989
-runWithFiberInDEV @ react-dom-client.development.js:871
-commitHookEffectListMount @ react-dom-client.development.js:13249
-commitHookPassiveMountEffects @ react-dom-client.development.js:13336
-commitPassiveMountOnFiber @ react-dom-client.development.js:15484
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15519
-flushPassiveEffects @ react-dom-client.development.js:18432
-(anonymous) @ react-dom-client.development.js:17923
-performWorkUntilDeadline @ scheduler.development.js:45
-DataContext.tsx:1260  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom-client.development.js:4631
-enqueueConcurrentHookUpdate @ react-dom-client.development.js:4584
-dispatchSetStateInternal @ react-dom-client.development.js:9167
-dispatchSetState @ react-dom-client.development.js:9127
-sendHeartbeat @ DataContext.tsx:1260
-(anonymous) @ UserContext.tsx:42
-react_stack_bottom_frame @ react-dom-client.development.js:25989
-runWithFiberInDEV @ react-dom-client.development.js:871
-commitHookEffectListMount @ react-dom-client.development.js:13249
-commitHookPassiveMountEffects @ react-dom-client.development.js:13336
-commitPassiveMountOnFiber @ react-dom-client.development.js:15484
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15519
-flushPassiveEffects @ react-dom-client.development.js:18432
-(anonymous) @ react-dom-client.development.js:17923
-performWorkUntilDeadline @ scheduler.development.js:45
-DataContext.tsx:1260  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom-client.development.js:4631
-enqueueConcurrentHookUpdate @ react-dom-client.development.js:4584
-dispatchSetStateInternal @ react-dom-client.development.js:9167
-dispatchSetState @ react-dom-client.development.js:9127
-sendHeartbeat @ DataContext.tsx:1260
-(anonymous) @ UserContext.tsx:42
-react_stack_bottom_frame @ react-dom-client.development.js:25989
-runWithFiberInDEV @ react-dom-client.development.js:871
-commitHookEffectListMount @ react-dom-client.development.js:13249
-commitHookPassiveMountEffects @ react-dom-client.development.js:13336
-commitPassiveMountOnFiber @ react-dom-client.development.js:15484
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15519
-flushPassiveEffects @ react-dom-client.development.js:18432
-(anonymous) @ react-dom-client.development.js:17923
-performWorkUntilDeadline @ scheduler.development.js:45
-DataContext.tsx:1260  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom-client.development.js:4631
-enqueueConcurrentHookUpdate @ react-dom-client.development.js:4584
-dispatchSetStateInternal @ react-dom-client.development.js:9167
-dispatchSetState @ react-dom-client.development.js:9127
-sendHeartbeat @ DataContext.tsx:1260
-(anonymous) @ UserContext.tsx:42
-react_stack_bottom_frame @ react-dom-client.development.js:25989
-runWithFiberInDEV @ react-dom-client.development.js:871
-commitHookEffectListMount @ react-dom-client.development.js:13249
-commitHookPassiveMountEffects @ react-dom-client.development.js:13336
-commitPassiveMountOnFiber @ react-dom-client.development.js:15484
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15519
-flushPassiveEffects @ react-dom-client.development.js:18432
-(anonymous) @ react-dom-client.development.js:17923
-performWorkUntilDeadline @ scheduler.development.js:45
-DataContext.tsx:1260  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom-client.development.js:4631
-enqueueConcurrentHookUpdate @ react-dom-client.development.js:4584
-dispatchSetStateInternal @ react-dom-client.development.js:9167
-dispatchSetState @ react-dom-client.development.js:9127
-sendHeartbeat @ DataContext.tsx:1260
-(anonymous) @ UserContext.tsx:42
-react_stack_bottom_frame @ react-dom-client.development.js:25989
-runWithFiberInDEV @ react-dom-client.development.js:871
-commitHookEffectListMount @ react-dom-client.development.js:13249
-commitHookPassiveMountEffects @ react-dom-client.development.js:13336
-commitPassiveMountOnFiber @ react-dom-client.development.js:15484
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15519
-flushPassiveEffects @ react-dom-client.development.js:18432
-(anonymous) @ react-dom-client.development.js:17923
-performWorkUntilDeadline @ scheduler.development.js:45
-DataContext.tsx:1260  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom-client.development.js:4631
-enqueueConcurrentHookUpdate @ react-dom-client.development.js:4584
-dispatchSetStateInternal @ react-dom-client.development.js:9167
-dispatchSetState @ react-dom-client.development.js:9127
-sendHeartbeat @ DataContext.tsx:1260
-(anonymous) @ UserContext.tsx:42
-react_stack_bottom_frame @ react-dom-client.development.js:25989
-runWithFiberInDEV @ react-dom-client.development.js:871
-commitHookEffectListMount @ react-dom-client.development.js:13249
-commitHookPassiveMountEffects @ react-dom-client.development.js:13336
-commitPassiveMountOnFiber @ react-dom-client.development.js:15484
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15519
-flushPassiveEffects @ react-dom-client.development.js:18432
-(anonymous) @ react-dom-client.development.js:17923
-performWorkUntilDeadline @ scheduler.development.js:45
-DataContext.tsx:1260  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom-client.development.js:4631
-enqueueConcurrentHookUpdate @ react-dom-client.development.js:4584
-dispatchSetStateInternal @ react-dom-client.development.js:9167
-dispatchSetState @ react-dom-client.development.js:9127
-sendHeartbeat @ DataContext.tsx:1260
-(anonymous) @ UserContext.tsx:42
-react_stack_bottom_frame @ react-dom-client.development.js:25989
-runWithFiberInDEV @ react-dom-client.development.js:871
-commitHookEffectListMount @ react-dom-client.development.js:13249
-commitHookPassiveMountEffects @ react-dom-client.development.js:13336
-commitPassiveMountOnFiber @ react-dom-client.development.js:15484
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15519
-flushPassiveEffects @ react-dom-client.development.js:18432
-(anonymous) @ react-dom-client.development.js:17923
-performWorkUntilDeadline @ scheduler.development.js:45
-DataContext.tsx:1260  Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
-getRootForUpdatedFiber @ react-dom-client.development.js:4631
-enqueueConcurrentHookUpdate @ react-dom-client.development.js:4584
-dispatchSetStateInternal @ react-dom-client.development.js:9167
-dispatchSetState @ react-dom-client.development.js:9127
-sendHeartbeat @ DataContext.tsx:1260
-(anonymous) @ UserContext.tsx:42
-react_stack_bottom_frame @ react-dom-client.development.js:25989
-runWithFiberInDEV @ react-dom-client.development.js:871
-commitHookEffectListMount @ react-dom-client.development.js:13249
-commitHookPassiveMountEffects @ react-dom-client.development.js:13336
-commitPassiveMountOnFiber @ react-dom-client.development.js:15484
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15519
-flushPassiveEffects @ react-dom-client.development.js:18432
-(anonymous) @ react-dom-client.development.js:17923
-performWorkUntilDeadline @ scheduler.development.js:45
+Loading Application... (If this persists, JavaScript failed to load)
+Error: Unknown error
+Source: Unknown source:0
+
+[plugin:vite:react-babel] D:\Projects\SBA Pro Master - Web\components\pages\Teachers.tsx: Adjacent JSX elements must be wrapped in an enclosing tag. Did you want a JSX fragment <>...</>? (195:20)
+  198 |                         title="Export to PDF"
+D:/Projects/SBA Pro Master - Web/components/pages/Teachers.tsx:195:20
+193|                          Excel
+194|                      </button>
+195|                      <button
+   |                      ^
+196|                          onClick={handleExportPDF}
+197|                          className="flex items-center bg-red-600 text-white px-4 py-2 rounded-lg shadow hover:bg-red-700 transition-colors w-full md:w-auto justify-center mr-2"
+    at constructor (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:367:19)
+    at TypeScriptParserMixin.raise (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:6624:19)
+    at TypeScriptParserMixin.jsxParseElementAt (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:4771:18)
+    at TypeScriptParserMixin.jsxParseElement (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:4778:17)
+    at TypeScriptParserMixin.parseExprAtom (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:4788:19)
+    at TypeScriptParserMixin.parseExprSubscripts (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:11145:23)
+    at TypeScriptParserMixin.parseUpdate (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:11130:21)
+    at TypeScriptParserMixin.parseMaybeUnary (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:11110:23)
+    at TypeScriptParserMixin.parseMaybeUnary (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:9890:18)
+    at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:10963:61)
+    at TypeScriptParserMixin.parseExprOps (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:10968:23)
+    at TypeScriptParserMixin.parseMaybeConditional (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:10945:23)
+    at TypeScriptParserMixin.parseMaybeAssign (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:10895:21)
+    at D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:9828:39
+    at TypeScriptParserMixin.tryParse (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:6932:20)
+    at TypeScriptParserMixin.parseMaybeAssign (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:9828:18)
+    at D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:10864:39
+    at TypeScriptParserMixin.allowInAnd (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:12500:12)
+    at TypeScriptParserMixin.parseMaybeAssignAllowIn (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:10864:17)
+    at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:12567:17)
+    at TypeScriptParserMixin.parseParenAndDistinguishExpression (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:11747:28)
+    at TypeScriptParserMixin.parseExprAtom (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:11395:23)
+    at TypeScriptParserMixin.parseExprAtom (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:4793:20)
+    at TypeScriptParserMixin.parseExprSubscripts (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:11145:23)
+    at TypeScriptParserMixin.parseUpdate (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:11130:21)
+    at TypeScriptParserMixin.parseMaybeUnary (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:11110:23)
+    at TypeScriptParserMixin.parseMaybeUnary (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:9890:18)
+    at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:10963:61)
+    at TypeScriptParserMixin.parseExprOpBaseRightExpr (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:11050:34)
+    at TypeScriptParserMixin.parseExprOpRightExpr (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:11045:21)
+    at TypeScriptParserMixin.parseExprOp (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:11011:27)
+    at TypeScriptParserMixin.parseExprOp (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:9365:18)
+    at TypeScriptParserMixin.parseExprOps (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:10972:17)
+    at TypeScriptParserMixin.parseMaybeConditional (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:10945:23)
+    at TypeScriptParserMixin.parseMaybeAssign (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:10895:21)
+    at TypeScriptParserMixin.parseMaybeAssign (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:9839:20)
+    at TypeScriptParserMixin.parseExpressionBase (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:10848:23)
+    at D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:10844:39
+    at TypeScriptParserMixin.allowInAnd (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:12500:12)
+    at TypeScriptParserMixin.parseExpression (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:10844:17)
+    at TypeScriptParserMixin.jsxParseExpressionContainer (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:4661:31)
+    at TypeScriptParserMixin.jsxParseElementAt (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:4740:36)
+    at TypeScriptParserMixin.jsxParseElementAt (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:4727:32)
+    at TypeScriptParserMixin.jsxParseElementAt (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:4727:32)
+    at TypeScriptParserMixin.jsxParseElementAt (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:4727:32)
+    at TypeScriptParserMixin.jsxParseElement (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:4778:17)
+    at TypeScriptParserMixin.parseExprAtom (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:4788:19)
+    at TypeScriptParserMixin.parseExprSubscripts (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:11145:23)
+    at TypeScriptParserMixin.parseUpdate (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:11130:21)
+    at TypeScriptParserMixin.parseMaybeUnary (D:\Projects\SBA Pro Master - Web\node_modules\@babel\parser\lib\index.js:11110:23
+Click outside, press Esc key, or fix the code to dismiss.
+You can also disable this overlay by setting server.hmr.overlay to false in vite.config.ts.

@@ -12,6 +12,7 @@ import { compressImage } from '../../utils/imageUtils';
 import { generateIndexNumber } from '../../utils/indexNumberGenerator';
 import { getNextAvailableCounter } from '../../utils/indexNumberCounter';
 import { sortClassesByName } from '../../utils/classSort';
+import { exportToExcel, exportToPDF } from '../../utils/exportUtils';
 
 const EMPTY_STUDENT_FORM: Omit<Student, 'id'> = {
     name: '',
@@ -95,6 +96,29 @@ const Students: React.FC = () => {
     }, [accessibleStudents, selectedClass, searchQuery]);
 
 
+
+    const handleExportExcel = () => {
+        const headers = ['Name', 'Index Number', 'Gender', 'Class', 'Date of Birth', 'Age'];
+        const keys = ['name', 'indexNumber', 'gender', 'class', 'dateOfBirth', 'age'];
+        const data = filteredStudents.map(s => ({
+            ...s,
+            age: calculateAge(s.dateOfBirth)
+        }));
+        exportToExcel(data, headers, keys, 'Students_List', 'Students');
+    };
+
+    const handleExportPDF = () => {
+        const headers = ['Name', 'Index Number', 'Gender', 'Class', 'Date of Birth', 'Age'];
+        const data = filteredStudents.map(s => [
+            s.name,
+            s.indexNumber,
+            s.gender,
+            s.class,
+            s.dateOfBirth,
+            calculateAge(s.dateOfBirth)
+        ]);
+        exportToPDF('Students List', headers, data, 'Students_List');
+    };
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -292,12 +316,32 @@ const Students: React.FC = () => {
                     {/* Add Student Button */}
                     <ReadOnlyWrapper allowedRoles={['Admin', 'Teacher']}>
                         {(currentUser?.role === 'Admin' || (currentUser?.role === 'Teacher' && currentUser.allowedClasses.length > 0)) && (
-                            <button onClick={handleAddNew} className="add-button flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors w-full md:w-auto justify-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                                </svg>
-                                Add New Student
-                            </button>
+                            <div className="flex items-center gap-3">
+                                <button onClick={handleAddNew} className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-sm">
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                    </svg>
+                                    <span>Add Student</span>
+                                </button>
+                                <button
+                                    onClick={handleExportExcel}
+                                    className="p-2 hover:bg-gray-100 rounded-full transition-colors group"
+                                    title="Export to Excel"
+                                >
+                                    <svg className="w-8 h-8 text-green-600 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M9.293 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.707A1 1 0 0 0 13.707 4L10 .293A1 1 0 0 0 9.293 0zM9.5 3.5v-2l3 3h-2a1 1 0 0 1-1-1zM5.884 6.68 8 9.219l2.116-2.54a.5.5 0 1 1 .768.641L8.651 10l2.233 2.68a.5.5 0 0 1-.768.64L8 10.781l-2.116 2.54a.5.5 0 0 1-.768-.641L7.349 10 5.116 7.32a.5.5 0 1 1 .768-.64z" />
+                                    </svg>
+                                </button>
+                                <button
+                                    onClick={handleExportPDF}
+                                    className="p-2 hover:bg-gray-100 rounded-full transition-colors group"
+                                    title="Export to PDF"
+                                >
+                                    <svg className="w-8 h-8 text-red-600 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M20 2H8c-1.1 0-2 .9-2 2v12H4v5c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5v1.5H19v2h-1.5V7h2V8.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z" />
+                                    </svg>
+                                </button>
+                            </div>
                         )}
                     </ReadOnlyWrapper>
                 </div>
