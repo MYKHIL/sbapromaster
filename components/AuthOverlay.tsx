@@ -71,9 +71,27 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
     // Persistent Login State
     const [restoringSession, setRestoringSession] = useState(true);
 
-    // RESTORE SESSION ON MOUNT
+    // Run once on mount
     useEffect(() => {
         const restoreSession = async () => {
+            // Check for pending login from database switch
+            const pendingLogin = sessionStorage.getItem('sba_pending_login');
+            if (pendingLogin) {
+                console.log('[AuthOverlay] 🔄 Found pending login from DB switch. Auto-logging in...');
+                const credentials = JSON.parse(pendingLogin);
+                sessionStorage.removeItem('sba_pending_login');
+
+                // Set local state for UI consistency
+                setSchoolName(credentials.schoolName);
+                setAcademicYear(credentials.academicYear);
+                setAcademicTerm(credentials.academicTerm);
+                setSchoolPassword(credentials.password);
+
+                // Execute login immediately
+                await executeLogin(credentials.schoolName, credentials.academicYear, credentials.academicTerm, credentials.password);
+                return;
+            }
+
             try {
                 const savedSchoolId = localStorage.getItem('sba_school_id');
                 const savedSchoolPassword = localStorage.getItem('sba_school_password');
@@ -85,9 +103,6 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                     setLoading(true);
 
                     // 1. Restore School Session
-                    // We don't have the original creation data (name/year/term) easily available here,
-                    // but loginOrRegisterSchool mostly needs the ID and Password for verification.
-                    // We pass empty initial data as we expect to FETCH existing data, not create new.
                     const initialData: AppDataType = {
                         settings: INITIAL_SETTINGS, // Placeholders
                         students: [],
@@ -161,7 +176,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
         };
 
         restoreSession();
-    }, []); // Run once on mount
+    }, []);
 
     const handleSchoolNameChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
@@ -190,29 +205,20 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
         setShowSuggestions(false);
     };
 
-    const handleSchoolLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!schoolName || !academicYear || !academicTerm || !schoolPassword) {
-            setError("Please fill in all fields.");
-            return;
-        }
-
+    const executeLogin = async (sName: string, aYear: string, aTerm: string, pwd: string) => {
         setLoading(true);
         setError(null);
         setAccessDenied(false);
 
-        const sanitizedSchoolName = schoolName.replace(/\//g, '');
-        const sanitizedAcademicYear = academicYear.replace(/\//g, '');
-        const combinedId = createDocumentId(sanitizedSchoolName, sanitizedAcademicYear, academicTerm);
+        const sanitizedSchoolName = sName.replace(/\//g, '');
+        const sanitizedAcademicYear = aYear.replace(/\//g, '');
+        const combinedId = createDocumentId(sanitizedSchoolName, sanitizedAcademicYear, aTerm);
 
         // ---------------------------------------------------------
         // DYNAMIC DATABASE SWITCHING LOGIC
         // ---------------------------------------------------------
-        // Check if this school requires a specific database index
-        // We use a simplified sanitization for matching (lowercase, no spaces) to match the key in constants
         const simpleName = sanitizedSchoolName.replace(/\s+/g, '').replace(/-/g, '').toLowerCase();
 
-        // Find if any key in map is contained in the simple name
         let targetIndex = 1; // Default
         Object.keys(SCHOOL_DATABASE_MAPPING).forEach(key => {
             if (simpleName.includes(key)) {
@@ -220,17 +226,24 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             }
         });
 
-        // If current index is different, Switch & Reload
         if (targetIndex !== ACTIVE_DATABASE_INDEX) {
-            console.log(`[AuthOverlay] 🔄 Switching Database to Index ${targetIndex} for school: ${schoolName}`);
+            console.log(`[AuthOverlay] 🔄 Switching Database to Index ${targetIndex} for school: ${sName}`);
             localStorage.setItem('active_database_index', String(targetIndex));
-            // Show feedback before reloading
-            setLoading(true); // Keep loading spinner
-            setError(`🔄 Switching to dedicated database for ${schoolName}...`);
+
+            // Save credentials for auto-login after reload
+            const credentials = {
+                schoolName: sName,
+                academicYear: aYear,
+                academicTerm: aTerm,
+                password: pwd
+            };
+            sessionStorage.setItem('sba_pending_login', JSON.stringify(credentials));
+
+            setError(`🔄 Switching to dedicated database for ${sName}...`);
 
             setTimeout(() => {
                 window.location.reload();
-            }, 1000);
+            }, 800);
             return; // Stop execution here
         }
         // ---------------------------------------------------------
@@ -238,9 +251,9 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
         const initialData: AppDataType = {
             settings: {
                 ...INITIAL_SETTINGS,
-                schoolName: schoolName,
-                academicYear: academicYear,
-                academicTerm: academicTerm
+                schoolName: sName,
+                academicYear: aYear,
+                academicTerm: aTerm
             },
             students: INITIAL_STUDENTS,
             subjects: INITIAL_SUBJECTS,
@@ -254,7 +267,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             deviceCredentials: [],
         };
 
-        const result = await loginOrRegisterSchool(combinedId, schoolPassword, initialData, false);
+        const result = await loginOrRegisterSchool(combinedId, pwd, initialData, false);
         setLoading(false);
 
         if (result.status === 'success') {
@@ -262,32 +275,26 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             console.log(`[SYNC_LOG] School login successful. DocId: ${docId}`);
             console.log(`[SYNC_LOG] Users from result.data: ${result.data.users?.length || 0}`);
 
-            // PERSISTENCE: Save School Credentials
             localStorage.setItem('sba_school_id', docId);
-            localStorage.setItem('sba_school_password', schoolPassword);
+            localStorage.setItem('sba_school_password', pwd);
 
             setSchoolId(docId);
             setCurrentSchoolId(docId);
             loadImportedData(result.data);
             setSchoolData(result.data);
 
-            // Check if users exist
             const users = result.data.users || [];
             console.log(`[SYNC_LOG] Setting users from login result. Count: ${users.length}`);
             setUsers(users);
 
             if (users.length === 0) {
-                // No users, show admin setup
                 setAuthStage('admin-setup');
             } else {
-                // Users exist, check for auto-login
                 const autoLoginUser = await checkAutoLogin(docId, users);
                 if (autoLoginUser) {
-                    // Auto-login successful - resume sync
                     resumeSync();
                     setAuthStage('authenticated');
                 } else {
-                    // Show user selection
                     setAuthStage('user-selection');
                 }
             }
@@ -300,6 +307,15 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
         } else if (result.status === 'error') {
             setError(result.message || "An error occurred.");
         }
+    };
+
+    const handleSchoolLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!schoolName || !academicYear || !academicTerm || !schoolPassword) {
+            setError("Please fill in all fields.");
+            return;
+        }
+        await executeLogin(schoolName, academicYear, academicTerm, schoolPassword);
     };
 
     const handleRegisterConfirm = async () => {
@@ -337,7 +353,6 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
         } else if (result.status === 'error') {
             setError(result.message || "An error occurred.");
         } else if (result.status === 'success') {
-            // PERSISTENCE: Save School Credentials on Register too
             localStorage.setItem('sba_school_id', result.docId);
             localStorage.setItem('sba_school_password', schoolPassword);
         }
@@ -347,7 +362,6 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
     const { users: dbUsers } = useData();
     useEffect(() => {
         if (dbUsers && dbUsers.length > 0) {
-            // Check if different to avoid loops/redraws
             if (JSON.stringify(dbUsers) !== JSON.stringify(users)) {
                 console.log("Syncing users from DataContext to UserContext");
                 setUsers(dbUsers);
@@ -362,41 +376,26 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
         }
 
         try {
-            setError(null); // Clear any previous errors
-
-            // Update users in Firebase
+            setError(null);
             await updateUsers(currentSchoolId, users);
-
-            // Update local state in UserContext
             setUsers(users);
-
-            // FIX: Update DataContext state so saveToCloud doesn't overwrite with empty users
-            // Pass false to mark users as dirty (local change)
             loadImportedData({ users }, false);
 
-            // Auto-login the admin user
             if (adminPassword && users.length > 0) {
                 const adminUser = users[0];
                 const success = await login(adminUser.id, adminPassword);
 
                 if (success) {
-                    // PERSISTENCE: Save User Credentials
                     localStorage.setItem('sba_user_id', String(adminUser.id));
                     localStorage.setItem('sba_user_password', adminPassword);
-
-                    // Save device credential for auto-login next time
                     saveDeviceCredential(currentSchoolId, adminUser.id);
-
-                    // Successfully logged in - resume sync and transition to authenticated state
                     resumeSync();
                     setAuthStage('authenticated');
                 } else {
-                    // Login failed - this shouldn't happen since we just set the password
                     setError('Setup completed but auto-login failed. Please select your user and login.');
                     setAuthStage('user-selection');
                 }
             } else {
-                // No password provided (shouldn't happen in setup mode)
                 setError('Setup completed. Please select your user and login.');
                 setAuthStage('user-selection');
             }
@@ -404,7 +403,6 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             console.error('Failed to complete admin setup:', err);
             const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
             setError(`Failed to save users: ${errorMessage}. Please try again.`);
-            // Stay in admin-setup stage so user can see the error and retry
         }
     };
 
@@ -412,13 +410,9 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
         const success = await login(userId, password);
 
         if (success && currentSchoolId) {
-            // PERSISTENCE: Save User Credentials
             localStorage.setItem('sba_user_id', String(userId));
             localStorage.setItem('sba_user_password', password);
-
-            // Save device credential
             saveDeviceCredential(currentSchoolId, userId);
-            // Resume sync now that we're authenticated
             resumeSync();
             setAuthStage('authenticated');
             return true;
@@ -430,31 +424,19 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
     const handleUserSetPassword = async (userId: number, password: string): Promise<void> => {
         if (!currentSchoolId) return;
 
-        // Hash the password before saving
         const hashedPassword = await hashPassword(password);
-
-        // Update generic user context
-        // UserContext.setPassword expects a plain password and hashes it internally
         await setUserPassword(userId, password);
 
-        // Update in Firebase
         const users = schoolData?.users || [];
         const updatedUsers = users.map(u =>
             u.id === userId ? { ...u, passwordHash: hashedPassword } : u
         );
         await updateUsers(currentSchoolId, updatedUsers);
 
-        // FIX: Update DataContext state and mark as dirty
-        // Pass false to mark users as dirty (local change)
         loadImportedData({ users: updatedUsers }, false);
-
-        // PERSISTENCE: Save User Credentials
         localStorage.setItem('sba_user_id', String(userId));
         localStorage.setItem('sba_user_password', password);
-
-        // Save device credential
         saveDeviceCredential(currentSchoolId, userId);
-        // Resume sync now that we're authenticated
         resumeSync();
         setAuthStage('authenticated');
     };
