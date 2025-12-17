@@ -118,14 +118,11 @@ const WrappedActionBar: React.FC<any> = ({
 
             // 2. Dispatch Read Receipt if it's a direct message (has sender) and wasn't already read
             if (notification && !notification.read && notification.senderId && notification.senderId !== currentUser.id) {
-                // Avoid spamming system notifications? 
-                // Requirement: "response should be dispatched to the sender"
-
                 const readReceipt = {
                     id: Date.now().toString(),
                     senderId: currentUser.id,
                     senderName: currentUser.name,
-                    type: 'system', // or 'feedback' logic
+                    type: 'system',
                     message: `Read Receipt: ${currentUser.name} read your message: "${notification.message.substring(0, 30)}${notification.message.length > 30 ? '...' : ''}"`,
                     read: false,
                     date: new Date().toISOString()
@@ -144,9 +141,11 @@ const WrappedActionBar: React.FC<any> = ({
 
             loadImportedData({ users: usersCopy }, false);
         } else {
-            // Fallback if users list not loaded?
             updateNotifications(updated);
         }
+
+        // Close the panel as requested
+        setIsNotificationOpen(false);
     };
 
     const handleReply = (id: string, message: string) => {
@@ -243,7 +242,7 @@ const WrappedActionBar: React.FC<any> = ({
 
     return (
         <>
-            <div className={`relative z-[50] ${currentPage === 'Score Entry' ? 'hidden lg:block' : ''}`}>
+            <div className={`relative z-[50]`}>
                 <div className="flex items-center gap-2 px-3 py-2 rounded-2xl shadow-lg border border-gray-200 backdrop-blur-sm bg-white/95">
                     {/* Notification Bell - Now integrated here */}
                     <div className="relative">
