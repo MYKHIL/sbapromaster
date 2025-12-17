@@ -1,5 +1,5 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect, useRef, useMemo } from 'react';
-import { saveUserDatabase, subscribeToSchoolData, AppDataType, updateHeartbeat, logUserActivity, getSchoolData, saveDataTransaction } from '../services/firebaseService';
+import { subscribeToSchoolData, AppDataType, updateHeartbeat, logUserActivity, getSchoolData, saveDataTransaction } from '../services/firebaseService';
 import * as SyncLogger from '../services/syncLogger';
 import useLocalStorage from '../hooks/useLocalStorage';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
@@ -1203,22 +1203,75 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 assessments,
                 scores,
                 reportData,
-                classData
+                classData,
+                // Prune logs to max 50 to prevent hitting Firestore 1MB limit
+                userLogs: (userLogs || []).slice(-50),
+                // Prune stale sessions (> 24h)
+                activeSessions: Object.fromEntries(
+                    Object.entries(activeSessions || {}).filter(([_, timestamp]) =>
+                        timestamp > new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+                    )
+                )
             };
 
-            // NOTE: Offline recovery should probably sync EVERYTHING just in case,
-            // or we could inspect the queue. For simplicity, we sync full state on recovery for now.
+            // NOTE: We calculate deletions manually here to support "Offline Deletions"
+            // but we implement a SAFETY CHECK to prevent "Mass Wipe" bugs.
+            const deletions: Record<string, string[]> = {};
+
+            // Check major collections for deletions
+            (['students', 'scores', 'assessments'] as const).forEach(key => {
+                const currentArr = currentData[key] as any[];
+                const originalArr = originalData.current[key] as any[];
+
+                if (Array.isArray(currentArr) && Array.isArray(originalArr)) {
+                    const deletedIds = originalArr
+                        .filter(o => o && o.id && !currentArr.find(c => c && c.id === o.id))
+                        .map(o => String(o.id));
+
+                    // SAFETY VALVE: Only allow deletions if they are NOT a "Mass Wipe"
+                    // If > 20% of data is being deleted, assume it's a glitch and block the deletion.
+                    // Exception: Small number of deletes (<= 5) is always allowed.
+                    const isSuspicious = deletedIds.length > 5 && (deletedIds.length > originalArr.length * 0.2);
+
+                    if (deletedIds.length > 0) {
+                        if (isSuspicious) {
+                            console.warn(`[DataContext] 🛡️ SAFETY VALVE: Blocked suspicious mass deletion of ${deletedIds.length} ${key} during offline recovery.`);
+                            // Notify user via the error modal (using a custom error object)
+                            showDatabaseError({
+                                message: `Safety Alert: A mass deletion of ${deletedIds.length} ${key} was blocked during offline recovery to prevent accidental data loss.`,
+                                code: 'SAFETY_BLOCK',
+                                details: 'If this was intentional, please perform the deletion while online or in smaller batches.'
+                            });
+                            // We do NOT add to 'deletions', effectively restoring the server data for these items.
+                        } else {
+                            deletions[key] = deletedIds;
+                        }
+                    }
+                }
+            });
             // Or we could trust the queue. The queue contains partials now.
             // But 'currentData' here is the FULL state.
-            // Let's stick to full sync on recovery for safety.
+            // The `saveDataTransaction` function performs the smart merge:
+            // 1. Adds/Updates items from `currentData`
+            // 2. Removes items specified in `deletions` (if safe)
 
-            saveUserDatabase(schoolId, currentData)
+            // Use the transactional save to perform a SMART MERGE of the offline state
+            // This prevents overwriting server data (like the "Data Wipe" bug caused by setDoc/merge:true on arrays)
+            saveDataTransaction(schoolId, currentData, deletions)
                 .then(() => {
                     // Success - clear the entire queue since we just synced current state
                     offlineQueue.clearQueue();
                     setQueuedCount(0);
+
+                    // Also clear dirty fields since we just synced everything
+                    dirtyFields.current.clear();
+                    setHasLocalChanges(false);
+
                     setIsSyncing(false);
-                    console.log('Current state synced successfully, queue cleared');
+                    console.log('Current state synced successfully (Merged), queue cleared');
+
+                    // Trigger a refresh to get the true merged state from server
+                    refreshFromCloud(true);
                 })
                 .catch(error => {
                     console.error('Error syncing current state:', error);

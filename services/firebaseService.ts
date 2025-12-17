@@ -312,21 +312,19 @@ export const saveDataTransaction = async (
     }
 };
 
-// Start of existing saveUserDatabase (leave as is for non-critical legacy saves)
-export const saveUserDatabase = async (docId: string, data: Partial<AppDataType>) => {
+// DANGEROUS: This overwrites the entire database document.
+// ONLY use this for creating a new term/school from scratch.
+// DO NOT use for syncing - it will wipe existing arrays if not careful.
+export const initializeNewTermDatabase = async (docId: string, data: Partial<AppDataType>) => {
     try {
         // docId is expected to be the full document ID (sanitized)
         const docRef = doc(db, "schools", docId);
-        // We use setDoc with merge: true to avoid overwriting the entire document if we only want to update parts,
-        // but here we likely want to save the whole state. However, we must preserve 'password' and 'Access' if they are not in 'data'.
-        // The 'data' passed from DataContext might not have password/Access if we don't store them in state.
-        // So we should use { merge: true } carefully.
-        // Actually, if we pass the full AppDataType from DataContext, we need to make sure we don't accidentally overwrite password/Access with undefined if they are missing.
-        // Best approach: merge: true
+        // We use setDoc without merge to ensure a clean state, or merge:true if we trust the input is complete.
+        // For new term initialization, we want to ensure specific structure.
         await setDoc(docRef, data, { merge: true });
+        console.log("New term database initialized successfully");
     } catch (error: any) {
-        console.error('[firebaseService] Error saving to database:', error);
-        // Re-throw the error so it can be caught and handled by the caller
+        console.error("Error initializing new term:", error);
         throw error;
     }
 };
@@ -413,7 +411,8 @@ export const logUserActivity = async (docId: string, log: UserLog) => {
         const logs = data.userLogs || [];
 
         // Optional: limit logs
-        if (logs.length > 500) logs.shift(); // Keep last 500
+        // AGGRESSIVE PRUNING: Reduce to 50 items to prevent hitting Firestore 1MB limit
+        if (logs.length > 50) logs.splice(0, logs.length - 50); // Keep last 50
 
         logs.push(log);
 
@@ -437,6 +436,15 @@ export const updateHeartbeat = async (docId: string, userId: number) => {
 
         const data = docSnap.data() as AppDataType;
         const activeSessions = data.activeSessions || {};
+
+        // Prune stale sessions (> 24 hours) to save space
+        const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        Object.keys(activeSessions).forEach(key => {
+            if (activeSessions[key] < yesterday) {
+                delete activeSessions[key];
+            }
+        });
+
         activeSessions[userId.toString()] = new Date().toISOString();
 
         await setDoc(docRef, { activeSessions }, { merge: true });

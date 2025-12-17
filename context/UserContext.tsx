@@ -136,6 +136,12 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             logUserAction(currentUser.id, currentUser.name, currentUser.role, 'Logout');
         }
 
+        // Clear persistence
+        localStorage.removeItem('sba_school_id');
+        localStorage.removeItem('sba_school_password');
+        localStorage.removeItem('sba_user_id');
+        localStorage.removeItem('sba_user_password');
+
         setCurrentUser(null);
         setIsAuthenticated(false);
     };

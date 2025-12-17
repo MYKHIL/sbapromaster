@@ -68,6 +68,100 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
         }
     }, [authStage, pauseSync]);
 
+    // Persistent Login State
+    const [restoringSession, setRestoringSession] = useState(true);
+
+    // RESTORE SESSION ON MOUNT
+    useEffect(() => {
+        const restoreSession = async () => {
+            try {
+                const savedSchoolId = localStorage.getItem('sba_school_id');
+                const savedSchoolPassword = localStorage.getItem('sba_school_password');
+                const savedUserId = localStorage.getItem('sba_user_id');
+                const savedUserPassword = localStorage.getItem('sba_user_password');
+
+                if (savedSchoolId && savedSchoolPassword) {
+                    console.log('[AuthOverlay] 🔄 Found saved session. Attempting to restore...');
+                    setLoading(true);
+
+                    // 1. Restore School Session
+                    // We don't have the original creation data (name/year/term) easily available here,
+                    // but loginOrRegisterSchool mostly needs the ID and Password for verification.
+                    // We pass empty initial data as we expect to FETCH existing data, not create new.
+                    const initialData: AppDataType = {
+                        settings: INITIAL_SETTINGS, // Placeholders
+                        students: [],
+                        subjects: [],
+                        classes: [],
+                        grades: [],
+                        assessments: [],
+                        scores: [],
+                        reportData: INITIAL_REPORT_DATA,
+                        classData: INITIAL_CLASS_DATA,
+                        users: [],
+                        deviceCredentials: []
+                    };
+
+                    const result = await loginOrRegisterSchool(savedSchoolId, savedSchoolPassword, initialData, false);
+
+                    if (result.status === 'success') {
+                        const docId = result.docId;
+                        console.log(`[AuthOverlay] ✅ School session restored: ${docId}`);
+
+                        setSchoolId(docId);
+                        setCurrentSchoolId(docId);
+                        loadImportedData(result.data);
+                        setSchoolData(result.data);
+
+                        // Sync Users
+                        const users = result.data.users || [];
+                        setUsers(users);
+
+                        // 2. Restore User Session (if available)
+                        if (savedUserId && savedUserPassword && users.length > 0) {
+                            const userId = Number(savedUserId);
+                            // Attempt login directly
+                            const success = await login(userId, savedUserPassword);
+
+                            if (success) {
+                                console.log(`[AuthOverlay] ✅ User session restored for ID: ${userId}`);
+                                saveDeviceCredential(docId, userId);
+                                resumeSync();
+                                setAuthStage('authenticated');
+                                setLoading(false);
+                                setRestoringSession(false);
+                                return; // Done
+                            }
+                        }
+
+                        // If user restore failed but school worked:
+                        // Check for auto-login via device credential (fallback/alternative)
+                        const autoLoginUser = await checkAutoLogin(docId, users);
+                        if (autoLoginUser) {
+                            resumeSync();
+                            setAuthStage('authenticated');
+                        } else {
+                            setAuthStage('user-selection');
+                        }
+
+                    } else {
+                        console.warn('[AuthOverlay] ⚠️ Failed to restore school session:', result.message);
+                        // Clear invalid credentials
+                        localStorage.removeItem('sba_school_id');
+                        localStorage.removeItem('sba_school_password');
+                    }
+                }
+            } catch (e) {
+                console.error('[AuthOverlay] Error restoring session:', e);
+            } finally {
+                setLoading(false);
+                setRestoringSession(false);
+            }
+        };
+
+        restoreSession();
+    }, []); // Run once on mount
+
     const handleSchoolNameChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         setSchoolName(value);
@@ -136,6 +230,10 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             const docId = result.docId;
             console.log(`[SYNC_LOG] School login successful. DocId: ${docId}`);
             console.log(`[SYNC_LOG] Users from result.data: ${result.data.users?.length || 0}`);
+
+            // PERSISTENCE: Save School Credentials
+            localStorage.setItem('sba_school_id', docId);
+            localStorage.setItem('sba_school_password', schoolPassword);
 
             setSchoolId(docId);
             setCurrentSchoolId(docId);
@@ -207,6 +305,10 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             setAccessDenied(true);
         } else if (result.status === 'error') {
             setError(result.message || "An error occurred.");
+        } else if (result.status === 'success') {
+            // PERSISTENCE: Save School Credentials on Register too
+            localStorage.setItem('sba_school_id', result.docId);
+            localStorage.setItem('sba_school_password', schoolPassword);
         }
     };
 
@@ -247,6 +349,10 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 const success = await login(adminUser.id, adminPassword);
 
                 if (success) {
+                    // PERSISTENCE: Save User Credentials
+                    localStorage.setItem('sba_user_id', String(adminUser.id));
+                    localStorage.setItem('sba_user_password', adminPassword);
+
                     // Save device credential for auto-login next time
                     saveDeviceCredential(currentSchoolId, adminUser.id);
 
@@ -275,6 +381,10 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
         const success = await login(userId, password);
 
         if (success && currentSchoolId) {
+            // PERSISTENCE: Save User Credentials
+            localStorage.setItem('sba_user_id', String(userId));
+            localStorage.setItem('sba_user_password', password);
+
             // Save device credential
             saveDeviceCredential(currentSchoolId, userId);
             // Resume sync now that we're authenticated
@@ -307,12 +417,30 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
         // Pass false to mark users as dirty (local change)
         loadImportedData({ users: updatedUsers }, false);
 
+        // PERSISTENCE: Save User Credentials
+        localStorage.setItem('sba_user_id', String(userId));
+        localStorage.setItem('sba_user_password', password);
+
         // Save device credential
         saveDeviceCredential(currentSchoolId, userId);
         // Resume sync now that we're authenticated
         resumeSync();
         setAuthStage('authenticated');
     };
+
+    if (restoringSession) {
+        return (
+            <div className="fixed inset-0 bg-gray-900 z-50 flex items-center justify-center p-4">
+                <div className="text-center">
+                    <svg className="animate-spin h-12 w-12 text-white mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <p className="text-white text-lg font-medium">Restoring your session...</p>
+                </div>
+            </div>
+        );
+    }
 
     if (authStage === 'authenticated') {
         return <>{children}</>;

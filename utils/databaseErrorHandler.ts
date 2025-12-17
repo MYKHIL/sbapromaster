@@ -6,6 +6,7 @@
 export interface DatabaseError {
     code: string;
     message: string;
+    friendlyMessage: string;
     fullError: any;
 }
 
@@ -17,7 +18,7 @@ const WHATSAPP_BASE_URL = 'https://wa.me/';
  */
 export const isQuotaExhaustedError = (error: any): boolean => {
     if (!error) return false;
- 
+
     const errorMessage = error.message || error.toString() || '';
     const errorCode = error.code || '';
 
@@ -83,15 +84,40 @@ export const createWhatsAppErrorLink = (error: any): string => {
 };
 
 /**
+ * Maps technical error codes to user-friendly messages
+ */
+const getFriendlyErrorMessage = (code: string, message: string): string => {
+    const lcCode = code.toLowerCase();
+    const lcMessage = message.toLowerCase();
+
+    if (lcCode.includes('resource-exhausted') || lcMessage.includes('quota')) {
+        return "The system is currently busy (Daily Quota Reached). Please try again later or contact support.";
+    }
+    if (lcCode.includes('permission-denied')) {
+        return "You don't have permission to perform this action.";
+    }
+    if (lcCode.includes('unavailable') || lcCode.includes('network')) {
+        return "Network connection issue. Please check your internet.";
+    }
+    if (lcCode.includes('not-found')) {
+        return "The requested data could not be found.";
+    }
+
+    return "An unexpected system error occurred.";
+};
+
+/**
  * Gets user-friendly error information
  */
 export const getDatabaseErrorInfo = (error: any): DatabaseError => {
     const errorMessage = error.message || error.toString() || 'Unknown error';
     const errorCode = error.code || 'UNKNOWN';
+    const friendlyMessage = getFriendlyErrorMessage(errorCode, errorMessage);
 
     return {
         code: errorCode,
         message: errorMessage,
+        friendlyMessage,
         fullError: error
     };
 };

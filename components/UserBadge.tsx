@@ -14,11 +14,21 @@ const UserBadge: React.FC = () => {
 
     const { isOnline, isSyncing, queuedCount, onlineUsers, settings } = useData();
     const [showConfirm, setShowConfirm] = useState(false);
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [showOnlineUsers, setShowOnlineUsers] = useState(false);
     const [isExpanded, setIsExpanded] = useState(true);
 
+    // Switch Account (Same School)
     const handleSwitchUser = () => {
         logout();
+        // AuthOverlay will detect !isAuthenticated and switch to 'user-selection'
+    };
+
+    // Full Logout (Return to School Selection)
+    const handleFullLogout = () => {
+        logout(); // Visual consistency + clear auth state
+        // Force reload to completely reset AuthOverlay state and clear school context
+        window.location.reload();
     };
 
     const getRoleColor = (role: string) => {
@@ -127,6 +137,20 @@ const UserBadge: React.FC = () => {
                         {/* Network Indicator - Always Visible */}
                         <NetworkIndicator isOnline={isOnline} isSyncing={isSyncing} queuedCount={queuedCount} />
 
+                        {/* Always Visible Logout Button */}
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setShowLogoutConfirm(true);
+                            }}
+                            className="p-1.5 rounded-full hover:bg-red-100 text-gray-500 hover:text-red-600 transition-colors"
+                            title="Logout from School"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                            </svg>
+                        </button>
+
                         {/* Collapse/Expand Toggle */}
                         <button
                             onClick={() => setIsExpanded(!isExpanded)}
@@ -169,21 +193,32 @@ const UserBadge: React.FC = () => {
                                         d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
                                     />
                                 </svg>
-                                <span>Switch Account</span>
+                                <span>Switch User</span>
                             </button>
                         </>
                     )}
                 </div>
             </div>
 
-            {/* Confirmation Modal */}
+            {/* Switch User Modal */}
             <ConfirmationModal
                 isOpen={showConfirm}
                 onClose={() => setShowConfirm(false)}
                 onConfirm={handleSwitchUser}
                 title="Switch User"
-                message={`Are you sure you want to switch users? You will be logged out as ${currentUser.name}.`}
-                confirmText="Switch"
+                message={`Switch to a different user account within this school?`}
+                confirmText="Switch User"
+            />
+
+            {/* Full Logout Modal */}
+            <ConfirmationModal
+                isOpen={showLogoutConfirm}
+                onClose={() => setShowLogoutConfirm(false)}
+                onConfirm={handleFullLogout}
+                title="Sign Out"
+                message="Are you sure you want to sign out? You will be returned to the School Login page."
+                confirmText="Sign Out"
+                variant="danger"
             />
 
             {/* Online Users Modal */}

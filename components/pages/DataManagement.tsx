@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
-import { updateUsers, createDocumentId, saveUserDatabase, getSchoolData, type AppDataType } from '../../services/firebaseService';
+import { updateUsers, createDocumentId, initializeNewTermDatabase, getSchoolData, type AppDataType } from '../../services/firebaseService';
 import { exportDatabase, importDatabase } from '../../services/databaseService';
 import { generateWpfProject } from '../../services/wpfProjectGenerator';
 import ConfirmationModal from '../ConfirmationModal';
@@ -135,7 +135,9 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
             };
 
             // 2. Save to Firebase
-            await saveUserDatabase(newDocId, newData);
+            // SAFETY: We use initializeNewTermDatabase here because we are explicitly creating a NEW term
+            // with a fresh document ID. This is the only valid use case for overwriting the DB.
+            await initializeNewTermDatabase(newDocId, newData);
 
             // 3. Switch to New Term
             dataContext.setSchoolId(newDocId);
