@@ -261,7 +261,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // ✅ ONLY update if imported data is ACTUALLY provided, not empty, AND different from current state
         if (importedSettings && !deepEqual(importedSettings, settings)) {
             console.log('[DataContext] ✅ Updating settings');
-            setSettings(importedSettings);
+            setSettings(prev => ({ ...prev, ...importedSettings }));
             if (!isRemote) markDirty('settings');
         }
         if (importedStudents && importedStudents.length > 0 && !deepEqual(importedStudents, students)) {

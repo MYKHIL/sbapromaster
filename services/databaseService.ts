@@ -146,10 +146,24 @@ function uint8ArrayToBase64(bytes: Uint8Array, mimeType: string = 'image/png'): 
     try {
         let binary = '';
         const len = bytes.byteLength;
+        // Limit max processing size to avoids Hanging/Crashing on massive blobs (e.g > 2MB)
+        if (len > 2 * 1024 * 1024) {
+            console.warn(`[databaseService] BLOB too large to process (${(len / 1024 / 1024).toFixed(2)} MB). Skipping.`);
+            return '';
+        }
+
         for (let i = 0; i < len; i++) {
             binary += String.fromCharCode(bytes[i]);
         }
-        return `data:${mimeType};base64,${btoa(binary)}`;
+        const base64 = `data:${mimeType};base64,${btoa(binary)}`;
+
+        // Firestore Field Limit Check (approx 1MB, but we set safe limit to 500KB for nested fields)
+        if (base64.length > 500 * 1024) {
+            console.warn(`[databaseService] Generated Base64 image too large (${(base64.length / 1024).toFixed(2)} KB). Skipping to prevent database error.`);
+            return '';
+        }
+
+        return base64;
     } catch (e) {
         console.error("Failed to convert Uint8Array to base64", e);
         return '';
@@ -275,13 +289,28 @@ export async function importDatabase(dbFile: Uint8Array): Promise<ImportResult> 
         const settingsRes = query('SELECT * FROM Settings LIMIT 1')[0];
         if (settingsRes) {
             importedData.settings = {
-                schoolName: settingsRes.SchoolName, district: settingsRes.District, address: settingsRes.Address,
-                academicYear: settingsRes.AcademicYear, academicTerm: settingsRes.AcademicTerm,
+                schoolName: String(settingsRes.SchoolName || ''),
+                district: String(settingsRes.District || ''),
+                address: String(settingsRes.Address || ''),
+                academicYear: String(settingsRes.AcademicYear || ''),
+                academicTerm: String(settingsRes.AcademicTerm || ''),
                 vacationDate: normalizeDateString(settingsRes.VacationDate),
                 reopeningDate: normalizeDateString(settingsRes.ReopeningDate),
-                headmasterName: settingsRes.HeadmasterName || '',
+                headmasterName: String(settingsRes.HeadmasterName || ''),
+                // Restore logo/signature with robust size checks
                 logo: uint8ArrayToBase64(settingsRes.LogoPath),
-                headmasterSignature: uint8ArrayToBase64(settingsRes.HeadSignaturePath)
+                headmasterSignature: uint8ArrayToBase64(settingsRes.HeadSignaturePath),
+                // Ensure new config fields have defaults if missing from old DBs
+                isDataEntryLocked: Boolean(settingsRes.IsDataEntryLocked),
+                autoAssignIndexNumbers: Boolean(settingsRes.AutoAssignIndexNumbers),
+                indexNumberGlobalPrefix: String(settingsRes.IndexNumberGlobalPrefix || ''),
+                indexNumberGlobalSuffix: String(settingsRes.IndexNumberGlobalSuffix || ''),
+                indexNumberCounterDigits: Number(settingsRes.IndexNumberCounterDigits) || 3,
+                indexNumberPerClass: Boolean(settingsRes.IndexNumberPerClass),
+                indexNumberAutoSort: Boolean(settingsRes.IndexNumberAutoSort),
+                indexNumberGlobalCounter: Number(settingsRes.IndexNumberGlobalCounter) || 0,
+                allowStudentProgressView: Boolean(settingsRes.AllowStudentProgressView),
+                isPromotionTerm: Boolean(settingsRes.ShowPromotionStatus) // Map ShowPromotionStatus to isPromotionTerm
             };
         }
 

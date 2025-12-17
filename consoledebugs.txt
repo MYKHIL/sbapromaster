@@ -1,110 +1,88 @@
-(index):64  cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation
-(anonymous) @ (index):64
-(anonymous) @ (index):64
-react-dom-client.development.js:28004 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
-geminiService.ts:8  Gemini API key not found. AI features will be disabled.
-(anonymous) @ geminiService.ts:8
-syncLogger.ts:31 [SyncLogger] Log initialized: SyncLog_2025-12-17T18-53-13.txt
-syncLogger.ts:32 [SyncLogger] Logs will be saved to browser when you call downloadLog()
-syncLogger.ts:59 [SYNC_LOG] AuthOverlay component mounted
-AuthOverlay.tsx:65 [AuthOverlay] Pausing sync - authentication in progress
-syncLogger.ts:59 [SYNC_LOG] Pausing sync - authentication in progress
-DataContext.tsx:1328 [DataContext] Sync PAUSED
-AuthOverlay.tsx:84 [AuthOverlay] 🔄 Found saved session. Attempting to restore...
-DataContext.tsx:809 [DataContext] 📥 Fetching initial data from cloud (Auto-Sync Disabled)...
-syncLogger.ts:59 [SYNC_LOG] AuthOverlay component unmounting
-syncLogger.ts:31 [SyncLogger] Log initialized: SyncLog_2025-12-17T18-53-13.txt
-syncLogger.ts:32 [SyncLogger] Logs will be saved to browser when you call downloadLog()
-syncLogger.ts:59 [SYNC_LOG] AuthOverlay component mounted
-AuthOverlay.tsx:65 [AuthOverlay] Pausing sync - authentication in progress
-syncLogger.ts:59 [SYNC_LOG] Pausing sync - authentication in progress
-DataContext.tsx:1328 [DataContext] Sync PAUSED
-AuthOverlay.tsx:84 [AuthOverlay] 🔄 Found saved session. Attempting to restore...
-DataContext.tsx:809 [DataContext] 📥 Fetching initial data from cloud (Auto-Sync Disabled)...
-AuthOverlay.tsx:65 [AuthOverlay] Pausing sync - authentication in progress
-syncLogger.ts:59 [SYNC_LOG] Pausing sync - authentication in progress
-DataContext.tsx:1328 [DataContext] Sync PAUSED
-AuthOverlay.tsx:109 [AuthOverlay] ✅ School session restored: elimacademy_20252026_First-Term
-DataContext.tsx:248 [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 182, subjectsCount: 15, classesCount: 12, gradesCount: 10, …}
-syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users. Count: 14
-DataContext.tsx:341 [DataContext] ✅ Updating users: 14
-syncLogger.ts:59 [SYNC_LOG] setUsers called. Current count: 0, New count: 14
-syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
-    at setUsers (DataContext.tsx:170:40)
-    at loadImportedData (DataContext.tsx:342:13)
-    at restoreSession (AuthOverlay.tsx:113:25)
+firebaseService.ts:741 [firebaseService] 📥 getSchoolData found document. Checking for migration...
+firebaseService.ts:741 [firebaseService] 📥 getSchoolData found document. Checking for migration...
+DataContext.tsx:248 [DataContext] 📦 loadImportedData called (isRemote=false) with: {hasSettings: true, studentsCount: 280, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+DataContext.tsx:268 [DataContext] ✅ Updating students: 280
+DataContext.tsx:273 [DataContext] ✅ Updating subjects: 14
+DataContext.tsx:278 [DataContext] ✅ Updating classes: 11
+DataContext.tsx:319 [DataContext] ✅ Updating scores: 2066 (Merged)
+syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users. Count: 0
+DataContext.tsx:345 [DataContext] 🚫 Skipping users update - data is empty/undefined
+DataContext.tsx:407 [DataContext] 💾 Local file import: Marking fields as dirty for verification
+useLocalStorage.ts:26  QuotaExceededError: Failed to execute 'setItem' on 'Storage': Setting the value of 'sba-gyewanidabasicschool_20252026_First-Term-students' exceeded the quota.
+    at useLocalStorage.ts:23:29
+    at Object.react_stack_bottom_frame (react-dom-client.development.js:25989:20)
+    at runWithFiberInDEV (react-dom-client.development.js:871:30)
+    at commitHookEffectListMount (react-dom-client.development.js:13249:29)
+    at commitHookPassiveMountEffects (react-dom-client.development.js:13336:11)
+    at commitPassiveMountOnFiber (react-dom-client.development.js:15484:13)
+    at recursivelyTraversePassiveMountEffects (react-dom-client.development.js:15439:11)
+    at commitPassiveMountOnFiber (react-dom-client.development.js:15718:11)
+    at recursivelyTraversePassiveMountEffects (react-dom-client.development.js:15439:11)
+    at commitPassiveMountOnFiber (react-dom-client.development.js:15476:11)
+(anonymous) @ useLocalStorage.ts:26
+react_stack_bottom_frame @ react-dom-client.development.js:25989
+runWithFiberInDEV @ react-dom-client.development.js:871
+commitHookEffectListMount @ react-dom-client.development.js:13249
+commitHookPassiveMountEffects @ react-dom-client.development.js:13336
+commitPassiveMountOnFiber @ react-dom-client.development.js:15484
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15519
+flushPassiveEffects @ react-dom-client.development.js:18432
+(anonymous) @ react-dom-client.development.js:17923
+performWorkUntilDeadline @ scheduler.development.js:45
+DataContext.tsx:625 [DataContext] ☁️ Syncing dirty fields: students, subjects, classes, scores (Manual Save)
+syncLogger.ts:59 [SYNC_LOG] saveToCloud: Preparing to save. Users count: 2
+DataContext.tsx:671 [DataContext] ℹ️ No actionable updates or deletions found for transaction.
+DataContext.tsx:674 [DataContext] ✅ Data saved to cloud successfully!
+DataContext.tsx:678 [DataContext] 🔄 Auto-refreshing data from cloud...
+DataContext.tsx:767 [DataContext] 📥 Manual refresh initiated - fetching data from cloud...
+firebaseService.ts:741 [firebaseService] 📥 getSchoolData found document. Checking for migration...
+DataContext.tsx:771 [DataContext] ✅ Data fetched successfully, applying updates...
+DataContext.tsx:248 [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 280, subjectsCount: 14, classesCount: 11, gradesCount: 9, …}
+DataContext.tsx:268 [DataContext] ✅ Updating students: 280
+DataContext.tsx:273 [DataContext] ✅ Updating subjects: 14
+DataContext.tsx:278 [DataContext] ✅ Updating classes: 11
+DataContext.tsx:319 [DataContext] ✅ Updating scores: 2066 (Merged)
+syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users. Count: 2
+DataContext.tsx:345 [DataContext] 🚫 Skipping users update - data is empty/undefined
 DataContext.tsx:384 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
-DataContext.tsx:1334 [DataContext] Sync RESUMED
-firebaseService.ts:712 [firebaseService] 📥 getSchoolData found document. Checking for migration...
-firebaseService.ts:23 [Migration] Found 1109 legacy items to migrate.
-firebaseService.ts:41 [Migration] Processing students...
-firebaseService.ts:41 [Migration] Processing scores...
-AuthOverlay.tsx:109 [AuthOverlay] ✅ School session restored: elimacademy_20252026_First-Term
-DataContext.tsx:248 [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 182, subjectsCount: 15, classesCount: 12, gradesCount: 10, …}
-syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users. Count: 14
-DataContext.tsx:341 [DataContext] ✅ Updating users: 14
-syncLogger.ts:59 [SYNC_LOG] setUsers called. Current count: 0, New count: 14
-syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
-    at setUsers (DataContext.tsx:170:40)
-    at loadImportedData (DataContext.tsx:342:13)
-    at restoreSession (AuthOverlay.tsx:113:25)
-DataContext.tsx:384 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
-DataContext.tsx:1334 [DataContext] Sync RESUMED
-firebaseService.ts:712 [firebaseService] 📥 getSchoolData found document. Checking for migration...
-firebaseService.ts:23 [Migration] Found 1109 legacy items to migrate.
-firebaseService.ts:41 [Migration] Processing students...
-firebaseService.ts:41 [Migration] Processing scores...
-firebaseService.ts:712 [firebaseService] 📥 getSchoolData found document. Checking for migration...
-firebaseService.ts:23 [Migration] Found 1109 legacy items to migrate.
-firebaseService.ts:41 [Migration] Processing students...
-firebaseService.ts:41 [Migration] Processing scores...
-firebaseService.ts:712 [firebaseService] 📥 getSchoolData found document. Checking for migration...
-firebaseService.ts:23 [Migration] Found 1109 legacy items to migrate.
-firebaseService.ts:41 [Migration] Processing students...
-firebaseService.ts:41 [Migration] Processing scores...
-firebaseService.ts:53 [Migration] 🔄 Committed a batch of 400 items...
-firebaseService.ts:53 [Migration] 🔄 Committed a batch of 400 items...
-firebaseService.ts:53 [Migration] 🔄 Committed a batch of 400 items...
-firebaseService.ts:53 [Migration] 🔄 Committed a batch of 400 items...
-firebaseService.ts:53 [Migration] 🔄 Committed a batch of 400 items...
-firebaseService.ts:41 [Migration] Processing classes...
-firebaseService.ts:41 [Migration] Processing subjects...
-firebaseService.ts:41 [Migration] Processing assessments...
-firebaseService.ts:53 [Migration] 🔄 Committed a batch of 400 items...
-firebaseService.ts:41 [Migration] Processing classes...
-firebaseService.ts:41 [Migration] Processing subjects...
-firebaseService.ts:41 [Migration] Processing assessments...
-firebaseService.ts:53 [Migration] 🔄 Committed a batch of 400 items...
-firebaseService.ts:41 [Migration] Processing classes...
-firebaseService.ts:41 [Migration] Processing subjects...
-firebaseService.ts:41 [Migration] Processing assessments...
-firebaseService.ts:53 [Migration] 🔄 Committed a batch of 400 items...
-firebaseService.ts:41 [Migration] Processing classes...
-firebaseService.ts:41 [Migration] Processing subjects...
-firebaseService.ts:41 [Migration] Processing assessments...
-firebaseService.ts:69 [Migration] ✅ Migration & Cleanup complete. Main document cleaned.
-DataContext.tsx:812 [DataContext] ✅ Initial data received via one-time fetch
-syncLogger.ts:59 [SYNC_LOG] Initial data loaded. Users: 14, Scores: 895
-DataContext.tsx:248 [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 182, subjectsCount: 15, classesCount: 12, gradesCount: 10, …}
-syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users. Count: 14
-DataContext.tsx:341 [DataContext] ✅ Updating users: 14
-syncLogger.ts:59 [SYNC_LOG] setUsers called. Current count: 0, New count: 14
-syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
-    at setUsers (DataContext.tsx:170:40)
-    at loadImportedData (DataContext.tsx:342:13)
-    at fetchInitialData (DataContext.tsx:816:21)
-DataContext.tsx:384 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
-firebaseService.ts:69 [Migration] ✅ Migration & Cleanup complete. Main document cleaned.
-DataContext.tsx:812 [DataContext] ✅ Initial data received via one-time fetch
-syncLogger.ts:59 [SYNC_LOG] Initial data loaded. Users: 14, Scores: 895
-DataContext.tsx:248 [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 182, subjectsCount: 15, classesCount: 12, gradesCount: 10, …}
-syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users. Count: 14
-DataContext.tsx:341 [DataContext] ✅ Updating users: 14
-syncLogger.ts:59 [SYNC_LOG] setUsers called. Current count: 0, New count: 14
-syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
-    at setUsers (DataContext.tsx:170:40)
-    at loadImportedData (DataContext.tsx:342:13)
-    at fetchInitialData (DataContext.tsx:816:21)
-DataContext.tsx:384 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
-firebaseService.ts:69 [Migration] ✅ Migration & Cleanup complete. Main document cleaned.
-firebaseService.ts:69 [Migration] ✅ Migration & Cleanup complete. Main document cleaned.
+DataContext.tsx:780 [DataContext] 🎉 Manual refresh complete
+DataContext.tsx:682 [DataContext] 🎉 Sync & Refresh complete - cleared dirty fields
+useLocalStorage.ts:26  QuotaExceededError: Failed to execute 'setItem' on 'Storage': Setting the value of 'sba-gyewanidabasicschool_20252026_First-Term-students' exceeded the quota.
+    at useLocalStorage.ts:23:29
+    at Object.react_stack_bottom_frame (react-dom-client.development.js:25989:20)
+    at runWithFiberInDEV (react-dom-client.development.js:871:30)
+    at commitHookEffectListMount (react-dom-client.development.js:13249:29)
+    at commitHookPassiveMountEffects (react-dom-client.development.js:13336:11)
+    at commitPassiveMountOnFiber (react-dom-client.development.js:15484:13)
+    at recursivelyTraversePassiveMountEffects (react-dom-client.development.js:15439:11)
+    at commitPassiveMountOnFiber (react-dom-client.development.js:15718:11)
+    at recursivelyTraversePassiveMountEffects (react-dom-client.development.js:15439:11)
+    at commitPassiveMountOnFiber (react-dom-client.development.js:15476:11)
+(anonymous) @ useLocalStorage.ts:26
+react_stack_bottom_frame @ react-dom-client.development.js:25989
+runWithFiberInDEV @ react-dom-client.development.js:871
+commitHookEffectListMount @ react-dom-client.development.js:13249
+commitHookPassiveMountEffects @ react-dom-client.development.js:13336
+commitPassiveMountOnFiber @ react-dom-client.development.js:15484
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15519
+flushPassiveEffects @ react-dom-client.development.js:18432
+(anonymous) @ react-dom-client.development.js:17923
+performWorkUntilDeadline @ scheduler.development.js:45
