@@ -8,6 +8,13 @@ interface ChartProps {
     showValues?: boolean;
 }
 
+// MultiLineChart Props
+interface MultiLineChartProps {
+    series: { label: string; data: { label: string; value: number }[]; color: string }[];
+    height?: number;
+    title?: string;
+}
+
 // --- Bar Chart ---
 export const BarChart: React.FC<ChartProps> = ({ data, height = 200, title, showValues = true }) => {
     if (data.length === 0) return <div className="h-full flex items-center justify-center text-gray-400">No Data</div>;
@@ -133,6 +140,85 @@ export const LineChart: React.FC<ChartProps> = ({ data, height = 200, title }) =
                 {data.map((d, i) => (
                     <div key={i} className="text-[10px] text-gray-500 text-center -ml-2 w-8 truncate" title={d.label}>
                         {d.label}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+// --- MultiLine Chart ---
+export const MultiLineChart: React.FC<MultiLineChartProps> = ({ series, height = 200, title }) => {
+    // Check if we have ANY data at all across series, not just the first one
+    const hasData = series.some(s => s.data.length > 0);
+    if (!hasData) return <div className="h-full flex items-center justify-center text-gray-400">Not Input Data</div>;
+
+    // Determine global max and labels from the series with the most data (or first)
+    const allValues = series.flatMap(s => s.data.map(d => d.value));
+    const maxValFound = Math.max(...allValues);
+    const maxValue = maxValFound > 0 ? maxValFound : 100; // Prevent 0/0 issues if all are 0
+
+    // Get unique labels across ALL series to ensure alignment
+    const allLabels = Array.from(new Set(series.flatMap(s => s.data.map(d => d.label))));
+    // Sort labels if they contain dates/terms? For now assume order is consistently chronological if provided by history
+    // Fallback: use the longest label set found
+    const longestSeries = series.reduce((prev, current) => (prev.data.length > current.data.length) ? prev : current, series[0]);
+    const labels = longestSeries.data.map(d => d.label);
+
+    return (
+        <div className="w-full flex flex-col h-full">
+            {title && <h4 className="text-sm font-bold text-gray-600 mb-2 text-center">{title}</h4>}
+            <div className="flex-1 relative" style={{ height }}>
+                <svg width="100%" height="100%" viewBox={`0 0 100 100`} preserveAspectRatio="none" className="overflow-visible">
+                    {/* Grid lines */}
+                    {[0, 25, 50, 75, 100].map(p => (
+                        <line key={p} x1="0" y1={100 - p} x2="100" y2={100 - p} stroke="#f3f4f6" strokeWidth="0.5" />
+                    ))}
+
+                    {/* Series */}
+                    {series.map((s, idx) => {
+                        if (s.data.length === 0) return null;
+
+                        const points = s.data.map((d, i) => {
+                            // If only 1 point, center it. Else distribute.
+                            const x = s.data.length === 1 ? 50 : (i / (s.data.length - 1)) * 100;
+                            const y = 100 - ((d.value / maxValue) * 100);
+                            return `${x},${y}`;
+                        }).join(' ');
+
+                        return (
+                            <g key={idx}>
+                                {s.data.length > 1 && (
+                                    <polyline points={points} fill="none" stroke={s.color} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                                )}
+                                {s.data.map((d, i) => {
+                                    const x = s.data.length === 1 ? 50 : (i / (s.data.length - 1)) * 100;
+                                    const y = 100 - ((d.value / maxValue) * 100);
+                                    return (
+                                        <circle key={i} cx={x} cy={y} r="1.5" fill="#fff" stroke={s.color} strokeWidth="1" />
+                                    );
+                                })}
+                            </g>
+                        )
+                    })}
+                </svg>
+            </div>
+
+            {/* Legend */}
+            <div className="flex flex-wrap justify-center gap-3 mt-2 mb-2">
+                {series.map((s, i) => (
+                    <div key={i} className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }}></span>
+                        <span className="text-[10px] text-gray-600">{s.label}</span>
+                    </div>
+                ))}
+            </div>
+
+            {/* X Axis Labels */}
+            <div className="flex justify-between w-full px-1">
+                {labels.map((l, i) => (
+                    <div key={i} className="text-[10px] text-gray-500 text-center -ml-2 w-8 truncate" title={l} style={labels.length === 1 ? { width: '100%', textAlign: 'center' } : {}}>
+                        {l}
                     </div>
                 ))}
             </div>
