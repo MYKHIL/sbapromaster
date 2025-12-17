@@ -12,6 +12,11 @@ export const MULTI_SCORE_ENTRY_ENABLED = false;
 export const SHOW_PDF_DOWNLOAD_BUTTON = true;
 export const WHATSAPP_DEVELOPER_NUMBER = '233542410613';
 
+// DATABASE SWITCHING CONTROL
+// 1 = Primary Database (sba-pro-master-759f6)
+// 2 = Backup Database (sba-pro-master-40f08)
+export const ACTIVE_DATABASE_INDEX = 2;
+
 export const INITIAL_SETTINGS: SchoolSettings = {
   schoolName: 'SBA Pro Master Demo School',
   district: 'Tech District',

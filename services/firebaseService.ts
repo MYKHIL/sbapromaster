@@ -75,18 +75,41 @@ const migrateLegacyData = async (docId: string, data: any) => {
 };
 
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-    apiKey: "AIzaSyCe0O-mBCODiEA-KNVLXLMp00lJ6_Jt5SU",
-    authDomain: "sba-pro-master-759f6.firebaseapp.com",
-    projectId: "sba-pro-master-759f6",
-    storageBucket: "sba-pro-master-759f6.firebasestorage.app",
-    messagingSenderId: "239073604626",
-    appId: "1:239073604626:web:452bc2719fc980704d14cb",
-    measurementId: "G-47MMKKX888"
-};
+import { ACTIVE_DATABASE_INDEX } from '../constants';
+
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfigs = [
+    // INDEX 0: Placeholder (Unused)
+    {},
+    // INDEX 1: Primary Database (sba-pro-master-759f6)
+    {
+        apiKey: "AIzaSyCe0O-mBCODiEA-KNVLXLMp00lJ6_Jt5SU",
+        authDomain: "sba-pro-master-759f6.firebaseapp.com",
+        projectId: "sba-pro-master-759f6",
+        storageBucket: "sba-pro-master-759f6.firebasestorage.app",
+        messagingSenderId: "239073604626",
+        appId: "1:239073604626:web:452bc2719fc980704d14cb",
+        measurementId: "G-47MMKKX888"
+    },
+    // INDEX 2: Backup Database (sba-pro-master-40f08)
+    {
+        apiKey: "AIzaSyBP6gLbFLhfbAvjB2ddXSq6zqE_gWK2MEI",
+        authDomain: "sba-pro-master-40f08.firebaseapp.com",
+        projectId: "sba-pro-master-40f08",
+        storageBucket: "sba-pro-master-40f08.firebasestorage.app",
+        messagingSenderId: "91692962474",
+        appId: "1:91692962474:web:eefa6a3a04ba557c38b6d3",
+        measurementId: "G-EHHNKZ5FBG"
+    }
+];
+
+// Select configuration based on the active index
+const selectedConfig = firebaseConfigs[ACTIVE_DATABASE_INDEX] || firebaseConfigs[1];
+
+console.log(`[Firebase] Initializing with Database Index: ${ACTIVE_DATABASE_INDEX} (${selectedConfig['projectId']})`);
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
+const app = initializeApp(selectedConfig);
 const analytics = getAnalytics(app);
 export const db = getFirestore(app);
 
