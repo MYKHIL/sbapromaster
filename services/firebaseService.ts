@@ -1,7 +1,78 @@
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, onSnapshot, runTransaction, query, where, documentId } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, onSnapshot, runTransaction, query, where, documentId, writeBatch, updateDoc, deleteField, Unsubscribe } from "firebase/firestore";
 import type { SchoolSettings, Student, Subject, Class, Grade, Assessment, Score, ReportSpecificData, ClassSpecificData, User, DeviceCredential, UserLog, OnlineUser } from '../types';
+
+// Helper to migrate legacy arrays to subcollections safely
+const migrateLegacyData = async (docId: string, data: any) => {
+    const SUBCOLLECTION_KEYS = ['students', 'scores', 'classes', 'subjects', 'assessments'];
+    const cleanup: any = {};
+    let hasMigrationWork = false;
+    let totalItemsToMigrate = 0;
+
+    // Calculate total work first
+    SUBCOLLECTION_KEYS.forEach(key => {
+        if (Array.isArray(data[key]) && data[key].length > 0) {
+            totalItemsToMigrate += data[key].length;
+            hasMigrationWork = true;
+        }
+    });
+
+    if (!hasMigrationWork) return;
+
+    console.log(`[Migration] Found ${totalItemsToMigrate} legacy items to migrate.`);
+
+    try {
+        // We use Batched Writes instead of one massive Transaction to avoid the 500-op limit.
+        // We assume exclusive control (no other user is editing *legacy* fields right now).
+
+        let batch = writeBatch(db);
+        let operationCount = 0;
+        const commitBatch = async () => {
+            if (operationCount > 0) {
+                await batch.commit();
+                batch = writeBatch(db); // Reset
+                operationCount = 0;
+            }
+        };
+
+        for (const key of SUBCOLLECTION_KEYS) {
+            if (Array.isArray(data[key]) && data[key].length > 0) {
+                console.log(`[Migration] Processing ${key}...`);
+
+                for (const item of data[key]) {
+                    if (item && item.id !== undefined) {
+                        const subDocRef = doc(db, "schools", docId, key, String(item.id));
+                        const sanitizedItem = sanitizeForFirestore(item);
+                        batch.set(subDocRef, sanitizedItem, { merge: true });
+                        operationCount++;
+
+                        // Commit every 400 ops to stay safe (Limit is 500)
+                        if (operationCount >= 400) {
+                            await commitBatch();
+                            console.log(`[Migration] 🔄 Committed a batch of 400 items...`);
+                        }
+                    }
+                }
+
+                // Mark this field for deletion after success
+                cleanup[key] = deleteField();
+            }
+        }
+
+        // Commit remaining writes
+        await commitBatch();
+
+        // Final Step: Clean up main document
+        const docRef = doc(db, "schools", docId);
+        await updateDoc(docRef, cleanup);
+        console.log('[Migration] ✅ Migration & Cleanup complete. Main document cleaned.');
+
+    } catch (e) {
+        console.error('[Migration] ❌ Migration failed:', e);
+        // Do not cleanup if write failed.
+    }
+};
 
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
@@ -38,6 +109,28 @@ export type AppDataType = {
     // School-level auth (legacy/initial setup)
     password?: string;
     Access?: boolean;
+};
+
+// Helper to recursively replace undefined with null for Firestore compatibility
+const sanitizeForFirestore = (obj: any): any => {
+    if (obj === undefined) return null;
+    if (obj === null) return null;
+    if (Array.isArray(obj)) {
+        return obj.map(sanitizeForFirestore);
+    }
+    if (typeof obj === 'object') {
+        const newObj: any = {};
+        for (const key in obj) {
+            if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                const val = sanitizeForFirestore(obj[key]);
+                // Filter out "undefined" keys if intended, or set to null
+                // If we set to null, Firestore keeps the field.
+                newObj[key] = val;
+            }
+        }
+        return newObj;
+    }
+    return obj;
 };
 
 export type LoginResult =
@@ -77,7 +170,7 @@ export const createDocumentId = (schoolName: string, academicYear: string, acade
     const sanitizedSchool = sanitizeSchoolName(schoolName);
     const sanitizedYear = sanitizeAcademicYear(academicYear);
     const sanitizedTerm = sanitizeAcademicTerm(academicTerm);
-    return `${sanitizedSchool}_${sanitizedYear}_${sanitizedTerm}`;
+    return `${sanitizedSchool}_${sanitizedYear}_${sanitizedTerm} `;
 };
 
 // Helper to search for schools and get available years
@@ -214,29 +307,77 @@ export const saveDataTransaction = async (
             const currentData = sfDoc.data() as AppDataType;
             const finalUpdates: any = {};
 
+            const SUBCOLLECTION_KEYS = ['students', 'scores', 'classes', 'subjects', 'assessments'];
+
             // Collect all fields that need attention (either update or deletion)
+            // PLUS force-check maintenance fields to self-heal size issues
             const allKeys = new Set([
                 ...Object.keys(updates),
-                ...(deletions ? Object.keys(deletions) : [])
+                ...(deletions ? Object.keys(deletions) : []),
+                'userLogs',
+                'activeSessions'
             ]);
 
             console.log('[firebaseService] ☁️ saveDataTransaction keys:', Array.from(allKeys));
 
             for (const key of allKeys) {
-                // Debug logging for specific failure key
-                // console.log(`[firebaseService] Processing key: ${key}`);
+                // Debug logging for maintenance
+                // console.log(`[firebaseService] Processing key: ${ key } `);
 
                 const currentVal = currentData[key as keyof AppDataType];
-                const newVal = updates[key as keyof AppDataType];
+                const newVal = updates[key as keyof AppDataType]; // Might be undefined if only pruning
                 const deletedIds = deletions ? deletions[key] : undefined;
 
-                // Strategy 1: Smart Array Merge (for lists with unique IDs)
-                // We check if it's an array based on currentVal OR newVal (in case currentVal is empty/undefined)
+                // ---------------------------------------------------------
+                // BRANCH A: Subcollections (The new scalable way)
+                // ---------------------------------------------------------
+                if (SUBCOLLECTION_KEYS.includes(key)) {
+                    // 1. Handle Updates (Array of items)
+                    if (Array.isArray(newVal)) {
+                        newVal.forEach((item: any) => {
+                            if (item && item.id !== undefined) {
+                                // Write to schools/{docId}/{key}/{itemId}
+                                const subDocRef = doc(db, "schools", docId, key, String(item.id));
+                                // Use { merge: true } so we don't wipe existing fields if we only sent partial data
+                                // (Though our app generally sends full objects for students/classes, scores might be partial in future)
+                                const sanitizedItem = sanitizeForFirestore(item);
+                                transaction.set(subDocRef, sanitizedItem, { merge: true });
+                            }
+                        });
+                    }
+
+                    // 2. Handle Deletions (Array of IDs)
+                    if (deletedIds && Array.isArray(deletedIds)) {
+                        console.log(`[firebaseService] 🗑️ Processing SUBCOLLECTION deletions for ${key}: ${deletedIds.join(', ')}`);
+                        deletedIds.forEach(id => {
+                            const subDocRef = doc(db, "schools", docId, key, String(id));
+                            transaction.delete(subDocRef);
+                        });
+                    }
+
+                    // Note: We DO NOT add anything to 'finalUpdates' for these keys.
+                    // This creates the "Fan-Out" effect.
+                    continue;
+                }
+
+                // ---------------------------------------------------------
+                // BRANCH B: Main Document Fields (Legacy / Metadata)
+                // ---------------------------------------------------------
+
+                // DIAGNOSTICING SIZE:
+                try {
+                    const size = JSON.stringify(currentVal || {}).length;
+                    if (size > 10000) {
+                        console.log(`[firebaseService] ⚠️ Large Main Doc Field: ${key} = ${(size / 1024).toFixed(2)} KB`);
+                    }
+                } catch (e) { }
+
+                // Strategy 1: Smart Array Merge (for lists with unique IDs that are NOT subcollections - e.g. maybe userLogs if we kept it here)
+                // Actually userLogs is array type, but strictly pruned.
                 const isArrayType = (Array.isArray(currentVal) || Array.isArray(newVal));
 
                 if (isArrayType) {
                     // Check if items have IDs (safely)
-                    // We need to look at either existing data or new data to determine if it's an ID-based array
                     const sampleItem = (Array.isArray(newVal) && newVal.length > 0) ? newVal[0] :
                         (Array.isArray(currentVal) && currentVal.length > 0) ? currentVal[0] : null;
 
@@ -275,15 +416,27 @@ export const saveDataTransaction = async (
                             const allLogs = Array.from(mergedMap.values());
                             // Sort by timestamp if possible (assuming ISO strings) or just take last 50
                             // UserLog has timestamp field.
-                            if (allLogs.length > 50) {
+                            // FIX: Stricter limit 20 to aggressively reduce size
+                            if (allLogs.length > 20) {
                                 allLogs.sort((a, b) => (new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()));
-                                const keptLogs = allLogs.slice(-50); // Keep last 50
+                                const keptLogs = allLogs.slice(-20); // Keep last 20
+                                console.log(`[firebaseService] ✂️ Pruned userLogs from ${allLogs.length} to 20`);
                                 finalUpdates[key] = keptLogs;
-                            } else {
+                            } else if (newVal !== undefined || (allLogs.length !== (currentVal as any[])?.length)) {
+                                // Only write if changed (updates exist OR length changed OR we just want to be safe)
+                                // If we are just "maintenance checking" and nothing changed, we don't strictly need to write back 
+                                // unless we want to ensure consistency. 
+                                // Actually, finalUpdates[key] = ... implies we overwrite the field.
+                                // If newVal is undefined and length is same, we are just writing back the same data.
+                                // Optimization: Only write if meaningful change? 
+                                // For now, write it to be safe (ensure sync).
                                 finalUpdates[key] = allLogs;
                             }
                         } else {
-                            finalUpdates[key] = Array.from(mergedMap.values());
+                            // Only include in finalUpdates if there was a change (newVal or deletions) OR if we want to refresh
+                            if (newVal !== undefined || (deletedIds && deletedIds.length > 0)) {
+                                finalUpdates[key] = Array.from(mergedMap.values());
+                            }
                         }
                     } else {
                         // Arrays without IDs: Overwrite (fallback) or Union? 
@@ -319,27 +472,7 @@ export const saveDataTransaction = async (
                 }
             }
 
-            // Helper to recursively replace undefined with null for Firestore compatibility
-            const sanitizeForFirestore = (obj: any): any => {
-                if (obj === undefined) return null;
-                if (obj === null) return null;
-                if (Array.isArray(obj)) {
-                    return obj.map(sanitizeForFirestore);
-                }
-                if (typeof obj === 'object') {
-                    const newObj: any = {};
-                    for (const key in obj) {
-                        if (Object.prototype.hasOwnProperty.call(obj, key)) {
-                            const val = sanitizeForFirestore(obj[key]);
-                            // Filter out "undefined" keys if intended, or set to null
-                            // If we set to null, Firestore keeps the field.
-                            newObj[key] = val;
-                        }
-                    }
-                    return newObj;
-                }
-                return obj;
-            };
+
 
             // Only perform update if we have data
             if (Object.keys(finalUpdates).length > 0) {
@@ -348,7 +481,7 @@ export const saveDataTransaction = async (
                 transaction.update(docRef, sanitizedUpdates);
             }
         });
-        console.log(`[firebaseService] Transaction successful. Keys: ${Object.keys(updates).join(', ')}. Deletions: ${deletions ? Object.keys(deletions).join(', ') : 'none'}`);
+        console.log(`[firebaseService] Transaction successful.Keys: ${Object.keys(updates).join(', ')}.Deletions: ${deletions ? Object.keys(deletions).join(', ') : 'none'} `);
     } catch (e) {
         console.error("[firebaseService] Transaction failed: ", e);
         throw e;
@@ -372,29 +505,95 @@ export const initializeNewTermDatabase = async (docId: string, data: Partial<App
     }
 };
 
-// Helper to subscribe to real-time updates
+// Helper to subscribe to real-time updates with Subcollection Fan-In
 export const subscribeToSchoolData = (docId: string, callback: (data: AppDataType, isLocal?: boolean) => void) => {
     const docRef = doc(db, "schools", docId);
 
-    // FIX: Add includeMetadataChanges to ensure we can accurately detect local vs remote changes
-    return onSnapshot(docRef, { includeMetadataChanges: true }, (doc) => {
-        // CRITICAL: Ignore local updates (latency compensation)
-        // If hasPendingWrites is true, this data hasn't reached the server yet.
-        // We already have this data locally (since we wrote it), so we don't need to process it.
-        // This prevents the "Echo Loop" where a local write triggers a listener event, which was then treated as a remote update.
-        if (doc.metadata.hasPendingWrites) {
-            console.log('[firebaseService] 🚫 Ignoring local pending write snapshot (Echo suppression)');
-            return;
+    // State to hold partial data from multiple sources
+    // We initialize with a skeleton, but actual data comes from snapshots
+    let currentAggregatedData: Partial<AppDataType> = {};
+    let isInitialLoad = true;
+    const SUBCOLLECTION_KEYS = ['students', 'scores', 'classes', 'subjects', 'assessments'];
+
+    // Store all unsubscribe functions
+    const unsubscribes: Unsubscribe[] = [];
+
+    // Helper to debounce updates slightly if multiple listeners fire at once? 
+    // For now, valid simple approach: just call callback on every update.
+    // React's setState batching usually handles rapid updates well.
+
+    const notifyCallback = () => {
+        // Only notify if we have at least the basic school info (from main doc)
+        if ((currentAggregatedData as any).schoolName) {
+            callback(currentAggregatedData as AppDataType, false);
+        }
+    };
+
+    // 1. Subscribe to Main Document (Settings, Logs, Metadata)
+    const mainUnsub = onSnapshot(docRef, { includeMetadataChanges: true }, (docSnap) => {
+        if (docSnap.metadata.hasPendingWrites && !isInitialLoad) {
+            // Include pending writes? Yes, usually for optimistic UI.
+            // But we ignore "echo" if needed. 
         }
 
-        if (doc.exists()) {
-            callback(doc.data() as AppDataType, false);
+        if (docSnap.exists()) {
+            const data = docSnap.data() as AppDataType;
+
+            // Merge into aggregated data (excluding subcollection keys if they exist physically in main doc)
+            // Actually, we overwrite. But subcollections might not be in 'data' if they are true subcollections.
+            // CAUTION: If legacy arrays exist in 'data', they will overwrite our subcollection arrays 
+            // unless we migrate them.
+
+            // Debug: See what's actually in the main doc
+            // console.log('[firebaseService] 📨 Snapshot Keys:', Object.keys(data));
+
+            // Migration Check:
+            migrateLegacyData(docId, data);
+
+            // Update local state, but preserve Subcollection arrays if we already fetched them
+            // We iterate keys to only update Non-Subcollection keys from main doc
+            // (Unless main doc *has* the array, in which case it temporarily wins until migration finishes)
+            const mainData: any = { ...data };
+
+            // If main doc has empty/null for subcollection keys (which is the goal), keep our local subcollection data
+            SUBCOLLECTION_KEYS.forEach(key => {
+                if (!mainData[key] || (Array.isArray(mainData[key]) && mainData[key].length === 0)) {
+                    // Main doc doesn't have it, so keep our aggregated subcollection data
+                    if ((currentAggregatedData as any)[key]) {
+                        mainData[key] = (currentAggregatedData as any)[key];
+                    } else {
+                        mainData[key] = []; // Default to empty array if neither has it
+                    }
+                }
+            });
+
+            currentAggregatedData = { ...currentAggregatedData, ...mainData };
+            notifyCallback();
+        } else {
+            console.log("No such document!");
+            // callback(null); // Optional: Handle deletion
         }
-    }, (error) => {
-        console.error("Real-time sync error:", error);
-        // Error will be handled by the subscription caller
-        throw error;
+        isInitialLoad = false;
     });
+    unsubscribes.push(mainUnsub);
+
+    // 2. Subscribe to Subcollections
+    SUBCOLLECTION_KEYS.forEach(key => {
+        const subColRef = collection(db, "schools", docId, key);
+        const subUnsub = onSnapshot(subColRef, (snapshot) => {
+            const items = snapshot.docs.map(d => d.data());
+            // console.log(`[firebaseService] 📥 Received ${items.length} items from ${key} subcollection`);
+
+            (currentAggregatedData as any)[key] = items;
+            notifyCallback();
+        });
+        unsubscribes.push(subUnsub);
+    });
+
+    // Return a single unsubscribe function that calls all of them
+    return () => {
+        unsubscribes.forEach(unsub => unsub());
+    };
 };
 
 // User Management Functions
@@ -506,7 +705,14 @@ export const getSchoolData = async (docId: string): Promise<AppDataType | null> 
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-            return docSnap.data() as AppDataType;
+            const data = docSnap.data() as AppDataType;
+
+            // Trigger migration if legacy data is found
+            // This ensures manual fetches cleans up the DB too
+            console.log('[firebaseService] 📥 getSchoolData found document. Checking for migration...');
+            await migrateLegacyData(docId, data);
+
+            return data;
         }
         return null;
     } catch (e) {
