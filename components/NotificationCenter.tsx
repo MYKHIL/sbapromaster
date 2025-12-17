@@ -86,8 +86,8 @@ const NotificationItem: React.FC<{
                 <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                         <span className={`text-xs px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${notification.type === 'missing_data_alert' ? 'bg-purple-100 text-purple-700' :
-                                notification.type === 'feedback' ? 'bg-blue-100 text-blue-700' :
-                                    'bg-gray-100 text-gray-700'
+                            notification.type === 'feedback' ? 'bg-blue-100 text-blue-700' :
+                                'bg-gray-100 text-gray-700'
                             }`}>
                             {notification.type === 'missing_data_alert' ? 'Action' : notification.type === 'feedback' ? 'Reply' : 'System'}
                         </span>
@@ -169,48 +169,56 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
     if (!isOpen) return null;
 
     return (
-        <div className="absolute right-0 top-14 w-80 md:w-96 bg-white rounded-xl shadow-2xl border border-gray-200 z-[60] overflow-hidden flex flex-col max-h-[80vh] animate-in fade-in zoom-in-95 duration-200 origin-top-right">
-            <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex justify-between items-center">
-                <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                    Notifications
-                    {unreadCount > 0 && <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{unreadCount}</span>}
-                </h3>
-                <div className="flex gap-2">
-                    {unreadCount > 0 && (
-                        <button
-                            className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                            onClick={() => notifications.forEach(n => !n.read && onMarkRead(n.id))}
-                        >
-                            Mark all read
-                        </button>
+        <>
+            {/* Backdrop for mobile to handle outside clicks better if needed */}
+            <div className="fixed inset-0 z-[55] bg-black/10 backdrop-blur-[1px] md:hidden" onClick={onClose}></div>
+
+            <div className="fixed left-4 right-4 md:left-auto md:right-auto md:w-96 
+                            top-[8.5rem] md:top-20 
+                            md:fixed md:left-1/2 md:-translate-x-1/2 md:transform
+                            bg-white rounded-xl shadow-2xl border border-gray-200 z-[60] overflow-hidden flex flex-col max-h-[70vh] animate-in fade-in zoom-in-95 duration-200 origin-top">
+                <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex justify-between items-center">
+                    <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                        Notifications
+                        {unreadCount > 0 && <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{unreadCount}</span>}
+                    </h3>
+                    <div className="flex gap-2">
+                        {unreadCount > 0 && (
+                            <button
+                                className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                                onClick={() => notifications.forEach(n => !n.read && onMarkRead(n.id))}
+                            >
+                                Mark all read
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                <div className="overflow-y-auto flex-1 custom-scrollbar">
+                    {notifications.length === 0 ? (
+                        <div className="p-8 text-center">
+                            <div className="bg-gray-50 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <svg className="w-6 h-6 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                </svg>
+                            </div>
+                            <p className="text-sm text-gray-500">No notifications yet</p>
+                        </div>
+                    ) : (
+                        notifications.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(n => (
+                            <NotificationItem
+                                key={n.id}
+                                notification={n}
+                                onMarkRead={onMarkRead}
+                                onReply={onReply}
+                                onNavigate={onNavigate}
+                                onClose={onClose}
+                            />
+                        ))
                     )}
                 </div>
             </div>
-
-            <div className="overflow-y-auto flex-1 custom-scrollbar">
-                {notifications.length === 0 ? (
-                    <div className="p-8 text-center">
-                        <div className="bg-gray-50 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <svg className="w-6 h-6 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                            </svg>
-                        </div>
-                        <p className="text-sm text-gray-500">No notifications yet</p>
-                    </div>
-                ) : (
-                    notifications.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(n => (
-                        <NotificationItem
-                            key={n.id}
-                            notification={n}
-                            onMarkRead={onMarkRead}
-                            onReply={onReply}
-                            onNavigate={onNavigate}
-                            onClose={onClose}
-                        />
-                    ))
-                )}
-            </div>
-        </div>
+        </>
     );
 };
 
