@@ -580,7 +580,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // AUTO-SYNC REMOVED: All saves are now manual and page-specific
 
-    const saveToCloud = async (isManualSave: boolean = false) => {
+    const saveToCloud = async (isManualSave: boolean = false, skipRefresh: boolean = false) => {
         // CRITICAL: Check if sync is paused (during authentication)
         if (isSyncPaused.current) {
             console.log("Sync is paused (likely during authentication), skipping save");
@@ -675,9 +675,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             // NEW: Fetch latest data from cloud to ensure UI is up-to-date and to confirm sync
             // This satisfies the requirement: "after a save action, the system should download the latest data"
-            console.log('[DataContext] 🔄 Auto-refreshing data from cloud...');
-            // CRITICAL: Pass true to ignore the sync lock since WE are holding the lock
-            await refreshFromCloud(true);
+            if (!skipRefresh) {
+                console.log('[DataContext] 🔄 Auto-refreshing data from cloud...');
+                // CRITICAL: Pass true to ignore the sync lock since WE are holding the lock
+                await refreshFromCloud(true);
+            } else {
+                console.log('[DataContext] ⏭️ Skipping auto-refresh as requested (Optimized for large imports)');
+            }
 
             console.log('[DataContext] 🎉 Sync & Refresh complete - cleared dirty fields');
 

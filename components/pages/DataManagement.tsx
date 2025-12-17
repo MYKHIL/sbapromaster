@@ -441,7 +441,10 @@ const DataManagement: React.FC = () => {
         setIsCloudSaveModalOpen(false);
         setFeedback({ message: 'Saving imported data to cloud...', type: 'info' });
         try {
-            await saveToCloud();
+            // PASS TRUE to skip the auto-refresh.
+            // When importing a full DB, we trust the import data we just loaded into memory.
+            // Fetching it back from the cloud immediately is a waste of Quota (Reads).
+            await saveToCloud(true, true);
             setFeedback({ message: 'Data saved to cloud successfully!', type: 'success' });
         } catch (error) {
             console.error("Cloud save failed:", error);
