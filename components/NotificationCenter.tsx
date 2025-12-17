@@ -176,7 +176,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
             <div className="fixed left-4 right-4 md:left-auto md:right-auto md:w-96 
                             top-[8.5rem] md:top-20 
                             md:fixed md:left-1/2 md:-translate-x-1/2 md:transform
-                            bg-white rounded-xl shadow-2xl border border-gray-200 z-[60] overflow-hidden flex flex-col max-h-[70vh] animate-in fade-in zoom-in-95 duration-200 origin-top">
+                            bg-white rounded-xl shadow-2xl border border-gray-200 z-[60] overflow-hidden flex flex-col max-h-[50vh] animate-in fade-in zoom-in-95 duration-200 origin-top">
                 <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex justify-between items-center">
                     <h3 className="font-bold text-gray-800 flex items-center gap-2">
                         Notifications
