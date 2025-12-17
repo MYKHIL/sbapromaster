@@ -58,7 +58,7 @@ const UserBadge: React.FC = () => {
 
     return (
         <>
-            <div className="fixed top-6 right-4 z-[60]">
+            <div className="relative z-[60]">
                 {/* User Info Badge */}
                 <div
                     className={`flex flex-col gap-2 px-3 py-2 rounded-2xl shadow-lg border backdrop-blur-sm bg-opacity-95 transition-all duration-300 ${getRoleColor(currentUser.role)}`}

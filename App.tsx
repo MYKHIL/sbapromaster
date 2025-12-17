@@ -36,9 +36,9 @@ const PageWrapper: React.FC<{ name: Page; currentPage: Page; children: React.Rea
 };
 
 // Renders the currently active page, causing it to remount on change.
-const ActivePage: React.FC<{ page: Page }> = ({ page }) => {
+const ActivePage: React.FC<{ page: Page; onNavigate: (page: Page) => void }> = ({ page, onNavigate }) => {
   switch (page) {
-    case 'Dashboard': return <Dashboard />;
+    case 'Dashboard': return <Dashboard onNavigate={onNavigate} />;
     case 'School Setup': return <Settings />;
     case 'Teachers': return <Teachers />;
     case 'Subjects': return <Subjects />;
@@ -104,8 +104,15 @@ const App: React.FC = () => {
               {/* PageVisitLogger removed to prevent excessive logging */}
               <GreetingWrapper currentPage={currentPage} />
               <TeacherPageRedirect currentPage={currentPage} setCurrentPage={setCurrentPage} />
-              <UserBadge />
-              <GlobalActionBar currentPage={currentPage} />
+              <div className="fixed top-[4.5rem] lg:top-4 right-4 z-[60] flex flex-col items-end gap-2 pointer-events-none transition-[top] duration-300">
+                {/* Pointer events needs to be auto for children so they are clickable */}
+                <div className="pointer-events-auto">
+                  <UserBadge />
+                </div>
+                <div className="pointer-events-auto">
+                  <GlobalActionBar currentPage={currentPage} onNavigate={setCurrentPage} />
+                </div>
+              </div>
               <div className="flex h-screen overflow-hidden bg-gray-50">
                 <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
                 <main className="flex-1 p-4 pt-20 md:p-6 md:pt-20 lg:p-10 overflow-auto">
@@ -115,7 +122,7 @@ const App: React.FC = () => {
                   </PageWrapper>
 
                   {/* All other pages are rendered conditionally, causing them to remount on navigation. */}
-                  {currentPage !== 'Data Management' && <ActivePage page={currentPage} />}
+                  {currentPage !== 'Data Management' && <ActivePage page={currentPage} onNavigate={setCurrentPage} />}
                 </main>
               </div>
             </AuthOverlay>

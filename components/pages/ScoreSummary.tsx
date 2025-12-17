@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
+import UserSelectionModal from '../UserSelectionModal';
+import { Notification } from '../../types';
 import ReadOnlyWrapper from '../ReadOnlyWrapper';
 import { sortClassesByName } from '../../utils/classSort';
 
@@ -22,11 +24,26 @@ interface ClassSummary {
     classId: number;
     className: string;
     subjects: SubjectSummary[];
-    totalPercentage: number;
+    scorePercentage: number;
+
+    // New Remarks Data
+    remarksStats: {
+        totalStudents: number;
+        completedRemarks: number;
+        missingEntries: MissingRemarkEntry[];
+        percentage: number;
+    };
+
+    overallPercentage: number;
+}
+
+interface MissingRemarkEntry {
+    studentName: string;
+    missingFields: string[];
 }
 
 const ScoreSummary: React.FC = () => {
-    const { students, subjects, classes, assessments, getStudentScores, refreshFromCloud, isSyncing, isOnline, users } = useData();
+    const { students, subjects, classes, assessments, getStudentScores, refreshFromCloud, isSyncing, isOnline, users, reportData, getReportData, updateStudent } = useData();
     const { currentUser } = useUser();
 
     // State to toggle specific class view details
@@ -132,19 +149,76 @@ const ScoreSummary: React.FC = () => {
                 };
             });
 
-            // Calculate overall percentage for the class
-            const totalExpected = subjectSummaries.reduce((sum, sub) => sum + sub.totalAssessmentsExpected, 0);
-            const totalCompleted = subjectSummaries.reduce((sum, sub) => sum + sub.completedAssessments, 0);
-            const totalPercentage = totalExpected > 0 ? Math.round((totalCompleted / totalExpected) * 100) : 0;
+            // Calculate overall percentage for the class (Scores)
+            const totalExpectedScores = subjectSummaries.reduce((sum, sub) => sum + sub.totalAssessmentsExpected, 0);
+            const totalCompletedScores = subjectSummaries.reduce((sum, sub) => sum + sub.completedAssessments, 0);
+            const scorePercentage = totalExpectedScores > 0 ? Math.round((totalCompletedScores / totalExpectedScores) * 100) : 0;
+
+            // --- Remarks/Reports Statistics ---
+            const remarksMissingEntries: MissingRemarkEntry[] = [];
+            let completedRemarksCount = 0;
+            const requiredFields = ['attendance', 'conduct', 'interest', 'attitude', 'teacherRemark'];
+            const fieldLabels: Record<string, string> = {
+                attendance: 'Attendance',
+                conduct: 'Conduct',
+                interest: 'Interest',
+                attitude: 'Attitude',
+                teacherRemark: 'Teacher Remark'
+            };
+
+            classStudents.forEach(student => {
+                // We use getReportData from context or directly from reportData array if needed.
+                // context's getReportData maps over reportData array.
+                // Since this is inside a loop, retrieving from the reportData array directly via lookup might be faster if we pre-map it,
+                // but getReportData(id) is fine for now as it just finds in array.
+                const rData = getReportData(student.id);
+                const missingFields: string[] = [];
+
+                if (rData) {
+                    requiredFields.forEach(field => {
+                        const val = rData[field as keyof typeof rData];
+                        if (!val || (typeof val === 'string' && val.trim() === '')) {
+                            missingFields.push(fieldLabels[field]);
+                        }
+                    });
+                } else {
+                    // No data at all means all fields missing
+                    requiredFields.forEach(field => missingFields.push(fieldLabels[field]));
+                }
+
+                if (missingFields.length > 0) {
+                    remarksMissingEntries.push({
+                        studentName: student.name,
+                        missingFields
+                    });
+                } else {
+                    completedRemarksCount++;
+                }
+            });
+
+            const totalStudents = classStudents.length;
+            const remarksPercentage = totalStudents > 0 ? Math.round((completedRemarksCount / totalStudents) * 100) : 0;
+
+            // Overall Percentage (Average of Score% and Remark%)
+            // Alternatively: Weighted average based on number of items.
+            // Let's use simple average for visibility.
+            const overallPercentage = Math.round((scorePercentage + remarksPercentage) / 2);
 
             return {
                 classId: cls.id,
                 className: cls.name,
                 subjects: subjectSummaries,
-                totalPercentage
+                scorePercentage,
+                remarksStats: {
+                    totalStudents,
+                    completedRemarks: completedRemarksCount,
+                    missingEntries: remarksMissingEntries,
+                    percentage: remarksPercentage
+                },
+                overallPercentage
             };
         });
-    }, [classes, students, subjects, assessments, getStudentScores, users]);
+    }, [classes, students, subjects, assessments, getStudentScores, users, reportData, getReportData]);
 
     // Mobile View: Selected Class State
     const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
@@ -263,6 +337,7 @@ const ScoreSummary: React.FC = () => {
 
                                 {selectedClassData && (
                                     <ClassScoreCard
+                                        key={selectedClassData.classId}
                                         clsSummary={selectedClassData}
                                         expandedClasses={expandedClasses}
                                     />
@@ -296,81 +371,235 @@ const ClassScoreCard: React.FC<{
     clsSummary: any;
     expandedClasses: Record<number, boolean>;
 }> = ({ clsSummary, expandedClasses }) => {
+    const { loadImportedData, users: allUsers } = useData();
+    const { currentUser } = useUser();
+
+    // Modal State
+    const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false);
+    const [notified, setNotified] = useState(false);
+
+    // Calculate pending stats for message
+    const autoMessage = useMemo(() => {
+        let lines = [`Action Required: ${clsSummary.className} Status Report`];
+
+        // Scores Section (First)
+        const subjectsWithMissing = clsSummary.subjects.filter((s: any) => s.missingEntries.length > 0);
+        if (subjectsWithMissing.length > 0) {
+            lines.push(`\nMISSING SCORES:`);
+            subjectsWithMissing.forEach((sub: any) => {
+                // Determine if listing every student is too long? Users asked for "specific".
+                sub.missingEntries.forEach((entry: any) => {
+                    lines.push(`- ${sub.subjectName}: ${entry.studentName} (${entry.missingAssessments.join(', ')})`);
+                });
+            });
+        }
+
+        // Remarks Section (Second)
+        if (clsSummary.remarksStats.missingEntries.length > 0) {
+            lines.push(`\nMISSING REMARKS (${clsSummary.remarksStats.missingEntries.length} Students):`);
+            clsSummary.remarksStats.missingEntries.forEach((entry: any) => {
+                lines.push(`- ${entry.studentName}: ${entry.missingFields.join(', ')}`);
+            });
+        }
+
+        return lines.join('\n');
+    }, [clsSummary]);
+
+    // Filter potential recipients (teachers of this class + admins)
+    const targetUsers = useMemo(() => {
+        if (!allUsers) return [];
+        // Include ALL admins and teachers, regardless of class assignment
+        return allUsers.filter(u => u.role === 'Admin' || u.role === 'Teacher');
+    }, [allUsers]);
+
+    const handleSendNotification = (selectedUserIds: number[], message: string, viaWhatsApp: boolean) => {
+        if (!allUsers || !currentUser) return;
+
+        // 1. WhatsApp Logic
+        if (viaWhatsApp) {
+            // Create a generic link for the admin to copy or send? 
+            // Requirement: "option of sending... via whatsapp". 
+            // We'll construct a text and open whatsapp.
+            const text = encodeURIComponent(`*SBA Pro Alert*\n${message}\n\n_Sent by ${currentUser.name}_`);
+            window.open(`https://wa.me/?text=${text}`, '_blank');
+        }
+
+        // 2. System Logic
+        const newNotification: Notification = {
+            id: Date.now().toString(),
+            senderId: currentUser.id, // Current Admin ID
+            senderName: currentUser.name,
+            type: 'missing_data_alert',
+            context: {
+                classId: clsSummary.classId,
+                dataType: 'scores' // Or 'remarks', or general? 'scores' logic covers general for now
+            },
+            message: message,
+            link: 'Report Viewer',
+            read: false,
+            date: new Date().toISOString(),
+        };
+
+        const updatedUsers = allUsers.map(u => {
+            if (selectedUserIds.includes(u.id)) {
+                return {
+                    ...u,
+                    notifications: [...(u.notifications || []), newNotification]
+                };
+            }
+            return u;
+        });
+
+        loadImportedData({ users: updatedUsers }, false);
+        setNotified(true);
+        setTimeout(() => setNotified(false), 3000);
+    };
+
+
     return (
         <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden flex flex-col h-full">
             <div className="bg-gray-50 p-4 border-b border-gray-100 flex justify-between items-center">
-                <h2 className="text-lg font-bold text-gray-800">{clsSummary.className}</h2>
-                <div className="flex items-center gap-3">
-                    {clsSummary.subjects.length > 0 && (
-                        <span className={`px-2 py-1 text-xs rounded-full font-medium ${clsSummary.totalPercentage === 100
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-blue-100 text-blue-700'
+                <div>
+                    <h2 className="text-lg font-bold text-gray-800">{clsSummary.className}</h2>
+                    <div className="flex items-center gap-2 mt-1">
+                        <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${clsSummary.overallPercentage === 100 ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700'
                             }`}>
-                            {clsSummary.totalPercentage}% Complete
+                            {clsSummary.overallPercentage}% Overall
                         </span>
-                    )}
-                    <span className="text-sm text-gray-500">{clsSummary.subjects.length > 0 ? `${clsSummary.subjects[0].totalStudents} Students` : 'No Students'}</span>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => setIsNotifyModalOpen(true)}
+                        disabled={notified || (clsSummary.overallPercentage === 100)}
+                        className={`text-xs px-3 py-1.5 rounded-full border transition-all ${notified
+                            ? 'bg-green-50 text-green-600 border-green-200'
+                            : 'bg-white text-gray-600 border-gray-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200'
+                            }`}
+                        title="Send alert to assigned teachers"
+                    >
+                        {notified ? 'Alert Sent!' : '🔔 Notify'}
+                    </button>
                 </div>
             </div>
 
-            <div className="p-4 space-y-4 flex-1 overflow-y-auto max-h-[500px]">
-                {clsSummary.subjects.length === 0 ? (
-                    <p className="text-gray-400 italic text-sm">No subjects or data available.</p>
-                ) : (
-                    clsSummary.subjects.map((sub: any) => {
-                        const percentComplete = sub.totalAssessmentsExpected > 0
-                            ? Math.round((sub.completedAssessments / sub.totalAssessmentsExpected) * 100)
-                            : 0;
+            <UserSelectionModal
+                isOpen={isNotifyModalOpen}
+                onClose={() => setIsNotifyModalOpen(false)}
+                onSend={handleSendNotification}
+                defaultMessage={autoMessage}
+                contextTitle={clsSummary.className}
+                users={targetUsers}
+            />
 
-                        const isComplete = percentComplete === 100;
-                        const hasMissing = sub.missingEntries.length > 0;
+            <div className="p-4 space-y-6 flex-1 overflow-y-auto max-h-[600px]">
+                {/* Subjects Section (First) */}
+                <div className="space-y-3">
+                    <div className="flex justify-between items-center mb-1">
+                        <h3 className="font-semibold text-gray-700 text-sm uppercase tracking-wider text-xs">Subject Scores</h3>
+                        <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${clsSummary.scorePercentage === 100 ? 'bg-green-100 text-green-700' : 'bg-blue-50 text-blue-700 border border-blue-100'}`}>
+                            {clsSummary.scorePercentage}% Done
+                        </span>
+                    </div>
+                    {clsSummary.subjects.length === 0 ? (
+                        <p className="text-gray-400 italic text-sm">No subjects available.</p>
+                    ) : (
+                        clsSummary.subjects.map((sub: any) => {
+                            const percentComplete = sub.totalAssessmentsExpected > 0
+                                ? Math.round((sub.completedAssessments / sub.totalAssessmentsExpected) * 100)
+                                : 0;
 
-                        return (
-                            <div key={sub.subjectId} className="border border-gray-100 rounded-lg p-3 hover:shadow-sm transition-shadow">
-                                <div className="flex justify-between items-center mb-2">
-                                    <h3 className="font-semibold text-gray-700">{sub.subjectName}</h3>
-                                    <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${isComplete ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800'}`}>
-                                        {percentComplete}% Done
-                                    </span>
-                                </div>
+                            const isComplete = percentComplete === 100;
+                            const hasMissing = sub.missingEntries.length > 0;
 
-                                <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
-                                    <div
-                                        className={`h-2 rounded-full transition-all duration-500 ${isComplete ? 'bg-green-500' : 'bg-blue-500'}`}
-                                        style={{ width: `${percentComplete}%` }}
-                                    ></div>
-                                </div>
-
-                                <div className="flex justify-between items-center text-xs text-gray-500">
-                                    <span>{sub.completedAssessments} / {sub.totalAssessmentsExpected} Entries</span>
-                                </div>
-
-                                {hasMissing && (
-                                    <div className="mt-3 pt-2 border-t border-gray-100">
-                                        <details className="group">
-                                            <summary className="flex items-center text-xs font-medium text-red-500 cursor-pointer hover:text-red-600 select-none">
-                                                <svg className="w-4 h-4 mr-1 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                                </svg>
-                                                {sub.missingEntries.length} Students with missing scores
-                                            </summary>
-                                            <div className="mt-2 pl-2 space-y-1 max-h-40 overflow-y-auto">
-                                                {sub.missingEntries.map((entry: any, idx: number) => (
-                                                    <div key={idx} className="text-xs text-gray-600 flex flex-col bg-red-50 p-2 rounded">
-                                                        <span className="font-medium text-red-700">{entry.studentName}</span>
-                                                        <span className="text-red-500 opacity-80 pl-2 border-l-2 border-red-200">
-                                                            Missing: {entry.missingAssessments.join(', ')}
-                                                        </span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </details>
+                            return (
+                                <div key={sub.subjectId} className="border border-gray-100 rounded-lg p-3 hover:shadow-sm transition-shadow bg-white">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <h3 className="font-semibold text-gray-700 text-sm">{sub.subjectName}</h3>
+                                        <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${isComplete ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                                            {percentComplete}%
+                                        </span>
                                     </div>
-                                )}
-                            </div>
-                        );
-                    })
-                )}
+
+                                    <div className="w-full bg-gray-100 rounded-full h-1.5 mb-2">
+                                        <div
+                                            className={`h-1.5 rounded-full transition-all duration-500 ${isComplete ? 'bg-green-500' : 'bg-blue-500'}`}
+                                            style={{ width: `${percentComplete}%` }}
+                                        ></div>
+                                    </div>
+
+                                    {hasMissing && (
+                                        <div className="mt-2">
+                                            <details className="group">
+                                                <summary className="flex items-center text-xs text-red-500 cursor-pointer hover:text-red-600 select-none">
+                                                    <svg className="w-3 h-3 mr-1 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                                    </svg>
+                                                    {sub.missingEntries.length} Missing
+                                                </summary>
+                                                <div className="mt-2 pl-2 space-y-1 max-h-32 overflow-y-auto custom-scrollbar">
+                                                    {sub.missingEntries.map((entry: any, idx: number) => (
+                                                        <div key={idx} className="text-xs text-gray-500 flex flex-col bg-red-50 p-1.5 rounded">
+                                                            <span className="font-medium text-red-800">{entry.studentName}</span>
+                                                            <span className="text-red-400 text-[10px]">
+                                                                {entry.missingAssessments.join(', ')}
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </details>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })
+                    )}
+                </div>
+
+                {/* Remarks Section (Second) */}
+                <div className="border border-purple-100 bg-purple-50/50 rounded-lg p-3">
+                    <div className="flex justify-between items-center mb-2">
+                        <h3 className="font-semibold text-purple-900 text-sm">Class Remarks</h3>
+                        <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${clsSummary.remarksStats.percentage === 100 ? 'bg-green-100 text-green-700' : 'bg-white text-purple-700 border border-purple-200'}`}>
+                            {clsSummary.remarksStats.percentage}% Done
+                        </span>
+                    </div>
+
+                    <div className="w-full bg-purple-200 rounded-full h-2 mb-2">
+                        <div
+                            className="h-2 rounded-full transition-all duration-500 bg-purple-500"
+                            style={{ width: `${clsSummary.remarksStats.percentage}%` }}
+                        ></div>
+                    </div>
+
+                    <div className="flex justify-between items-center text-xs text-purple-700 mb-1">
+                        <span>{clsSummary.remarksStats.completedRemarks} / {clsSummary.remarksStats.totalStudents} Students Completed</span>
+                    </div>
+
+                    {clsSummary.remarksStats.missingEntries.length > 0 && (
+                        <div className="mt-2 pt-2 border-t border-purple-200">
+                            <details className="group">
+                                <summary className="flex items-center text-xs font-medium text-purple-800 cursor-pointer hover:text-purple-900 select-none">
+                                    <svg className="w-4 h-4 mr-1 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                    </svg>
+                                    {clsSummary.remarksStats.missingEntries.length} Students incomplete
+                                </summary>
+                                <div className="mt-2 pl-2 space-y-1 max-h-40 overflow-y-auto custom-scrollbar">
+                                    {clsSummary.remarksStats.missingEntries.map((entry: any, idx: number) => (
+                                        <div key={idx} className="text-xs text-purple-800 flex flex-col bg-white p-2 rounded border border-purple-100">
+                                            <span className="font-medium">{entry.studentName}</span>
+                                            <span className="text-purple-500 opacity-80 pl-2 border-l-2 border-purple-300 mt-1 text-[10px] uppercase tracking-wide">
+                                                Missing: {entry.missingFields.join(', ')}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </details>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

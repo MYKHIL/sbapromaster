@@ -76,15 +76,25 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage }) => {
     <>
       {/* Mobile Hamburger Menu Button */}
       {/* Mobile Hamburger Menu Button */}
+      {/* Mobile Top Navigation Bar */}
       {!isMobileMenuOpen && (
-        <button
-          className="lg:hidden fixed top-4 left-4 z-50 flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-all duration-300 hover:scale-105 active:scale-95"
-          onClick={() => setIsMobileMenuOpen(true)}
-          aria-label="Open menu"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
-          <span className="font-bold text-sm tracking-wide">MENU</span>
-        </button>
+        <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white shadow-sm border-b border-gray-200 z-[49] flex items-center justify-between px-4 transition-transform duration-300">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              aria-label="Open menu"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <span className="font-bold text-lg text-gray-800 tracking-tight">SBA Pro Master</span>
+          </div>
+          {/* Right side is intentionally empty, UserBadge will float below/over this or we can put something here? 
+              The requirement says UserBadge is anchored BELOW it. So we leave this empty or minimal.
+          */}
+        </div>
       )}
 
       {/* Overlay for mobile */}

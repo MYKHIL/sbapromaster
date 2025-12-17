@@ -109,6 +109,29 @@ export interface ClassSpecificData {
 // Authentication & Authorization Types
 export type UserRole = 'Admin' | 'Teacher' | 'Guest';
 
+export interface Notification {
+  id: string;
+  senderId?: number; // Optional for system messages, required for user messages
+  senderName?: string;
+  type: 'system' | 'missing_data_alert' | 'feedback';
+  context?: {
+    classId?: number;
+    subjectId?: number;
+    dataType: 'scores' | 'remarks';
+  };
+  message: string;
+  link?: string;
+  read: boolean;
+  date: string;
+  classId?: number; // Deprecated, use context.classId
+  replies?: {
+    senderId: number;
+    senderName: string;
+    message: string;
+    date: string;
+  }[];
+}
+
 export interface User {
   id: number;
   name: string;
@@ -118,6 +141,7 @@ export interface User {
   classSubjects?: { [className: string]: string[] }; // Optional: class -> subjects mapping
   passwordHash: string; // Hashed password
   isReadOnly?: boolean; // If true, user cannot edit anything regardless of role
+  notifications?: Notification[];
 }
 
 export interface DeviceCredential {

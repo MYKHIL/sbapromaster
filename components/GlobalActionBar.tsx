@@ -3,13 +3,15 @@ import { useData } from '../context/DataContext';
 import { useUser } from '../context/UserContext';
 import PreviewDataModal from './PreviewDataModal';
 import { Page } from '../types';
+import NotificationCenter from './NotificationCenter';
 
 interface GlobalActionBarProps {
     onOpenDebugModal?: () => void;
     currentPage?: Page;
+    onNavigate?: (page: Page) => void;
 }
 
-const GlobalActionBar: React.FC<GlobalActionBarProps> = ({ onOpenDebugModal, currentPage }) => {
+const GlobalActionBar: React.FC<GlobalActionBarProps> = ({ onOpenDebugModal, currentPage, onNavigate }) => {
     const {
         saveToCloud,
         refreshFromCloud,
@@ -26,14 +28,18 @@ const GlobalActionBar: React.FC<GlobalActionBarProps> = ({ onOpenDebugModal, cur
         classes
     } = useData();
     const { currentUser } = useUser();
+    const { loadImportedData } = useData();
 
     const [isDebugModalOpen, setIsDebugModalOpen] = useState(false);
     const [debugData, setDebugData] = useState<any>(null);
+    const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
     // Only show for authenticated users
     if (!currentUser) return null;
 
     const isAdmin = currentUser.role === 'Admin';
+    const notifications = currentUser.notifications || [];
+    const unreadCount = notifications.filter(n => !n.read).length;
 
     const handleShowDebugData = () => {
         const data = getPendingUploadData();
@@ -46,6 +52,22 @@ const GlobalActionBar: React.FC<GlobalActionBarProps> = ({ onOpenDebugModal, cur
         setDebugData(null);
     };
 
+    // Notification Handlers
+    const handleMarkRead = (id: string, all: boolean = false) => {
+        // Since we can't update user from here directly without refreshing all data or having a setUser
+        // We use loadImportedData to patch the user
+        // Wait, loadImportedData might be heavy? No, it's fine.
+        // Or we assume `currentUser` is from context state that we can update? 
+        // We need to update the global `users` list where this user resides.
+
+        // This logic mirrors Dashboard.tsx
+        // Ideally should be in a hook `useNotifications` but inline is fine for now.
+        // We'll need `users` from useData.
+
+        // Let's grab `users` from useData
+        // We didn't deconstruct it yet. see below.
+    };
+
     // Helper functions for humanizing data
     const getStudentName = (id: number) => students.find(s => s.id === id)?.name || `Student #${id}`;
     const getSubjectName = (id: number) => subjects.find(s => s.id === id)?.subject || `Subject #${id}`;
@@ -56,9 +78,202 @@ const GlobalActionBar: React.FC<GlobalActionBarProps> = ({ onOpenDebugModal, cur
     const getClassName = (id: number) => classes.find(c => c.id === id)?.name || `Class #${id}`;
 
     return (
+        <WrappedActionBar
+            {...{ onOpenDebugModal, currentPage, currentUser, isAdmin, handleShowDebugData, notifications, unreadCount, isNotificationOpen, setIsNotificationOpen, saveToCloud, refreshFromCloud, isSyncing, isOnline, pendingCount, isFetching, hasLocalChanges, isDebugModalOpen, handleCloseDebugModal, debugData, onNavigate }}
+        />
+    );
+};
+
+// Extracted for state handling cleanliness
+const WrappedActionBar: React.FC<any> = ({
+    onOpenDebugModal, currentPage, currentUser, isAdmin, handleShowDebugData, notifications, unreadCount,
+    isNotificationOpen, setIsNotificationOpen, saveToCloud, refreshFromCloud, isSyncing, isOnline,
+    pendingCount, isFetching, hasLocalChanges, isDebugModalOpen, handleCloseDebugModal, debugData,
+    onNavigate
+}) => {
+    const { users, loadImportedData } = useData();
+
+    const updateNotifications = (newNotifications: any[]) => {
+        if (!users) return;
+        const updatedUsers = users.map(u => {
+            if (u.id === currentUser.id) {
+                return { ...u, notifications: newNotifications };
+            }
+            return u;
+        });
+        loadImportedData({ users: updatedUsers }, false);
+    };
+
+    const handleMarkRead = (id: string) => {
+        // Find notification before marking it
+        const notification = currentUser.notifications?.find((n: any) => n.id === id);
+
+        // Update local state
+        const updated = (currentUser.notifications || []).map((n: any) => n.id === id ? { ...n, read: true } : n);
+
+        let usersCopy = users ? [...users] : [];
+        if (usersCopy.length > 0) {
+            // 1. Update current user notifications
+            usersCopy = usersCopy.map(u => u.id === currentUser.id ? { ...u, notifications: updated } : u);
+
+            // 2. Dispatch Read Receipt if it's a direct message (has sender) and wasn't already read
+            if (notification && !notification.read && notification.senderId && notification.senderId !== currentUser.id) {
+                // Avoid spamming system notifications? 
+                // Requirement: "response should be dispatched to the sender"
+
+                const readReceipt = {
+                    id: Date.now().toString(),
+                    senderId: currentUser.id,
+                    senderName: currentUser.name,
+                    type: 'system', // or 'feedback' logic
+                    message: `Read Receipt: ${currentUser.name} read your message: "${notification.message.substring(0, 30)}${notification.message.length > 30 ? '...' : ''}"`,
+                    read: false,
+                    date: new Date().toISOString()
+                };
+
+                usersCopy = usersCopy.map(u => {
+                    if (u.id === notification.senderId) {
+                        return {
+                            ...u,
+                            notifications: [...(u.notifications || []), readReceipt]
+                        };
+                    }
+                    return u;
+                });
+            }
+
+            loadImportedData({ users: usersCopy }, false);
+        } else {
+            // Fallback if users list not loaded?
+            updateNotifications(updated);
+        }
+    };
+
+    const handleReply = (id: string, message: string) => {
+        // Find notification
+        const notification = notifications.find((n: any) => n.id === id);
+        if (!notification || !notification.senderId) return;
+
+        // Create new notification for the SENDER
+        const replyNotification = {
+            id: Date.now().toString(),
+            senderId: currentUser.id,
+            senderName: currentUser.name,
+            type: 'feedback',
+            message: `Reply from ${currentUser.name}: ${message}`,
+            read: false,
+            date: new Date().toISOString(),
+            replies: []
+        };
+
+        // Also add reply to current thread?
+        const updatedCurrent = notifications.map((n: any) => {
+            if (n.id === id) {
+                return {
+                    ...n,
+                    replies: [...(n.replies || []), { senderId: currentUser.id, senderName: currentUser.name, message, date: new Date().toISOString() }]
+                };
+            }
+            return n;
+        });
+
+        // We need to update BOTH users. The current user (thread update) and the sender (new notification).
+        if (!users) return;
+
+        let usersCopy = [...users];
+
+        // 1. Update current user
+        usersCopy = usersCopy.map(u => u.id === currentUser.id ? { ...u, notifications: updatedCurrent } : u);
+
+        // 2. Update target user (sender of original msg)
+        usersCopy = usersCopy.map(u => {
+            if (u.id === notification.senderId) {
+                return {
+                    ...u,
+                    notifications: [...(u.notifications || []), replyNotification]
+                };
+            }
+            return u;
+        });
+
+        loadImportedData({ users: usersCopy }, false);
+    };
+
+    // Assuming we need a way to navigate. 
+    // GlobalActionBar is rendered in App.tsx but doesn't have Access to `setCurrentPage` directly? 
+    // Wait, App.tsx passes `currentPage`. 
+    // We might need to initiate navigation via event dispatch or Context.
+    // Or just reload? No.
+    // Actually NotificationCenter needs onNavigate.
+    // Let's assume GlobalActionBar receives onNavigate? No it doesn't in props.
+    // We should fix App.tsx to pass onNavigate to GlobalActionBar or use a Context.
+    // Dashboard receives it.
+    // Let's modify App.tsx to pass onNavigate to GlobalActionBar? 
+    // OR we can make a simple hack: emit a custom event or check if we can access provided context.
+    // `useData` `useUser` don't have navigation.
+    // The cleanest way is to pass `onNavigate` to GlobalActionBar.
+
+    // For now, let's just scaffold it and I will update App.tsx in next step to pass onNavigate.
+
+    // Temp dummy
+    const handleNavigate = (page: Page) => {
+        if (onNavigate) {
+            onNavigate(page);
+        } else {
+            // Fallback if prop missing (though verified it is passed)
+            window.dispatchEvent(new CustomEvent('navigate-to-page', { detail: page }));
+        }
+    };
+
+    // Auto-Open Notification Center on Login if Unread Check
+    const [hasAutoOpened, setHasAutoOpened] = useState(false);
+
+    // Using a ref to track if we've checked since mount, effectively "session start" for this component
+    // Since GlobalActionBar is top-level, it mounts once.
+    React.useEffect(() => {
+        if (!hasAutoOpened && unreadCount > 0) {
+            // Small delay to allow UI to settle?
+            const timer = setTimeout(() => {
+                setIsNotificationOpen(true);
+                setHasAutoOpened(true);
+            }, 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [unreadCount, hasAutoOpened]);
+
+    return (
         <>
-            <div className={`fixed top-24 right-4 z-[50] ${currentPage === 'Score Entry' ? 'hidden lg:block' : ''}`}>
+            <div className={`relative z-[50] ${currentPage === 'Score Entry' ? 'hidden lg:block' : ''}`}>
                 <div className="flex items-center gap-2 px-3 py-2 rounded-2xl shadow-lg border border-gray-200 backdrop-blur-sm bg-white/95">
+                    {/* Notification Bell - Now integrated here */}
+                    <div className="relative">
+                        <button
+                            onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                            className={`p-2 rounded-full transition-colors relative ${isNotificationOpen ? 'bg-blue-100 text-blue-600' : 'text-gray-500 hover:text-blue-600 hover:bg-gray-100'}`}
+                            title="Notifications"
+                        >
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                            </svg>
+                            {unreadCount > 0 && (
+                                <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-red-100 transform translate-x-1/4 -translate-y-1/4 bg-red-600 rounded-full animate-pulse">
+                                    {unreadCount}
+                                </span>
+                            )}
+                        </button>
+
+                        <NotificationCenter
+                            isOpen={isNotificationOpen}
+                            onClose={() => setIsNotificationOpen(false)}
+                            notifications={notifications}
+                            onMarkRead={handleMarkRead}
+                            onReply={handleReply}
+                            onNavigate={handleNavigate}
+                        />
+                    </div>
+
+                    <div className="w-px h-6 bg-gray-300 mx-1"></div>
+
                     {/* Preview Button - Only show if there are actual changes to preview */}
                     {pendingCount > 0 && (
                         <button
