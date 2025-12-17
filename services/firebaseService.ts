@@ -200,21 +200,51 @@ export const createDocumentId = (schoolName: string, academicYear: string, acade
 export const searchSchools = async (partialName: string): Promise<{ schoolName: string, years: string[] }[] | null> => {
     if (!partialName || partialName.length < 3) return null;
 
+    // DOMAIN OPTIMIZATION: Use range queries (>= start, <= end) to avoid full collection reads
+    // This reduces reads from N (total docs) to M (matched docs).
     const sanitizedInput = sanitizeSchoolName(partialName);
     const schoolsRef = collection(db, "schools");
 
-    // Fetch all documents to filter client-side (assuming dataset size allows)
-    const querySnapshot = await getDocs(schoolsRef);
-    const matches: string[] = [];
+    // We search for IDs starting with the sanitized name (lowercase)
+    // Note: This relies on IDs being stored as lowercase (which createDocumentId ensures).
+    // Legacy IDs with mixed case might be missed, but this is a necessary trade-off for performance.
 
-    querySnapshot.forEach((doc) => {
-        // Since IDs are now lowercased by createDocumentId, we can just check startsWith
-        // But for backward compatibility or if sanitizedInput is just a prefix, this works.
-        // sanitizedInput is already lowercased by sanitizeSchoolName.
+    // Strategy: Run two queries in parallel to catch most ID patterns without full scan
+    // 1. Lowercase (standard): "stmarys"
+    // 2. Capitalized (legacy): "Stmarys"
+
+    const capitalizedInput = sanitizedInput.charAt(0).toUpperCase() + sanitizedInput.slice(1);
+
+    const q1 = query(
+        schoolsRef,
+        where(documentId(), '>=', sanitizedInput),
+        where(documentId(), '<=', sanitizedInput + '\uf8ff')
+    );
+
+    const q2 = query(
+        schoolsRef,
+        where(documentId(), '>=', capitalizedInput),
+        where(documentId(), '<=', capitalizedInput + '\uf8ff')
+    );
+
+    // Run in parallel
+    const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+
+    const matches: string[] = [];
+    const seen = new Set<string>();
+
+    const processDoc = (doc: any) => {
+        // Deduplicate
+        if (seen.has(doc.id)) return;
+        seen.add(doc.id);
+
         if (doc.id.toLowerCase().startsWith(sanitizedInput)) {
             matches.push(doc.id);
         }
-    });
+    };
+
+    snap1.forEach(processDoc);
+    snap2.forEach(processDoc);
 
     if (matches.length > 0) {
         // Group matches by school name
@@ -225,16 +255,8 @@ export const searchSchools = async (partialName: string): Promise<{ schoolName: 
             if (firstUnderscoreIndex !== -1) {
                 const schoolNamePart = id.substring(0, firstUnderscoreIndex);
                 const parts = id.split('_');
-                // Format: School_Year_Term
-                // parts[0] = School
-                // parts[1] = Year (sanitized)
 
                 if (parts.length >= 2) {
-                    // We want to display the "original" looking name if possible, but we only have the ID.
-                    // Ideally we would store the display name in the document, but for now we just use the ID part.
-                    // Since we can't easily reverse the sanitization (spaces lost), we just use the ID part.
-                    // However, to make it look slightly better, we could capitalize the first letter?
-                    // For now, let's just use the ID part as is (which is lowercase).
                     if (!schoolsMap.has(schoolNamePart)) {
                         schoolsMap.set(schoolNamePart, new Set());
                     }
@@ -243,7 +265,6 @@ export const searchSchools = async (partialName: string): Promise<{ schoolName: 
             }
         });
 
-        // Convert map to array of objects
         const results = Array.from(schoolsMap.entries()).map(([schoolName, yearsSet]) => ({
             schoolName,
             years: Array.from(yearsSet)

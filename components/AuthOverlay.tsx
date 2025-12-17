@@ -178,22 +178,29 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
         restoreSession();
     }, []);
 
-    const handleSchoolNameChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Debounced Search Effect to prevent excessive database reads on every keystroke
+    useEffect(() => {
+        const timer = setTimeout(async () => {
+            if (schoolName.length >= 3) {
+                const results = await searchSchools(schoolName);
+                if (results && results.length > 0) {
+                    const suggestions = results.map(r => r.schoolName);
+                    setSchoolSuggestions(suggestions);
+                    setShowSuggestions(true);
+                    setSearchResults(results);
+                }
+            }
+        }, 800); // 800ms debounce
+
+        return () => clearTimeout(timer);
+    }, [schoolName]);
+
+    const handleSchoolNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         setSchoolName(value);
         setAvailableYears([]);
         setSchoolSuggestions([]);
         setShowSuggestions(false);
-
-        if (value.length >= 3) {
-            const results = await searchSchools(value);
-            if (results && results.length > 0) {
-                const suggestions = results.map(r => r.schoolName);
-                setSchoolSuggestions(suggestions);
-                setShowSuggestions(true);
-                setSearchResults(results);
-            }
-        }
     };
 
     const handleSuggestionClick = (suggestion: string) => {
