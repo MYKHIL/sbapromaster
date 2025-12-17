@@ -220,7 +220,12 @@ export const saveDataTransaction = async (
                 ...(deletions ? Object.keys(deletions) : [])
             ]);
 
+            console.log('[firebaseService] ☁️ saveDataTransaction keys:', Array.from(allKeys));
+
             for (const key of allKeys) {
+                // Debug logging for specific failure key
+                // console.log(`[firebaseService] Processing key: ${key}`);
+
                 const currentVal = currentData[key as keyof AppDataType];
                 const newVal = updates[key as keyof AppDataType];
                 const deletedIds = deletions ? deletions[key] : undefined;
@@ -256,12 +261,30 @@ export const saveDataTransaction = async (
 
                         // 3. Apply Deletions (Remove items that were locally deleted)
                         if (deletedIds && Array.isArray(deletedIds)) {
+                            console.log(`[firebaseService] 🗑️ Processing deletions for ${key}: ${deletedIds.join(', ')}`);
+                            console.log(`[firebaseService]    Map size BEFORE: ${mergedMap.size}`);
                             deletedIds.forEach(id => {
-                                mergedMap.delete(String(id));
+                                const deleted = mergedMap.delete(String(id));
+                                console.log(`[firebaseService]    Deleted ID ${id}? ${deleted}`);
                             });
+                            console.log(`[firebaseService]    Map size AFTER: ${mergedMap.size}`);
                         }
 
-                        finalUpdates[key] = Array.from(mergedMap.values());
+                        // SPECIAL HANDLING: Prune userLogs to prevent database size limit errors
+                        if (key === 'userLogs') {
+                            const allLogs = Array.from(mergedMap.values());
+                            // Sort by timestamp if possible (assuming ISO strings) or just take last 50
+                            // UserLog has timestamp field.
+                            if (allLogs.length > 50) {
+                                allLogs.sort((a, b) => (new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()));
+                                const keptLogs = allLogs.slice(-50); // Keep last 50
+                                finalUpdates[key] = keptLogs;
+                            } else {
+                                finalUpdates[key] = allLogs;
+                            }
+                        } else {
+                            finalUpdates[key] = Array.from(mergedMap.values());
+                        }
                     } else {
                         // Arrays without IDs: Overwrite (fallback) or Union? 
                         // e.g. string[]. We assume overwrite for simple lists unless specific logic.
@@ -271,7 +294,24 @@ export const saveDataTransaction = async (
                 // Strategy 2: Object Merge (for Settings, ActiveSessions)
                 else if (key === 'settings' || key === 'activeSessions') {
                     // Start with server data, merge updates. (Deletions not supported for object properties yet, only array items)
-                    finalUpdates[key] = { ...(currentVal || {}), ...(newVal || {}) };
+                    // Cast to any to satisfy TS "Spread types may only be created from object types"
+                    const currentObj = (currentVal || {}) as any;
+                    const newObj = (newVal || {}) as any;
+                    const mergedObj = { ...currentObj, ...newObj };
+
+                    // SPECIAL HANDLING: Prune activeSessions > 24h
+                    if (key === 'activeSessions') {
+                        const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+                        const prunedSessions: Record<string, string> = {};
+                        Object.entries(mergedObj).forEach(([sessionId, timestamp]) => {
+                            if (typeof timestamp === 'string' && timestamp > yesterday) {
+                                prunedSessions[sessionId] = timestamp;
+                            }
+                        });
+                        finalUpdates[key] = prunedSessions;
+                    } else {
+                        finalUpdates[key] = mergedObj;
+                    }
                 }
                 // Strategy 3: Default Overwrite (Primitives)
                 else {
@@ -290,7 +330,10 @@ export const saveDataTransaction = async (
                     const newObj: any = {};
                     for (const key in obj) {
                         if (Object.prototype.hasOwnProperty.call(obj, key)) {
-                            newObj[key] = sanitizeForFirestore(obj[key]);
+                            const val = sanitizeForFirestore(obj[key]);
+                            // Filter out "undefined" keys if intended, or set to null
+                            // If we set to null, Firestore keeps the field.
+                            newObj[key] = val;
                         }
                     }
                     return newObj;

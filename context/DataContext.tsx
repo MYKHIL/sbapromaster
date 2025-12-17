@@ -627,88 +627,20 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Capture CURRENT state at sync time (not stale state from when timeout started)
         SyncLogger.log(`saveToCloud: Preparing to save. Users count: ${users.length}`);
 
+        const currentData = stateRef.current;
+
         // CRITICAL: Log warning if saving empty users array
-        // The sync pause mechanism should prevent this, but we log for visibility
         if (fieldsToSave.includes('users') && users.length === 0 && schoolId) {
             SyncLogger.log(`WARNING: Attempting to save with empty users array. This may indicate an issue.`);
             console.warn('[DataContext] Saving with empty users array - this should only happen for new school accounts');
         }
 
-        // Use stateRef to get the ABSOLUTE LATEST data at the moment of execution
-        const currentData = stateRef.current;
-
-        // Construct the transactional payload
-        const transactionPayload: Partial<AppDataType> = {};
-        const transactionDeletions: Record<string, string[]> = {};
-
-        fieldsToSave.forEach(field => {
-            const key = field as keyof AppDataType;
-            const currentVal = currentData[key];
-            const originalVal = originalData.current[key];
-
-            // Check for Deletions (Array types with IDs)
-            if (Array.isArray(currentVal) && Array.isArray(originalVal)) {
-                const deletedIds = originalVal
-                    .filter((o: any) => o && o.id && !currentVal.find((c: any) => c && c.id === o.id))
-                    .map((o: any) => String(o.id));
-
-                if (deletedIds.length > 0) {
-                    transactionDeletions[key] = deletedIds;
-                }
-            }
-            // Optimization for Scores: Only send changed items to save bandwidth
-            // (The server transaction handles smart merging either way, but sending 2 items is faster than 2000)
-            if (key === 'scores') {
-                const currentScores = scores as Score[];
-                const originalScores = (originalData.current.scores || []) as Score[];
-                // Compute Diff
-                const updates: Score[] = [];
-                const explicitDeletions: string[] = [];
-
-                currentScores.forEach((item: Score) => {
-                    if (!item || typeof item !== 'object' || !('id' in item)) return;
-
-                    const originalItem = originalScores.find(o => o.id === item.id);
-                    const isEffectivelyEmpty = !item.assessmentScores || !Object.values(item.assessmentScores).some(scores => scores.some(s => s.trim() !== ''));
-
-                    if (!originalItem) {
-                        // NEW ITEM
-                        if (isEffectivelyEmpty) {
-                            // If user added then cleared a score before sync, just ignore it.
-                            // Logic: Cloud (null) == Local (Empty). No action needed.
-                            return;
-                        }
-                        // New with data -> Save
-                        updates.push(item);
-                    } else {
-                        // EXISTING ITEM
-                        if (deepEqual(item, originalItem)) return; // No change
-
-                        if (isEffectivelyEmpty) {
-                            // User cleared an existing score.
-                            // Mark for DELETION to remove the object entirely from Cloud.
-                            explicitDeletions.push(item.id);
-                        } else {
-                            // Modified with data -> Save
-                            updates.push(item);
-                        }
-                    }
-                });
-
-                if (updates.length > 0) {
-                    transactionPayload.scores = updates;
-                }
-                if (explicitDeletions.length > 0) {
-                    transactionDeletions.scores = (transactionDeletions.scores || []).concat(explicitDeletions);
-                }
-            } else {
-                // For other fields, we currently send the full list/object.
-                // The 'saveDataTransaction' will handle the smart merge on the server side 
-                // to prevent overwrites.
-                // Cast to any to avoid "Type 'any' is not assignable to type 'never'" error
-                (transactionPayload as any)[key] = currentData[key];
-            }
-        });
+        // Use standard helper to generate payload (Ensures consistency with savePageData)
+        // This handles smart diffing, deletions, and logic for all fields.
+        const pendingData = getPendingUploadData();
+        const transactionDeletions = pendingData._deletions || {};
+        // Remove _deletions from payload
+        const { _deletions, ...transactionPayload } = pendingData;
 
         // Check network status
         if (!isOnline) {
@@ -729,10 +661,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             isSyncingRef.current = true;
             setIsSyncing(true);
 
-            if (Object.keys(transactionPayload).length > 0) {
+            // FIX: Check for EITHER updates OR deletions.
+            // Previously, if we only had deletions (no updates), this block was skipped!
+            if (Object.keys(transactionPayload).length > 0 || (transactionDeletions && Object.keys(transactionDeletions).length > 0)) {
                 console.log('[DataContext] ☁️ Performing Universal Transactional Save...');
                 // Uses the new generalized transaction helper
                 await saveDataTransaction(schoolId, transactionPayload, transactionDeletions);
+            } else {
+                console.log('[DataContext] ℹ️ No actionable updates or deletions found for transaction.');
             }
 
             console.log('[DataContext] ✅ Data saved to cloud successfully!');
@@ -1154,12 +1090,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setIsSyncing(true);
             console.log(`[savePageData] ☁️ Saving ${field} to cloud...`);
 
-            const payload: Partial<AppDataType> = {
-                [field]: data
-            };
+            // FIX: Granular Save - Only get data for THIS field (and potentially logs/sessions if needed)
+            // This prevents "Bleeding Saves" and correctly handles deletions for this field.
+            // We include 'userLogs' and 'activeSessions' to ensure they sync often.
+            const { _deletions, ...updates } = getPendingUploadData([field, 'userLogs', 'activeSessions']);
 
             // Use transaction for all saves to ensure consistency
-            await saveDataTransaction(schoolId, payload);
+            await saveDataTransaction(schoolId, updates, _deletions);
 
             // Clear dirty flag for this field
             dirtyFields.current.delete(field);
@@ -1211,7 +1148,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     Object.entries(activeSessions || {}).filter(([_, timestamp]) =>
                         timestamp > new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
                     )
-                )
+                ) as Record<string, string>
             };
 
             // NOTE: We calculate deletions manually here to support "Offline Deletions"
@@ -1419,12 +1356,22 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return fields.some(field => dirtyFields.current.has(field));
     };
 
-    const getPendingUploadData = (): any => {
+    // Updated to support granular saves (preventing "Bleeding Save" bugs)
+    const getPendingUploadData = (limitToFields?: (keyof AppDataType)[]): any => {
         if (dirtyFields.current.size === 0) {
             return {};
         }
 
-        const fieldsToSave = Array.from(dirtyFields.current);
+        let fieldsToSave = Array.from(dirtyFields.current);
+
+        // FILTER: If fields are restricted, only include those allowed
+        if (limitToFields && limitToFields.length > 0) {
+            const allowedSet = new Set(limitToFields);
+            fieldsToSave = fieldsToSave.filter(f => allowedSet.has(f as keyof AppDataType));
+        }
+
+        if (fieldsToSave.length === 0) return {};
+
         // Use current state variables directly instead of Ref to ensure Render-Cycle freshness
         // This fixes the "First Edit" lag where the Ref wasn't updated yet during the render cycle
         const currentData: AppDataType = {
@@ -1433,7 +1380,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const payload: any = {};
         const deletions: any = {};
 
-        fieldsToSave.forEach(field => {
+        fieldsToSave.forEach(f => {
+            const field = f as keyof AppDataType;
             // @ts-ignore
             const currentVal = currentData[field];
             const originalVal = originalData.current[field];
@@ -1442,9 +1390,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (Array.isArray(currentVal) && Array.isArray(originalVal)) {
 
                 // 1. Check for Deletions
-                const deletedItems = originalVal.filter((o: any) => o && o.id && !currentVal.find((c: any) => c && c.id === o.id));
-                if (deletedItems.length > 0) {
-                    deletions[field] = deletedItems;
+                const deletedIds = originalVal
+                    .filter((o: any) => o && o.id && !currentVal.find((c: any) => c && c.id === o.id))
+                    .map((o: any) => String(o.id));
+
+                if (deletedIds.length > 0) {
+                    console.log(`[DataContext] 🗑️ Detected Deletions for ${field}:`, deletedIds);
+                    deletions[field] = deletedIds;
                 }
 
                 // 2. Check for Adds/Updates

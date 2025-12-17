@@ -55,7 +55,8 @@ export const isDatabaseError = (error: any): boolean => {
         'out-of-range',
         'unimplemented',
         'internal',
-        'data-loss'
+        'data-loss',
+        'invalid-argument' // Catch size limit errors
     ];
 
     return databaseErrorCodes.some(code =>
@@ -98,6 +99,9 @@ const getFriendlyErrorMessage = (code: string, message: string): string => {
     }
     if (lcCode.includes('unavailable') || lcCode.includes('network')) {
         return "Network connection issue. Please check your internet.";
+    }
+    if (lcCode.includes('invalid-argument') || lcMessage.includes('size')) {
+        return "Data too large to save (Limit Exceeded). Please reach out to support.";
     }
     if (lcCode.includes('not-found')) {
         return "The requested data could not be found.";

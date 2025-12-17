@@ -61,6 +61,15 @@ const DatabaseErrorModal: React.FC<DatabaseErrorModalProps> = ({ error, onClose,
                             Contact Developer
                         </a>
 
+                        {/* Technical Details (For Debugging) */}
+                        <details className="mt-2 text-xs text-gray-500 cursor-pointer">
+                            <summary>Technical Details</summary>
+                            <div className="mt-1 p-2 bg-gray-100 rounded border overflow-auto max-h-32">
+                                <p><strong>Code:</strong> {error?.code || 'N/A'}</p>
+                                <p><strong>Message:</strong> {error?.message || error?.toString()}</p>
+                            </div>
+                        </details>
+
                         {/* Secondary Action: Close */}
                         <button
                             onClick={onClose}
