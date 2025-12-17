@@ -279,9 +279,30 @@ export const saveDataTransaction = async (
                 }
             }
 
+            // Helper to recursively replace undefined with null for Firestore compatibility
+            const sanitizeForFirestore = (obj: any): any => {
+                if (obj === undefined) return null;
+                if (obj === null) return null;
+                if (Array.isArray(obj)) {
+                    return obj.map(sanitizeForFirestore);
+                }
+                if (typeof obj === 'object') {
+                    const newObj: any = {};
+                    for (const key in obj) {
+                        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                            newObj[key] = sanitizeForFirestore(obj[key]);
+                        }
+                    }
+                    return newObj;
+                }
+                return obj;
+            };
+
             // Only perform update if we have data
             if (Object.keys(finalUpdates).length > 0) {
-                transaction.update(docRef, finalUpdates);
+                // Sanitize the entire payload to ensure no 'undefined' values exist
+                const sanitizedUpdates = sanitizeForFirestore(finalUpdates);
+                transaction.update(docRef, sanitizedUpdates);
             }
         });
         console.log(`[firebaseService] Transaction successful. Keys: ${Object.keys(updates).join(', ')}. Deletions: ${deletions ? Object.keys(deletions).join(', ') : 'none'}`);

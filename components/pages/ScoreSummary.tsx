@@ -62,13 +62,20 @@ const ScoreSummary: React.FC = () => {
         return sortClassesByName(classes).map(cls => {
             const classStudents = students.filter(s => s.class === cls.name);
 
-            // If no students in class, return basic info
+            // If no students in class, return basic info with complete structure to prevent crashes
             if (classStudents.length === 0) {
                 return {
                     classId: cls.id,
                     className: cls.name,
                     subjects: [],
-                    totalPercentage: 0
+                    scorePercentage: 0,
+                    remarksStats: {
+                        totalStudents: 0,
+                        completedRemarks: 0,
+                        missingEntries: [],
+                        percentage: 0
+                    },
+                    overallPercentage: 0
                 };
             }
 
