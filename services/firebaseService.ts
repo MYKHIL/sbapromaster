@@ -170,7 +170,7 @@ export const createDocumentId = (schoolName: string, academicYear: string, acade
     const sanitizedSchool = sanitizeSchoolName(schoolName);
     const sanitizedYear = sanitizeAcademicYear(academicYear);
     const sanitizedTerm = sanitizeAcademicTerm(academicTerm);
-    return `${sanitizedSchool}_${sanitizedYear}_${sanitizedTerm} `;
+    return `${sanitizedSchool}_${sanitizedYear}_${sanitizedTerm}`;
 };
 
 // Helper to search for schools and get available years
@@ -232,6 +232,28 @@ export const searchSchools = async (partialName: string): Promise<{ schoolName: 
     return null;
 };
 
+// Helper to fetch full school data (Fan-In from Subcollections)
+const getFullSchoolData = async (docId: string, mainDocData: AppDataType): Promise<AppDataType> => {
+    const SUBCOLLECTION_KEYS = ['students', 'scores', 'classes', 'subjects', 'assessments'];
+    const fullData: any = { ...mainDocData };
+
+    // Parallel fetch of all subcollections
+    await Promise.all(SUBCOLLECTION_KEYS.map(async (key) => {
+        try {
+            const subColRef = collection(db, "schools", docId, key);
+            const snapshot = await getDocs(subColRef);
+            if (!snapshot.empty) {
+                fullData[key] = snapshot.docs.map(d => d.data());
+                // console.log(`[firebaseService] 📥 Fetched ${fullData[key].length} ${key} from subcollection`);
+            }
+        } catch (e) {
+            console.error(`[firebaseService] Error fetching subcollection ${key}:`, e);
+        }
+    }));
+
+    return fullData as AppDataType;
+};
+
 // Helper to login or register a school
 export const loginOrRegisterSchool = async (docId: string, password: string, initialData: AppDataType, createIfMissing: boolean = false): Promise<LoginResult> => {
     try {
@@ -252,32 +274,38 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
             if (match) {
                 targetDocId = match.id;
                 docRef = doc(db, "schools", targetDocId);
-                docSnap = match; // Use the found snapshot
+                docSnap = match;
             }
         }
 
         if (docSnap.exists()) {
             const data = docSnap.data() as AppDataType;
-            if (data.password === password) {
-                if (data.Access === true) {
-                    return { status: 'success', data, docId: targetDocId };
-                } else {
-                    return { status: 'access_denied' };
-                }
-            } else {
+
+            // Verify Password first
+            if (data.password !== password) {
                 return { status: 'wrong_password' };
             }
+
+            if (data.Access === false) {
+                return { status: 'access_denied' };
+            }
+
+            // Success! Fetch the REST of the data (Subcollections)
+            const fullData = await getFullSchoolData(targetDocId, data);
+
+            return { status: 'success', data: fullData, docId: targetDocId };
         } else {
             if (!createIfMissing) {
                 return { status: 'not_found' };
             }
-            // Create new school with the sanitized (lowercase) ID
+
+            // Create new school
             const newData: AppDataType = {
                 ...initialData,
                 password: password,
-                Access: false // Default to false
+                Access: false
             };
-            // Reset docRef to the original sanitized ID for creation
+
             docRef = doc(db, "schools", docId);
             await setDoc(docRef, newData);
             return { status: 'created_pending_access' };
@@ -289,7 +317,6 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
 };
 
 // Helper to save/update the database with safe transactional merging for ALL fields
-// This ensures that concurrent edits to different items within arrays (or different fields) are preserved.
 export const saveDataTransaction = async (
     docId: string,
     updates: Partial<AppDataType>,
@@ -596,6 +623,8 @@ export const subscribeToSchoolData = (docId: string, callback: (data: AppDataTyp
     };
 };
 
+
+
 // User Management Functions
 
 /**
@@ -712,7 +741,9 @@ export const getSchoolData = async (docId: string): Promise<AppDataType | null> 
             console.log('[firebaseService] 📥 getSchoolData found document. Checking for migration...');
             await migrateLegacyData(docId, data);
 
-            return data;
+            // Fetch subcollections to ensure we return COMPLETE data
+            const fullData = await getFullSchoolData(docId, data);
+            return fullData;
         }
         return null;
     } catch (e) {
