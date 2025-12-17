@@ -7,7 +7,7 @@ import { useData } from '../context/DataContext';
 import { useUser } from '../context/UserContext';
 import { saveDeviceCredential, getDeviceCredential, hashPassword } from '../services/authService';
 import * as SyncLogger from '../services/syncLogger';
-import { INITIAL_SETTINGS, INITIAL_STUDENTS, INITIAL_SUBJECTS, INITIAL_CLASSES, INITIAL_GRADES, INITIAL_ASSESSMENTS, INITIAL_SCORES, INITIAL_REPORT_DATA, INITIAL_CLASS_DATA } from '../constants';
+import { INITIAL_SETTINGS, INITIAL_STUDENTS, INITIAL_SUBJECTS, INITIAL_CLASSES, INITIAL_GRADES, INITIAL_ASSESSMENTS, INITIAL_SCORES, INITIAL_REPORT_DATA, INITIAL_CLASS_DATA, ACTIVE_DATABASE_INDEX, SCHOOL_DATABASE_MAPPING } from '../constants';
 import type { User, DeviceCredential } from '../types';
 
 type AuthStage = 'school-login' | 'admin-setup' | 'user-selection' | 'authenticated';
@@ -145,7 +145,8 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                         }
 
                     } else {
-                        console.warn('[AuthOverlay] ⚠️ Failed to restore school session:', result.message);
+                        const errMsg = (result.status === 'error' && 'message' in result) ? result.message : 'Unknown Session Error';
+                        console.warn('[AuthOverlay] ⚠️ Failed to restore school session:', errMsg);
                         // Clear invalid credentials
                         localStorage.removeItem('sba_school_id');
                         localStorage.removeItem('sba_school_password');
@@ -203,6 +204,36 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
         const sanitizedSchoolName = schoolName.replace(/\//g, '');
         const sanitizedAcademicYear = academicYear.replace(/\//g, '');
         const combinedId = createDocumentId(sanitizedSchoolName, sanitizedAcademicYear, academicTerm);
+
+        // ---------------------------------------------------------
+        // DYNAMIC DATABASE SWITCHING LOGIC
+        // ---------------------------------------------------------
+        // Check if this school requires a specific database index
+        // We use a simplified sanitization for matching (lowercase, no spaces) to match the key in constants
+        const simpleName = sanitizedSchoolName.replace(/\s+/g, '').replace(/-/g, '').toLowerCase();
+
+        // Find if any key in map is contained in the simple name
+        let targetIndex = 1; // Default
+        Object.keys(SCHOOL_DATABASE_MAPPING).forEach(key => {
+            if (simpleName.includes(key)) {
+                targetIndex = SCHOOL_DATABASE_MAPPING[key];
+            }
+        });
+
+        // If current index is different, Switch & Reload
+        if (targetIndex !== ACTIVE_DATABASE_INDEX) {
+            console.log(`[AuthOverlay] 🔄 Switching Database to Index ${targetIndex} for school: ${schoolName}`);
+            localStorage.setItem('active_database_index', String(targetIndex));
+            // Show feedback before reloading
+            setLoading(true); // Keep loading spinner
+            setError(`🔄 Switching to dedicated database for ${schoolName}...`);
+
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+            return; // Stop execution here
+        }
+        // ---------------------------------------------------------
 
         const initialData: AppDataType = {
             settings: {

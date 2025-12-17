@@ -95,22 +95,25 @@ const StudentProgress: React.FC = () => {
             // Find student in this term (match by Index Number first, then Name)
             // Index Number provides better continuity if unique
             let studentInTerm: Student | undefined;
+            const termStudents = termData.students || [];
+
             if (selectedStudent.indexNumber) {
-                studentInTerm = termData.students.find(s => s.indexNumber === selectedStudent.indexNumber);
+                studentInTerm = termStudents.find(s => s.indexNumber === selectedStudent.indexNumber);
             }
             if (!studentInTerm) {
                 // Fallback to name match
-                studentInTerm = termData.students.find(s => s.name.toLowerCase() === selectedStudent.name.toLowerCase());
+                studentInTerm = termStudents.find(s => s.name.toLowerCase() === selectedStudent.name.toLowerCase());
             }
 
             if (studentInTerm) {
                 // Calculate Stats for this term
-                const studentScores = termData.scores.filter(s => s.studentId === studentInTerm!.id);
+                const termScores = termData.scores || [];
+                const studentScores = termScores.filter(s => s.studentId === studentInTerm!.id);
                 const subjectPerformances: SubjectPerformance[] = [];
 
                 // Let's use ClassSpecificData for positions if available (Wait, is it?)
                 // Or ReportSpecificData?
-                const reportData = termData.reportData.find(r => r.studentId === studentInTerm!.id);
+                const reportData = (termData.reportData || []).find(r => r.studentId === studentInTerm!.id);
 
                 let totalPercentage = 0;
                 let subjectCount = 0;
@@ -145,10 +148,12 @@ const StudentProgress: React.FC = () => {
                     }, 0);
                 };
 
-                const examAssessment = termData.assessments.find(a => a.name.toLowerCase().includes('exam'));
-                const classAssessments = termData.assessments.filter(a => !examAssessment || a.id !== examAssessment.id);
+                const termAssessments = termData.assessments || [];
+                const examAssessment = termAssessments.find(a => a.name.toLowerCase().includes('exam'));
+                const classAssessments = termAssessments.filter(a => !examAssessment || a.id !== examAssessment.id);
 
-                termData.subjects.forEach(subject => {
+                const termSubjects = termData.subjects || [];
+                termSubjects.forEach(subject => {
                     // Check if student has score for this subject
                     const hasScore = studentScores.some(s => s.subjectId === subject.id);
 
@@ -164,7 +169,8 @@ const StudentProgress: React.FC = () => {
                             // Determine Grade
                             // Find relevant grade from termData.grades
                             const roundedMark = Math.round(totalScore);
-                            const sortedGrades = [...termData.grades].sort((a, b) => b.minScore - a.minScore);
+                            const termGrades = termData.grades || [];
+                            const sortedGrades = [...termGrades].sort((a, b) => b.minScore - a.minScore);
                             const gradeInfo = sortedGrades.find(g => roundedMark >= g.minScore && roundedMark <= g.maxScore);
 
                             subjectPerformances.push({

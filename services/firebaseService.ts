@@ -793,11 +793,14 @@ export const getSchoolHistory = async (schoolName: string): Promise<AppDataType[
         );
 
         const querySnapshot = await getDocs(q);
-        const historyData: AppDataType[] = [];
 
-        querySnapshot.forEach((doc) => {
-            historyData.push(doc.data() as AppDataType);
-        });
+
+        // Use parallel fetching to get full data for each term
+        const historyData = await Promise.all(querySnapshot.docs.map(async (doc) => {
+            const data = doc.data() as AppDataType;
+            // Fetch subcollections if needed (fan-in)
+            return await getFullSchoolData(doc.id, data);
+        }));
 
         return historyData;
 

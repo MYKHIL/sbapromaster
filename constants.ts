@@ -15,7 +15,15 @@ export const WHATSAPP_DEVELOPER_NUMBER = '233542410613';
 // DATABASE SWITCHING CONTROL
 // 1 = Primary Database (sba-pro-master-759f6)
 // 2 = Backup Database (sba-pro-master-40f08)
-export const ACTIVE_DATABASE_INDEX = 2;
+// Initialize from localStorage if available, otherwise default to 1
+const storedIndex = typeof window !== 'undefined' ? localStorage.getItem('active_database_index') : null;
+export const ACTIVE_DATABASE_INDEX = storedIndex ? parseInt(storedIndex, 10) : 1;
+
+// Mapping of partial school names to specific database indices
+// Keys should be lowercase and sanitized (no spaces, no special chars)
+export const SCHOOL_DATABASE_MAPPING: { [key: string]: number } = {
+  'ayirebida': 2
+};
 
 export const INITIAL_SETTINGS: SchoolSettings = {
   schoolName: 'SBA Pro Master Demo School',
