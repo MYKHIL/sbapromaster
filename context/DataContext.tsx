@@ -676,10 +676,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             // NEW: Fetch latest data from cloud to ensure UI is up-to-date and to confirm sync
             // This satisfies the requirement: "after a save action, the system should download the latest data"
+            // OPTIMIZED: Granular Refresh - Only fetch what we saved + critical metadata
             if (!skipRefresh) {
-                console.log('[DataContext] 🔄 Auto-refreshing data from cloud...');
+                console.log('[DataContext] 🔄 Auto-refreshing data from cloud (Granular)...');
                 // CRITICAL: Pass true to ignore the sync lock since WE are holding the lock
-                await refreshFromCloud(true);
+                // We convert dirty fields to keysToFetch.
+                const fieldsToRefresh = fieldsToSave as (keyof AppDataType)[];
+                await refreshFromCloud(true, fieldsToRefresh);
             } else {
                 console.log('[DataContext] ⏭️ Skipping auto-refresh as requested (Optimized for large imports)');
             }
@@ -769,7 +772,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
-    const refreshFromCloud = async (ignoreSyncLock: boolean = false) => {
+    const refreshFromCloud = async (ignoreSyncLock: boolean = false, keysToRefresh?: (keyof AppDataType)[]) => {
         if (!schoolId) return;
         if (isSyncingRef.current && !ignoreSyncLock) {
             console.log("Sync already in progress, skipping manual refresh");
@@ -779,15 +782,20 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
             isSyncingRef.current = true;
             setIsSyncing(true);
-            console.log('[DataContext] 📥 Manual refresh initiated - fetching data from cloud...');
+            const refreshType = keysToRefresh ? `Partial (${keysToRefresh.join(', ')})` : 'FULL';
+            console.log(`[DataContext] 📥 Manual refresh initiated - fetching data from cloud [${refreshType}]...`);
 
-            const data = await getSchoolData(schoolId);
+            const data = await getSchoolData(schoolId, keysToRefresh);
             if (data) {
                 console.log('[DataContext] ✅ Data fetched successfully, applying updates...');
 
                 // CRITICAL: Explicitly clear pending score changes tracker so that 
                 // loadImportedData allows overwriting local scores with server data
-                pendingScoreChanges.current.clear();
+                // IF we are refreshing scores.
+                // Strict safety: If we are refreshing 'scores', we clear pending checks.
+                if (!keysToRefresh || keysToRefresh.includes('scores')) {
+                    pendingScoreChanges.current.clear();
+                }
 
                 // Mark as manual remote update
                 isRemoteUpdate.current = true;
@@ -796,8 +804,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
                 // CRITICAL: Clear all local drafts and effectively "reset" the UI state
                 draftScores.current.clear();
-                dirtyFields.current.clear();
-                setHasLocalChanges(false);
+
+                // Optimized Clear: Only clear dirty fields for what we refreshed
+                if (keysToRefresh) {
+                    keysToRefresh.forEach(k => dirtyFields.current.delete(k));
+                } else {
+                    dirtyFields.current.clear();
+                }
+
+                setHasLocalChanges(dirtyFields.current.size > 0);
                 setDraftVersion(v => v + 1); // Force inputs to re-read from the new (clean) state
             } else {
                 console.log('[DataContext] ⚠️ No data found for this school ID');

@@ -146,7 +146,7 @@ export const getNextQuotaResetDate = (): Date => {
 
         const nextReset = new Date();
         // Add 20 minutes safety buffer
-        nextReset.setUTCHours(resetHourUTC + 1, 0, 0, 0);
+        nextReset.setUTCHours(resetHourUTC, 30, 0, 0);
 
         // If current time passed reset time, it happens the next day
         if (now > nextReset) {

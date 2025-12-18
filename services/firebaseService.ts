@@ -277,12 +277,28 @@ export const searchSchools = async (partialName: string): Promise<{ schoolName: 
 };
 
 // Helper to fetch full school data (Fan-In from Subcollections)
-const getFullSchoolData = async (docId: string, mainDocData: AppDataType): Promise<AppDataType> => {
-    const SUBCOLLECTION_KEYS = ['students', 'scores', 'classes', 'subjects', 'assessments'];
+const getFullSchoolData = async (docId: string, mainDocData: AppDataType, keysToFetch?: (keyof AppDataType)[]): Promise<AppDataType> => {
+    // If keysToFetch is provided, filtering to those that match SUBCOLLECTION_KEYS.
+    // Otherwise, fetch all.
+    const ALL_SUBCOLLECTIONS = ['students', 'scores', 'classes', 'subjects', 'assessments'];
+
+    const keysToProcess = keysToFetch
+        ? ALL_SUBCOLLECTIONS.filter(k => keysToFetch.includes(k as any))
+        : ALL_SUBCOLLECTIONS;
+
     const fullData: any = { ...mainDocData };
 
-    // Parallel fetch of all subcollections
-    await Promise.all(SUBCOLLECTION_KEYS.map(async (key) => {
+    if (keysToProcess.length === 0 && keysToFetch) {
+        // Optimization: If keysToFetch was provided but contained no subcollections (e.g. only 'settings'), 
+        // we don't need to fetch anything here.
+        // However, we must ensure we return the existing mainDocData structure.
+        return fullData as AppDataType;
+    }
+
+    console.log(`[firebaseService] 📥 Fetching subcollections: ${keysToProcess.join(', ')}`);
+
+    // Parallel fetch of selected subcollections
+    await Promise.all(keysToProcess.map(async (key) => {
         try {
             const subColRef = collection(db, "schools", docId, key);
             const snapshot = await getDocs(subColRef);
@@ -297,6 +313,29 @@ const getFullSchoolData = async (docId: string, mainDocData: AppDataType): Promi
 
     return fullData as AppDataType;
 };
+
+// ... loginOrRegisterSchool ...
+
+// Helper to save/update the database with safe transactional merging for ALL fields
+export const saveDataTransaction = async (
+    docId: string,
+    updates: Partial<AppDataType>,
+    deletions?: Record<string, string[]>
+) => {
+    // ... existing saveDataTransaction code ...
+    // (We are not touching saveDataTransaction in this edit, just skipping down to getSchoolData which is exported)
+    // Actually, getSchoolData is further down. I see I need to be careful with the replace range.
+    // getFullSchoolData is at line 280. 
+    // getSchoolData is at line 775. 
+    // I should split this into two replaces or use multi_replace if appropriate. 
+    // But getFullSchoolData is local, so I can't export it easily without changing signature everywhere.
+    // Wait, getFullSchoolData is defined right before usage in getSchoolData? 
+    // No, it's defined at line 280. usage is at line 338 and 789.
+    // I will start by updating getFullSchoolData definition.
+};
+
+// ...
+
 
 // Helper to login or register a school
 export const loginOrRegisterSchool = async (docId: string, password: string, initialData: AppDataType, createIfMissing: boolean = false): Promise<LoginResult> => {
@@ -772,7 +811,7 @@ export const updateHeartbeat = async (docId: string, userId: number) => {
 /**
  * Fetch the full school data document
  */
-export const getSchoolData = async (docId: string): Promise<AppDataType | null> => {
+export const getSchoolData = async (docId: string, keysToFetch?: (keyof AppDataType)[]): Promise<AppDataType | null> => {
     try {
         const docRef = doc(db, "schools", docId);
         const docSnap = await getDoc(docRef);
@@ -786,7 +825,7 @@ export const getSchoolData = async (docId: string): Promise<AppDataType | null> 
             await migrateLegacyData(docId, data);
 
             // Fetch subcollections to ensure we return COMPLETE data
-            const fullData = await getFullSchoolData(docId, data);
+            const fullData = await getFullSchoolData(docId, data, keysToFetch);
             return fullData;
         }
         return null;
