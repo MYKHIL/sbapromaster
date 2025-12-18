@@ -5,6 +5,7 @@ import useLocalStorage from '../hooks/useLocalStorage';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { offlineQueue } from '../services/offlineQueue';
 import { useDatabaseError } from './DatabaseErrorContext';
+import { isQuotaExhaustedError } from '../utils/databaseErrorHandler';
 import type { Student, Subject, Class, Grade, Assessment, Score, SchoolSettings, ReportSpecificData, ClassSpecificData, User, UserLog, OnlineUser } from '../types';
 import {
     INITIAL_SETTINGS,
@@ -741,7 +742,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             console.error('[DataContext] ❌ Failed to save data to cloud:', error);
 
             // Show database error modal for critical errors
+            // Show database error modal for critical errors
             showDatabaseError(error);
+
+            // FIX: Don't add to offline queue if it's a permanent error like Quota Exceeded or Permission Denied
+            // These will never resolve by retrying immediately, and we don't want to clutter the queue
+            if (isQuotaExhaustedError(error) || error?.code === 'permission-denied' || error?.message?.includes('permission-denied')) {
+                console.log('[DataContext] 🚫 Not adding to offline queue - Error is permanent (Quota/Permission)');
+                setIsSyncing(false);
+                isSyncingRef.current = false;
+                return;
+            }
 
             console.log('[DataContext] 📦 Adding to offline queue for retry when online');
             // Re-construct full payload for queue fallback

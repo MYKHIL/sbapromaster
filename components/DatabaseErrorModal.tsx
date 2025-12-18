@@ -2,7 +2,8 @@ import React from 'react';
 import {
     createWhatsAppErrorLink,
     getDatabaseErrorInfo,
-    isQuotaExhaustedError
+    isQuotaExhaustedError,
+    getNextQuotaResetDate
 } from '../utils/databaseErrorHandler';
 
 interface DatabaseErrorModalProps {
@@ -12,11 +13,70 @@ interface DatabaseErrorModalProps {
 }
 
 const DatabaseErrorModal: React.FC<DatabaseErrorModalProps> = ({ error, onClose, isOpen }) => {
+    // State for live countdown
+    const [liveTimeMessage, setLiveTimeMessage] = React.useState<string>('');
+    const timerRef = React.useRef<NodeJS.Timeout | null>(null);
+
+    React.useEffect(() => {
+        if (!isOpen || !error) {
+            setLiveTimeMessage('');
+            if (timerRef.current) clearInterval(timerRef.current);
+            return;
+        }
+
+        const isQuota = isQuotaExhaustedError(error);
+
+        if (isQuota) {
+            const targetDate = getNextQuotaResetDate();
+
+            const updateTimer = () => {
+                const now = new Date();
+                const diffMs = targetDate.getTime() - now.getTime();
+
+                if (diffMs <= 0) {
+                    setLiveTimeMessage('now');
+                    return;
+                }
+
+                // Calculate human-friendly countdown
+                const hours = Math.floor(diffMs / (1000 * 60 * 60));
+                const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+
+                let timeStr = '';
+                if (hours > 0) {
+                    timeStr = `${hours}h ${minutes}m ${seconds}s`;
+                } else if (minutes > 0) {
+                    timeStr = `${minutes}m ${seconds}s`;
+                } else {
+                    timeStr = `${seconds}s`;
+                }
+                setLiveTimeMessage(timeStr);
+            };
+
+            // Initial update
+            updateTimer();
+            // Start interval
+            timerRef.current = setInterval(updateTimer, 1000);
+        } else {
+            setLiveTimeMessage('');
+        }
+
+        return () => {
+            if (timerRef.current) clearInterval(timerRef.current);
+        };
+    }, [isOpen, error]);
+
     if (!isOpen || !error) return null;
 
     const errorInfo = getDatabaseErrorInfo(error);
     const whatsappLink = createWhatsAppErrorLink(error);
     const isQuotaError = isQuotaExhaustedError(error);
+
+    // Dynamic message injection
+    const displayMessage = isQuotaError && liveTimeMessage
+        ? `The system has reached its daily data limit. Service will be restored in approximately <strong>${liveTimeMessage}</strong>. Please try again then or contact support.`
+        : errorInfo.friendlyMessage;
 
     return (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black bg-opacity-40 backdrop-blur-sm animate-fadeIn">
@@ -43,9 +103,10 @@ const DatabaseErrorModal: React.FC<DatabaseErrorModalProps> = ({ error, onClose,
 
                 {/* Friendly Content */}
                 <div className="p-6">
-                    <p className="text-gray-700 text-sm leading-relaxed mb-6">
-                        {errorInfo.friendlyMessage}
-                    </p>
+                    <p
+                        className="text-gray-700 text-sm leading-relaxed mb-6"
+                        dangerouslySetInnerHTML={{ __html: displayMessage }}
+                    />
 
                     <div className="flex flex-col gap-3">
                         {/* Primary Action: WhatsApp */}
