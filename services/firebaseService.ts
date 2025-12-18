@@ -8,7 +8,7 @@ const migrateLegacyData = async (docId: string, data: any) => {
     const SUBCOLLECTION_KEYS = ['students', 'scores', 'classes', 'subjects', 'assessments'];
     const cleanup: any = {};
     let hasMigrationWork = false;
-    let totalItemsToMigrate = 0;
+    let totalItemsToMigrate = 0;  
 
     // Calculate total work first
     SUBCOLLECTION_KEYS.forEach(key => {
