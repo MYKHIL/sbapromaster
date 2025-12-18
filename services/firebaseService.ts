@@ -316,23 +316,7 @@ const getFullSchoolData = async (docId: string, mainDocData: AppDataType, keysTo
 
 // ... loginOrRegisterSchool ...
 
-// Helper to save/update the database with safe transactional merging for ALL fields
-export const saveDataTransaction = async (
-    docId: string,
-    updates: Partial<AppDataType>,
-    deletions?: Record<string, string[]>
-) => {
-    // ... existing saveDataTransaction code ...
-    // (We are not touching saveDataTransaction in this edit, just skipping down to getSchoolData which is exported)
-    // Actually, getSchoolData is further down. I see I need to be careful with the replace range.
-    // getFullSchoolData is at line 280. 
-    // getSchoolData is at line 775. 
-    // I should split this into two replaces or use multi_replace if appropriate. 
-    // But getFullSchoolData is local, so I can't export it easily without changing signature everywhere.
-    // Wait, getFullSchoolData is defined right before usage in getSchoolData? 
-    // No, it's defined at line 280. usage is at line 338 and 789.
-    // I will start by updating getFullSchoolData definition.
-};
+
 
 // ...
 
