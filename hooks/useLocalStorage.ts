@@ -22,27 +22,31 @@ function useLocalStorage<T,>(key: string, initialValue: T): [T, React.Dispatch<R
       if (typeof window !== 'undefined') {
         window.localStorage.setItem(key, JSON.stringify(storedValue));
       }
-    } catch (error) {
-      console.error(error);
+    } catch (error: any) {
+      if (error && (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
+        console.warn(`[useLocalStorage] Storage quota exceeded for key "${key}". Data will not be persisted to localStorage.`);
+      } else {
+        console.error(`[useLocalStorage] Error setting key "${key}":`, error);
+      }
     }
   }, [key, storedValue]);
 
   // 3. useEffect to listen for changes to the same localStorage key from other tabs.
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
-        if (e.key === key) {
-            try {
-                setStoredValue(e.newValue ? JSON.parse(e.newValue) : initialValue);
-            } catch (error) {
-                console.error(error);
-                setStoredValue(initialValue);
-            }
+      if (e.key === key) {
+        try {
+          setStoredValue(e.newValue ? JSON.parse(e.newValue) : initialValue);
+        } catch (error) {
+          console.error(error);
+          setStoredValue(initialValue);
         }
+      }
     };
 
     window.addEventListener('storage', handleStorageChange);
     return () => {
-        window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, [key, initialValue]);
 

@@ -1,16 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import ConfirmationModal from './ConfirmationModal';
-import AdminSetup from './AdminSetup';
-import UserSelection from './UserSelection';
-import { loginOrRegisterSchool, AppDataType, createDocumentId, searchSchools, updateUsers, updateDeviceCredentials } from '../services/firebaseService';
 import { useData } from '../context/DataContext';
 import { useUser } from '../context/UserContext';
-import { saveDeviceCredential, getDeviceCredential, hashPassword } from '../services/authService';
+import { loginOrRegisterSchool, AppDataType, SchoolListItem, SchoolPeriod, clearAuthCaches } from '../services/firebaseService';
 import * as SyncLogger from '../services/syncLogger';
-import { INITIAL_SETTINGS, INITIAL_STUDENTS, INITIAL_SUBJECTS, INITIAL_CLASSES, INITIAL_GRADES, INITIAL_ASSESSMENTS, INITIAL_SCORES, INITIAL_REPORT_DATA, INITIAL_CLASS_DATA, ACTIVE_DATABASE_INDEX, SCHOOL_DATABASE_MAPPING } from '../constants';
-import type { User, DeviceCredential } from '../types';
+import { INITIAL_SETTINGS, INITIAL_STUDENTS, INITIAL_SUBJECTS, INITIAL_CLASSES, INITIAL_GRADES, INITIAL_ASSESSMENTS, INITIAL_SCORES, INITIAL_REPORT_DATA, INITIAL_CLASS_DATA } from '../constants';
+import type { User } from '../types';
 
-type AuthStage = 'school-login' | 'admin-setup' | 'user-selection' | 'authenticated';
+// Import new auth components
+import WelcomeScreen from './auth/WelcomeScreen';
+import SchoolListScreen from './auth/SchoolListScreen';
+import PasswordScreen from './auth/PasswordScreen';
+import YearTermSelector from './auth/YearTermSelector';
+import RegistrationForm from './auth/RegistrationForm';
+import SessionRestoreDialog from './auth/SessionRestoreDialog';
+import RegistrationPendingDialog from './auth/RegistrationPendingDialog';
+import AdminSetup from './AdminSetup';
+import UserSelection from './UserSelection';
+
+type AuthStep = 'welcome' | 'school-list' | 'password' | 'year-term' | 'register' | 'admin-setup' | 'user-selection' | 'authenticated';
 
 interface AuthOverlayProps {
     children?: React.ReactNode;
@@ -20,157 +27,92 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
     const { loadImportedData, setSchoolId, pauseSync, resumeSync } = useData();
     const { setUsers, users, login, setPassword: setUserPassword, checkAutoLogin, isAuthenticated } = useUser();
 
-    // School login state
-    const [schoolName, setSchoolName] = useState('');
-    const [academicYear, setAcademicYear] = useState('');
-    const [academicTerm, setAcademicTerm] = useState('');
-    const [schoolPassword, setSchoolPassword] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [accessDenied, setAccessDenied] = useState(false);
-    const [showRegisterConfirm, setShowRegisterConfirm] = useState(false);
-
-    // Search suggestions state
-    const [schoolSuggestions, setSchoolSuggestions] = useState<string[]>([]);
-    const [availableYears, setAvailableYears] = useState<string[]>([]);
-    const [showSuggestions, setShowSuggestions] = useState(false);
-    const [searchResults, setSearchResults] = useState<{ schoolName: string, years: string[] }[]>([]);
-
-    // Authentication flow state
-    const [authStage, setAuthStage] = useState<AuthStage>('school-login');
-    const [currentSchoolId, setCurrentSchoolId] = useState<string | null>(null);
+    // Navigation state
+    const [currentStep, setCurrentStep] = useState<AuthStep>('welcome');
+    const [selectedSchool, setSelectedSchool] = useState<SchoolListItem | null>(null);
+    const [selectedPeriod, setSelectedPeriod] = useState<SchoolPeriod | null>(null);
+    const [verifiedPassword, setVerifiedPassword] = useState<string>(''); // Store password after verification
     const [schoolData, setSchoolData] = useState<AppDataType | null>(null);
+    const [currentSchoolId, setCurrentSchoolId] = useState<string | null>(null);
+    const [showSessionRestore, setShowSessionRestore] = useState<boolean>(false);
+    const [sessionInfo, setSessionInfo] = useState<{ schoolName: string; userName: string } | null>(null);
+    const [showRegistrationPending, setShowRegistrationPending] = useState<boolean>(false);
+    const [pendingSchoolName, setPendingSchoolName] = useState<string>('');
 
-    // Monitor authentication state
-    useEffect(() => {
-        if (!isAuthenticated && currentSchoolId && authStage === 'authenticated') {
-            setAuthStage('user-selection');
-        }
-    }, [isAuthenticated, currentSchoolId, authStage]);
+    // Loading state
+    const [restoringSession, setRestoringSession] = useState(true);
 
-    // Initialize SyncLogger when component mounts
+    // Initialize SyncLogger
     useEffect(() => {
         SyncLogger.startNewLog('School Authentication');
         SyncLogger.log('AuthOverlay component mounted');
-
-        // Cleanup: download log when unmounting
         return () => {
             SyncLogger.log('AuthOverlay component unmounting');
         };
     }, []);
 
-    // CRITICAL: Pause all sync activities when in auth mode
+    // Pause sync during authentication
     useEffect(() => {
-        if (authStage !== 'authenticated') {
+        if (currentStep !== 'authenticated') {
             console.log('[AuthOverlay] Pausing sync - authentication in progress');
-            SyncLogger.log('Pausing sync - authentication in progress');
             pauseSync();
         }
-    }, [authStage, pauseSync]);
+    }, [currentStep, pauseSync]);
 
-    // Persistent Login State
-    const [restoringSession, setRestoringSession] = useState(true);
-
-    // Run once on mount
+    // Restore session on mount
     useEffect(() => {
         const restoreSession = async () => {
-            // Check for pending login from database switch
-            const pendingLogin = sessionStorage.getItem('sba_pending_login');
-            if (pendingLogin) {
-                console.log('[AuthOverlay] 🔄 Found pending login from DB switch. Auto-logging in...');
-                const credentials = JSON.parse(pendingLogin);
-                sessionStorage.removeItem('sba_pending_login');
-
-                // Set local state for UI consistency
-                setSchoolName(credentials.schoolName);
-                setAcademicYear(credentials.academicYear);
-                setAcademicTerm(credentials.academicTerm);
-                setSchoolPassword(credentials.password);
-
-                // Execute login immediately
-                await executeLogin(credentials.schoolName, credentials.academicYear, credentials.academicTerm, credentials.password);
-                return;
-            }
-
             try {
                 const savedSchoolId = localStorage.getItem('sba_school_id');
                 const savedSchoolPassword = localStorage.getItem('sba_school_password');
                 const savedUserId = localStorage.getItem('sba_user_id');
                 const savedUserPassword = localStorage.getItem('sba_user_password');
 
-                if (savedSchoolId && savedSchoolPassword) {
-                    console.log('[AuthOverlay] 🔄 Found saved session. Attempting to restore...');
-                    setLoading(true);
-
-                    // 1. Restore School Session
-                    const initialData: AppDataType = {
-                        settings: INITIAL_SETTINGS, // Placeholders
-                        students: [],
-                        subjects: [],
-                        classes: [],
-                        grades: [],
-                        assessments: [],
-                        scores: [],
-                        reportData: INITIAL_REPORT_DATA,
-                        classData: INITIAL_CLASS_DATA,
-                        users: [],
-                        deviceCredentials: []
-                    };
-
-                    const result = await loginOrRegisterSchool(savedSchoolId, savedSchoolPassword, initialData, false);
-
-                    if (result.status === 'success') {
-                        const docId = result.docId;
-                        console.log(`[AuthOverlay] ✅ School session restored: ${docId}`);
-
-                        setSchoolId(docId);
-                        setCurrentSchoolId(docId);
-                        loadImportedData(result.data);
-                        setSchoolData(result.data);
-
-                        // Sync Users
-                        const users = result.data.users || [];
-                        setUsers(users);
-
-                        // 2. Restore User Session (if available)
-                        if (savedUserId && savedUserPassword && users.length > 0) {
-                            const userId = Number(savedUserId);
-                            // Attempt login directly
-                            const success = await login(userId, savedUserPassword);
-
-                            if (success) {
-                                console.log(`[AuthOverlay] ✅ User session restored for ID: ${userId}`);
-                                saveDeviceCredential(docId, userId);
-                                resumeSync();
-                                setAuthStage('authenticated');
-                                setLoading(false);
-                                setRestoringSession(false);
-                                return; // Done
-                            }
-                        }
-
-                        // If user restore failed but school worked:
-                        // Check for auto-login via device credential (fallback/alternative)
-                        const autoLoginUser = await checkAutoLogin(docId, users);
-                        if (autoLoginUser) {
-                            resumeSync();
-                            setAuthStage('authenticated');
-                        } else {
-                            setAuthStage('user-selection');
-                        }
-
-                    } else {
-                        const errMsg = (result.status === 'error' && 'message' in result) ? result.message : 'Unknown Session Error';
-                        console.warn('[AuthOverlay] ⚠️ Failed to restore school session:', errMsg);
-                        // Clear invalid credentials
-                        localStorage.removeItem('sba_school_id');
-                        localStorage.removeItem('sba_school_password');
-                    }
+                if (!savedSchoolId || !savedSchoolPassword || !savedUserId || !savedUserPassword) {
+                    console.log('[AuthOverlay] No saved session found');
+                    return;
                 }
-            } catch (e) {
-                console.error('[AuthOverlay] Error restoring session:', e);
+
+                console.log('[AuthOverlay] Found saved session, fetching school data...');
+
+                // Fetch school data
+                const result = await loginOrRegisterSchool(savedSchoolId, savedSchoolPassword, {} as AppDataType, false);
+
+                if (result.status !== 'success' || !result.data) {
+                    console.error('[AuthOverlay] Failed to restore session:', result.status);
+                    // Clear invalid session
+                    localStorage.removeItem('sba_school_id');
+                    localStorage.removeItem('sba_school_password');
+                    localStorage.removeItem('sba_user_id');
+                    localStorage.removeItem('sba_user_password');
+                    return;
+                }
+
+                // Find the user
+                const user = result.data.users?.find(u => u.id === parseInt(savedUserId));
+                if (!user) {
+                    console.error('[AuthOverlay] User not found in school data');
+                    return;
+                }
+
+                // Load school data
+                loadImportedData(result.data);
+                setSchoolData(result.data);
+                setCurrentSchoolId(result.docId || savedSchoolId);
+                setSchoolId(result.docId || savedSchoolId);
+                setUsers(result.data.users || []);
+
+                // Show session restore dialog
+                setSessionInfo({
+                    schoolName: result.data.settings?.schoolName || 'Unknown School',
+                    userName: user.name
+                });
+                setShowSessionRestore(true);
+
+                console.log('[AuthOverlay] Session data loaded, showing restore dialog');
+            } catch (error) {
+                console.error('[AuthOverlay] Session restore error:', error);
             } finally {
-                setLoading(false);
                 setRestoringSession(false);
             }
         };
@@ -178,556 +120,549 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
         restoreSession();
     }, []);
 
-    // Debounced Search Effect to prevent excessive database reads on every keystroke
-    useEffect(() => {
-        const timer = setTimeout(async () => {
-            if (schoolName.length >= 3) {
-                const results = await searchSchools(schoolName);
-                if (results && results.length > 0) {
-                    const suggestions = results.map(r => r.schoolName);
-                    setSchoolSuggestions(suggestions);
-                    setShowSuggestions(true);
-                    setSearchResults(results);
-                }
+    // Handle session restore - continue
+    const handleContinueSession = async () => {
+        try {
+            const savedUserId = localStorage.getItem('sba_user_id');
+            const savedUserPassword = localStorage.getItem('sba_user_password');
+
+            if (!savedUserId || !savedUserPassword) {
+                setShowSessionRestore(false);
+                return;
             }
-        }, 800); // 800ms debounce
 
-        return () => clearTimeout(timer);
-    }, [schoolName]);
+            // Login the user
+            const success = await login(parseInt(savedUserId), savedUserPassword);
 
-    const handleSchoolNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
-        setSchoolName(value);
-        setAvailableYears([]);
-        setSchoolSuggestions([]);
-        setShowSuggestions(false);
-    };
-
-    const handleSuggestionClick = (suggestion: string) => {
-        setSchoolName(suggestion);
-        const match = searchResults.find(r => r.schoolName === suggestion);
-        if (match) {
-            setAvailableYears(match.years);
-        }
-        setShowSuggestions(false);
-    };
-
-    const executeLogin = async (sName: string, aYear: string, aTerm: string, pwd: string) => {
-        setLoading(true);
-        setError(null);
-        setAccessDenied(false);
-
-        const sanitizedSchoolName = sName.replace(/\//g, '');
-        const sanitizedAcademicYear = aYear.replace(/\//g, '');
-        const combinedId = createDocumentId(sanitizedSchoolName, sanitizedAcademicYear, aTerm);
-
-        // ---------------------------------------------------------
-        // DYNAMIC DATABASE SWITCHING LOGIC
-        // ---------------------------------------------------------
-        const simpleName = sanitizedSchoolName.replace(/\s+/g, '').replace(/-/g, '').toLowerCase();
-
-        let targetIndex = 1; // Default
-        Object.keys(SCHOOL_DATABASE_MAPPING).forEach(key => {
-            if (simpleName.includes(key)) {
-                targetIndex = SCHOOL_DATABASE_MAPPING[key];
-            }
-        });
-
-        if (targetIndex !== ACTIVE_DATABASE_INDEX) {
-            // CRITICAL CHECK: In Emulator Mode, we DO NOT switch databases.
-            // We stay on the "Emulator Project" (Index 2) to prevent mismatched Project IDs.
-            // @ts-ignore
-            if (import.meta.env.VITE_USE_EMULATOR === 'true') {
-                console.log(`[AuthOverlay] 🛡️ Debug Mode: Ignoring database switch request for ${sName}. Staying on current index.`);
+            if (success) {
+                setShowSessionRestore(false);
+                setCurrentStep('authenticated');
+                resumeSync();
+                console.log('[AuthOverlay] ✅ Session restored successfully');
             } else {
-                console.log(`[AuthOverlay] 🔄 Switching Database to Index ${targetIndex} for school: ${sName}`);
-                localStorage.setItem('active_database_index', String(targetIndex));
-
-                // Save credentials for auto-login after reload
-                const credentials = {
-                    schoolName: sName,
-                    academicYear: aYear,
-                    academicTerm: aTerm,
-                    password: pwd
-                };
-                sessionStorage.setItem('sba_pending_login', JSON.stringify(credentials));
-
-                setError(`🔄 Switching to dedicated database for ${sName}...`);
-
-                setTimeout(() => {
-                    window.location.reload();
-                }, 800);
-                return; // Stop execution here
+                console.error('[AuthOverlay] Failed to login with saved credentials');
+                handleLogoutSession();
             }
+        } catch (error) {
+            console.error('[AuthOverlay] Continue session error:', error);
+            handleLogoutSession();
         }
-        // ---------------------------------------------------------
+    };
 
-        const initialData: AppDataType = {
-            settings: {
-                ...INITIAL_SETTINGS,
-                schoolName: sName,
-                academicYear: aYear,
-                academicTerm: aTerm
-            },
-            students: INITIAL_STUDENTS,
-            subjects: INITIAL_SUBJECTS,
-            classes: INITIAL_CLASSES,
-            grades: INITIAL_GRADES,
-            assessments: INITIAL_ASSESSMENTS,
-            scores: INITIAL_SCORES,
-            reportData: INITIAL_REPORT_DATA,
-            classData: INITIAL_CLASS_DATA,
-            users: [],
-            deviceCredentials: [],
-        };
+    // Handle session restore - logout
+    const handleLogoutSession = () => {
+        // Clear all saved credentials
+        localStorage.removeItem('sba_school_id');
+        localStorage.removeItem('sba_school_password');
+        localStorage.removeItem('sba_user_id');
+        localStorage.removeItem('sba_user_password');
 
-        console.log(`[AUTH_DEBUG] executeLogin calling loginOrRegisterSchool...`);
-        const result = await loginOrRegisterSchool(combinedId, pwd, initialData, false);
-        console.log(`[AUTH_DEBUG] loginOrRegisterSchool returned:`, result.status);
-        setLoading(false);
+        // Reset state
+        setShowSessionRestore(false);
+        setSessionInfo(null);
+        setCurrentStep('welcome');
 
-        if (result.status === 'success') {
-            const docId = result.docId;
-            console.log(`[SYNC_LOG] School login successful. DocId: ${docId}`);
-            console.log(`[SYNC_LOG] Users from result.data: ${result.data.users?.length || 0}`);
+        console.log('[AuthOverlay] Session cleared, starting fresh');
+    };
 
-            localStorage.setItem('sba_school_id', docId);
-            localStorage.setItem('sba_school_password', pwd);
+    // ========== NAVIGATION HANDLERS ==========
 
-            setSchoolId(docId);
-            setCurrentSchoolId(docId);
+    const handleRegisterClick = () => {
+        setCurrentStep('register');
+    };
+
+    const handleLoginClick = () => {
+        setCurrentStep('school-list');
+    };
+
+    const handleSchoolSelect = (school: SchoolListItem) => {
+        setSelectedSchool(school);
+        setCurrentStep('password');
+    };
+
+    const handlePasswordVerified = (password: string) => {
+        if (!selectedSchool) return;
+        // Store the verified password for later use
+        setVerifiedPassword(password);
+        // Check if multiple periods exist for this school
+        setCurrentStep('year-term');
+    };
+
+    const handlePeriodSelect = async (period: SchoolPeriod) => {
+        setSelectedPeriod(period);
+        await executeLogin(period.docId);
+    };
+
+    const handleRegistration = async (
+        schoolName: string,
+        year: string,
+        term: string,
+        password: string,
+        docId: string
+    ) => {
+        try {
+            console.log('[AuthOverlay] 📝 Registering new school:', schoolName);
+
+            // -------------------------------------------------------------
+            // DEBUG AUTOMATION: Pre-create admin for Dummy School
+            // -------------------------------------------------------------
+            let usersArray: User[] = [];
+            // @ts-ignore - DEV and VITE_USE_EMULATOR exist in Vite env
+            if ((import.meta.env.DEV || import.meta.env.VITE_USE_EMULATOR === 'true') && schoolName === 'Dummy School') {
+                console.log('[AuthOverlay] 🤖 Debug Mode: Pre-creating admin for Dummy School...');
+                const { hashPassword } = await import('../services/authService');
+                const hashedPassword = await hashPassword('password');
+
+                usersArray = [{
+                    id: 1,
+                    name: 'Admin User',
+                    role: 'Admin',
+                    allowedClasses: [],
+                    allowedSubjects: [],
+                    passwordHash: hashedPassword
+                }];
+            }
+
+            // Create initial data
+            const initialData: AppDataType = {
+                settings: {
+                    ...INITIAL_SETTINGS,
+                    schoolName,
+                    academicYear: year,
+                    academicTerm: term
+                },
+                students: INITIAL_STUDENTS,
+                subjects: INITIAL_SUBJECTS,
+                classes: INITIAL_CLASSES,
+                grades: INITIAL_GRADES,
+                assessments: INITIAL_ASSESSMENTS,
+                scores: INITIAL_SCORES,
+                reportData: INITIAL_REPORT_DATA,
+                classData: INITIAL_CLASS_DATA,
+                users: usersArray,
+                password,
+                Access: true,
+                activeSessions: {},
+                userLogs: []
+            };
+
+            // Register school: loginOrRegisterSchool(docId, password, initialData, createIfMissing)
+            const result = await loginOrRegisterSchool(docId, password, initialData, true);
+
+            if (result.status === 'success' && result.data) {
+                console.log('[AuthOverlay] ✅ School registered successfully');
+
+                // Load data and proceed to admin setup
+                loadImportedData(result.data);
+                setSchoolData(result.data);
+                setCurrentSchoolId(result.docId || docId);
+                setSchoolId(result.docId || docId);
+
+                // Save credentials
+                localStorage.setItem('sba_school_id', result.docId || docId);
+                localStorage.setItem('sba_school_password', password);
+
+                // Clear auth caches
+                clearAuthCaches();
+
+                // -------------------------------------------------------------
+                // DEBUG AUTOMATION: Auto-login for Dummy School
+                // -------------------------------------------------------------
+                // @ts-ignore - DEV and VITE_USE_EMULATOR exist in Vite env
+                if ((import.meta.env.DEV || import.meta.env.VITE_USE_EMULATOR === 'true') && schoolName === 'Dummy School') {
+                    try {
+                        console.log('[AuthOverlay] 🤖 Debug Mode: Auto-logging in as admin...');
+                        setUsers(usersArray);
+
+                        // Auto-login as the pre-created admin
+                        const loginSuccess = await login(1, 'password', usersArray[0]);
+
+                        if (!loginSuccess) {
+                            throw new Error('Login returned false');
+                        }
+
+                        setUserPassword('password');
+
+                        // Save user credentials (ignore quota errors - not critical for debug)
+                        try {
+                            localStorage.setItem('sba_user_id', '1');
+                            localStorage.setItem('sba_user_password', 'password');
+                        } catch (storageError) {
+                            console.warn('[AuthOverlay] ⚠️ Could not save credentials to localStorage (quota exceeded)');
+                        }
+
+                        // Complete authentication
+                        setCurrentStep('authenticated');
+                        resumeSync();
+
+                        console.log('[AuthOverlay] ✅ Debug auto-login complete');
+                    } catch (loginError) {
+                        console.error('[AuthOverlay] ❌ Debug auto-login failed:', loginError);
+                        // Fallback: go to user selection screen
+                        setUsers(usersArray);
+                        setCurrentStep('user-selection');
+                    }
+                } else {
+                    // Normal flow: check if admin setup is needed
+                    const hasUsers = result.data.users && result.data.users.length > 0;
+                    if (!hasUsers) {
+                        console.log('[AuthOverlay] No users found - proceeding to admin setup');
+                        setCurrentStep('admin-setup');
+                    } else {
+                        console.log('[AuthOverlay] Users found - proceeding to user selection');
+                        setUsers(result.data.users);
+                        setCurrentStep('user-selection');
+                    }
+                }
+
+            } else if (result.status === 'created_pending_access') {
+                console.log('[AuthOverlay] ✅ School created, pending activation');
+
+                // DEBUG OVERRIDE: If debug mode, we can force access? 
+                // Actually if we passed Access:true in initialData (which we do if we modify initialData above?), 
+                // checking result.status...
+                // But handleRegistration sets Access:true in initialData locally:
+                // Access: true (line 224). 
+                // So likely it won't be 'created_pending_access' unless server overrides.
+                // But if it DOES return pending (e.g. security rules), we handle it.
+
+                // @ts-ignore - DEV and VITE_USE_EMULATOR exist in Vite env
+                if ((import.meta.env.DEV || import.meta.env.VITE_USE_EMULATOR === 'true') && schoolName === 'Dummy School') {
+                    // Force Admin Setup anyway? No, if pending, we can't login usually.
+                    // But for emulator, we might want to allow it.
+                    console.log('[AuthOverlay] 🤖 Debug Mode: Ignoring pending status for Dummy School');
+                    // We would need to set Access=true in DB if server denied it?
+                    // Assuming initialData.Access = true works in Emulator.
+                }
+
+                // Show registration pending dialog
+                setPendingSchoolName(schoolName);
+                setShowRegistrationPending(true);
+
+                // Clear auth caches
+                clearAuthCaches();
+            } else {
+                console.error('[AuthOverlay] ❌ Registration failed:', result.message || result.status);
+                alert(result.message || `Registration failed: ${result.status}`);
+            }
+        } catch (error) {
+            console.error('[AuthOverlay] Registration error:', error);
+            alert('Failed to register school. Please try again.');
+        }
+    };
+
+    const handleBackToWelcome = () => {
+        setSelectedSchool(null);
+        setSelectedPeriod(null);
+        setCurrentStep('welcome');
+    };
+
+    const handleBackToSchoolList = () => {
+        setSelectedSchool(null);
+        setCurrentStep('school-list');
+    };
+
+    const handleBackToPassword = () => {
+        setSelectedPeriod(null);
+        setCurrentStep('password');
+    };
+
+    // ========== LOGIN EXECUTION ==========
+
+    const executeLogin = async (docId: string) => {
+        try {
+            console.log('[AuthOverlay] 🔐 Executing login for:', docId);
+            SyncLogger.log(`Attempting login for: ${docId}`);
+
+            // Use the verified password from PasswordScreen
+            const result = await loginOrRegisterSchool(docId, verifiedPassword, {} as AppDataType, false);
+
+            if (result.status !== 'success') {
+                console.error('[AuthOverlay] ❌ Login failed:', result.message || result.status);
+                alert(result.message || `Login failed: ${result.status}`);
+                return;
+            }
+
+            if (!result.data) {
+                console.error('[AuthOverlay] ❌ No data returned');
+                alert('Failed to load school data');
+                return;
+            }
+
+            console.log('[AuthOverlay] ✅ School data loaded successfully');
+
+            // Load data into context
             loadImportedData(result.data);
             setSchoolData(result.data);
+            setCurrentSchoolId(result.docId || docId);
+            setSchoolId(result.docId || docId);
 
-            const users = result.data.users || [];
-            console.log(`[SYNC_LOG] Setting users from login result. Count: ${users.length}`);
-            setUsers(users);
+            // Save school credentials
+            localStorage.setItem('sba_school_id', result.docId || docId);
+            localStorage.setItem('sba_school_password', verifiedPassword);
 
-            if (users.length === 0) {
-                setAuthStage('admin-setup');
+            // Check if admin setup is needed
+            const hasUsers = result.data.users && result.data.users.length > 0;
+            if (!hasUsers) {
+                console.log('[AuthOverlay] No users found - proceeding to admin setup');
+                setCurrentStep('admin-setup');
             } else {
-                const autoLoginUser = await checkAutoLogin(docId, users);
-                if (autoLoginUser) {
-                    resumeSync();
-                    setAuthStage('authenticated');
-                } else {
-                    setAuthStage('user-selection');
-                }
+                console.log('[AuthOverlay] Users found - proceeding to user selection');
+                setUsers(result.data.users);
+                setCurrentStep('user-selection');
             }
-        } else if (result.status === 'access_denied' || result.status === 'created_pending_access') {
-            setAccessDenied(true);
-        } else if (result.status === 'wrong_password') {
-            setError("Incorrect password for this school/term combination.");
-        } else if (result.status === 'not_found') {
-            setShowRegisterConfirm(true);
-        } else if (result.status === 'error') {
-            setError(result.message || "An error occurred.");
+        } catch (error) {
+            console.error('[AuthOverlay] Login error:', error);
+            alert('Login failed. Please try again.');
         }
     };
 
-    const handleSchoolLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!schoolName || !academicYear || !academicTerm || !schoolPassword) {
-            setError("Please fill in all fields.");
-            return;
-        }
-        await executeLogin(schoolName, academicYear, academicTerm, schoolPassword);
-    };
+    // ========== ADMIN SETUP HANDLER ==========
 
-    const handleRegisterConfirm = async () => {
-        setShowRegisterConfirm(false);
-        setLoading(true);
-
-        const sanitizedSchoolName = schoolName.replace(/\//g, '');
-        const sanitizedAcademicYear = academicYear.replace(/\//g, '');
-        const combinedId = createDocumentId(sanitizedSchoolName, sanitizedAcademicYear, academicTerm);
-
-        const initialData: AppDataType = {
-            settings: {
-                ...INITIAL_SETTINGS,
-                schoolName: schoolName,
-                academicYear: academicYear,
-                academicTerm: academicTerm
-            },
-            students: INITIAL_STUDENTS,
-            subjects: INITIAL_SUBJECTS,
-            classes: INITIAL_CLASSES,
-            grades: INITIAL_GRADES,
-            assessments: INITIAL_ASSESSMENTS,
-            scores: INITIAL_SCORES,
-            reportData: INITIAL_REPORT_DATA,
-            classData: INITIAL_CLASS_DATA,
-            users: [],
-            deviceCredentials: [],
-        };
-
-        const result = await loginOrRegisterSchool(combinedId, schoolPassword, initialData, true);
-        setLoading(false);
-
-        if (result.status === 'created_pending_access') {
-            setAccessDenied(true);
-        } else if (result.status === 'error') {
-            setError(result.message || "An error occurred.");
-        } else if (result.status === 'success') {
-            localStorage.setItem('sba_school_id', result.docId);
-            localStorage.setItem('sba_school_password', schoolPassword);
-        }
-    };
-
-    // FIX: Sync users from DataContext (remote updates) to UserContext
-    const { users: dbUsers } = useData();
-    useEffect(() => {
-        if (dbUsers && dbUsers.length > 0) {
-            if (JSON.stringify(dbUsers) !== JSON.stringify(users)) {
-                console.log("Syncing users from DataContext to UserContext");
-                setUsers(dbUsers);
-            }
-        }
-    }, [dbUsers, setUsers, users]);
-
-    const handleAdminSetupComplete = async (users: User[], adminPassword?: string) => {
-        if (!currentSchoolId || !schoolData) {
-            setError('Setup error: Missing school data. Please try logging in again.');
-            return;
-        }
-
+    const handleAdminSetup = async (users: User[], adminPassword?: string) => {
         try {
-            setError(null);
-            await updateUsers(currentSchoolId, users);
-            setUsers(users);
-            loadImportedData({ users }, false);
+            console.log('[AuthOverlay] 👤 Setting up admin user');
 
-            if (adminPassword && users.length > 0) {
-                const adminUser = users[0];
-                const success = await login(adminUser.id, adminPassword);
-
-                if (success) {
-                    localStorage.setItem('sba_user_id', String(adminUser.id));
-                    localStorage.setItem('sba_user_password', adminPassword);
-                    saveDeviceCredential(currentSchoolId, adminUser.id);
-                    resumeSync();
-                    setAuthStage('authenticated');
-                } else {
-                    setError('Setup completed but auto-login failed. Please select your user and login.');
-                    setAuthStage('user-selection');
-                }
-            } else {
-                setError('Setup completed. Please select your user and login.');
-                setAuthStage('user-selection');
+            // In setup mode, we expect at least one user (the admin) and a password
+            if (users.length === 0 || !adminPassword) {
+                throw new Error('Invalid admin setup data');
             }
-        } catch (err) {
-            console.error('Failed to complete admin setup:', err);
-            const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
-            setError(`Failed to save users: ${errorMessage}. Please try again.`);
+
+            const adminUser = users[0];
+
+            setUsers(users);
+
+            // Update school data with new users
+            if (currentSchoolId) {
+                // Explicitly save to Firestore first to ensure persistence
+                const { updateUsers } = await import('../services/firebaseService');
+                await updateUsers(currentSchoolId, users);
+                console.log('[AuthOverlay] ✅ Users saved to Firestore');
+
+                // Then update local state which might trigger dirty check but data is already safe
+                loadImportedData({ users: users }, false);
+            }
+
+            // Auto-login as admin - call UserContext.login with (userId, password, userOverride)
+            await login(adminUser.id, adminPassword, adminUser);
+            setUserPassword(adminPassword);
+
+            // Save user credentials
+            localStorage.setItem('sba_user_id', adminUser.id.toString());
+            localStorage.setItem('sba_user_password', adminPassword);
+
+            // Complete authentication
+            setCurrentStep('authenticated');
+            resumeSync();
+
+            console.log('[AuthOverlay] ✅ Admin setup complete - authenticated');
+        } catch (error) {
+            console.error('[AuthOverlay] Admin setup error:', error);
+            alert('Failed to set up admin user');
         }
     };
+
+    // ========== USER SELECTION HANDLERS ==========
 
     const handleUserLogin = async (userId: number, password: string): Promise<boolean> => {
-        const success = await login(userId, password);
+        try {
+            const user = users.find(u => u.id === userId);
+            if (!user) {
+                console.error('[AuthOverlay] User not found:', userId);
+                return false;
+            }
 
-        if (success && currentSchoolId) {
-            localStorage.setItem('sba_user_id', String(userId));
+            console.log('[AuthOverlay] 👤 User logged in:', user.name);
+
+            // Verify password hash
+            const { hashPassword } = await import('../services/authService');
+            const hashedInput = await hashPassword(password);
+
+            if (user.passwordHash !== hashedInput) {
+                console.warn('[AuthOverlay] Password mismatch for user:', user.name);
+                return false;
+            }
+
+            // Login successful - call UserContext.login with (userId, password)
+            await login(user.id, password);
+            setUserPassword(password);
+
+            // Save user credentials
+            localStorage.setItem('sba_user_id', user.id.toString());
             localStorage.setItem('sba_user_password', password);
-            saveDeviceCredential(currentSchoolId, userId);
+
+            // Complete authentication
+            setCurrentStep('authenticated');
             resumeSync();
-            setAuthStage('authenticated');
+
+            console.log('[AuthOverlay] ✅ User authentication complete');
             return true;
+        } catch (error) {
+            console.error('[AuthOverlay] User login error:', error);
+            return false;
         }
-
-        return false;
     };
 
-    const handleUserSetPassword = async (userId: number, password: string): Promise<void> => {
-        if (!currentSchoolId) return;
+    const handleSetPassword = async (userId: number, password: string): Promise<void> => {
+        try {
+            const user = users.find(u => u.id === userId);
+            if (!user) {
+                throw new Error('User not found');
+            }
 
-        const hashedPassword = await hashPassword(password);
-        await setUserPassword(userId, password);
+            console.log('[AuthOverlay] 🔑 Setting password for user:', user.name);
 
-        const users = schoolData?.users || [];
-        const updatedUsers = users.map(u =>
-            u.id === userId ? { ...u, passwordHash: hashedPassword } : u
-        );
-        await updateUsers(currentSchoolId, updatedUsers);
+            // Hash the password
+            const { hashPassword } = await import('../services/authService');
+            const hashedPassword = await hashPassword(password);
 
-        loadImportedData({ users: updatedUsers }, false);
-        localStorage.setItem('sba_user_id', String(userId));
-        localStorage.setItem('sba_user_password', password);
-        saveDeviceCredential(currentSchoolId, userId);
-        resumeSync();
-        setAuthStage('authenticated');
+            // Update user with hashed password
+            const updatedUser = { ...user, passwordHash: hashedPassword };
+            const updatedUsers = users.map(u => u.id === userId ? updatedUser : u);
+            setUsers(updatedUsers);
+
+            // Save to cloud
+            if (currentSchoolId) {
+                const { updateUsers } = await import('../services/firebaseService');
+                await updateUsers(currentSchoolId, updatedUsers);
+            }
+
+            // Auto-login after setting password - call UserContext.login with (userId, password)
+            await login(user.id, password);
+            setUserPassword(password);
+
+            // Save user credentials
+            localStorage.setItem('sba_user_id', user.id.toString());
+            localStorage.setItem('sba_user_password', password);
+
+            // Complete authentication
+            setCurrentStep('authenticated');
+            resumeSync();
+
+            console.log('[AuthOverlay] ✅ Password set and user authenticated');
+        } catch (error) {
+            console.error('[AuthOverlay] Set password error:', error);
+            throw error;
+        }
     };
 
+    // ========== RENDER ==========
+
+    // Show loading state while restoring session
     if (restoringSession) {
         return (
-            <div className="fixed inset-0 bg-gray-900 z-50 flex items-center justify-center p-4">
+            <div className="fixed inset-0 bg-gray-900 bg-opacity-95 z-50 flex items-center justify-center">
                 <div className="text-center">
-                    <svg className="animate-spin h-12 w-12 text-white mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <p className="text-white text-lg font-medium">Restoring your session...</p>
+                    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4"></div>
+                    <p className="text-white text-lg">Restoring session...</p>
                 </div>
             </div>
         );
     }
 
-    if (authStage === 'authenticated') {
+    // Show session restore dialog
+    if (showSessionRestore && sessionInfo) {
+        return (
+            <SessionRestoreDialog
+                schoolName={sessionInfo.schoolName}
+                userName={sessionInfo.userName}
+                onContinue={handleContinueSession}
+                onLogout={handleLogoutSession}
+            />
+        );
+    }
+
+    // Show registration pending dialog
+    if (showRegistrationPending) {
+        return (
+            <RegistrationPendingDialog
+                schoolName={pendingSchoolName}
+                onClose={() => {
+                    setShowRegistrationPending(false);
+                    setPendingSchoolName('');
+                    setCurrentStep('welcome');
+                }}
+            />
+        );
+    }
+
+    if (currentStep === 'authenticated') {
         return <>{children}</>;
     }
 
-    if (authStage === 'admin-setup') {
-        return (
-            <AdminSetup
-                mode="setup"
-                users={[]}
-                onComplete={handleAdminSetupComplete}
-                externalError={error}
-            />
-        );
-    }
+    // Render appropriate screen based on current step
+    switch (currentStep) {
+        case 'welcome':
+            return (
+                <WelcomeScreen
+                    onRegister={handleRegisterClick}
+                    onLogin={handleLoginClick}
+                />
+            );
 
-    if (authStage === 'user-selection' && schoolData) {
-        return (
-            <UserSelection
-                users={(users && users.length > 0) ? users : (schoolData?.users || [])}
-                onLogin={handleUserLogin}
-                onSetPassword={handleUserSetPassword}
-            />
-        );
-    }
+        case 'school-list':
+            return (
+                <SchoolListScreen
+                    onSelectSchool={handleSchoolSelect}
+                    onBack={handleBackToWelcome}
+                />
+            );
 
-    // School login screen
-    return (
-        <div className="fixed inset-0 bg-gray-900 bg-opacity-95 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full">
-                <div className="text-center mb-8">
-                    <h2 className="text-3xl font-bold text-gray-800">SBA Pro Master</h2>
-                    <p className="text-gray-600 mt-2">School Database Login</p>
-                </div>
+        case 'password':
+            return selectedSchool ? (
+                <PasswordScreen
+                    school={selectedSchool}
+                    onPasswordVerified={handlePasswordVerified}
+                    onBack={handleBackToSchoolList}
+                />
+            ) : null;
 
-                {accessDenied ? (
-                    <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
-                        <div className="flex">
-                            <div className="flex-shrink-0">
-                                <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                                </svg>
-                            </div>
-                            <div className="ml-3">
-                                <p className="text-sm text-yellow-700">
-                                    Access Denied. Please contact the administrator on <a href="tel:0542410613" className="font-bold underline hover:text-yellow-800">0542410613</a> for access.
-                                </p>
-                                <button
-                                    onClick={() => setAccessDenied(false)}
-                                    className="mt-2 text-sm text-yellow-700 underline hover:text-yellow-600"
-                                >
-                                    Back to Login
-                                </button>
-                            </div>
-                        </div>
+        case 'year-term':
+            return selectedSchool ? (
+                <YearTermSelector
+                    schoolName={selectedSchool.displayName}
+                    onSelectPeriod={handlePeriodSelect}
+                    onBack={handleBackToPassword}
+                />
+            ) : null;
+
+        case 'register':
+            return (
+                <RegistrationForm
+                    onRegister={handleRegistration}
+                    onBack={handleBackToWelcome}
+                />
+            );
+
+        case 'admin-setup':
+            return (
+                <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+                    <div className="w-full max-w-md">
+                        <AdminSetup
+                            mode="setup"
+                            users={[]}
+                            onComplete={handleAdminSetup}
+                        />
                     </div>
-                ) : (
-                    <form onSubmit={handleSchoolLogin} className="space-y-4">
-                        {error && (
-                            <div className="bg-red-50 border-l-4 border-red-500 p-4 text-sm text-red-700">
-                                {error}
-                            </div>
-                        )}
-
-                        <div className="relative">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">School Name</label>
-                            <input
-                                type="text"
-                                value={schoolName}
-                                onChange={handleSchoolNameChange}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                                placeholder="e.g. St. Mary's School"
-                                required
-                            />
-                            {showSuggestions && schoolSuggestions.length > 0 && (
-                                <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto mt-1">
-                                    {schoolSuggestions.map((suggestion, index) => (
-                                        <li
-                                            key={index}
-                                            className="px-4 py-2 hover:bg-blue-100 cursor-pointer text-sm text-gray-700"
-                                            onClick={() => handleSuggestionClick(suggestion)}
-                                        >
-                                            {suggestion}
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                            {availableYears.length > 0 && (
-                                <p className="text-xs text-green-600 mt-1">
-                                    Found existing school records. Select a year below or type a new one.
-                                </p>
-                            )}
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Academic Year</label>
-                                <div className="relative">
-                                    <input
-                                        type="text"
-                                        inputMode="decimal"
-                                        value={academicYear}
-                                        onChange={(e) => {
-                                            // Reject alphabetic characters
-                                            const value = e.target.value.replace(/[a-zA-Z]/g, '');
-                                            setAcademicYear(value);
-                                        }}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                                        placeholder="e.g. 2023/2024"
-                                        required
-                                        list="available-years"
-                                    />
-                                    <datalist id="available-years">
-                                        {availableYears.map((year) => (
-                                            <option key={year} value={year} />
-                                        ))}
-                                    </datalist>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Academic Term</label>
-                                <select
-                                    value={academicTerm}
-                                    onChange={(e) => setAcademicTerm(e.target.value)}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                                    required
-                                >
-                                    <option value="">Select Term</option>
-                                    <option value="First Term">First Term</option>
-                                    <option value="Second Term">Second Term</option>
-                                    <option value="Third Term">Third Term</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                            <input
-                                type="password"
-                                value={schoolPassword}
-                                onChange={(e) => setSchoolPassword(e.target.value)}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                                placeholder="Enter password"
-                                required
-                            />
-                        </div>
-
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
-                        >
-                            {loading ? (
-                                <>
-                                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                    Processing...
-                                </>
-                            ) : (
-                                'Login / Register'
-                            )}
-                        </button>
-
-                        {/* DEBUG QUICK LOGIN */}
-                        {/* @ts-ignore */}
-                        {import.meta.env.VITE_USE_EMULATOR === 'true' && (
-                            <button
-                                type="button"
-                                onClick={async () => {
-                                    if (loading) return;
-                                    setLoading(true);
-                                    setError(null);
-                                    try {
-                                        const debugSchoolName = "Debug School";
-                                        const debugYear = new Date().getFullYear().toString();
-                                        const debugTerm = "First Term";
-                                        const debugPass = "admin123";
-
-                                        console.log("[AuthOverlay] ⚡ Attempting Quick Debug Login...");
-
-                                        // We construct ID manually to match logic
-                                        const sanitizedSchoolName = debugSchoolName.replace(/\//g, '');
-                                        const sanitizedAcademicYear = debugYear.replace(/\//g, '');
-                                        const combinedId = createDocumentId(sanitizedSchoolName, sanitizedAcademicYear, debugTerm);
-
-                                        // Mock correct data for state
-                                        setSchoolName(debugSchoolName);
-                                        setAcademicYear(debugYear);
-                                        setAcademicTerm(debugTerm);
-                                        setSchoolPassword(debugPass);
-
-                                        // Attempt Register/Login with createIfMissing=true
-                                        const result = await loginOrRegisterSchool(combinedId, debugPass, {
-                                            settings: {
-                                                ...INITIAL_SETTINGS,
-                                                schoolName: debugSchoolName,
-                                                academicYear: debugYear,
-                                                academicTerm: debugTerm,
-                                                currentTerm: debugTerm,
-                                            },
-                                            // Seed with some dummy data if creating
-                                            classes: [{ id: 1, name: "Class 1" }],
-                                            subjects: [{ id: 1, subject: "Mathematics" }],
-                                            students: []
-                                        }, true); // true = FORCE CREATE if missing
-
-                                        if (result.status === 'success' || result.status === 'created_pending_access') {
-                                            console.log("[AuthOverlay] ⚡ Quick Login Success!");
-                                            // Proceed to execute login logic
-                                            const success = await handleLoginSuccess(combinedId, result.data, debugPass);
-                                        } else {
-                                            throw new Error(`Debug Login Failed: ${result.status}`);
-                                        }
-
-                                    } catch (err: any) {
-                                        console.error("Quick Debug Login Error", err);
-                                        setError(err.message);
-                                        setLoading(false);
-                                    }
-                                }}
-                                className="w-full mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg shadow-md border-2 border-purple-400 border-dashed flex items-center justify-center gap-2"
-                            >
-                                <span>⚡ Quick Debug School (Auto-Create)</span>
-                            </button>
-                        )}
-                    </form>
-                )}
-            </div>
-
-            <ConfirmationModal
-                isOpen={showRegisterConfirm}
-                onClose={() => setShowRegisterConfirm(false)}
-                onConfirm={handleRegisterConfirm}
-                title="No Existing Database Found"
-                message={
-                    <span>
-                        No existing database found for these credentials. Would you like to register? <br /> <br />
-                        <span className="font-bold underline bg-yellow-200 px-1 rounded">Note:</span> <br />
-                        You will need to contact the administrator on <a href="tel:0542410613" className="font-bold underline text-blue-600 hover:text-blue-800">0542410613</a> for access.
-                    </span>
-                }
-                variant="info"
-                confirmText="Register"
-            />
-
-            {/* Browser Recommendation - Non-obtrusive */}
-            {!navigator.userAgent.match(/Chrome|Edg/) && (
-                <div className="absolute bottom-4 left-0 right-0 text-center px-4 animate-fade-in text-white/80 text-xs">
-                    <p className="bg-black/40 backdrop-blur-md inline-block px-4 py-2 rounded-full border border-white/10 shadow-lg">
-                        ℹ️ For the best experience, we recommend using <a href="https://www.google.com/chrome/" target="_blank" rel="noopener noreferrer" className="text-yellow-300 hover:underline font-bold">Google Chrome</a>.
-                    </p>
                 </div>
-            )}
-        </div>
-    );
+            );
+
+        case 'user-selection':
+            return (
+                <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+                    <div className="w-full max-w-md">
+                        <UserSelection
+                            users={users}
+                            onLogin={handleUserLogin}
+                            onSetPassword={handleSetPassword}
+                        />
+                    </div>
+                </div>
+            );
+
+        default:
+            return null;
+    }
 };
 
 export default AuthOverlay;

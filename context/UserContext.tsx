@@ -17,7 +17,7 @@ interface UserContextType {
     isAuthenticated: boolean;
     users: User[];
     setUsers: (users: User[]) => void;
-    login: (userId: number, password: string) => Promise<boolean>;
+    login: (userId: number, password: string, userOverride?: User) => Promise<boolean>;
     logout: () => void;
     setPassword: (userId: number, password: string) => Promise<void>;
     checkAutoLogin: (schoolId: string, users: User[]) => Promise<User | null>;
@@ -73,8 +73,8 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     /**
      * Login with user ID and password
      */
-    const login = async (userId: number, password: string): Promise<boolean> => {
-        const user = users.find(u => u.id === userId);
+    const login = async (userId: number, password: string, userOverride?: User): Promise<boolean> => {
+        const user = userOverride || users.find(u => u.id === userId);
 
         if (!user) {
             return false;

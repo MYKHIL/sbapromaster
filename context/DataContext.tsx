@@ -799,27 +799,47 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const refreshType = keysToRefresh ? `Partial (${keysToRefresh.join(', ')})` : 'FULL';
             console.log(`[DataContext] 📥 Manual refresh initiated - fetching data from cloud [${refreshType}]...`);
 
+            // 1. Fetch Main Document (settings, users, access codes)
             const data = await getSchoolData(schoolId, keysToRefresh);
-            if (data) {
-                console.log('[DataContext] ✅ Data fetched successfully, applying updates...');
 
-                // CRITICAL: Explicitly clear pending score changes tracker so that 
-                // loadImportedData allows overwriting local scores with server data
-                // IF we are refreshing scores.
-                // Strict safety: If we are refreshing 'scores', we clear pending checks.
+            if (data) {
+                console.log('[DataContext] ✅ Main document fetched, applying updates...');
+
+                // 2. Clear relevant pending states
                 if (!keysToRefresh || keysToRefresh.includes('scores')) {
                     pendingScoreChanges.current.clear();
                 }
 
-                // Mark as manual remote update
+                // 3. Mark as remote update & Apply Main Doc Data
                 isRemoteUpdate.current = true;
                 loadImportedData(data);
+
+                // 4. Force Fetch Subcollections (The "Missing Link" for Global Refresh)
+                // This ensures we actually download fresh Students, Classes, etc.
+                const promises: Promise<any>[] = [];
+
+                // A) Metadata (Classes, Subjects, Assessments)
+                if (!keysToRefresh || keysToRefresh.some(k => ['classes', 'subjects', 'assessments'].includes(k))) {
+                    console.log('[DataContext] 🔄 Force refreshing Metadata (Classes, Subjects, Assessments)...');
+                    promises.push(loadMetadata(true));
+                }
+
+                // B) Students (Only if requested or FULL refresh)
+                if (!keysToRefresh || keysToRefresh.includes('students')) {
+                    console.log('[DataContext] 🔄 Force refreshing Students subcollection...');
+                    promises.push(loadStudents(undefined, true));
+                }
+
+                // C) Scores (Granular only, usually) 
+                // We don't force load ALL scores on global refresh to avoid huge reads.
+                // But if specific Class/Subject is active, loadScores might be triggered by UI.
+
+                await Promise.all(promises);
+
                 console.log('[DataContext] 🎉 Manual refresh complete');
 
-                // CRITICAL: Clear all local drafts and effectively "reset" the UI state
+                // 5. Cleanup Local State
                 draftScores.current.clear();
-
-                // Optimized Clear: Only clear dirty fields for what we refreshed
                 if (keysToRefresh) {
                     keysToRefresh.forEach(k => dirtyFields.current.delete(k));
                 } else {
@@ -827,14 +847,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 }
 
                 setHasLocalChanges(dirtyFields.current.size > 0);
-                setDraftVersion(v => v + 1); // Force inputs to re-read from the new (clean) state
+                setDraftVersion(v => v + 1);
             } else {
                 console.log('[DataContext] ⚠️ No data found for this school ID');
             }
         } catch (error) {
             console.error('[DataContext] ❌ Failed to refresh data from cloud:', error);
-
-            // Show database error modal for critical errors
             showDatabaseError(error);
         } finally {
             setIsSyncing(false);
@@ -858,6 +876,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
                     // Mark as remote update to allow processing
                     loadImportedData(data);
+
+                    // -----------------------------------------------------------------
+                    // CRITICAL: Eager fetch subcollections on LOGIN to satisfy user request:
+                    // "loaded once when i log in... switching... should not reload"
+                    // -----------------------------------------------------------------
+                    console.log('[DataContext] 🚀 Eagerly loading Metadata & Students for "Load Once" optimization...');
+
+                    // Fire and forget (or await if we want to block UI - firing parallel is faster)
+                    // We don't block locally because imported data is already available for basic UI
+                    loadMetadata();
+                    loadStudents();
                 } else {
                     console.log('[DataContext] ⚠️ No initial data found for school');
                 }

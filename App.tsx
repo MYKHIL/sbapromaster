@@ -37,6 +37,9 @@ const PageWrapper: React.FC<{ name: Page; currentPage: Page; children: React.Rea
 
 // Renders the currently active page, causing it to remount on change.
 const ActivePage: React.FC<{ page: Page; onNavigate: (page: Page) => void }> = ({ page, onNavigate }) => {
+  // Data loading is now handled centrally in DataContext (fetchInitialData)
+  // This ensures "Load Once" behavior.
+
   switch (page) {
     case 'Dashboard': return <Dashboard onNavigate={onNavigate} />;
     case 'School Setup': return <Settings />;

@@ -47,7 +47,11 @@ const GradingSystem: React.FC = () => {
 
         // Check for gaps
         for (let i = 0; i < sortedGrades.length - 1; i++) {
-            if (sortedGrades[i].maxScore + 1 !== sortedGrades[i + 1].minScore) {
+            const diff = sortedGrades[i + 1].minScore - sortedGrades[i].maxScore;
+            // Allow a gap of 1 (integer boundaries) or less (decimal precision)
+            // e.g. 59 -> 60 (diff 1) is ok. 59.9 -> 60 (diff 0.1) is ok.
+            // But 59 -> 61 (diff 2) is a gap.
+            if (diff > 1 + Number.EPSILON) {
                 issues.push(`There is a gap between ${sortedGrades[i].maxScore}% and ${sortedGrades[i + 1].minScore}%.`);
             }
         }

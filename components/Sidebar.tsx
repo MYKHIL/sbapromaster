@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { Page } from '../types';
 import { useUser } from '../context/UserContext';
 import { useData } from '../context/DataContext';
+import { APP_VERSION } from '../constants';
 
 interface SidebarProps {
   currentPage: Page;
@@ -151,7 +152,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage }) => {
         </nav>
         <div className={`mt-auto p-2 text-center text-xs text-gray-400 transition-opacity duration-300 flex-shrink-0 ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>
           <p>&copy; 2024 SBA Pro Master</p>
-          <p>Version 5.5.9</p>
+          <p>Version {APP_VERSION}</p>
         </div>
       </aside>
     </>

@@ -1,6 +1,9 @@
 // MAINTENANCE MODE: Set to false to show "Under Construction" page
 export const SITE_ACTIVE = true;
 
+// APP VERSION: Single source of truth for version number
+export const APP_VERSION = '6.0.5';
+
 import type { SchoolSettings, Student, Subject, Class, Grade, Assessment, Score, ReportSpecificData, ClassSpecificData } from './types';
 
 // SYNC OVERLAY: Set to false to disable the blocking overlay during sync

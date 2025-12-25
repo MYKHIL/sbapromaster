@@ -96,6 +96,84 @@ export const createDocumentId = (schoolName: string, academicYear: string, acade
     return `${sanitizedSchool}_${sanitizedYear}_${sanitizedTerm}`;
 };
 
+// -----------------------------------------------------------------------------
+// CACHING UTILITIES (TTL-based localStorage)
+// -----------------------------------------------------------------------------
+
+interface CachedData<T> {
+    data: T;
+    timestamp: number;
+    ttl: number; // Time to live in milliseconds
+}
+
+/**
+ * Store data in localStorage with TTL
+ */
+const setCachedData = <T>(key: string, data: T, ttlMs: number): void => {
+    try {
+        const cached: CachedData<T> = {
+            data,
+            timestamp: Date.now(),
+            ttl: ttlMs
+        };
+        localStorage.setItem(key, JSON.stringify(cached));
+    } catch (e) {
+        console.warn(`[Cache] Failed to cache ${key}:`, e);
+    }
+};
+
+/**
+ * Retrieve data from localStorage if not expired
+ */
+const getCachedData = <T>(key: string): T | null => {
+    try {
+        const item = localStorage.getItem(key);
+        if (!item) return null;
+
+        const cached: CachedData<T> = JSON.parse(item);
+        const age = Date.now() - cached.timestamp;
+
+        if (age > cached.ttl) {
+            // Expired - remove from cache
+            localStorage.removeItem(key);
+            return null;
+        }
+
+        return cached.data;
+    } catch (e) {
+        console.warn(`[Cache] Failed to read cache ${key}:`, e);
+        return null;
+    }
+};
+
+/**
+ * Clear specific cache key
+ */
+const clearCache = (key: string): void => {
+    try {
+        localStorage.removeItem(key);
+    } catch (e) {
+        console.warn(`[Cache] Failed to clear ${key}:`, e);
+    }
+};
+
+/**
+ * Clear all auth-related caches
+ */
+export const clearAuthCaches = (): void => {
+    clearCache('auth_school_list');
+    // Clear all period caches (they start with auth_periods_)
+    try {
+        Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('auth_periods_')) {
+                localStorage.removeItem(key);
+            }
+        });
+    } catch (e) {
+        console.warn('[Cache] Failed to clear auth caches:', e);
+    }
+};
+
 const sanitizeForFirestore = (obj: any): any => {
     if (obj === undefined) return null;
     if (obj === null) return null;
@@ -210,6 +288,165 @@ export const fetchScoresForClass = async (docId: string, classId: number, subjec
     } catch (e) {
         console.error("Error fetching legacy scores:", e);
         return [];
+    }
+};
+
+// -----------------------------------------------------------------------------
+// AUTHENTICATION FUNCTIONS (Read-Optimized with Caching)
+// -----------------------------------------------------------------------------
+
+export interface SchoolListItem {
+    displayName: string;
+    docId: string;
+}
+
+export interface SchoolPeriod {
+    year: string;
+    term: string;
+    docId: string;
+}
+
+/**
+ * Get list of all schools with actual names (CACHED 24hrs)
+ * Read Cost: 1 list operation (only on cache miss)
+ */
+export const getSchoolList = async (): Promise<SchoolListItem[]> => {
+    const CACHE_KEY = 'auth_school_list';
+    const TTL = 24 * 60 * 60 * 1000; // 24 hours
+
+    // Try cache first
+    const cached = getCachedData<SchoolListItem[]>(CACHE_KEY);
+    if (cached) {
+        console.log('[Auth] Using cached school list');
+        return cached;
+    }
+
+    console.log('[Auth] Fetching school list from Firestore...');
+    try {
+        const schoolsRef = collection(db, 'schools');
+        const snapshot = await getDocs(schoolsRef);
+
+        const schools: SchoolListItem[] = [];
+        const seenNames = new Set<string>(); // Deduplicate by school name
+
+        snapshot.forEach(doc => {
+            const data = doc.data();
+
+            // Skip schools with Access: false
+            if (data.Access === false) {
+                console.log(`[Auth] Skipping school ${doc.id} - Access denied`);
+                return;
+            }
+
+            const displayName = data.settings?.schoolName || 'Unknown School';
+
+            // Only add unique school names
+            if (!seenNames.has(displayName)) {
+                seenNames.add(displayName);
+                schools.push({
+                    displayName,
+                    docId: doc.id
+                });
+            }
+        });
+
+        // Sort alphabetically
+        schools.sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+        // Cache the result
+        setCachedData(CACHE_KEY, schools, TTL);
+        console.log(`[Auth] Fetched ${schools.length} unique schools`);
+
+        return schools;
+    } catch (error) {
+        console.error('[Auth] Error fetching school list:', error);
+        return [];
+    }
+};
+
+/**
+ * Get all available years and terms for a specific school (CACHED 1hr per school)
+ * Read Cost: 1 list operation per school (only on cache miss)
+ */
+export const getSchoolYearsAndTerms = async (schoolName: string): Promise<SchoolPeriod[]> => {
+    const CACHE_KEY = `auth_periods_${sanitizeSchoolName(schoolName)}`;
+    const TTL = 60 * 60 * 1000; // 1 hour
+
+    // Try cache first
+    const cached = getCachedData<SchoolPeriod[]>(CACHE_KEY);
+    if (cached) {
+        console.log(`[Auth] Using cached periods for ${schoolName}`);
+        return cached;
+    }
+
+    console.log(`[Auth] Fetching periods for ${schoolName}...`);
+    try {
+        const schoolsRef = collection(db, 'schools');
+        const snapshot = await getDocs(schoolsRef);
+
+        const periods: SchoolPeriod[] = [];
+
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const docSchoolName = data.settings?.schoolName;
+
+            // Match by actual school name
+            if (docSchoolName === schoolName) {
+                periods.push({
+                    year: data.settings?.academicYear || 'Unknown Year',
+                    term: data.settings?.academicTerm || 'Unknown Term',
+                    docId: doc.id
+                });
+            }
+        });
+
+        // Sort by year (descending) then term
+        periods.sort((a, b) => {
+            const yearCompare = b.year.localeCompare(a.year);
+            if (yearCompare !== 0) return yearCompare;
+            return a.term.localeCompare(b.term);
+        });
+
+        // Cache the result
+        setCachedData(CACHE_KEY, periods, TTL);
+        console.log(`[Auth] Found ${periods.length} periods for ${schoolName}`);
+
+        return periods;
+    } catch (error) {
+        console.error(`[Auth] Error fetching periods for ${schoolName}:`, error);
+        return [];
+    }
+};
+
+/**
+ * Verify password for a school (Field-level read - only fetches password)
+ * Read Cost: 1 document read (minimal data transfer)
+ */
+export const verifySchoolPassword = async (docId: string, password: string): Promise<boolean> => {
+    try {
+        console.log(`[Auth] Verifying password for ${docId}...`);
+        const docRef = doc(db, 'schools', docId);
+        const docSnap = await getDoc(docRef);
+
+        if (!docSnap.exists()) {
+            console.warn(`[Auth] School ${docId} not found`);
+            return false;
+        }
+
+        const data = docSnap.data();
+        const storedPassword = data.password;
+
+        if (!storedPassword) {
+            console.warn(`[Auth] No password set for ${docId}`);
+            return false;
+        }
+
+        const isValid = storedPassword === password;
+        console.log(`[Auth] Password ${isValid ? 'valid' : 'invalid'}`);
+        return isValid;
+    } catch (error) {
+        console.error(`[Auth] Error verifying password:`, error);
+        return false;
     }
 };
 
@@ -495,10 +732,18 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
                 return { status: 'not_found' };
             }
             console.log(`[FIREBASE_DEBUG] Creating new school document: ${docId}`);
-            const newData = { ...initialData, password, Access: false };
+            // Respect Access from initialData (allows debug mode to set Access: true)
+            const newData = { ...initialData, password, Access: initialData.Access ?? false };
             await setDoc(doc(db, "schools", docId), newData);
-            console.log(`[FIREBASE_DEBUG] New document created. Returning 'created_pending_access'.`);
-            return { status: 'created_pending_access' };
+
+            // If Access is true, return success (debug mode). Otherwise, pending.
+            if (newData.Access === true) {
+                console.log(`[FIREBASE_DEBUG] New document created with Access=true. Returning 'success'.`);
+                return { status: 'success', data: newData, docId: docId };
+            } else {
+                console.log(`[FIREBASE_DEBUG] New document created with Access=false. Returning 'created_pending_access'.`);
+                return { status: 'created_pending_access' };
+            }
         }
     } catch (e: any) {
         console.error(`[FIREBASE_DEBUG] Error in loginOrRegisterSchool:`, e);
