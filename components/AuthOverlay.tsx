@@ -234,24 +234,31 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
         });
 
         if (targetIndex !== ACTIVE_DATABASE_INDEX) {
-            console.log(`[AuthOverlay] 🔄 Switching Database to Index ${targetIndex} for school: ${sName}`);
-            localStorage.setItem('active_database_index', String(targetIndex));
+            // CRITICAL CHECK: In Emulator Mode, we DO NOT switch databases.
+            // We stay on the "Emulator Project" (Index 2) to prevent mismatched Project IDs.
+            // @ts-ignore
+            if (import.meta.env.VITE_USE_EMULATOR === 'true') {
+                console.log(`[AuthOverlay] 🛡️ Debug Mode: Ignoring database switch request for ${sName}. Staying on current index.`);
+            } else {
+                console.log(`[AuthOverlay] 🔄 Switching Database to Index ${targetIndex} for school: ${sName}`);
+                localStorage.setItem('active_database_index', String(targetIndex));
 
-            // Save credentials for auto-login after reload
-            const credentials = {
-                schoolName: sName,
-                academicYear: aYear,
-                academicTerm: aTerm,
-                password: pwd
-            };
-            sessionStorage.setItem('sba_pending_login', JSON.stringify(credentials));
+                // Save credentials for auto-login after reload
+                const credentials = {
+                    schoolName: sName,
+                    academicYear: aYear,
+                    academicTerm: aTerm,
+                    password: pwd
+                };
+                sessionStorage.setItem('sba_pending_login', JSON.stringify(credentials));
 
-            setError(`🔄 Switching to dedicated database for ${sName}...`);
+                setError(`🔄 Switching to dedicated database for ${sName}...`);
 
-            setTimeout(() => {
-                window.location.reload();
-            }, 800);
-            return; // Stop execution here
+                setTimeout(() => {
+                    window.location.reload();
+                }, 800);
+                return; // Stop execution here
+            }
         }
         // ---------------------------------------------------------
 
@@ -274,7 +281,9 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             deviceCredentials: [],
         };
 
+        console.log(`[AUTH_DEBUG] executeLogin calling loginOrRegisterSchool...`);
         const result = await loginOrRegisterSchool(combinedId, pwd, initialData, false);
+        console.log(`[AUTH_DEBUG] loginOrRegisterSchool returned:`, result.status);
         setLoading(false);
 
         if (result.status === 'success') {
@@ -626,6 +635,69 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                                 'Login / Register'
                             )}
                         </button>
+
+                        {/* DEBUG QUICK LOGIN */}
+                        {/* @ts-ignore */}
+                        {import.meta.env.VITE_USE_EMULATOR === 'true' && (
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    if (loading) return;
+                                    setLoading(true);
+                                    setError(null);
+                                    try {
+                                        const debugSchoolName = "Debug School";
+                                        const debugYear = new Date().getFullYear().toString();
+                                        const debugTerm = "First Term";
+                                        const debugPass = "admin123";
+
+                                        console.log("[AuthOverlay] ⚡ Attempting Quick Debug Login...");
+
+                                        // We construct ID manually to match logic
+                                        const sanitizedSchoolName = debugSchoolName.replace(/\//g, '');
+                                        const sanitizedAcademicYear = debugYear.replace(/\//g, '');
+                                        const combinedId = createDocumentId(sanitizedSchoolName, sanitizedAcademicYear, debugTerm);
+
+                                        // Mock correct data for state
+                                        setSchoolName(debugSchoolName);
+                                        setAcademicYear(debugYear);
+                                        setAcademicTerm(debugTerm);
+                                        setSchoolPassword(debugPass);
+
+                                        // Attempt Register/Login with createIfMissing=true
+                                        const result = await loginOrRegisterSchool(combinedId, debugPass, {
+                                            settings: {
+                                                ...INITIAL_SETTINGS,
+                                                schoolName: debugSchoolName,
+                                                academicYear: debugYear,
+                                                academicTerm: debugTerm,
+                                                currentTerm: debugTerm,
+                                            },
+                                            // Seed with some dummy data if creating
+                                            classes: [{ id: 1, name: "Class 1" }],
+                                            subjects: [{ id: 1, subject: "Mathematics" }],
+                                            students: []
+                                        }, true); // true = FORCE CREATE if missing
+
+                                        if (result.status === 'success' || result.status === 'created_pending_access') {
+                                            console.log("[AuthOverlay] ⚡ Quick Login Success!");
+                                            // Proceed to execute login logic
+                                            const success = await handleLoginSuccess(combinedId, result.data, debugPass);
+                                        } else {
+                                            throw new Error(`Debug Login Failed: ${result.status}`);
+                                        }
+
+                                    } catch (err: any) {
+                                        console.error("Quick Debug Login Error", err);
+                                        setError(err.message);
+                                        setLoading(false);
+                                    }
+                                }}
+                                className="w-full mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg shadow-md border-2 border-purple-400 border-dashed flex items-center justify-center gap-2"
+                            >
+                                <span>⚡ Quick Debug School (Auto-Create)</span>
+                            </button>
+                        )}
                     </form>
                 )}
             </div>

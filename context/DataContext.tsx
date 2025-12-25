@@ -128,11 +128,20 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Database error handler
     const { showError: showDatabaseError } = useDatabaseError();
 
-    // CRITICAL: Get schoolId first (non-namespaced)
-    const [schoolId, setSchoolId] = useLocalStorage<string | null>('sba-school-id', null);
+    // Check for Emulator Mode
+    // @ts-ignore
+    const isEmulator = import.meta.env.VITE_USE_EMULATOR === 'true';
 
     // Helper to create school-specific localStorage keys
-    const getKey = (base: string) => schoolId ? `sba-${schoolId}-${base}` : `sba-${base}`;
+    const getKey = (base: string) => {
+        const prefix = isEmulator ? 'emulator-sba-' : 'sba-';
+        return schoolId ? `${prefix}${schoolId}-${base}` : `${prefix}${base}`;
+    };
+
+    // CRITICAL: Get schoolId first (non-namespaced or emulator-namespaced)
+    // We need to use a distinct key for schoolId in emulator mode to prevent cross-contamination
+    const schoolIdKey = isEmulator ? 'emulator-sba-school-id' : 'sba-school-id';
+    const [schoolId, setSchoolId] = useLocalStorage<string | null>(schoolIdKey, null);
 
     // All data uses schoolId-namespaced keys
     const [settings, setSettings] = useLocalStorage<SchoolSettings>(getKey('settings'), INITIAL_SETTINGS);

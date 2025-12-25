@@ -1,7 +1,14 @@
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, onSnapshot, runTransaction, query, where, documentId, writeBatch, updateDoc, deleteField, Unsubscribe, limit, startAfter, orderBy, DocumentSnapshot } from "firebase/firestore";
+import { getFirestore, connectFirestoreEmulator, doc, getDoc, setDoc, collection, getDocs, onSnapshot, runTransaction, query, where, documentId, writeBatch, updateDoc, deleteField, Unsubscribe, limit, startAfter, orderBy, DocumentSnapshot, WriteBatch } from "firebase/firestore";
 import type { SchoolSettings, Student, Subject, Class, Grade, Assessment, Score, ReportSpecificData, ClassSpecificData, User, DeviceCredential, UserLog, OnlineUser, AppDataType } from '../types';
+
+// CACHE STORAGE
+// @ts-ignore
+const historyCache = new Map<string, { timestamp: number, data: AppDataType[] }>();
+// @ts-ignore
+const searchCache = new Map<string, { timestamp: number, results: any }>();
+const CACHE_TTL = 60 * 1000; // 1 Minute Cache for frequent lookups
 // Re-export AppDataType so it's available
 export type { AppDataType };
 
@@ -35,12 +42,29 @@ const firebaseConfigs = [
     }
 ];
 
-const selectedConfig = firebaseConfigs[ACTIVE_DATABASE_INDEX] || firebaseConfigs[1];
-console.log(`[Firebase] Initializing with Database Index: ${ACTIVE_DATABASE_INDEX} (${selectedConfig['projectId']})`);
+const isEmulator = import.meta.env.VITE_USE_EMULATOR === 'true'; // @ts-ignore
+
+// In Emulator Mode, we ALWAYS use Index 2 (sba-pro-master-40f08) because that's what the Emulator is started with.
+const targetIndex = isEmulator ? 2 : ACTIVE_DATABASE_INDEX;
+
+const selectedConfig = firebaseConfigs[targetIndex] || firebaseConfigs[1];
+console.log(`[Firebase] Initializing with Database Index: ${targetIndex} (${selectedConfig['projectId']}) ${isEmulator ? '[EMULATOR FORCED]' : ''}`);
 
 const app = initializeApp(selectedConfig);
 const analytics = getAnalytics(app);
 export const db = getFirestore(app);
+
+// Check if we are in Debug/Emulator Mode
+// @ts-ignore
+if (import.meta.env.VITE_USE_EMULATOR === 'true') {
+    console.warn("⚠️ USING FIRESTORE EMULATOR ⚠️");
+    try {
+        connectFirestoreEmulator(db, '127.0.0.1', 8080);
+        console.log("✅ Main Firestore connected to emulator on 127.0.0.1:8080");
+    } catch (e) {
+        console.error("Failed to connect to emulator:", e);
+    }
+}
 
 // -----------------------------------------------------------------------------
 // UTILITIES
@@ -247,11 +271,20 @@ export const saveDataTransaction = async (
     updates: Partial<AppDataType>,
     deletions?: Record<string, string[]>
 ) => {
-    const batch = writeBatch(db);
-    let opCount = 0;
+    // Helper to manage batches
+    const executeBatch = async (operations: ((batch: WriteBatch) => void)[]) => {
+        const BATCH_SIZE = 450; // Safety margin below 500
+        for (let i = 0; i < operations.length; i += BATCH_SIZE) {
+            const batch = writeBatch(db);
+            const chunk = operations.slice(i, i + BATCH_SIZE);
+            chunk.forEach(op => op(batch));
+            await batch.commit();
+            console.log(`[Optimization] ✅ Committed batch chunk ${i / BATCH_SIZE + 1} (${chunk.length} ops)`);
+        }
+    };
 
     try {
-        const docRef = doc(db, "schools", docId);
+        const operations: ((batch: WriteBatch) => void)[] = [];
         const mainUpdates: any = {};
         const MAIN_KEYS = ['settings', 'userLogs', 'activeSessions', 'users', 'access', 'password'];
 
@@ -268,27 +301,12 @@ export const saveDataTransaction = async (
 
             for (const [subId, map] of Object.entries(subjectBuckets)) {
                 // Use a 'subject_id' document to hold all scores for that subject
-                // This is a "Wide Bucket". 
                 const bucketRef = doc(db, "schools", docId, "score_buckets", `subject_${subId}`);
-
-                // We use { merge: true } to update only specific fields
-                // To do this properly with a map, we need to construct a map with keys like "scoresMap.uuid"
-                // But batch.set with merge handles nested objects if provided as a whole object property?
-                // No, standard Set/Merge replaces the Key if top level.
-                // To merge deeply, we'd use batch.update with dot notation, but update requires existence.
-                // So we use set({ scoresMap: { [id]: data } }, {merge: true}) which merges at the `scoresMap` level?
-                // Actually, Firestore merge on `set` performs a deep merge of the data. 
-                // So `scoresMap: { A: 1 }` merged with existing `scoresMap: { B: 2 }` results in `{ A: 1, B: 2 }`?
-                // YES, Firestore `set` with `merge:true` merges maps.
-
-                batch.set(bucketRef, { scoresMap: map }, { merge: true });
-                opCount++;
+                operations.push((batch) => batch.set(bucketRef, { scoresMap: map }, { merge: true }));
             }
-            // delete (updates as any).scores; // Do not process scores as individual docs
         }
 
         // --- HANDLE SUBCOLLECTIONS (Fan-Out with Batch) ---
-        // Note: We skip scores here because we handled them in buckets above.
         const SUBCOLLECTION_KEYS = ['students', 'classes', 'subjects', 'assessments'];
 
         for (const key of Object.keys(updates)) {
@@ -299,14 +317,13 @@ export const saveDataTransaction = async (
                     items.forEach(item => {
                         if (item.id) {
                             const ref = doc(db, "schools", docId, key, String(item.id));
-                            batch.set(ref, sanitizeForFirestore(item), { merge: true });
-                            opCount++;
+                            operations.push((batch) => batch.set(ref, sanitizeForFirestore(item), { merge: true }));
                         }
                     });
                 }
             } else if (MAIN_KEYS.includes(key) || key === 'userLogs' || key === 'activeSessions') {
                 const val = (updates as any)[key];
-                mainUpdates[key] = val; // We trust DataContext to provide the right value
+                mainUpdates[key] = val;
             }
         }
 
@@ -316,23 +333,19 @@ export const saveDataTransaction = async (
                 if (SUBCOLLECTION_KEYS.includes(key)) {
                     ids.forEach(id => {
                         const ref = doc(db, "schools", docId, key, String(id));
-                        batch.delete(ref);
-                        opCount++;
+                        operations.push((batch) => batch.delete(ref));
                     });
                 }
-                // Handle score deletions? Buckets make this harder (need 'update({ ["scoresMap."+id]: deleteField() })')
-                // For now, deletions might lag for scores. Accepted trade-off for this optimization task.
             }
         }
 
         if (Object.keys(mainUpdates).length > 0) {
-            batch.set(docRef, sanitizeForFirestore(mainUpdates), { merge: true });
-            opCount++;
+            const docRef = doc(db, "schools", docId);
+            operations.push((batch) => batch.set(docRef, sanitizeForFirestore(mainUpdates), { merge: true }));
         }
 
-        if (opCount > 0) {
-            await batch.commit();
-            console.log(`[Optimization] ✅ Batch write completed (${opCount} ops)`);
+        if (operations.length > 0) {
+            await executeBatch(operations);
         }
 
     } catch (error) {
@@ -429,38 +442,66 @@ export const initializeNewTermDatabase = async (docId: string, data: AppDataType
 };
 
 export const loginOrRegisterSchool = async (docId: string, password: string, initialData: AppDataType, createIfMissing: boolean = false) => {
+    console.log(`[FIREBASE_DEBUG] loginOrRegisterSchool called for docId: ${docId}, createIfMissing: ${createIfMissing}`);
     try {
         let targetDocId = docId;
         let docRef = doc(db, "schools", targetDocId);
+
+        console.log(`[FIREBASE_DEBUG] Fetching document: schools/${targetDocId}`);
         let docSnap = await getDoc(docRef);
+        console.log(`[FIREBASE_DEBUG] Document exists? ${docSnap.exists()}`);
 
         if (!docSnap.exists()) {
+            console.log(`[FIREBASE_DEBUG] Document not found. Attempting case-insensitive fallback search...`);
             // Case-insensitive fallback
             const schoolsRef = collection(db, "schools");
             const q = query(schoolsRef, where(documentId(), '>=', targetDocId.toLowerCase()), limit(5)); // Optimize fallback
             const snap = await getDocs(q);
+            console.log(`[FIREBASE_DEBUG] Fallback search found ${snap.size} documents.`);
+
             const match = snap.docs.find(d => d.id.toLowerCase() === docId.toLowerCase());
             if (match) {
+                console.log(`[FIREBASE_DEBUG] Fallback match found: ${match.id}`);
                 targetDocId = match.id;
                 docRef = doc(db, "schools", targetDocId);
                 docSnap = match;
+            } else {
+                console.log(`[FIREBASE_DEBUG] No matching document found in fallback.`);
             }
         }
 
         if (docSnap.exists()) {
+            console.log(`[FIREBASE_DEBUG] Processing existing document...`);
             const data = docSnap.data() as AppDataType;
-            if (data.password !== password) return { status: 'wrong_password' };
-            if (data.Access === false) return { status: 'access_denied' };
 
+            // Debug logs for password comparison (be careful with real passwords in logs, but for debug it's ok)
+            // console.log(`[FIREBASE_DEBUG] Stored password: ${data.password}, Provided: ${password}`);
+
+            if (data.password !== password) {
+                console.warn(`[FIREBASE_DEBUG] Password mismatch.`);
+                return { status: 'wrong_password' };
+            }
+            if (data.Access === false) {
+                console.warn(`[FIREBASE_DEBUG] Access denied (Access flag is false).`);
+                return { status: 'access_denied' };
+            }
+
+            console.log(`[FIREBASE_DEBUG] Login successful. Returning data.`);
             // OPTIMIZATION: Return ONLY main data. Do not fan-in.
             return { status: 'success', data: data, docId: targetDocId };
         } else {
-            if (!createIfMissing) return { status: 'not_found' };
+            if (!createIfMissing) {
+                console.log(`[FIREBASE_DEBUG] Document not found and createIfMissing is false.`);
+                return { status: 'not_found' };
+            }
+            console.log(`[FIREBASE_DEBUG] Creating new school document: ${docId}`);
             const newData = { ...initialData, password, Access: false };
             await setDoc(doc(db, "schools", docId), newData);
+            console.log(`[FIREBASE_DEBUG] New document created. Returning 'created_pending_access'.`);
             return { status: 'created_pending_access' };
         }
     } catch (e: any) {
+        console.error(`[FIREBASE_DEBUG] Error in loginOrRegisterSchool:`, e);
         return { status: 'error', message: e.message };
     }
 };
@@ -492,13 +533,24 @@ export const updateDeviceCredentials = async (docId: string, deviceCredentials: 
  */
 export const getSchoolHistory = async (schoolNamePrefix: string): Promise<AppDataType[]> => {
     try {
+        // Check Cache
+        const cached = historyCache.get(schoolNamePrefix);
+        if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
+            console.log(`[Optimization] 🚀 Returning cached history for ${schoolNamePrefix}`);
+            return cached.data;
+        }
+
         const schoolsRef = collection(db, "schools");
         const q = query(schoolsRef,
             where(documentId(), '>=', schoolNamePrefix),
             where(documentId(), '<=', schoolNamePrefix + '\uf8ff')
         );
         const snapshot = await getDocs(q);
-        return snapshot.docs.map(d => d.data() as AppDataType);
+        const data = snapshot.docs.map(d => d.data() as AppDataType);
+
+        // Update Cache
+        historyCache.set(schoolNamePrefix, { timestamp: Date.now(), data });
+        return data;
     } catch (error) {
         console.error("Error fetching school history:", error);
         return [];

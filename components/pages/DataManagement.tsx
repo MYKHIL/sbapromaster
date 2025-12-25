@@ -369,6 +369,11 @@ const DataManagement: React.FC = () => {
             const { data: importedData, diagnostics } = await importDatabase(dbFile);
 
             setFeedback({ message: 'Updating application data...', type: 'info' });
+
+            // CRITICAL FIX: Temporarily block remote updates to prevent listener spam
+            // This prevents the app from trying to re-read data while we're bulk-importing
+            dataContext.blockRemoteUpdates();
+
             // Pass 'false' for isRemote to trigger dirty detection and cloud save
             loadImportedData(importedData, false);
 
@@ -389,11 +394,16 @@ const DataManagement: React.FC = () => {
             // Prompt to save to cloud if logged in
             if (schoolId) {
                 setIsCloudSaveModalOpen(true);
+            } else {
+                // Re-enable remote updates if not saving to cloud
+                dataContext.allowRemoteUpdates();
             }
         } catch (error) {
             console.error("Import processing failed:", error);
             const errorMessage = error instanceof Error ? `Import failed: ${error.message}` : "An unknown error occurred during import.";
             setFeedback({ message: errorMessage, type: 'error' });
+            // Re-enable remote updates on error
+            dataContext.allowRemoteUpdates();
         } finally {
             setProcessingAction(null);
         }
@@ -449,11 +459,16 @@ const DataManagement: React.FC = () => {
         } catch (error) {
             console.error("Cloud save failed:", error);
             setFeedback({ message: 'Failed to save data to cloud.', type: 'error' });
+        } finally {
+            // CRITICAL: Re-enable remote updates after save completes
+            dataContext.allowRemoteUpdates();
         }
     };
 
     const handleCancelCloudSave = () => {
         setIsCloudSaveModalOpen(false);
+        // Re-enable remote updates if user cancels the save
+        dataContext.allowRemoteUpdates();
     };
 
     const handleUserManagementSave = async (updatedUsers: User[], shouldClose: boolean = true) => {

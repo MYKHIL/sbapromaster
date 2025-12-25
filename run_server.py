@@ -27,6 +27,74 @@ PORT = 5173
 HOST = 'localhost'
 URL = f'http://{HOST}:{PORT}/'
 
+# ------------------------------------------------------------------------------
+# GLOBAL DEBUG CONFIG
+# ------------------------------------------------------------------------------
+# Default to False, but will be overridden by user input
+# ------------------------------------------------------------------------------
+
+def start_firestore_emulator():
+    """Starts the Firestore emulator in a separate process."""
+    print("Starting Firestore Emulator...")
+    cwd = PROJECT_ROOT
+    # Force the emulator to use the specific project ID that matches the app's config
+    # This prevents "Demo" project mode and ensures UI matches App.
+    cmd = ["npx", "firebase", "emulators:start", "--only", "firestore", "--project", "sba-pro-master-40f08"]
+    
+    # Check if npx exists (should be there if npm is there)
+    if os.name == 'nt':
+        cmd = ["npx.cmd", "firebase", "emulators:start", "--only", "firestore", "--project", "sba-pro-master-40f08"]
+
+    try:
+        # We start it as a background process.
+        # We pipe stdout/stderr to the console so the user can see what's happening.
+        print(f"Executing: {' '.join(cmd)}")
+        proc = subprocess.Popen(
+            cmd, 
+            cwd=cwd, 
+            shell=True,
+            stdout=sys.stdout, # Inherit stdout to show logs
+            stderr=sys.stderr  # Inherit stderr to show errors
+        )
+        return proc
+    except Exception as e:
+        print(f"Failed to start emulator: {e}")
+        return None
+
+
+def ensure_firebase_config():
+    """Ensures firebase.json and .firebaserc exist to prevent init warnings."""
+    config_path = os.path.join(PROJECT_ROOT, 'firebase.json')
+    rc_path = os.path.join(PROJECT_ROOT, '.firebaserc')
+
+    # 1. Ensure firebase.json
+    if not os.path.exists(config_path):
+        print("Creating firebase.json for emulator configuration...")
+        with open(config_path, 'w') as f:
+            f.write('''{
+    "emulators": {
+        "firestore": {
+            "port": 8080
+        },
+        "ui": {
+            "enabled": true,
+            "port": 4000
+        },
+        "singleProjectMode": true
+    }
+}''')
+
+    # 2. Ensure .firebaserc
+    if not os.path.exists(rc_path):
+        print("Creating .firebaserc for project alias...")
+        with open(rc_path, 'w') as f:
+            f.write('''{
+  "projects": {
+    "default": "sba-pro-master-40f08"
+  }
+}''')
+
+
 
 def find_pids_on_port(port):
     """Return a set of PIDs listening on the given TCP port (Windows `netstat -ano`)."""
@@ -156,6 +224,67 @@ def wait_for_server(url, timeout=30.0):
 def main():
     print('Start script running in:', PROJECT_ROOT)
 
+    # Ask user for mode
+    print("\n----------------------------------------------------------------")
+    print("SELECT RUN MODE:")
+    print("1) DEBUG MODE   (Firestore Emulator - Safe for testing)")
+    print("2) PUBLISH MODE (Real Firestore - Production Data)")
+    print("----------------------------------------------------------------")
+    choice = input("Enter 1 or 2 [Default: 2]: ").strip()
+    
+    DEBUG_MODE = (choice == '1')
+
+    emulator_proc = None
+
+    # Step 0: Check for Debug Mode and Emulators
+    if DEBUG_MODE:
+        ensure_firebase_config()
+
+        print("----------------------------------------------------------------")
+        print("⚠️  DEBUG MODE ACTIVE - USING FIRESTORE EMULATOR ⚠️")
+        print("----------------------------------------------------------------")
+        
+        # Set environment variable for Vite to pick up
+        os.environ['VITE_USE_EMULATOR'] = 'true'
+        
+        # Check if emulator port (8080) is already in use
+        emulator_ready = False
+        if socket_check('localhost', 8080):
+             print(f"Port 8080 is already active. Assuming Emulator is running.")
+             emulator_ready = True
+        else:
+            print("Port 8080 is free. Launching Firestore Emulator...")
+            emulator_proc = start_firestore_emulator()
+            
+            # Wait for Emulator to be ready (Port 8080 for Firestore, 4000 for UI)
+            print("Waiting for Firestore Emulator to initialize...")
+            start_wait = time.time()
+            while time.time() - start_wait < 60: # Wait up to 60 seconds
+                if socket_check('localhost', 8080) and socket_check('localhost', 4000):
+                    print("✅ Firestore Emulator is UP and RUNNING!")
+                    emulator_ready = True
+                    break
+                time.sleep(1)
+            
+            if not emulator_ready:
+                print("❌ Timed out waiting for Emulator. Continuing anyway, but things might break.")
+
+        if emulator_ready:
+            print("Opening Firestore Emulator UI...")
+            try:
+                # Open in a background thread or just open it
+                webbrowser.open("http://localhost:4000")
+            except Exception as e:
+                print(f"Failed to open Emulator UI: {e}")
+            
+    else:
+        print("----------------------------------------------------------------")
+        print("🚀 PUBLISH/LIVE MODE - CONNECTING TO REAL FIRESTORE 🚀")
+        print("----------------------------------------------------------------")
+        if 'VITE_USE_EMULATOR' in os.environ:
+            del os.environ['VITE_USE_EMULATOR']
+
+
     # Step 1: find & kill existing processes on ports 5173-5180
     # We check a range because Vite might have incremented the port if 5173 was busy.
     ports_to_check = range(3000, 3010)
@@ -210,12 +339,13 @@ def main():
             sys.exit(1)
 
     try:
+        # Pass current environment (including VITE_USE_EMULATOR)
         if isinstance(npm_cmd, list):
             print('Starting dev server:', ' '.join(npm_cmd))
-            proc = subprocess.Popen(npm_cmd, cwd=PROJECT_ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='replace', shell=False)
+            proc = subprocess.Popen(npm_cmd, cwd=PROJECT_ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='replace', shell=False, env=os.environ)
         else:
             print('Starting dev server (shell):', npm_cmd)
-            proc = subprocess.Popen(npm_cmd, cwd=PROJECT_ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='replace', shell=True)
+            proc = subprocess.Popen(npm_cmd, cwd=PROJECT_ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='replace', shell=True, env=os.environ)
     except FileNotFoundError:
         print('Error: `npm` not found. Make sure Node.js and npm are installed and available in your PATH.')
         print('You can download Node.js from https://nodejs.org/')
@@ -224,7 +354,6 @@ def main():
         print('Failed to start dev server:', e)
         sys.exit(1)
     
-
     # Ensure we try to terminate subprocess on exit
     def _terminate(signum, frame):
         print('\nTerminating dev server...')
@@ -232,6 +361,14 @@ def main():
             proc.terminate()
         except Exception:
             pass
+        
+        if emulator_proc:
+             print('Terminating emulator...')
+             try:
+                 emulator_proc.terminate()
+             except Exception:
+                 pass
+        
         sys.exit(0)
 
     signal.signal(signal.SIGINT, _terminate)
