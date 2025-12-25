@@ -10,7 +10,8 @@ export type Page =
   | 'School Setup'
   | 'Data Management'
   | 'Score Summary'
-  | 'Student Progress';
+  | 'Student Progress'
+  | 'Firebase Analytics';
 
 export interface Student {
   id: number;

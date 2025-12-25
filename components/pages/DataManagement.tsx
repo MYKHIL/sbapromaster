@@ -28,7 +28,7 @@ interface CreateTermModalProps {
 const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setFeedback }) => {
     const dataContext = useData();
     const { settings, schoolId } = dataContext;
-    const { users } = useUser();
+    // const { users } = useUser(); // Users accessed directly from dataContext now
 
     const [newYear, setNewYear] = useState('');
     const [newTerm, setNewTerm] = useState('');
@@ -37,6 +37,7 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
     const [showPassword, setShowPassword] = useState(false);
     const [isFetchingPwd, setIsFetchingPwd] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
+    const [createdTermId, setCreatedTermId] = useState<string | null>(null);
 
     useEffect(() => {
         if (isOpen) {
@@ -60,6 +61,7 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
             setPassword('');
             setMaintainPassword(true);
             setShowPassword(false);
+            setCreatedTermId(null);
         }
     }, [isOpen, settings]);
 
@@ -127,7 +129,7 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
                 scores: [], // Clear scores
                 reportData: [], // Clear comments/remarks
                 classData: [], // Clear class stats
-                users: users, // Copy existing users access
+                users: dataContext.users, // Copy existing users access
                 password: password,
                 Access: true, // Enable access immediately
                 activeSessions: {}, // Reset sessions
@@ -139,15 +141,9 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
             // with a fresh document ID. This is the only valid use case for overwriting the DB.
             await initializeNewTermDatabase(newDocId, newData);
 
-            // 3. Switch to New Term
-            dataContext.setSchoolId(newDocId);
-            setFeedback({ message: 'New term created! Switching to ' + newDocId, type: 'success' });
-
-            // Close modal
-            onClose();
-
-            // Optional: Force reload if context doesn't auto-refresh completely
-            setTimeout(() => window.location.reload(), 1500);
+            // STOP HERE: Do not switch yet. Show confirmation.
+            setCreatedTermId(newDocId);
+            setFeedback({ message: 'New term created successfully!', type: 'success' });
 
         } catch (error: any) {
             console.error("Failed to create term:", error);
@@ -156,6 +152,84 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
             setIsCreating(false);
         }
     };
+
+    const handleSwitchToNewTerm = async () => {
+        if (!createdTermId) return;
+
+        try {
+            setFeedback({ message: 'Switching to ' + createdTermId + '...', type: 'info' });
+
+            // 1. Update Persistent Storage (Critical for preventing fallback on refresh)
+            localStorage.setItem('sba_school_id', createdTermId);
+            // We use the password state variable which holds the password used to create the term
+            if (password) {
+                localStorage.setItem('sba_school_password', password);
+            }
+
+            // 2. Switch Context State
+            // This will trigger reactivity in the app (clearing caches, etc.)
+            dataContext.setSchoolId(createdTermId);
+
+            // 3. Force Data Load for the new term
+            // We need to ensure the app loads the new data immediately
+            await dataContext.refreshFromCloud();
+
+            // 4. Update Device Credential (for auto-login helper)
+            const currentUserId = Number(localStorage.getItem('sba_user_id'));
+            if (currentUserId) {
+                const { saveDeviceCredential } = await import('../../services/authService');
+                saveDeviceCredential(createdTermId, currentUserId);
+            }
+
+            setFeedback({ message: 'Successfully switched to ' + createdTermId, type: 'success' });
+
+            // Close the modal
+            onClose();
+
+        } catch (e) {
+            console.error("Switch failed", e);
+            setFeedback({ message: "Failed to switch automatically.", type: 'error' });
+        }
+    };
+
+    const handleClose = () => {
+        onClose();
+    };
+
+    // RENDER: Confirmation State
+    if (createdTermId) {
+        return (
+            <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 animate-fade-in-scale">
+                <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md m-4 text-center">
+                    <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                        <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">Term Created Successfully!</h3>
+                    <p className="text-gray-600 mb-6">
+                        The new term <strong>{newYear} - {newTerm}</strong> is ready.<br />
+                        Would you like to switch to it now?
+                    </p>
+
+                    <div className="flex flex-col gap-3">
+                        <button
+                            onClick={handleSwitchToNewTerm}
+                            className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 font-medium"
+                        >
+                            Yes, Switch to New Term
+                        </button>
+                        <button
+                            onClick={handleClose}
+                            className="w-full bg-gray-100 text-gray-700 px-4 py-3 rounded-lg hover:bg-gray-200"
+                        >
+                            No, Stay Here
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 animate-fade-in-scale">
@@ -251,7 +325,7 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
                         className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 flex items-center"
                     >
                         {isCreating && <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
-                        Create & Switch
+                        Create Term
                     </button>
                     <button
                         onClick={onClose}
@@ -302,7 +376,7 @@ const DataManagement: React.FC = () => {
         setFeedback({ message: 'Generating database file...', type: 'info' });
         try {
             const fileData = await exportDatabase(dataContext);
-            const blob = new Blob([fileData], { type: 'application/x-sqlite3' });
+            const blob = new Blob([fileData as any], { type: 'application/x-sqlite3' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;

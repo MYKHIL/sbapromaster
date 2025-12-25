@@ -5,6 +5,7 @@ import useLocalStorage from '../hooks/useLocalStorage';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { offlineQueue } from '../services/offlineQueue';
 import { useDatabaseError } from './DatabaseErrorContext';
+import { useFirebaseAnalytics } from './FirebaseAnalyticsContext';
 import { isQuotaExhaustedError } from '../utils/databaseErrorHandler';
 import type { Student, Subject, Class, Grade, Assessment, Score, SchoolSettings, ReportSpecificData, ClassSpecificData, User, UserLog, OnlineUser } from '../types';
 import {
@@ -185,6 +186,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         SyncLogger.log(`Stack trace: ${new Error().stack}`);
         setUsersInternal(newValue);
     };
+
+    // Firebase Analytics Tracking (conditionally available in debug mode)
+    let analytics: ReturnType<typeof useFirebaseAnalytics> | null = null;
+    try {
+        analytics = useFirebaseAnalytics();
+    } catch (e) {
+        // FirebaseAnalyticsProvider not available (not in debug mode or not wrapped)
+    }
 
     // Track overall local changes for UI feedback (e.g. enabling Upload button)
     const [hasLocalChanges, setHasLocalChanges] = useState(false);
@@ -1544,6 +1553,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const draftScores = useRef<Map<string, string>>(new Map());
     const [draftVersion, setDraftVersion] = useState(0); // Used to force updates in subscribers
 
+    // Cache for loaded subjects to prevent redundant fetches
+    const loadedSubjects = useRef<Set<number>>(new Set());
+
     // Update the draft value for a score (marks it as dirty)
     const updateDraftScore = (studentId: number, assessmentId: number, value: string) => {
         const key = `${studentId}-${assessmentId}`;
@@ -1635,24 +1647,34 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const loadScores = React.useCallback(async (classId: number, subjectId: number, force: boolean = false) => {
         if (!schoolId) return;
-        // For scores, we might want to be more aggressive about fetching to ensure we have the latest,
-        // but we can implement similar logic if we track which buckets we've loaded.
-        // For now, simpler is better: we fetch when context changes (Class/Subject change).
+
+        // Cache Check: Since scores are fetched by SUBJECT (buckets or queries), we only need to check if the subject is loaded.
+        if (!force && loadedSubjects.current.has(subjectId)) {
+            // For safety, checks if we actually have scores? No, trust the cache bit implies "attempted load".
+            // Even if empty, we don't want to re-query 404s constantly.
+            console.log(`[DataContext] 🧠 Using Cached Scores for Subject ${subjectId}`);
+            return;
+        }
 
         setIsFetching(true);
         try {
-            console.log(`[DataContext] 📥 Lazy Loading Scores for Class ${classId}, Subject ${subjectId}...`);
+            console.log(`[DataContext] 📥 Lazy Loading Scores for Subject ${subjectId}...`);
             const newScores = await fetchScoresForClass(schoolId, classId, subjectId);
 
-            if (newScores && newScores.length > 0) {
-                console.log(`[DataContext] ✅ Loaded ${newScores.length} scores from bucket.`);
-                setScores(prev => {
-                    const prevMap = new Map(prev.map(s => [s.id, s]));
-                    newScores.forEach(s => prevMap.set(s.id, s));
-                    return Array.from(prevMap.values());
-                });
-            } else {
-                console.log(`[DataContext] ⚠️ No scores found in bucket or legacy docs.`);
+            if (newScores && newScores.length >= 0) {
+                // Always mark as loaded, even if empty, to prevent spam re-fetching
+                loadedSubjects.current.add(subjectId);
+
+                if (newScores.length > 0) {
+                    console.log(`[DataContext] ✅ Loaded ${newScores.length} scores.`);
+                    setScores(prev => {
+                        const prevMap = new Map(prev.map(s => [s.id, s]));
+                        newScores.forEach(s => prevMap.set(s.id, s));
+                        return Array.from(prevMap.values());
+                    });
+                } else {
+                    console.log(`[DataContext] ⚠️ No scores found.`);
+                }
             }
         } catch (e) {
             console.error("Failed to load scores", e);
@@ -1779,6 +1801,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     useEffect(() => {
         draftScores.current.clear();
         setDraftVersion(0);
+        loadedSubjects.current.clear(); // Clear cached subjects
     }, [schoolId]);
 
     // CRITICAL FIX: Do NOT initialize originalData from localStorage!

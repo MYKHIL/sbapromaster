@@ -21,6 +21,11 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
     const [users, setUsers] = useState<Partial<User>[]>(mode === 'setup' ? [{ role: 'Admin' as UserRole, allowedClasses: [], allowedSubjects: [] }] : []);
     const [existingUsers, setExistingUsers] = useState<User[]>(initialUsers);
     const [adminPassword, setAdminPassword] = useState('');
+
+    // Update local state when prop changes (e.g. after data load)
+    useEffect(() => {
+        setExistingUsers(initialUsers);
+    }, [initialUsers]);
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [editingUserId, setEditingUserId] = useState<number | null>(null);

@@ -16,6 +16,7 @@ export type { AppDataType };
 // CONFIGURATION
 // -----------------------------------------------------------------------------
 import { ACTIVE_DATABASE_INDEX } from '../constants';
+import { trackFirebaseRead, trackFirebaseWrite } from './analyticsTracking';
 
 const firebaseConfigs = [
     // INDEX 0: Placeholder
@@ -208,6 +209,7 @@ const sanitizeForFirestore = (obj: any): any => {
 export const getSchoolData = async (docId: string, keysToFetch?: (keyof AppDataType)[]): Promise<AppDataType | null> => {
     try {
         const docRef = doc(db, "schools", docId);
+        trackFirebaseRead('getSchoolData', 'schools', 1, 'Loading main school data');
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
@@ -245,6 +247,7 @@ export const fetchStudents = async (
             q = query(studentsRef, orderBy("name"), startAfter(lastVisible), limit(pageSize));
         }
 
+        trackFirebaseRead('fetchStudents', 'students', pageSize, `Fetching students page (limit: ${pageSize})`);
         const snapshot = await getDocs(q);
         const students = snapshot.docs.map(d => d.data() as Student);
         const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
@@ -266,6 +269,7 @@ export const fetchScoresForClass = async (docId: string, classId: number, subjec
     try {
         const bucketId = `subject_${subjectId}`; // Simplifying to Subject Buckets as per implementation limitations
         const bucketRef = doc(db, "schools", docId, "score_buckets", bucketId);
+        trackFirebaseRead('fetchScoresForClass', 'score_buckets', 1, `Fetching bucket: ${bucketId}`);
         const bucketSnap = await getDoc(bucketRef);
 
         if (bucketSnap.exists()) {
@@ -282,7 +286,9 @@ export const fetchScoresForClass = async (docId: string, classId: number, subjec
     try {
         const scoresRef = collection(db, "schools", docId, "scores");
         const q = query(scoresRef, where("subjectId", "==", subjectId));
+        trackFirebaseRead('fetchScoresForClass (fallback)', 'scores', 0, 'Querying legacy scores');
         const snap = await getDocs(q);
+        trackFirebaseRead('fetchScoresForClass (fallback)', 'scores', snap.size, 'Fetched legacy scores');
         snap.forEach(d => scores.push(d.data() as Score));
         return scores;
     } catch (e) {
@@ -324,7 +330,9 @@ export const getSchoolList = async (): Promise<SchoolListItem[]> => {
     console.log('[Auth] Fetching school list from Firestore...');
     try {
         const schoolsRef = collection(db, 'schools');
+        trackFirebaseRead('getSchoolList', 'schools', 0, 'Fetching all schools list');
         const snapshot = await getDocs(schoolsRef);
+        trackFirebaseRead('getSchoolList', 'schools', snapshot.size, 'Fetched all schools list');
 
         const schools: SchoolListItem[] = [];
         const seenNames = new Set<string>(); // Deduplicate by school name
@@ -382,7 +390,9 @@ export const getSchoolYearsAndTerms = async (schoolName: string): Promise<School
     console.log(`[Auth] Fetching periods for ${schoolName}...`);
     try {
         const schoolsRef = collection(db, 'schools');
+        trackFirebaseRead('getSchoolYearsAndTerms', 'schools', 0, 'Fetching years/terms');
         const snapshot = await getDocs(schoolsRef);
+        trackFirebaseRead('getSchoolYearsAndTerms', 'schools', snapshot.size, 'Fetched years/terms');
 
         const periods: SchoolPeriod[] = [];
 
@@ -426,6 +436,7 @@ export const verifySchoolPassword = async (docId: string, password: string): Pro
     try {
         console.log(`[Auth] Verifying password for ${docId}...`);
         const docRef = doc(db, 'schools', docId);
+        trackFirebaseRead('verifySchoolPassword', 'schools', 1, 'Verifying password');
         const docSnap = await getDoc(docRef);
 
         if (!docSnap.exists()) {
@@ -488,7 +499,9 @@ export const subscribeToResource = (
 export const fetchSubcollection = async <T>(docId: string, resourceName: string): Promise<T[]> => {
     try {
         const colRef = collection(db, "schools", docId, resourceName);
+        trackFirebaseRead('fetchSubcollection', resourceName, 0, `Fetching all ${resourceName}`);
         const snapshot = await getDocs(colRef);
+        trackFirebaseRead('fetchSubcollection', resourceName, snapshot.size, `Fetched all ${resourceName}`);
         return snapshot.docs.map(d => d.data() as T);
     } catch (e) {
         console.error(`Error fetching ${resourceName}:`, e);
@@ -582,6 +595,7 @@ export const saveDataTransaction = async (
         }
 
         if (operations.length > 0) {
+            trackFirebaseWrite('saveDataTransaction', 'multi', `Saving batch of ${operations.length} operations`);
             await executeBatch(operations);
         }
 
@@ -685,6 +699,7 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
         let docRef = doc(db, "schools", targetDocId);
 
         console.log(`[FIREBASE_DEBUG] Fetching document: schools/${targetDocId}`);
+        trackFirebaseRead('loginOrRegisterSchool', 'schools', 1, `Checking school existence: ${targetDocId}`);
         let docSnap = await getDoc(docRef);
         console.log(`[FIREBASE_DEBUG] Document exists? ${docSnap.exists()}`);
 
@@ -693,6 +708,7 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
             // Case-insensitive fallback
             const schoolsRef = collection(db, "schools");
             const q = query(schoolsRef, where(documentId(), '>=', targetDocId.toLowerCase()), limit(5)); // Optimize fallback
+            trackFirebaseRead('loginOrRegisterSchool (fallback)', 'schools', 5, 'Fallback case-insensitive search');
             const snap = await getDocs(q);
             console.log(`[FIREBASE_DEBUG] Fallback search found ${snap.size} documents.`);
 
@@ -790,7 +806,9 @@ export const getSchoolHistory = async (schoolNamePrefix: string): Promise<AppDat
             where(documentId(), '>=', schoolNamePrefix),
             where(documentId(), '<=', schoolNamePrefix + '\uf8ff')
         );
+        trackFirebaseRead('getSchoolHistory', 'schools', 0, 'Fetching school history');
         const snapshot = await getDocs(q);
+        trackFirebaseRead('getSchoolHistory', 'schools', snapshot.size, 'Fetched school history');
         const data = snapshot.docs.map(d => d.data() as AppDataType);
 
         // Update Cache
