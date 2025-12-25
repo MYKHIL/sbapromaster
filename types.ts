@@ -20,6 +20,7 @@ export interface Student {
   class: string;
   dateOfBirth: string;
   age: string;
+
   picture: string; // base64 string
 }
 
@@ -167,4 +168,22 @@ export interface OnlineUser {
   userName: string;
   role: string;
   lastActive: string; // ISO
+}
+
+export interface AppDataType {
+  settings: SchoolSettings;
+  students: Student[];
+  subjects: Subject[];
+  classes: Class[];
+  grades: Grade[];
+  assessments: Assessment[];
+  scores: Score[];
+  reportData: ReportSpecificData[];
+  classData: ClassSpecificData[];
+  users?: User[];
+  userLogs?: UserLog[];
+  activeSessions?: Record<string, string>;
+  Access?: boolean;
+  password?: string;
+  deviceCredentials?: DeviceCredential[];
 }

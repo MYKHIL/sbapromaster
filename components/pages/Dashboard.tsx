@@ -18,8 +18,13 @@ const StatCard: React.FC<{ title: string; value: number | string; icon: React.Re
 );
 
 const Dashboard: React.FC<{ onNavigate?: (page: Page) => void }> = ({ onNavigate }) => {
-  const { students, subjects, settings } = useData();
-  // Notifications are now global in GlobalActionBar
+  const { students, subjects, settings, loadMetadata } = useData();
+
+  // Lazy Load Metadata on Dashboard Mount
+  // This ensures Classes, Subjects, and Assessments are loaded when user starts session
+  React.useEffect(() => {
+    loadMetadata();
+  }, [loadMetadata]);
 
   return (
     <div className="space-y-8">

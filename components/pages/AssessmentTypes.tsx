@@ -18,8 +18,15 @@ const DragHandleIcon: React.FC = () => (
 
 
 const AssessmentTypes: React.FC = () => {
-    const { assessments, setAssessments, addAssessment, updateAssessment, deleteAssessment, saveAssessments, isDirty, isSyncing, isOnline } = useData();
+    const { assessments, setAssessments, addAssessment, updateAssessment, deleteAssessment, saveAssessments, isDirty, isSyncing, isOnline, loadMetadata } = useData();
     const { currentUser } = useUser();
+
+    // Ensure assessments are loaded
+    React.useEffect(() => {
+        if (assessments.length === 0) {
+            loadMetadata();
+        }
+    }, [assessments, loadMetadata]);
     const isAdmin = currentUser?.role === 'Admin';
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentAssessment, setCurrentAssessment] = useState<Assessment | Omit<Assessment, 'id'> | null>(null);

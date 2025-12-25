@@ -30,7 +30,7 @@ interface StudentHistory {
 let cachedSelectedStudentIds: number[] = [];
 
 const StudentProgress: React.FC = () => {
-    const { settings, students, schoolId } = useData();
+    const { settings, students, schoolId, loadStudents, loadMetadata } = useData();
     const { currentUser } = useUser();
 
     // History Data State
@@ -59,6 +59,12 @@ const StudentProgress: React.FC = () => {
 
     const contentRef = React.useRef<HTMLDivElement>(null);
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+    // Lazy Load Data on Mount
+    useEffect(() => {
+        loadStudents();
+        loadMetadata();
+    }, [loadStudents, loadMetadata]);
 
     useEffect(() => {
         const fetchHistory = async () => {

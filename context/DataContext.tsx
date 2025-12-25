@@ -1,5 +1,5 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect, useRef, useMemo } from 'react';
-import { subscribeToSchoolData, AppDataType, updateHeartbeat, logUserActivity, getSchoolData, saveDataTransaction } from '../services/firebaseService';
+import { subscribeToSchoolData, AppDataType, updateHeartbeat, logUserActivity, getSchoolData, saveDataTransaction, fetchStudents, fetchScoresForClass, subscribeToResource, fetchSubcollection } from '../services/firebaseService';
 import * as SyncLogger from '../services/syncLogger';
 import useLocalStorage from '../hooks/useLocalStorage';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
@@ -99,6 +99,11 @@ export interface DataContextType {
     // New Actions
     logUserAction: (userId: number, userName: string, role: string, action: 'Login' | 'Logout') => Promise<void>;
     sendHeartbeat: (userId: number) => Promise<void>;
+
+    // Lazy Loading
+    loadStudents: (limit?: number) => Promise<void>;
+    loadScores: (classId: number, subjectId: number) => Promise<void>;
+    loadMetadata: () => Promise<void>;
 
     // UI Feedback
     hasLocalChanges: boolean;
@@ -1101,24 +1106,24 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const savePageData = async (field: keyof AppDataType, data: any) => {
         if (!schoolId) {
-            console.log(`No school ID, skipping ${field} save.`);
+            console.log(`No school ID, skipping ${String(field)} save.`);
             return;
         }
 
         if (!isDirty(field)) {
-            console.log(`[savePageData] No changes to ${field}, skipping save.`);
+            console.log(`[savePageData] No changes to ${String(field)}, skipping save.`);
             return;
         }
 
         if (isSyncingRef.current) {
-            console.log(`[savePageData] Sync already in progress for ${field}`);
+            console.log(`[savePageData] Sync already in progress for ${String(field)}`);
             return;
         }
 
         try {
             isSyncingRef.current = true;
             setIsSyncing(true);
-            console.log(`[savePageData] ☁️ Saving ${field} to cloud...`);
+            console.log(`[savePageData] ☁️ Saving ${String(field)} to cloud...`);
 
             // FIX: Granular Save - Only get data for THIS field (and potentially logs/sessions if needed)
             // This prevents "Bleeding Saves" and correctly handles deletions for this field.
@@ -1132,7 +1137,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             dirtyFields.current.delete(field);
             setHasLocalChanges(dirtyFields.current.size > 0);
 
-            console.log(`[savePageData] ✅ ${field} saved successfully!`);
+            console.log(`[savePageData] ✅ ${String(field)} saved successfully!`);
             setIsSyncing(false);
             isSyncingRef.current = false;
         } catch (error) {
@@ -1556,6 +1561,102 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return savedScores[0] || '';
     };
 
+    // -------------------------------------------------------------------------
+    // LAZY LOADING IMPLEMENTATION
+    // -------------------------------------------------------------------------
+
+    const loadStudents = React.useCallback(async (limit?: number, force: boolean = false) => {
+        if (!schoolId) return;
+        // Optimization: If we already have students and aren't forcing a refresh, skip the read.
+        if (!force && students.length > 0) {
+            console.log(`[DataContext] 🧠 Using Cached Students (${students.length})`);
+            return;
+        }
+
+        setIsFetching(true);
+        try {
+            console.log(`[DataContext] 📥 Lazy Loading ALL Students...`);
+            const newStudents = await fetchSubcollection<Student>(schoolId, 'students');
+
+            if (newStudents && newStudents.length > 0) {
+                console.log(`[DataContext] ✅ Loaded ${newStudents.length} students.`);
+                setStudents(prev => {
+                    const prevMap = new Map(prev.map(s => [s.id, s]));
+                    newStudents.forEach(s => prevMap.set(s.id, s));
+                    return Array.from(prevMap.values());
+                });
+            } else {
+                console.log(`[DataContext] ⚠️ No students found in subcollection.`);
+            }
+        } catch (e) {
+            console.error("Failed to load students", e);
+        } finally {
+            setIsFetching(false);
+        }
+    }, [schoolId, students.length]);
+
+    const loadScores = React.useCallback(async (classId: number, subjectId: number, force: boolean = false) => {
+        if (!schoolId) return;
+        // For scores, we might want to be more aggressive about fetching to ensure we have the latest,
+        // but we can implement similar logic if we track which buckets we've loaded.
+        // For now, simpler is better: we fetch when context changes (Class/Subject change).
+
+        setIsFetching(true);
+        try {
+            console.log(`[DataContext] 📥 Lazy Loading Scores for Class ${classId}, Subject ${subjectId}...`);
+            const newScores = await fetchScoresForClass(schoolId, classId, subjectId);
+
+            if (newScores && newScores.length > 0) {
+                console.log(`[DataContext] ✅ Loaded ${newScores.length} scores from bucket.`);
+                setScores(prev => {
+                    const prevMap = new Map(prev.map(s => [s.id, s]));
+                    newScores.forEach(s => prevMap.set(s.id, s));
+                    return Array.from(prevMap.values());
+                });
+            } else {
+                console.log(`[DataContext] ⚠️ No scores found in bucket or legacy docs.`);
+            }
+        } catch (e) {
+            console.error("Failed to load scores", e);
+        } finally {
+            setIsFetching(false);
+        }
+    }, [schoolId]);
+
+    // Load Critical Metadata (Classes, Subjects, Assessments)
+    const loadMetadata = React.useCallback(async (force: boolean = false) => {
+        if (!schoolId) return;
+
+        // Caching Check
+        if (!force && classes.length > 0 && subjects.length > 0 && assessments.length > 0) {
+            console.log(`[DataContext] 🧠 Using Cached Metadata`);
+            return;
+        }
+
+        setIsFetching(true);
+        try {
+            console.log(`[DataContext] 📥 Loading Metadata (Classes, Subjects, Assessments)...`);
+            const [fetchedClasses, fetchedSubjects, fetchedAssessments] = await Promise.all([
+                fetchSubcollection<Class>(schoolId, 'classes'),
+                fetchSubcollection<Subject>(schoolId, 'subjects'),
+                fetchSubcollection<Assessment>(schoolId, 'assessments')
+            ]);
+
+            if (fetchedClasses.length > 0) setClasses(fetchedClasses);
+            if (fetchedSubjects.length > 0) setSubjects(fetchedSubjects);
+            if (fetchedAssessments.length > 0) setAssessments(fetchedAssessments);
+
+            console.log(`[DataContext] ✅ Metadata Loaded: ${fetchedClasses.length} Classes, ${fetchedSubjects.length} Subjects, ${fetchedAssessments.length} Assessments`);
+        } catch (e) {
+            console.error("Failed to load metadata", e);
+        } finally {
+            setIsFetching(false);
+        }
+    }, [schoolId, classes.length, subjects.length, assessments.length]);
+
+    // Load Critical Metadata (Classes, Subjects, Assessments)
+    // Should be called on Dashboard or App Init
+
     const value: DataContextType = {
         settings, setSettings, updateSettings,
         students,
@@ -1598,6 +1699,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         saveGrades,
         saveAssessments,
         saveScores,
+        loadStudents,
+        loadScores,
+        loadMetadata, // Exposed Metadata Loader
         refreshFromCloud,
         schoolId,
         setSchoolId,

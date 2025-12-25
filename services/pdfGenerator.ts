@@ -227,7 +227,7 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
         // --- PRE-CALCULATE FOOTER POSITION ---
         // Components: Grading Key (Header + Content), Attendance/Remarks, Signatures
 
-        const numCols = 4;
+        const numCols = 3;
         const itemsPerCol = Math.ceil(sortedGrades.length / numCols);
         const gradingKeyRowsHeight = itemsPerCol * 4;
         const gradingKeyHeaderHeight = 12; // Increased space for header
@@ -261,7 +261,7 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
             "TOTAL (100%)", "GRADE", "POSITION", "REMARKS"
         ];
 
-        let headerRowHeight = 10;
+        let headerRowHeight = 12; // Increased from 10
         let y = currentY;
 
         // Header Row
@@ -271,11 +271,63 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
         doc.setLineWidth(0.2);
 
         let x = tableX;
+        const baseFontSize = 9;
+
         headers.forEach((h, idx) => {
             const w = colWidths[idx];
             doc.rect(x, y, w, headerRowHeight);
+
+            // 1. Find the widest word to ensure no word gets broken/hyphenated
+            const words = h.split(' ');
+            let safeFontSize = baseFontSize;
+            doc.setFontSize(safeFontSize);
+            doc.setFont('times', 'bold'); // Headers are likely bold in intent, though previous code set size 9. Let's stick to what it was or ensure clarity. 
+            // Previous code: doc.setFontSize(9); doc.setLineWidth(0.2); -> font was 'times', 'normal' from before loop?
+            // Actually line 247 set 'bold' and 12. Then layout loop started.
+            // Let's assume we want bold headers.
+            doc.setFont('times', 'bold');
+
+            // Reduce font size until the widest word fits
+            let maxWordWidth = 0;
+            words.forEach(word => {
+                const ww = doc.getTextWidth(word);
+                if (ww > maxWordWidth) maxWordWidth = ww;
+            });
+
+            while (maxWordWidth > (w - 2) && safeFontSize > 5) {
+                safeFontSize -= 0.5;
+                doc.setFontSize(safeFontSize);
+                // Re-measure widest word with new font size
+                maxWordWidth = 0;
+                words.forEach(word => {
+                    const ww = doc.getTextWidth(word);
+                    if (ww > maxWordWidth) maxWordWidth = ww;
+                });
+            }
+
+            // 2. Now wrap the text with the safe font size
             const lines = doc.splitTextToSize(h, w - 2);
-            doc.text(lines, x + w / 2, y + (headerRowHeight - (lines.length * 3)) / 2 + 2, { align: 'center' });
+
+            // 3. Center vertically
+            const lineHeight = safeFontSize * 0.3527; // approx mm for pt
+            const totalTextHeight = lines.length * 3.5; // spaced lines
+            // or use standard spacing. splitTextToSize doesn't give height.
+            // draw text uses line height.
+
+            // Simpler vertical centering:
+            const blockHeight = lines.length * (safeFontSize * 0.45); // rough estimation of line height in mm
+            const startY = y + (headerRowHeight - blockHeight) / 2 + (safeFontSize * 0.3);
+
+            // actually doc.text handles array of strings by printing distinct lines.
+            // We can just iterate and print centered.
+            let lineY = y + (headerRowHeight - (lines.length * 3.5)) / 2 + 2.5;
+            if (lines.length === 1) lineY = y + (headerRowHeight / 2) + 1.5;
+
+            lines.forEach((line: string) => {
+                doc.text(line, x + w / 2, lineY, { align: 'center' });
+                lineY += 3.5; // reduced line spacing for tighter multi-line
+            });
+
             x += w;
         });
 
@@ -346,8 +398,8 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
         const verticalOffset = (gradingKeyRowsHeight - totalContentHeight) / 2;
 
         // Center the entire grid block horizontally
-        // Estimate width of one grading item "A+ 80-100% Excellent" -> approx 40mm
-        const itemWidth = 42;
+        // Estimate width of one grading item "A+ 80-100% Excellent" -> approx 40mm -> increased to 55mm for 3 cols
+        const itemWidth = 55;
 
         // Calculate actually used columns to properly center
         const actualNumCols = Math.ceil(sortedGrades.length / itemsPerCol);
@@ -364,10 +416,21 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
                 doc.setFont('times', 'bold');
                 doc.text(g.name, colX, gy); // Grade Letter
                 doc.setFont('times', 'normal');
-                doc.text(`${g.minScore}-${g.maxScore}%`, colX + 10, gy); // Range
-                doc.text(g.remark, colX + 26, gy); // Remark
+                doc.text(`${g.minScore}-${g.maxScore}%`, colX + 12, gy); // Range
+                doc.text(g.remark, colX + 32, gy); // Remark
                 gy += 4;
             });
+
+            // Draw vertical separator line (white) on the right side of the column, except for the last column
+            if (c < numCols - 1) {
+                const sepX = gridStartX + ((c + 1) * itemWidth) - (itemWidth * 0.1); // Slight offset
+                doc.setDrawColor(255, 255, 255);
+                doc.setLineWidth(0.2);
+                // Draw line from header bottom to end of section
+                // Use `currentY` is baseline of first row. Shift up by 3mm to align with top of text.
+                // Shift bottom up by 3mm as well.
+                doc.line(sepX, currentY - 3, sepX, currentY + gradingKeyRowsHeight - 3);
+            }
         }
 
         doc.setTextColor(0, 0, 0);

@@ -13,7 +13,7 @@ import { sortClassesByName } from '../../utils/classSort';
 
 const ScoreEntry: React.FC = () => {
     // Destructure with default empty arrays to prevent undefined errors
-    const { students = [], subjects: allSubjects = [], assessments = [], classes: allClasses = [], getStudentScores, updateStudentScores, isOnline, isSyncing, isFetching, queuedCount, hasLocalChanges, setHasLocalChanges, isDirty, updateDraftScore, removeDraftScore, getComputedScore, draftVersion, scores, saveToCloud, refreshFromCloud, pendingCount, getPendingUploadData } = useData();
+    const { students = [], subjects: allSubjects = [], assessments = [], classes: allClasses = [], getStudentScores, updateStudentScores, isOnline, isSyncing, isFetching, queuedCount, hasLocalChanges, setHasLocalChanges, isDirty, updateDraftScore, removeDraftScore, getComputedScore, draftVersion, scores, saveToCloud, refreshFromCloud, pendingCount, getPendingUploadData, loadScores } = useData();
     const { currentUser } = useUser();
     const isReadOnly = currentUser?.role === 'Guest';
 
@@ -127,6 +127,18 @@ const ScoreEntry: React.FC = () => {
             return 0;
         }
     });
+
+    // Lazy Load Scores when Class or Subject changes
+    useEffect(() => {
+        if (selectedClass && selectedSubjectId) {
+            const cls = allClasses.find(c => c.name === selectedClass);
+            if (cls) {
+                // Determine logic to avoid excessive calls?
+                // DataContext.loadScores handles isFetching check.
+                loadScores(cls.id, selectedSubjectId);
+            }
+        }
+    }, [selectedClass, selectedSubjectId, allClasses, loadScores]);
 
     // Mobile View State
     // PERSISTENCE: Initialize from localStorage

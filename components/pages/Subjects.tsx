@@ -13,8 +13,15 @@ const EMPTY_SUBJECT_FORM: Omit<Subject, 'id'> = {
 };
 
 const Subjects: React.FC = () => {
-    const { subjects, addSubject, updateSubject, deleteSubject, saveSubjects, isDirty, isSyncing, isOnline } = useData();
+    const { subjects, addSubject, updateSubject, deleteSubject, saveSubjects, isDirty, isSyncing, isOnline, loadMetadata } = useData();
     const { currentUser } = useUser();
+
+    // Ensure subjects are loaded
+    React.useEffect(() => {
+        if (subjects.length === 0) {
+            loadMetadata();
+        }
+    }, [subjects, loadMetadata]);
     const isAdmin = currentUser?.role === 'Admin';
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentSubject, setCurrentSubject] = useState<Subject | Omit<Subject, 'id'> | null>(null);

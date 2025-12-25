@@ -43,7 +43,7 @@ interface MissingRemarkEntry {
 }
 
 const ScoreSummary: React.FC = () => {
-    const { students, subjects, classes, assessments, getStudentScores, refreshFromCloud, isSyncing, isOnline, users, reportData, getReportData, updateStudent } = useData();
+    const { students, subjects, classes, assessments, getStudentScores, refreshFromCloud, isSyncing, isOnline, users, reportData, getReportData, updateStudent, loadScores } = useData();
     const { currentUser } = useUser();
 
     // State to toggle specific class view details
@@ -55,6 +55,14 @@ const ScoreSummary: React.FC = () => {
             [classId]: !prev[classId]
         }));
     };
+
+    // Lazy load all scores for summary
+    React.useEffect(() => {
+        if (subjects && subjects.length > 0) {
+            console.log('[ScoreSummary] 📥 Triggering batch score load for all subjects...');
+            subjects.forEach(sub => loadScores(0, sub.id));
+        }
+    }, [subjects, loadScores]);
 
     const summaryData = useMemo(() => {
         if (!classes || !students || !assessments || !subjects) return [];

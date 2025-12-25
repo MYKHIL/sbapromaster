@@ -41,7 +41,7 @@ const calculateAge = (dobString: string): string => {
 
 
 const Students: React.FC = () => {
-    const { students, classes, addStudent, updateStudent, deleteStudent, saveStudents, isDirty, isSyncing, isOnline, settings, updateSettings } = useData();
+    const { students, classes, addStudent, updateStudent, deleteStudent, saveStudents, isDirty, isSyncing, isOnline, settings, updateSettings, loadStudents } = useData();
     const { currentUser, isAuthenticated } = useUser();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentStudent, setCurrentStudent] = useState<Student | Omit<Student, 'id'> | null>(null);
@@ -73,6 +73,11 @@ const Students: React.FC = () => {
             hasSetDefaultClass.current = true;
         }
     }, [availableClasses]);
+
+    // Lazy Load Students on Mount
+    useEffect(() => {
+        loadStudents();
+    }, [loadStudents]);
 
     const filteredStudents = useMemo(() => {
         const query = searchQuery.toLowerCase();
