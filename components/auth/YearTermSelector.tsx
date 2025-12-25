@@ -1,26 +1,37 @@
 import React, { useState, useEffect } from 'react';
-import { getSchoolYearsAndTerms, SchoolPeriod } from '../../services/firebaseService';
+import { getSchoolYearsAndTerms, SchoolPeriod, SchoolListItem } from '../../services/firebaseService';
 
 interface YearTermSelectorProps {
-    schoolName: string;
+    school: SchoolListItem; // Changed from schoolName to full school object
     onSelectPeriod: (period: SchoolPeriod) => void;
     onBack: () => void;
 }
 
-const YearTermSelector: React.FC<YearTermSelectorProps> = ({ schoolName, onSelectPeriod, onBack }) => {
+const YearTermSelector: React.FC<YearTermSelectorProps> = ({ school, onSelectPeriod, onBack }) => {
     const [periods, setPeriods] = useState<SchoolPeriod[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         loadPeriods();
-    }, [schoolName]);
+    }, [school.docId]); // Changed dependency to school.docId
 
-    const loadPeriods = async () => {
+    const loadPeriods = async (forceRefresh: boolean = false) => {
         try {
             setLoading(true);
             setError(null);
-            const periodList = await getSchoolYearsAndTerms(schoolName);
+
+            // Clear cache if force refresh
+            if (forceRefresh) {
+                const { sanitizeSchoolName } = await import('../../services/firebaseService');
+                const dbSuffix = school._databaseIndex !== undefined ? `_db${school._databaseIndex}` : '';
+                const cacheKey = `auth_periods_${sanitizeSchoolName(school.displayName)}${dbSuffix}`;
+                localStorage.removeItem(cacheKey);
+                console.log('[YearTermSelector] Cache cleared, fetching fresh data');
+            }
+
+            // Pass school's database index to ensure correct database is queried
+            const periodList = await getSchoolYearsAndTerms(school.displayName, school._databaseIndex);
             setPeriods(periodList);
         } catch (err) {
             console.error('Failed to load periods:', err);
@@ -36,11 +47,29 @@ const YearTermSelector: React.FC<YearTermSelectorProps> = ({ schoolName, onSelec
                 {/* Header */}
                 <div className="text-center mb-6">
                     <h1 className="text-3xl font-bold text-gray-900 mb-2">Select Academic Period</h1>
-                    <p className="text-gray-600">{schoolName}</p>
+                    <p className="text-gray-600">{school.displayName}</p>
                 </div>
 
                 {/* Main Card */}
                 <div className="bg-white rounded-2xl shadow-xl p-6">
+                    {/* Reload Button */}
+                    <div className="mb-4">
+                        <button
+                            onClick={() => loadPeriods(true)}
+                            disabled={loading}
+                            className="w-full px-4 py-3 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 text-gray-700 rounded-xl transition-colors flex items-center justify-center gap-2 border-2 border-gray-200 font-medium"
+                        >
+                            <svg
+                                className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`}
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            <span>Reload Periods</span>
+                        </button>
+                    </div>
                     {loading ? (
                         <div className="text-center py-12">
                             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -67,8 +96,8 @@ const YearTermSelector: React.FC<YearTermSelectorProps> = ({ schoolName, onSelec
                                     key={period.docId}
                                     onClick={() => onSelectPeriod(period)}
                                     className={`w-full text-left p-4 rounded-xl border-2 transition-all duration-200 group ${index === 0
-                                            ? 'border-blue-500 bg-blue-50'
-                                            : 'border-gray-200 hover:border-blue-500 hover:bg-blue-50'
+                                        ? 'border-blue-500 bg-blue-50'
+                                        : 'border-gray-200 hover:border-blue-500 hover:bg-blue-50'
                                         }`}
                                 >
                                     <div className="flex items-center justify-between">

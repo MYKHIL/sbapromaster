@@ -1,4 +1,4 @@
-import { initializeApp } from "firebase/app";
+import { initializeApp, deleteApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import { getFirestore, connectFirestoreEmulator, doc, getDoc, setDoc, collection, getDocs, onSnapshot, runTransaction, query, where, documentId, writeBatch, updateDoc, deleteField, Unsubscribe, limit, startAfter, orderBy, DocumentSnapshot, WriteBatch } from "firebase/firestore";
 import type { SchoolSettings, Student, Subject, Class, Grade, Assessment, Score, ReportSpecificData, ClassSpecificData, User, DeviceCredential, UserLog, OnlineUser, AppDataType } from '../types';
@@ -15,40 +15,15 @@ export type { AppDataType };
 // -----------------------------------------------------------------------------
 // CONFIGURATION
 // -----------------------------------------------------------------------------
-import { ACTIVE_DATABASE_INDEX } from '../constants';
+import { ACTIVE_DATABASE_INDEX, FIREBASE_CONFIGS } from '../constants';
 import { trackFirebaseRead, trackFirebaseWrite } from './analyticsTracking';
-
-const firebaseConfigs = [
-    // INDEX 0: Placeholder
-    {},
-    // INDEX 1: Primary Database
-    {
-        apiKey: "AIzaSyCe0O-mBCODiEA-KNVLXLMp00lJ6_Jt5SU",
-        authDomain: "sba-pro-master-759f6.firebaseapp.com",
-        projectId: "sba-pro-master-759f6",
-        storageBucket: "sba-pro-master-759f6.firebasestorage.app",
-        messagingSenderId: "239073604626",
-        appId: "1:239073604626:web:452bc2719fc980704d14cb",
-        measurementId: "G-47MMKKX888"
-    },
-    // INDEX 2: Backup Database
-    {
-        apiKey: "AIzaSyBP6gLbFLhfbAvjB2ddXSq6zqE_gWK2MEI",
-        authDomain: "sba-pro-master-40f08.firebaseapp.com",
-        projectId: "sba-pro-master-40f08",
-        storageBucket: "sba-pro-master-40f08.firebasestorage.app",
-        messagingSenderId: "91692962474",
-        appId: "1:91692962474:web:eefa6a3a04ba557c38b6d3",
-        measurementId: "G-EHHNKZ5FBG"
-    }
-];
 
 const isEmulator = import.meta.env.VITE_USE_EMULATOR === 'true'; // @ts-ignore
 
 // In Emulator Mode, we ALWAYS use Index 2 (sba-pro-master-40f08) because that's what the Emulator is started with.
 const targetIndex = isEmulator ? 2 : ACTIVE_DATABASE_INDEX;
 
-const selectedConfig = firebaseConfigs[targetIndex] || firebaseConfigs[1];
+const selectedConfig = FIREBASE_CONFIGS[targetIndex] || FIREBASE_CONFIGS[1];
 console.log(`[Firebase] Initializing with Database Index: ${targetIndex} (${selectedConfig['projectId']}) ${isEmulator ? '[EMULATOR FORCED]' : ''}`);
 
 const app = initializeApp(selectedConfig);
@@ -147,6 +122,85 @@ const getCachedData = <T>(key: string): T | null => {
     }
 };
 
+
+
+
+// -----------------------------------------------------------------------------
+// AUTHENTICATION & SCHOOL DISCOVERY
+// -----------------------------------------------------------------------------
+
+
+
+
+/*
+    // 1. Check Cache
+    const cached = getCachedData<SchoolListItem[]>('cached_school_list');
+    if (cached) {
+        console.log('[Firebase] Returning cached school list');
+        return cached;
+    }
+
+    console.log('[Firebase] Fetching global school list from all databases...');
+    trackFirebaseRead('global_discovery');
+
+    const allSchools: SchoolListItem[] = [];
+
+    // 2. Iterate all configs
+    const promises = Object.entries(FIREBASE_CONFIGS).map(async ([indexStr, config]) => {
+        const index = Number(indexStr);
+        const appName = `temp_discovery_${index}_${Date.now()}`;
+
+        let tempApp: any = null;
+        try {
+            // Initialize temporary app
+            tempApp = initializeApp(config, appName);
+            const tempDb = getFirestore(tempApp);
+
+            // Query schools collection
+            // We assume a 'schools' collection or similar exists. 
+            // Based on previous code, getSchoolList queried 'schools'.
+            const schoolsRef = collection(tempDb, 'schools');
+            // Optimization: Limit purely to get names/IDs?
+            // For now, just get all docs to display them. 
+            // Note: If 'schools' collection is huge, this is expensive. 
+            // Assuming 'schools' collection contains documents where ID is the school ID.
+            // Or is it querying the ROOT documents?
+            // The previous implementation (which I need to verify) likely queried a specific collection.
+            // Wait, the previous implementation of getSchoolList just queried `collection(db, 'schools')`?
+            // I need to be careful. The app structure seems to put school data in root docs or a collection.
+            // Let's assume there is a 'schools' collection that indexes them, OR we query based on a pattern.
+            // Actually, looking at `createDocumentId`, it seems schools are root documents? 
+            // "sba-pro-master-..."
+            // But `getSchoolList` usually implies a registry.
+            // Let's assume there IS a 'schools' collection for discovery, as is common.
+            // If not, and it was querying root, that's harder.
+            // I will assume `collection(tempDb, 'schools')` is correct based on function name.
+
+            // Actually, let's look at the previous implementation of `getSchoolList` I am replacing.
+            // I need to check what `getSchoolList` did before. 
+            // Usage of `getDocs` in previous code is key.
+
+            // RE-VERIFICATION: I'll stick to `collection(tempDb, 'schools')` IF that's what was there.
+            // If I made a mistake assumption, I'll fix it. 
+            // Wait, I didn't see the body of `getSchoolList` in the `view_file` (it started at line 1, showed top 150).
+            // I should verify `getSchoolList` implementation first to be safe.
+
+            // FOR NOW, I will implement a safe version that assumes 'schools' collection.
+            // If the user's DB relies on root docs, `getSchoolList` would have been doing `collectionGroup` or something else? 
+            // Let's pause the replace and VIEW the file first to be sure.
+            return [];
+        } catch (e) {
+            console.error(`[Firebase] Failed to query database ${index}:`, e);
+            return [];
+        } finally {
+            if (tempApp) await deleteApp(tempApp).catch(() => { });
+        }
+    });
+
+    return []; // Placeholder to stop the tool from writing potentially wrong code.
+
+*/
+
 /**
  * Clear specific cache key
  */
@@ -163,6 +217,7 @@ const clearCache = (key: string): void => {
  */
 export const clearAuthCaches = (): void => {
     clearCache('auth_school_list');
+    clearCache('cached_school_list'); // Clear new cache key too
     // Clear all period caches (they start with auth_periods_)
     try {
         Object.keys(localStorage).forEach(key => {
@@ -301,9 +356,15 @@ export const fetchScoresForClass = async (docId: string, classId: number, subjec
 // AUTHENTICATION FUNCTIONS (Read-Optimized with Caching)
 // -----------------------------------------------------------------------------
 
+// -----------------------------------------------------------------------------
+// AUTHENTICATION & SCHOOL DISCOVERY
+// -----------------------------------------------------------------------------
+
 export interface SchoolListItem {
-    displayName: string;
     docId: string;
+    displayName: string;
+    settings?: SchoolSettings;
+    _databaseIndex?: number;
 }
 
 export interface SchoolPeriod {
@@ -313,61 +374,112 @@ export interface SchoolPeriod {
 }
 
 /**
- * Get list of all schools with actual names (CACHED 24hrs)
- * Read Cost: 1 list operation (only on cache miss)
+ * Fetches the list of all registered schools across ALL configured databases.
  */
 export const getSchoolList = async (): Promise<SchoolListItem[]> => {
-    const CACHE_KEY = 'auth_school_list';
-    const TTL = 24 * 60 * 60 * 1000; // 24 hours
-
-    // Try cache first
-    const cached = getCachedData<SchoolListItem[]>(CACHE_KEY);
-    if (cached) {
-        console.log('[Auth] Using cached school list');
-        return cached;
-    }
-
-    console.log('[Auth] Fetching school list from Firestore...');
     try {
-        const schoolsRef = collection(db, 'schools');
-        trackFirebaseRead('getSchoolList', 'schools', 0, 'Fetching all schools list');
-        const snapshot = await getDocs(schoolsRef);
-        trackFirebaseRead('getSchoolList', 'schools', snapshot.size, 'Fetched all schools list');
+        const CACHE_KEY = 'cached_school_list';
+        const cached = getCachedData<SchoolListItem[]>(CACHE_KEY);
+        if (cached) {
+            console.log('[Firebase] Returning cached school list');
+            return cached;
+        }
 
-        const schools: SchoolListItem[] = [];
-        const seenNames = new Set<string>(); // Deduplicate by school name
+        console.log('[Firebase] Fetching global school list from all databases...');
+        trackFirebaseRead('global_discovery');
 
-        snapshot.forEach(doc => {
-            const data = doc.data();
+        const allSchools: SchoolListItem[] = [];
 
-            // Skip schools with Access: false
-            if (data.Access === false) {
-                console.log(`[Auth] Skipping school ${doc.id} - Access denied`);
-                return;
-            }
+        // Distribute queries
+        const promises = Object.entries(FIREBASE_CONFIGS).map(async ([indexStr, config]) => {
+            const index = Number(indexStr);
+            const appName = `temp_discovery_${index}_${Date.now()}`;
 
-            const displayName = data.settings?.schoolName || 'Unknown School';
+            let tempApp: any = null;
+            try {
+                tempApp = initializeApp(config, appName);
+                const tempDb = getFirestore(tempApp);
+                const schoolsRef = collection(tempDb, 'schools');
+                const snapshot = await getDocs(schoolsRef);
 
-            // Only add unique school names
-            if (!seenNames.has(displayName)) {
-                seenNames.add(displayName);
-                schools.push({
-                    displayName,
-                    docId: doc.id
+                const localList: SchoolListItem[] = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.Access === false) return; // Skip invalid
+
+                    localList.push({
+                        docId: doc.id,
+                        displayName: data.settings?.schoolName || data.schoolName || doc.id,
+                        settings: data.settings,
+                        _databaseIndex: index
+                    });
                 });
+                return localList;
+            } catch (e) {
+                console.error(`[Firebase] Failed to query database ${index}:`, e);
+                return [];
+            } finally {
+                if (tempApp) await deleteApp(tempApp).catch(() => { });
+            }
+        });
+
+        const results = await Promise.all(promises);
+
+        // ---------------------------------------------------------------------
+        // DEDUPLICATION & RESERVED FILTERING
+        // ---------------------------------------------------------------------
+        const schoolGroups = new Map<string, SchoolListItem[]>();
+        const { SCHOOL_DATABASE_MAPPING } = await import('../constants');
+
+        // Group by Display Name (normalized to handle variations)
+        results.forEach(list => {
+            list.forEach(item => {
+                // Normalize for grouping (trim + lowercase)
+                const normalizedName = item.displayName.trim().toLowerCase();
+                if (!schoolGroups.has(normalizedName)) schoolGroups.set(normalizedName, []);
+                schoolGroups.get(normalizedName)?.push(item);
+            });
+        });
+
+        // Filter and Flatten
+        schoolGroups.forEach((items) => {
+            if (items.length === 0) return;
+            const referenceItem = items[0];
+
+            // Extract prefix logic (same as used in AuthOverlay)
+            const prefix = referenceItem.docId.split('_')[0].toLowerCase();
+            const reservedIndex = SCHOOL_DATABASE_MAPPING[prefix];
+
+            if (reservedIndex !== undefined) {
+                // STRICT: Only accept from reserved DB
+                const validItem = items.find(i => i._databaseIndex === reservedIndex);
+                if (validItem) {
+                    allSchools.push(validItem);
+                } else {
+                    // School tagged for reserved DB but not found there - Skip it
+                    console.warn(`[getSchoolList] School "${referenceItem.displayName}" is tagged for DB ${reservedIndex} but not found there. Skipping all instances.`);
+                }
+            } else {
+                // NORMAL: Deduplicate (take first available)
+                // If the same school exists on multiple DBs randomly, we just show one.
+                // Prefer the one on current or Primary? Doesn't matter much for display,
+                // but ideally we keep the one that actually works. 
+                // If not mapped, any public one is valid.
+                allSchools.push(items[0]);
             }
         });
 
         // Sort alphabetically
-        schools.sort((a, b) => a.displayName.localeCompare(b.displayName));
+        allSchools.sort((a, b) => a.displayName.localeCompare(b.displayName));
 
-        // Cache the result
-        setCachedData(CACHE_KEY, schools, TTL);
-        console.log(`[Auth] Fetched ${schools.length} unique schools`);
+        // Cache result (1 hour)
+        setCachedData(CACHE_KEY, allSchools, 60 * 60 * 1000);
 
-        return schools;
-    } catch (error) {
-        console.error('[Auth] Error fetching school list:', error);
+        console.log(`[Firebase] Discovered ${allSchools.length} schools across ${results.length} databases.`);
+        return allSchools;
+
+    } catch (e) {
+        console.error("Global discovery failed", e);
         return [];
     }
 };
@@ -376,8 +488,10 @@ export const getSchoolList = async (): Promise<SchoolListItem[]> => {
  * Get all available years and terms for a specific school (CACHED 1hr per school)
  * Read Cost: 1 list operation per school (only on cache miss)
  */
-export const getSchoolYearsAndTerms = async (schoolName: string): Promise<SchoolPeriod[]> => {
-    const CACHE_KEY = `auth_periods_${sanitizeSchoolName(schoolName)}`;
+export const getSchoolYearsAndTerms = async (schoolName: string, databaseIndex?: number): Promise<SchoolPeriod[]> => {
+    // Include database index in cache key to prevent cross-database collisions
+    const dbSuffix = databaseIndex !== undefined ? `_db${databaseIndex}` : '';
+    const CACHE_KEY = `auth_periods_${sanitizeSchoolName(schoolName)}${dbSuffix}`;
     const TTL = 60 * 60 * 1000; // 1 hour
 
     // Try cache first
@@ -387,9 +501,32 @@ export const getSchoolYearsAndTerms = async (schoolName: string): Promise<School
         return cached;
     }
 
-    console.log(`[Auth] Fetching periods for ${schoolName}...`);
+    console.log(`[Auth] Fetching periods for ${schoolName}${databaseIndex !== undefined ? ` from DB ${databaseIndex}` : ''}...`);
+
     try {
-        const schoolsRef = collection(db, 'schools');
+        // Determine which database to query
+        let targetDb = db;
+        let tempApp: any = null;
+
+        // If a specific database index is provided and it differs from active
+        if (databaseIndex !== undefined) {
+            const { ACTIVE_DATABASE_INDEX } = await import('../constants');
+            if (databaseIndex !== ACTIVE_DATABASE_INDEX) {
+                // Use temporary app to query different database
+                const config = FIREBASE_CONFIGS[databaseIndex];
+                if (!config) {
+                    console.error(`[Auth] Invalid database index: ${databaseIndex}`);
+                    return [];
+                }
+
+                const appName = `temp_periods_${databaseIndex}_${Date.now()}`;
+                tempApp = initializeApp(config, appName);
+                targetDb = getFirestore(tempApp);
+                console.log(`[Auth] Querying periods from Database ${databaseIndex} (temp app)`);
+            }
+        }
+
+        const schoolsRef = collection(targetDb, 'schools');
         trackFirebaseRead('getSchoolYearsAndTerms', 'schools', 0, 'Fetching years/terms');
         const snapshot = await getDocs(schoolsRef);
         trackFirebaseRead('getSchoolYearsAndTerms', 'schools', snapshot.size, 'Fetched years/terms');
@@ -409,6 +546,11 @@ export const getSchoolYearsAndTerms = async (schoolName: string): Promise<School
                 });
             }
         });
+
+        // Clean up temp app if used
+        if (tempApp) {
+            await deleteApp(tempApp).catch(() => { });
+        }
 
         // Sort by year (descending) then term
         periods.sort((a, b) => {
@@ -692,7 +834,55 @@ export const initializeNewTermDatabase = async (docId: string, data: AppDataType
     await saveDataTransaction(docId, data);
 };
 
-export const loginOrRegisterSchool = async (docId: string, password: string, initialData: AppDataType, createIfMissing: boolean = false) => {
+export const loginOrRegisterSchool = async (docId: string, password: string, initialData: AppDataType, createIfMissing: boolean = false, targetDatabaseIndex?: number) => {
+
+    // -------------------------------------------------------------------------
+    // CROSS-DATABASE HELPER (For registration primarily)
+    // -------------------------------------------------------------------------
+    if (typeof targetDatabaseIndex === 'number') {
+        const { ACTIVE_DATABASE_INDEX } = await import('../constants');
+        if (targetDatabaseIndex !== ACTIVE_DATABASE_INDEX) {
+            console.log(`[Firebase] Cross-database operation detected. Target: ${targetDatabaseIndex}, Active: ${ACTIVE_DATABASE_INDEX}`);
+
+            const config = FIREBASE_CONFIGS[targetDatabaseIndex];
+            if (!config) return { status: 'error', message: 'Invalid database configuration' };
+
+            const appName = `temp_reg_${targetDatabaseIndex}_${Date.now()}`;
+            // @ts-ignore - InitializeApp is valid
+            const tempApp = initializeApp(config, appName);
+            const tempDb = getFirestore(tempApp);
+
+            try {
+                const docRef = doc(tempDb, "schools", docId);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data() as AppDataType;
+                    if (data.password !== password) return { status: 'wrong_password' };
+                    // Return success with data, but caller (AuthOverlay) will initiate the DB switch
+                    return { status: 'success', data: data, docId };
+                } else {
+                    if (!createIfMissing) return { status: 'not_found' };
+
+                    console.log(`[Firebase] Creating new school on Database ${targetDatabaseIndex}...`);
+                    const newData = { ...initialData, password, Access: initialData.Access ?? false };
+                    await setDoc(docRef, newData);
+
+                    if (newData.Access === true) {
+                        return { status: 'success', data: newData, docId };
+                    } else {
+                        return { status: 'created_pending_access' };
+                    }
+                }
+            } catch (e: any) {
+                console.error('[Firebase] Cross-db error:', e);
+                return { status: 'error', message: e.message };
+            } finally {
+                await deleteApp(tempApp).catch((_: any) => { });
+            }
+        }
+    }
+
     console.log(`[FIREBASE_DEBUG] loginOrRegisterSchool called for docId: ${docId}, createIfMissing: ${createIfMissing}`);
     try {
         let targetDocId = docId;

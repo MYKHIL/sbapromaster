@@ -129,7 +129,28 @@ const SchoolListScreen: React.FC<SchoolListScreenProps> = ({ onSelectSchool, onB
                             filteredSchools.map((school) => (
                                 <button
                                     key={school.docId}
-                                    onClick={() => onSelectSchool(school)}
+                                    onClick={async () => {
+                                        // DATABASE SWITCH CHECK
+                                        const { SCHOOL_DATABASE_MAPPING, ACTIVE_DATABASE_INDEX } = await import('../../constants');
+
+                                        // Priority 1: Use the index discovered from global search
+                                        let requiredIndex = school._databaseIndex;
+
+                                        // Priority 2: Fallback to prefix mapping (e.g. for manually added schools or legacy)
+                                        if (typeof requiredIndex !== 'number') {
+                                            const schoolPrefix = school.docId.split('_')[0].toLowerCase();
+                                            requiredIndex = SCHOOL_DATABASE_MAPPING[schoolPrefix];
+                                        }
+
+                                        if (typeof requiredIndex === 'number' && requiredIndex !== ACTIVE_DATABASE_INDEX) {
+                                            console.warn(`[SchoolList] Switching to Database Index ${requiredIndex} for ${school.docId}`);
+                                            localStorage.setItem('active_database_index', requiredIndex.toString());
+                                            window.location.reload();
+                                            return;
+                                        }
+
+                                        onSelectSchool(school);
+                                    }}
                                     className="w-full text-left p-4 rounded-xl border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200 group"
                                 >
                                     <div className="flex items-center justify-between">

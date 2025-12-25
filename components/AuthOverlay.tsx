@@ -75,6 +75,20 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
 
                 console.log('[AuthOverlay] Found saved session, fetching school data...');
 
+                // DATABASE SWITCH CHECK:
+                // If the saved school ID implies a specific database (e.g. 'ayirebida' -> Index 2),
+                // we must ensure we are on the correct database index.
+                const { SCHOOL_DATABASE_MAPPING, ACTIVE_DATABASE_INDEX } = await import('../constants');
+                const schoolPrefix = savedSchoolId.split('_')[0].toLowerCase();
+                const requiredIndex = SCHOOL_DATABASE_MAPPING[schoolPrefix];
+
+                if (requiredIndex && requiredIndex !== ACTIVE_DATABASE_INDEX) {
+                    console.warn(`[AuthOverlay] Database mismatch for ${savedSchoolId}. Switching to Index ${requiredIndex}...`);
+                    localStorage.setItem('active_database_index', requiredIndex.toString());
+                    window.location.reload(); // Reload to initialize Firebase with new config
+                    return;
+                }
+
                 // Fetch school data
                 const result = await loginOrRegisterSchool(savedSchoolId, savedSchoolPassword, {} as AppDataType, false);
 
@@ -246,8 +260,74 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 userLogs: []
             };
 
-            // Register school: loginOrRegisterSchool(docId, password, initialData, createIfMissing)
-            const result = await loginOrRegisterSchool(docId, password, initialData, true);
+            // -------------------------------------------------------------
+            // DUPLICATE CHECK: Prevent re-registering existing schools
+            // -------------------------------------------------------------
+            const schoolPrefix = docId.split('_')[0].toLowerCase();
+
+            try {
+                // Leverage cached school list to check for duplicates (minimizes reads)
+                const { getSchoolList } = await import('../services/firebaseService');
+                const existingSchools = await getSchoolList();
+
+                // Check if any school has the same prefix (name part)
+                const duplicate = existingSchools.find(school => {
+                    const existingPrefix = school.docId.split('_')[0].toLowerCase();
+                    return existingPrefix === schoolPrefix;
+                });
+
+                if (duplicate) {
+                    console.warn(`[AuthOverlay] School "${schoolName}" already exists as ${duplicate.docId}`);
+                    alert(`This school is already registered as "${duplicate.displayName}".\n\nPlease select it from the School List instead of registering again.`);
+                    return;
+                }
+            } catch (error) {
+                console.error('[AuthOverlay] Failed to check for duplicates:', error);
+                // Continue anyway - better to allow registration than block on check failure
+            }
+
+            // -------------------------------------------------------------
+            // DATABASE SELECTION LOGIC
+            // -------------------------------------------------------------
+            const { FIREBASE_CONFIGS, SCHOOL_DATABASE_MAPPING, ACTIVE_DATABASE_INDEX } = await import('../constants');
+
+            // 1. Check if school is mapped to a reserved/specific database
+            let targetIndex = SCHOOL_DATABASE_MAPPING[schoolPrefix];
+
+            // 2. If not mapped, assign to a random PUBLIC database
+            if (!targetIndex) {
+                const publicIndices = Object.entries(FIREBASE_CONFIGS)
+                    .filter(([_, cfg]) => !cfg.isReserved)
+                    .map(([idx, _]) => Number(idx));
+
+                if (publicIndices.length > 0) {
+                    targetIndex = publicIndices[Math.floor(Math.random() * publicIndices.length)];
+                } else {
+                    targetIndex = 1; // Fallback to primary
+                }
+            }
+
+            console.log(`[AuthOverlay] Targeted Database Index: ${targetIndex} for ${docId}`);
+
+            // Register school: loginOrRegisterSchool(docId, password, initialData, createIfMissing, targetDbIndex)
+            // @ts-ignore - Argument to be added
+            const result = await loginOrRegisterSchool(docId, password, initialData, true, targetIndex);
+
+            // -------------------------------------------------------------
+            // HANDLE DATABASE SWITCH IF NEEDED
+            // -------------------------------------------------------------
+            if (result.status === 'success' && targetIndex !== ACTIVE_DATABASE_INDEX) {
+                console.warn(`[AuthOverlay] Registration successful on DB ${targetIndex}. Switching context...`);
+
+                // Save context and credentials
+                localStorage.setItem('active_database_index', targetIndex.toString());
+                localStorage.setItem('sba_school_id', result.docId || docId);
+                localStorage.setItem('sba_school_password', password);
+
+                // Force reload to switch database
+                window.location.reload();
+                return;
+            }
 
             if (result.status === 'success' && result.data) {
                 console.log('[AuthOverlay] ✅ School registered successfully');
@@ -620,7 +700,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
         case 'year-term':
             return selectedSchool ? (
                 <YearTermSelector
-                    schoolName={selectedSchool.displayName}
+                    school={selectedSchool}
                     onSelectPeriod={handlePeriodSelect}
                     onBack={handleBackToPassword}
                 />
