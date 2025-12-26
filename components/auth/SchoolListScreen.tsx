@@ -144,7 +144,11 @@ const SchoolListScreen: React.FC<SchoolListScreenProps> = ({ onSelectSchool, onB
 
                                         if (typeof requiredIndex === 'number' && requiredIndex !== ACTIVE_DATABASE_INDEX) {
                                             console.warn(`[SchoolList] Switching to Database Index ${requiredIndex} for ${school.docId}`);
+
+                                            // Save pending selection to restore after reload
+                                            localStorage.setItem('pending_school_selection', JSON.stringify(school));
                                             localStorage.setItem('active_database_index', requiredIndex.toString());
+
                                             window.location.reload();
                                             return;
                                         }

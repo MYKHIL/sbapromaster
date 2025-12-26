@@ -63,6 +63,39 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
     useEffect(() => {
         const restoreSession = async () => {
             try {
+                // -------------------------------------------------------------
+                // 1. CHECK FOR PENDING SELECTION (Active DB Switch)
+                // -------------------------------------------------------------
+                const pendingSelectionStr = localStorage.getItem('pending_school_selection');
+                if (pendingSelectionStr) {
+                    console.log('[AuthOverlay] 🔄 Found pending school selection (DB Switch)');
+                    try {
+                        const pendingSchool = JSON.parse(pendingSelectionStr) as SchoolListItem;
+
+                        // Verify we are on the correct DB now
+                        const { SCHOOL_DATABASE_MAPPING, ACTIVE_DATABASE_INDEX } = await import('../constants');
+                        let requiredIndex = pendingSchool._databaseIndex;
+                        if (typeof requiredIndex !== 'number') {
+                            const schoolPrefix = pendingSchool.docId.split('_')[0].toLowerCase();
+                            requiredIndex = SCHOOL_DATABASE_MAPPING[schoolPrefix];
+                        }
+
+                        // Restore selection
+                        handleSchoolSelect(pendingSchool);
+                        console.log('[AuthOverlay] ✅ Restored pending selection:', pendingSchool.docId);
+
+                        // Clear the key so we don't loop or reuse
+                        localStorage.removeItem('pending_school_selection');
+
+                        // ABORT normal session restore - user is in a NEW active flow
+                        setRestoringSession(false);
+                        return;
+
+                    } catch (parseError) {
+                        console.error('[AuthOverlay] Failed to parse pending selection:', parseError);
+                        localStorage.removeItem('pending_school_selection'); // Clear bad data
+                    }
+                }
                 const savedSchoolId = localStorage.getItem('sba_school_id');
                 const savedSchoolPassword = localStorage.getItem('sba_school_password');
                 const savedUserId = localStorage.getItem('sba_user_id');
