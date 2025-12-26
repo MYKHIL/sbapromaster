@@ -9,14 +9,13 @@ const UserBadge: React.FC = () => {
     const { currentUser, logout } = useUser();
 
     // Early return BEFORE other hooks to avoid React error #300
-    // This ensures consistent hook call order across all renders
     if (!currentUser) return null;
 
     const { isOnline, isSyncing, queuedCount, onlineUsers, settings } = useData();
     const [showConfirm, setShowConfirm] = useState(false);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [showOnlineUsers, setShowOnlineUsers] = useState(false);
-    const [isExpanded, setIsExpanded] = useState(true);
+    const [isExpanded, setIsExpanded] = useState(false);
 
     // Switch Account (Same School)
     const handleSwitchUser = () => {
@@ -67,11 +66,11 @@ const UserBadge: React.FC = () => {
     }, [isExpanded]);
 
     return (
-        <>
-            <div className="relative z-[60]">
+        <div className="flex flex-col items-end">
+            <div className={`relative z-[60] transition-all duration-300 ${!isExpanded ? 'scale-90 opacity-80 hover:opacity-100 hover:scale-95' : 'scale-100'}`}>
                 {/* User Info Badge */}
                 <div
-                    className={`flex flex-col gap-2 px-3 py-2 rounded-2xl shadow-lg border backdrop-blur-sm bg-opacity-95 transition-all duration-300 ${getRoleColor(currentUser.role)}`}
+                    className={`flex flex-col gap-1.5 px-2 py-1.5 rounded-2xl shadow-lg border backdrop-blur-md bg-opacity-90 transition-all duration-300 lg:px-3 lg:py-2 lg:bg-opacity-95 ${getRoleColor(currentUser.role)}`}
                 >
                     {/* Header Row with Name/Initials and Toggle */}
                     <div className="flex items-center gap-2">
@@ -159,7 +158,7 @@ const UserBadge: React.FC = () => {
                         >
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
-                                className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                                className={`h-4 w-4 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
@@ -227,7 +226,7 @@ const UserBadge: React.FC = () => {
                 onClose={() => setShowOnlineUsers(false)}
                 onlineUsers={onlineUsers}
             />
-        </>
+        </div>
     );
 };
 

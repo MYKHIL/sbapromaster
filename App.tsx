@@ -111,7 +111,7 @@ const App: React.FC = () => {
                 {/* PageVisitLogger removed to prevent excessive logging */}
                 <GreetingWrapper currentPage={currentPage} />
                 <TeacherPageRedirect currentPage={currentPage} setCurrentPage={setCurrentPage} />
-                <div className="fixed top-[4.5rem] lg:top-4 right-4 z-[60] flex flex-col items-end gap-2 pointer-events-none transition-[top] duration-300">
+                <div className="fixed top-2 lg:top-4 right-2 lg:right-4 z-[60] flex flex-col items-end gap-1.5 pointer-events-none transition-all duration-300">
                   {/* Pointer events needs to be auto for children so they are clickable */}
                   <div className="pointer-events-auto">
                     <UserBadge />
