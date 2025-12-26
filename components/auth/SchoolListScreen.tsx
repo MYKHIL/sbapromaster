@@ -145,6 +145,16 @@ const SchoolListScreen: React.FC<SchoolListScreenProps> = ({ onSelectSchool, onB
                                         if (typeof requiredIndex === 'number' && requiredIndex !== ACTIVE_DATABASE_INDEX) {
                                             console.warn(`[SchoolList] Switching to Database Index ${requiredIndex} for ${school.docId}`);
 
+                                            // Clear old session data to prevent conflicts
+                                            localStorage.removeItem('sba_school_id');
+                                            localStorage.removeItem('sba_school_password');
+                                            localStorage.removeItem('sba_user_id');
+                                            localStorage.removeItem('sba_user_password');
+
+                                            // Clear auth caches
+                                            const { clearAuthCaches } = await import('../../services/firebaseService');
+                                            clearAuthCaches();
+
                                             // Save pending selection to restore after reload
                                             localStorage.setItem('pending_school_selection', JSON.stringify(school));
                                             localStorage.setItem('active_database_index', requiredIndex.toString());

@@ -142,12 +142,54 @@ const UserBadge: React.FC = () => {
                                 e.stopPropagation();
                                 setShowLogoutConfirm(true);
                             }}
-                            className="p-1.5 rounded-full hover:bg-red-100 text-gray-500 hover:text-red-600 transition-colors"
+                            style={{
+                                display: 'inline-flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '2px',
+                                padding: '4px 6px',
+                                borderRadius: '9999px',
+                                backgroundColor: 'transparent',
+                                border: 'none',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                            }}
+                            className="hover:bg-red-100"
                             title="Logout from School"
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = 'rgba(254, 226, 226, 0.5)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                            }}
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-5 w-5 text-gray-500 hover:text-red-600"
+                                style={{ transition: 'color 0.2s' }}
+                                fill="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                {/* Door Frame */}
+                                <rect x="2" y="3" width="8" height="18" stroke="currentColor" strokeWidth="1.5" fill="none" />
+
+                                {/* Open Door */}
+                                <path d="M10 3 L13 5 L13 19 L10 21 Z" fill="currentColor" opacity="0.3" />
+                                <path d="M10 3 L13 5 L13 19 L10 21" stroke="currentColor" strokeWidth="1.5" fill="none" />
+
+                                {/* Door Handle */}
+                                <circle cx="6" cy="12" r="0.8" fill="currentColor" />
+
+                                {/* Exit Arrow */}
+                                <path d="M12 12 h4 M14 10 l2 2 l-2 2" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+
+                                {/* Walking Person */}
+                                <circle cx="19" cy="8" r="1.5" fill="currentColor" />
+                                <path d="M19 10 v3 M19 13 l-1.5 3.5 M19 13 l1.5 3.5 M18 11 l2 1" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
+                            <span style={{ fontSize: '9px', color: '#6b7280', fontWeight: 500, opacity: 0.8 }}>
+                                Log Out
+                            </span>
                         </button>
 
                         {/* Collapse/Expand Toggle */}
