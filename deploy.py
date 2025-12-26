@@ -1,12 +1,22 @@
 import subprocess
 import os
 import sys
-import re
+import shutil
 
-def run_command(command, error_message=None):
+# Configuration
+USERNAME = "MYKHIL"
+GIT_EMAIL = "darkmic50@gmail.com"
+
+# Paths (Relative to script location or absolute as fallback)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+WEB_PRO_PATH = BASE_DIR
+APPROVAL_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "SBA Web Approval"))
+MY_WEBSITE_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "My website"))
+
+def run_command(command, cwd=None, error_message=None):
     try:
-        # Run command and print output in real-time
-        process = subprocess.run(command, shell=True, check=True, text=True)
+        # Run command and print output
+        process = subprocess.run(command, shell=True, check=True, text=True, cwd=cwd)
         return True
     except subprocess.CalledProcessError as e:
         if error_message:
@@ -15,18 +25,12 @@ def run_command(command, error_message=None):
             print(f"Command failed: {command}")
         return False
 
-def check_and_remove_git_lock():
-    """Check for Git lock file and prompt user to remove it if found."""
-    lock_file = ".git/index.lock"
+def check_git_lock(path):
+    lock_file = os.path.join(path, ".git", "index.lock")
     if os.path.exists(lock_file):
-        print("\n⚠️  WARNING: Git lock file detected!")
-        print(f"Lock file location: {os.path.abspath(lock_file)}")
-        print("\nThis usually happens when a Git process was interrupted or crashed.")
-        print("Removing this lock file is safe if no other Git process is currently running.")
-        
-        response = input("\nDo you want to remove the lock file and proceed? (y/n): ").lower().strip()
-        
-        if response == 'y' or response == 'yes':
+        print(f"\n⚠️  WARNING: Git lock file detected in {path}!")
+        response = input("Remove lock file and proceed? (y/n): ").lower().strip()
+        if response in ['y', 'yes']:
             try:
                 os.remove(lock_file)
                 print("✓ Lock file removed successfully.")
@@ -34,92 +38,153 @@ def check_and_remove_git_lock():
             except Exception as e:
                 print(f"✗ Failed to remove lock file: {e}")
                 return False
-        else:
-            print("Deployment cancelled. Please ensure no Git processes are running and try again.")
-            return False
+        return False
     return True
 
-def main():
-    print("--- SBA Pro Master GitHub Deploy Script ---")
-    
-    # Check for Git lock file before proceeding
-    if not check_and_remove_git_lock():
-        return
-    
-    # 1. Initialize Git if needed
-    if not os.path.exists(".git"):
-        print("\nInitializing Git repository...")
-        if not run_command("git init", "Failed to initialize git repository"): return
-    else:
-        print("\nGit repository already initialized.")
+def configure_git(cwd):
+    run_command(f'git config user.name "{USERNAME}"', cwd=cwd)
+    run_command(f'git config user.email "{GIT_EMAIL}"', cwd=cwd)
 
-    # 2. Add all files
-    print("\nAdding files to staging...")
-    if not run_command("git add .", "Failed to add files"): return
+def deploy_pro_master():
+    print("\n🚀 DEPLOYING: SBA Pro Master - Web")
+    print("-----------------------------------")
+    
+    if not os.path.exists(WEB_PRO_PATH):
+        print(f"❌ Error: Path not found {WEB_PRO_PATH}")
+        return False
 
-    # 3. Commit
-    print("\nCommitting changes...")
-    # Check if there are changes to commit
-    status = subprocess.run("git status --porcelain", shell=True, text=True, capture_output=True)
+    if not check_git_lock(WEB_PRO_PATH): return False
+
+    # Initialize Git if needed
+    if not os.path.exists(os.path.join(WEB_PRO_PATH, ".git")):
+        run_command("git init", cwd=WEB_PRO_PATH)
+
+    configure_git(WEB_PRO_PATH)
+    
+    # Add and Commit
+    run_command("git add .", cwd=WEB_PRO_PATH)
+    status = subprocess.run("git status --porcelain", shell=True, text=True, capture_output=True, cwd=WEB_PRO_PATH)
     if status.stdout.strip():
-        if not run_command('git commit -m "Configure deployment for GitHub Pages"', "Failed to commit changes"): return
-    else:
-        print("No changes to commit.")
-
-    # 4. Configure Remote
-    # Hardcoded GitHub configuration
+        run_command('git commit -m "Deployment Update"', cwd=WEB_PRO_PATH)
+    
     repo_name = "sbapromaster"
-    username = "MYKHIL"
-    git_email = "darkmic50@gmail.com"
+    remote_url = f"https://github.com/{USERNAME}/{repo_name}.git"
     
-    print(f"\nConfiguring Git with user: {username}")
-    print(f"Email: {git_email}")
-    
-    # Set Git user configuration
-    run_command(f'git config user.name "{username}"')
-    run_command(f'git config user.email "{git_email}"')
-    
-    remote_url = f"https://github.com/{username}/{repo_name}.git"
-    
-    # Check if remote exists
-    remotes = subprocess.run("git remote", shell=True, text=True, capture_output=True).stdout
+    # Configure Remote
+    remotes = subprocess.run("git remote", shell=True, text=True, capture_output=True, cwd=WEB_PRO_PATH).stdout
     if "origin" in remotes:
-        print(f"Updating remote 'origin' to {remote_url}")
-        run_command(f"git remote set-url origin {remote_url}")
+        run_command(f"git remote set-url origin {remote_url}", cwd=WEB_PRO_PATH)
     else:
-        print(f"Adding remote 'origin': {remote_url}")
-        run_command(f"git remote add origin {remote_url}")
+        run_command(f"git remote add origin {remote_url}", cwd=WEB_PRO_PATH)
     
-    # 5. Push
-    print("\nPushing to GitHub automatically...")
-    print(f"Repository: {username}/{repo_name}")
+    run_command("git branch -M main", cwd=WEB_PRO_PATH)
     
-    # Ensure main branch
-    run_command("git branch -M main")
-    
-    if run_command("git push -u origin main"):
-        print("\n-----------------------------------")
-        print("SUCCESS! Code pushed to GitHub.")
-        print("-----------------------------------")
-        print("Next Steps:")
-        print(f"1. Go to your repository settings: https://github.com/{username or '<username>'}/{repo_name}/settings/pages")
-        print("2. Under 'Build and deployment', select 'GitHub Actions' as the source.")
-        print("   (The workflow file .github/workflows/deploy.yml has been created for you)")
-        print("3. Wait for the Action to complete, and your site will be live!")
+    print(f"Pushing to https://github.com/{USERNAME}/{repo_name}...")
+    if run_command("git push -u origin main", cwd=WEB_PRO_PATH):
+        print("\n✅ SUCCESS: SBA Pro Master Web pushed to GitHub.")
+        print("\n[Manual Action Required]")
+        print(f"1. Visit: https://github.com/{USERNAME}/{repo_name}/settings/pages")
+        print("2. Ensure 'Build and deployment' source is set to 'GitHub Actions'.")
+        return True
     else:
-        print("\n-----------------------------------")
-        print("PUSH FAILED.")
-        print("-----------------------------------")
-        print("Common reasons:")
-        print(f"1. The repository '{repo_name}' does not exist on your GitHub account ({username or 'unknown'}).")
-        print("   -> Go to https://github.com/new and create it.")
-        print("2. You do not have permission or are not logged in.")
+        print("\n❌ FAILED: Push rejected. Ensure the repository exists at GitHub.")
+        return False
+
+def deploy_approval():
+    print("\n🚀 DEPLOYING: SBA Web Approval (to User Pages)")
+    print("-----------------------------------")
+
+    # 1. Check if SBA Web Approval exists locally
+    if not os.path.exists(APPROVAL_PATH):
+        print(f"Creating project folder: {APPROVAL_PATH}")
+        os.makedirs(APPROVAL_PATH, exist_ok=True)
+        # Create a placeholder if totally empty
+        if not os.listdir(APPROVAL_PATH):
+            with open(os.path.join(APPROVAL_PATH, "index.html"), "w", encoding="utf-8") as f:
+                f.write("<!DOCTYPE html><html><body><h1>SBA Web Approval Portal</h1></body></html>")
+    
+    # 2. Check if Main Website exists
+    if not os.path.exists(MY_WEBSITE_PATH):
+        print(f"❌ Error: Main website repo not found at {MY_WEBSITE_PATH}")
+        print("Please ensure 'd:\\Projects\\My website' exists.")
+        return False
+
+    # 3. Copy files to /approvesba
+    target_dir = os.path.join(MY_WEBSITE_PATH, "approvesba")
+    os.makedirs(target_dir, exist_ok=True)
+    
+    # Find the main file (user deleted license-portal.html, so we look for index.html)
+    source_file = os.path.join(APPROVAL_PATH, "index.html")
+    if not os.path.exists(source_file):
+        # Fallback to any html file if index isn't there
+        html_files = [f for f in os.listdir(APPROVAL_PATH) if f.endswith(".html")]
+        if html_files:
+            source_file = os.path.join(APPROVAL_PATH, html_files[0])
+        else:
+            print("❌ Error: No HTML files found in SBA Web Approval folder.")
+            return False
+
+    print(f"Copying {os.path.basename(source_file)} to approvals folder...")
+    shutil.copy2(source_file, os.path.join(target_dir, "index.html"))
+    
+    # 4. Deploy Main Website
+    if not check_git_lock(MY_WEBSITE_PATH): return False
+    
+    configure_git(MY_WEBSITE_PATH)
+    run_command("git add .", cwd=MY_WEBSITE_PATH)
+    status = subprocess.run("git status --porcelain", shell=True, text=True, capture_output=True, cwd=MY_WEBSITE_PATH)
+    
+    if status.stdout.strip():
+        run_command('git commit -m "Update SBA Web Approval portal (/approvesba)"', cwd=MY_WEBSITE_PATH)
+    else:
+        print("No changes detected in website repository.")
+
+    repo_name = "mykhil.github.io"
+    remote_url = f"https://github.com/{USERNAME}/{repo_name}.git"
+
+    # Configure Remote
+    remotes = subprocess.run("git remote", shell=True, text=True, capture_output=True, cwd=MY_WEBSITE_PATH).stdout
+    if "origin" in remotes:
+        run_command(f"git remote set-url origin {remote_url}", cwd=MY_WEBSITE_PATH)
+    else:
+        run_command(f"git remote add origin {remote_url}", cwd=MY_WEBSITE_PATH)
+
+    run_command("git branch -M main", cwd=MY_WEBSITE_PATH)
+
+    print(f"Pushing to https://github.com/{USERNAME}/{repo_name}...")
+    if run_command("git push origin main", cwd=MY_WEBSITE_PATH):
+        print("\n✅ SUCCESS: SBA Web Approval is now live!")
+        print(f"URL: https://{USERNAME.lower()}.github.io/approvesba")
+        return True
+    else:
+        print("\n❌ FAILED: Push rejected. Ensure the repository exists at GitHub.")
+        return False
+
+def main():
+    while True:
+        print("\n==============================================")
+        print("      SBA UNIFIED DEPLOYMENT MANAGER")
+        print("==============================================")
+        print("Which project(s) do you want to deploy?")
+        print("[1] SBA Pro Master - Web      (sbapromaster.git)")
+        print("[2] SBA Web Approval Portal   (mykhil.github.io/approvesba)")
+        print("[3] Both Projects")
+        print("[Q] Quit")
         
-        # Get current git email for debugging
-        git_email = subprocess.run("git config user.email", shell=True, text=True, capture_output=True).stdout.strip()
-        print(f"   (Git is currently configured with email: {git_email or 'Not configured'})")
+        choice = input("\nEnter choice (1/2/3/Q): ").strip().upper()
         
-        print("   -> Try running 'git push -u origin main' manually to see the error.")
+        if choice == '1':
+            deploy_pro_master()
+        elif choice == '2':
+            deploy_approval()
+        elif choice == '3':
+            res1 = deploy_pro_master()
+            res2 = deploy_approval()
+        elif choice == 'Q':
+            print("Goodbye!")
+            break
+        else:
+            print("Invalid selection. Please try again.")
 
 if __name__ == "__main__":
     main()
