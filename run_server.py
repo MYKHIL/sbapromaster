@@ -37,13 +37,13 @@ def start_firestore_emulator():
     """Starts the Firestore emulator in a separate process."""
     print("Starting Firestore Emulator...")
     cwd = PROJECT_ROOT
-    # Force the emulator to use the specific project ID that matches the app's config
+    # Force the emulator to use the specific project ID and the DEBUG config (open rules)
     # This prevents "Demo" project mode and ensures UI matches App.
-    cmd = ["npx", "firebase", "emulators:start", "--only", "firestore", "--project", "sba-pro-master-40f08"]
+    cmd = ["npx", "firebase", "emulators:start", "--only", "firestore", "--project", "sba-pro-master-40f08", "--config", "firebase.debug.json"]
     
     # Check if npx exists (should be there if npm is there)
     if os.name == 'nt':
-        cmd = ["npx.cmd", "firebase", "emulators:start", "--only", "firestore", "--project", "sba-pro-master-40f08"]
+        cmd = ["npx.cmd", "firebase", "emulators:start", "--only", "firestore", "--project", "sba-pro-master-40f08", "--config", "firebase.debug.json"]
 
     try:
         # We start it as a background process.

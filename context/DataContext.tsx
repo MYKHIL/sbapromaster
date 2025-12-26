@@ -358,15 +358,21 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (!isRemote) markDirty('classData');
         }
 
+
         // Sync users if present
-        SyncLogger.log(`loadImportedData: Loading users. Count: ${importedUsers?.length || 0}`);
-        // CRITICAL LOOP PREVENTION: AuthOverlay syncs back to us. Check equality.
-        if (importedUsers && importedUsers.length > 0 && !deepEqual(importedUsers, users)) {
-            console.log('[DataContext] ✅ Updating users:', importedUsers.length);
-            setUsers(importedUsers);
-            if (!isRemote) markDirty('users');
-        } else {
-            console.log('[DataContext] 🚫 Skipping users update - data is empty/undefined');
+        if (importedUsers && importedUsers.length > 0) {
+            SyncLogger.log(`loadImportedData: Loading users from document. Count: ${importedUsers.length}`);
+            if (!deepEqual(importedUsers, users)) {
+                console.log('[DataContext] ✅ Updating users:', importedUsers.length);
+                setUsers(importedUsers);
+                if (!isRemote) markDirty('users');
+            }
+        } else if (importedUsers && importedUsers.length === 0) {
+            // Explicit empty array update
+            if (users.length > 0) {
+                setUsers([]);
+                if (!isRemote) markDirty('users');
+            }
         }
 
         if (data.userLogs) {
@@ -839,9 +845,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     promises.push(loadStudents(undefined, true));
                 }
 
-                // C) Scores (Granular only, usually) 
-                // We don't force load ALL scores on global refresh to avoid huge reads.
-                // But if specific Class/Subject is active, loadScores might be triggered by UI.
+
+                // D) Users - Loaded via Main Document (No Subcollection)
+
 
                 await Promise.all(promises);
 
@@ -896,6 +902,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     // We don't block locally because imported data is already available for basic UI
                     loadMetadata();
                     loadStudents();
+                    // Users are already loaded with Main Doc
                 } else {
                     console.log('[DataContext] ⚠️ No initial data found for school');
                 }
@@ -1238,7 +1245,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const deletions: Record<string, string[]> = {};
 
             // Check major collections for deletions
-            (['students', 'scores', 'assessments'] as const).forEach(key => {
+            (['students', 'scores', 'assessments', 'users'] as const).forEach(key => {
                 const currentArr = currentData[key] as any[];
                 const originalArr = originalData.current[key] as any[];
 
@@ -1644,6 +1651,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setIsFetching(false);
         }
     }, [schoolId, students.length]);
+
+    // loadUsers removed - users now in main document
 
     const loadScores = React.useCallback(async (classId: number, subjectId: number, force: boolean = false) => {
         if (!schoolId) return;

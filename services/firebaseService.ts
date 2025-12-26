@@ -395,7 +395,27 @@ export const getSchoolList = async (): Promise<SchoolListItem[]> => {
 
         const allSchools: SchoolListItem[] = [];
 
-        // Distribute queries
+        // EMULATOR OVERRIDE: Single Database Only
+        if (isEmulator) {
+            console.log('[Firebase] Emulator detected - Querying ONLY the current emulator instance.');
+            const schoolsRef = collection(db, 'schools');
+            const snapshot = await getDocs(schoolsRef);
+            return snapshot.docs
+                .map(doc => {
+                    const data = doc.data();
+                    if (data.Access === false) return null;
+                    const item: SchoolListItem = {
+                        docId: doc.id,
+                        displayName: data.settings?.schoolName || data.schoolName || doc.id,
+                        settings: data.settings,
+                        _databaseIndex: 2 // Emulator forces Index 2 context
+                    };
+                    return item;
+                })
+                .filter((s): s is SchoolListItem => s !== null)
+                .sort((a, b) => a.displayName.localeCompare(b.displayName));
+        }
+
         const promises = Object.entries(FIREBASE_CONFIGS).map(async ([indexStr, config]) => {
             const index = Number(indexStr);
             const appName = `temp_discovery_${index}_${Date.now()}`;
@@ -514,7 +534,7 @@ export const getSchoolYearsAndTerms = async (schoolName: string, databaseIndex?:
         let tempApp: any = null;
 
         // If a specific database index is provided and it differs from active
-        if (databaseIndex !== undefined) {
+        if (databaseIndex !== undefined && !isEmulator) { // Disable cross-db query in Emulator
             const { ACTIVE_DATABASE_INDEX } = await import('../constants');
             if (databaseIndex !== ACTIVE_DATABASE_INDEX) {
                 // Use temporary app to query different database
@@ -608,6 +628,11 @@ export const verifySchoolPassword = async (docId: string, password: string): Pro
 
         // Password is valid, now check license
         const baseName = docId.split('_')[0];
+        if (isEmulator) {
+            console.log(`[Auth] Emulator detected - Bypassing license check for ${baseName}`);
+            return { isValid: true, isExpired: false };
+        }
+
         const subRef = doc(db, 'subscriptions', baseName);
         trackFirebaseRead('checkLicense', 'subscriptions', 1, 'Checking license status');
         const subSnap = await getDoc(subRef);
@@ -711,7 +736,7 @@ export const saveDataTransaction = async (
     try {
         const operations: ((batch: WriteBatch) => void)[] = [];
         const mainUpdates: any = {};
-        const MAIN_KEYS = ['settings', 'userLogs', 'activeSessions', 'users', 'access', 'password'];
+        const MAIN_KEYS = ['settings', 'userLogs', 'activeSessions', 'access', 'password', 'users'];
 
         // --- HANDLE SCORES (Subject Bucketing) ---
         if (updates.scores && Array.isArray(updates.scores)) {
@@ -872,7 +897,7 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
     // -------------------------------------------------------------------------
     // CROSS-DATABASE HELPER (For registration primarily)
     // -------------------------------------------------------------------------
-    if (typeof targetDatabaseIndex === 'number') {
+    if (typeof targetDatabaseIndex === 'number' && !isEmulator) {
         const { ACTIVE_DATABASE_INDEX } = await import('../constants');
         if (targetDatabaseIndex !== ACTIVE_DATABASE_INDEX) {
             console.log(`[Firebase] Cross-database operation detected. Target: ${targetDatabaseIndex}, Active: ${ACTIVE_DATABASE_INDEX}`);
@@ -963,21 +988,26 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
             }
 
             // LICENSE CHECK: Only check license for existing schools
-            const baseName = targetDocId.split('_')[0];
-            const subRef = doc(db, 'subscriptions', baseName);
-            trackFirebaseRead('loginOrRegisterSchool (license)', 'subscriptions', 1, 'Checking license status');
-            const subSnap = await getDoc(subRef);
+            // EMULATOR BYPASS
+            if (isEmulator) {
+                console.log(`[FIREBASE_DEBUG] Emulator detected - Bypassing license check.`);
+            } else {
+                const baseName = targetDocId.split('_')[0];
+                const subRef = doc(db, 'subscriptions', baseName);
+                trackFirebaseRead('loginOrRegisterSchool (license)', 'subscriptions', 1, 'Checking license status');
+                const subSnap = await getDoc(subRef);
 
-            if (!subSnap.exists()) {
-                console.warn(`[FIREBASE_DEBUG] License record for ${baseName} missing.`);
-                return { status: 'expired', message: 'No active license found for this school.' };
-            }
+                if (!subSnap.exists()) {
+                    console.warn(`[FIREBASE_DEBUG] License record for ${baseName} missing.`);
+                    return { status: 'expired', message: 'No active license found for this school.' };
+                }
 
-            const subData = subSnap.data();
-            const expiryDate = subData.expiryDate?.toDate();
-            if (!expiryDate || new Date() > expiryDate) {
-                console.warn(`[FIREBASE_DEBUG] School license has expired.`);
-                return { status: 'expired', message: 'Your school license has expired. Please use the License Management Portal to renew.' };
+                const subData = subSnap.data();
+                const expiryDate = subData.expiryDate?.toDate();
+                if (!expiryDate || new Date() > expiryDate) {
+                    console.warn(`[FIREBASE_DEBUG] School license has expired.`);
+                    return { status: 'expired', message: 'Your school license has expired. Please use the License Management Portal to renew.' };
+                }
             }
 
             console.log(`[FIREBASE_DEBUG] Login successful. Returning data.`);

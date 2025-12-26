@@ -188,3 +188,9 @@ export interface AppDataType {
   password?: string;
   deviceCredentials?: DeviceCredential[];
 }
+
+export interface SchoolPeriod {
+  year: string;
+  term: string;
+  docId: string;
+}

@@ -13,6 +13,7 @@ export const AI_FEATURES_ENABLED = false;
 export const DEV_TOOLS_ENABLED = false;
 export const MULTI_SCORE_ENTRY_ENABLED = false;
 export const SHOW_PDF_DOWNLOAD_BUTTON = true;
+export const SHOW_USER_EXPORT_BUTTON = false;
 export const WHATSAPP_DEVELOPER_NUMBER = '233542410613';
 
 // DATABASE SWITCHING CONTROL

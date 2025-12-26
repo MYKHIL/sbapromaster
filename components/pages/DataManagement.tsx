@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
-import { updateUsers, createDocumentId, initializeNewTermDatabase, getSchoolData, type AppDataType } from '../../services/firebaseService';
+import { updateUsers, createDocumentId, initializeNewTermDatabase, getSchoolData, getSchoolList, getSchoolYearsAndTerms, fetchSubcollection, saveDataTransaction, type AppDataType } from '../../services/firebaseService';
 import { exportDatabase, importDatabase } from '../../services/databaseService';
 import { generateWpfProject } from '../../services/wpfProjectGenerator';
 import ConfirmationModal from '../ConfirmationModal';
 import AdminSetup from '../AdminSetup';
-import { DEV_TOOLS_ENABLED, WHATSAPP_DEVELOPER_NUMBER } from '../../constants';
-import type { User } from '../../types';
+import { DEV_TOOLS_ENABLED, WHATSAPP_DEVELOPER_NUMBER, SHOW_USER_EXPORT_BUTTON } from '../../constants';
+import type { User, SchoolPeriod } from '../../types';
 import { generateIndexNumber, validateIndexNumberPattern } from '../../utils/indexNumberGenerator';
 import IndexNumberConfig from '../IndexNumberConfig';
 
@@ -37,6 +37,7 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
     const [showPassword, setShowPassword] = useState(false);
     const [isFetchingPwd, setIsFetchingPwd] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
+    const [lockCurrentUsers, setLockCurrentUsers] = useState(false);
     const [createdTermId, setCreatedTermId] = useState<string | null>(null);
 
     useEffect(() => {
@@ -60,6 +61,7 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
 
             setPassword('');
             setMaintainPassword(true);
+            setLockCurrentUsers(false);
             setShowPassword(false);
             setCreatedTermId(null);
         }
@@ -118,6 +120,25 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
             const schoolPrefix = schoolId ? schoolId.split('_')[0] : settings.schoolName;
             const newDocId = createDocumentId(schoolPrefix, newSettings.academicYear, newSettings.academicTerm);
 
+            // 1.5. Lock Current Users (Optional)
+            if (lockCurrentUsers && schoolId) {
+                // Create a list of users with isReadOnly=true
+                const lockedUsers = dataContext.users.map(u => ({ ...u, isReadOnly: true }));
+                // Update CURRENT db locally and cloud
+                // We should probably await this to ensure it's saved before we move on,
+                // BUT if we fail to create the new term, we might have locked users prematurely?
+                // Risk is low. Reverting is manual (admin unchecks box).
+                await saveDataTransaction(schoolId, { users: lockedUsers });
+                console.log('Main term users locked.');
+            }
+
+            // 1.6 Ensure New Term Users are Unlocked
+            const unlockedUsers = dataContext.users.map(u => {
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                const { isReadOnly, ...rest } = u; // Remove isReadOnly property
+                return { ...rest, isReadOnly: false }; // Explicitly set to false to be safe
+            });
+
             // Full data payload
             const newData: AppDataType = {
                 settings: newSettings,
@@ -129,7 +150,7 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
                 scores: [], // Clear scores
                 reportData: [], // Clear comments/remarks
                 classData: [], // Clear class stats
-                users: dataContext.users, // Copy existing users access
+                users: unlockedUsers, // Copy existing users access (Unlocked)
                 password: password,
                 Access: true, // Enable access immediately
                 activeSessions: {}, // Reset sessions
@@ -297,23 +318,40 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
                                 )}
                             </button>
                         </div>
-                        <div className="flex items-center mt-2 space-x-2">
-                            <input
-                                type="checkbox"
-                                id="maintainPassword"
-                                checked={maintainPassword}
-                                onChange={(e) => setMaintainPassword(e.target.checked)}
-                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                            />
-                            <label htmlFor="maintainPassword" className="text-sm text-gray-600 select-none cursor-pointer">
-                                Maintain current school password
-                            </label>
-                            {isFetchingPwd && (
-                                <svg className="animate-spin h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                            )}
+
+                        <div className="flex flex-col gap-2 mt-4">
+                            <div className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    id="maintainPassword"
+                                    checked={maintainPassword}
+                                    onChange={(e) => setMaintainPassword(e.target.checked)}
+                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                />
+                                <label htmlFor="maintainPassword" className="text-sm text-gray-600 select-none cursor-pointer">
+                                    Maintain current school password
+                                </label>
+                                {isFetchingPwd && (
+                                    <svg className="animate-spin h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                )}
+                            </div>
+
+                            <div className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    id="lockCurrentUsers"
+                                    checked={lockCurrentUsers}
+                                    onChange={(e) => setLockCurrentUsers(e.target.checked)}
+                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                />
+                                <label htmlFor="lockCurrentUsers" className="text-sm text-gray-600 select-none cursor-pointer">
+                                    Lock all users in current term
+                                </label>
+                                <span className="text-xs text-slate-400" title="Prevents changes to the current term's data after switching">(Read-only)</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -334,6 +372,267 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
                         Cancel
                     </button>
                 </div>
+            </div>
+        </div>
+    );
+};
+
+// --- User Merging Tool (Debug) ---
+interface MergeUsersModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    currentUsers: User[];
+    onMerge: (mergedUsers: User[]) => void;
+    setFeedback: (feedback: FeedbackState | null) => void;
+}
+
+const MergeUsersModal: React.FC<MergeUsersModalProps> = ({ isOpen, onClose, currentUsers, onMerge, setFeedback }) => {
+    const [schools, setSchools] = useState<{ docId: string; displayName: string }[]>([]);
+    const [selectedDocId, setSelectedDocId] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [isMerging, setIsMerging] = useState(false);
+
+    useEffect(() => {
+        if (isOpen) {
+            const loadSchools = async () => {
+                setIsLoading(true);
+                try {
+                    const list = await getSchoolList();
+                    setSchools(list.map(s => ({ docId: s.docId, displayName: s.displayName })));
+                } catch (e) {
+                    setFeedback({ message: 'Failed to load schools for merging', type: 'error' });
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+            loadSchools();
+        }
+    }, [isOpen, setFeedback]);
+
+    const handleMerge = async () => {
+        if (!selectedDocId) return;
+        setIsMerging(true);
+        try {
+            // 1. Fetch users from source term (Document Field)
+            const sourceData = await getSchoolData(selectedDocId);
+            const sourceUsers: User[] = (sourceData as any)?.users || [];
+
+            if (!sourceUsers || sourceUsers.length === 0) {
+                setFeedback({ message: 'No users found in the selected term', type: 'warning' });
+                setIsMerging(false);
+                return;
+            }
+
+            // 2. Perform Merge (Deduplicate by name + role)
+            const mergedMap = new Map<string, User>();
+            // Add current users first
+            currentUsers.forEach(u => mergedMap.set(`${u.name}_${u.role}`, u));
+            // Add source users (override/add new)
+            sourceUsers.forEach(u => {
+                const key = `${u.name}_${u.role}`;
+                if (!mergedMap.has(key)) {
+                    // New user: assign new ID to avoid collisions
+                    mergedMap.set(key, { ...u, id: Date.now() + Math.floor(Math.random() * 1000) });
+                }
+            });
+
+            onMerge(Array.from(mergedMap.values()));
+            onClose();
+        } catch (e) {
+            setFeedback({ message: 'Merging failed: ' + (e as Error).message, type: 'error' });
+        } finally {
+            setIsMerging(false);
+        }
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-[60] animate-fade-in-scale">
+            <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md m-4">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Merge Users from Other Term</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                    Select an existing term to pull users from. Only users with unique Name/Role combinations will be added.
+                </p>
+
+                {isLoading ? (
+                    <div className="py-8 text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                        <p className="mt-2 text-sm text-gray-500">Loading terms...</p>
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Source Term</label>
+                            <select
+                                value={selectedDocId}
+                                onChange={e => setSelectedDocId(e.target.value)}
+                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                            >
+                                <option value="">Select a term...</option>
+                                {schools.map(s => (
+                                    <option key={s.docId} value={s.docId}>{s.displayName} ({s.docId})</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="flex gap-3 pt-4">
+                            <button
+                                onClick={handleMerge}
+                                disabled={!selectedDocId || isMerging}
+                                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-semibold disabled:bg-blue-300"
+                            >
+                                {isMerging ? 'Merging...' : 'Merge Users'}
+                            </button>
+                            <button
+                                onClick={onClose}
+                                className="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+// --- User Export Tool (New Feature) ---
+interface ExportUsersModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    currentUsers: User[];
+    setFeedback: (feedback: FeedbackState | null) => void;
+}
+
+const ExportUsersModal: React.FC<ExportUsersModalProps> = ({ isOpen, onClose, currentUsers, setFeedback }) => {
+    const { settings, schoolId } = useData();
+    const [periods, setPeriods] = useState<SchoolPeriod[]>([]);
+    const [selectedDocId, setSelectedDocId] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
+
+    useEffect(() => {
+        if (isOpen) {
+            const loadPeriods = async () => {
+                setIsLoading(true);
+                try {
+                    // Fetch all terms for the CURRENT school only (Scoped)
+                    const list = await getSchoolYearsAndTerms(settings.schoolName);
+                    // Filter out the current active term (can't export to self)
+                    const validPeriods = list.filter(p => p.docId !== schoolId);
+                    setPeriods(validPeriods);
+                } catch (e) {
+                    setFeedback({ message: 'Failed to load terms for export', type: 'error' });
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+            loadPeriods();
+        }
+    }, [isOpen, settings.schoolName, schoolId, setFeedback]);
+
+    const handleExport = async () => {
+        if (!selectedDocId) return;
+        setIsExporting(true);
+        try {
+            // 1. Fetch users from target term (Document Field)
+            const targetData = await getSchoolData(selectedDocId);
+            const targetUsers: User[] = (targetData as any)?.users || [];
+            // Note: targetUsers is a reference, pushing to it simplifies merge? 
+            // Better to keep it as read-only source for map initialization.
+
+            // 2. Perform Merge (Current -> Target)
+            const mergedMap = new Map<string, User>();
+            // Add target users first
+            targetUsers.forEach(u => mergedMap.set(`${u.name}_${u.role}`, u));
+
+            let addedCount = 0;
+            currentUsers.forEach(u => {
+                const key = `${u.name}_${u.role}`;
+                if (!mergedMap.has(key)) {
+                    // New user to target: assign new ID to avoid collisions
+                    mergedMap.set(key, { ...u, id: Date.now() + Math.floor(Math.random() * 1000) + addedCount });
+                    addedCount++;
+                }
+            });
+
+            if (addedCount === 0) {
+                setFeedback({ message: 'No new users to export (all exist in target).', type: 'info' });
+                setIsExporting(false);
+                return;
+            }
+
+            const finalUsers = Array.from(mergedMap.values());
+
+            // 3. Save to Target
+            await saveDataTransaction(selectedDocId, { users: finalUsers });
+
+            setFeedback({ message: `Successfully exported ${addedCount} user(s) to target term.`, type: 'success' });
+            onClose();
+        } catch (e) {
+            setFeedback({ message: 'Export failed: ' + (e as Error).message, type: 'error' });
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-[60] animate-fade-in-scale">
+            <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md m-4">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Export Users to Term</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                    Copy current users to another term within <strong>{settings.schoolName}</strong>.<br />
+                    Existing users with the same Name/Role will be preserved.
+                </p>
+
+                {isLoading ? (
+                    <div className="py-8 text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                        <p className="mt-2 text-sm text-gray-500">Loading terms...</p>
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Select Target Term</label>
+                            {periods.length === 0 ? (
+                                <p className="text-gray-500 text-sm mt-2 italic">No other terms found for this school.</p>
+                            ) : (
+                                <select
+                                    value={selectedDocId}
+                                    onChange={e => setSelectedDocId(e.target.value)}
+                                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                >
+                                    <option value="">Select a term...</option>
+                                    {periods.map(p => (
+                                        <option key={p.docId} value={p.docId}>
+                                            {p.year} - {p.term}
+                                        </option>
+                                    ))}
+                                </select>
+                            )}
+                        </div>
+
+                        <div className="flex gap-3 pt-4">
+                            <button
+                                onClick={handleExport}
+                                disabled={!selectedDocId || isExporting}
+                                className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 font-semibold disabled:bg-green-300 disabled:cursor-not-allowed"
+                            >
+                                {isExporting ? 'Exporting...' : 'Export Users'}
+                            </button>
+                            <button
+                                onClick={onClose}
+                                className="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -367,6 +666,8 @@ const DataManagement: React.FC = () => {
     // State for user management
     const [isUserManagementOpen, setIsUserManagementOpen] = useState(false);
     const [isCreateTermModalOpen, setIsCreateTermModalOpen] = useState(false);
+    const [isMergeUsersModalOpen, setIsMergeUsersModalOpen] = useState(false);
+    const [isExportUsersModalOpen, setIsExportUsersModalOpen] = useState(false);
 
 
     const buttonStyles = "flex items-center justify-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-wait";
@@ -836,7 +1137,9 @@ const DataManagement: React.FC = () => {
             <h1 className="text-3xl font-bold text-gray-800">Data Management</h1>
 
             <FeedbackPanel />
+
             <CreateTermModal isOpen={isCreateTermModalOpen} onClose={() => setIsCreateTermModalOpen(false)} setFeedback={setFeedback} />
+            <ExportUsersModal isOpen={isExportUsersModalOpen} onClose={() => setIsExportUsersModalOpen(false)} currentUsers={users} setFeedback={setFeedback} />
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* LEFT COLUMN: Operations & Admin */}
@@ -871,6 +1174,25 @@ const DataManagement: React.FC = () => {
                                         Start New Term
                                     </button>
                                 </div>
+
+                                {SHOW_USER_EXPORT_BUTTON && (
+                                    <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg border border-gray-100">
+                                        <div>
+                                            <h3 className="font-semibold text-gray-800">Export Users</h3>
+                                            <p className="text-sm text-gray-500 mt-1">Copy current user list to another term.</p>
+                                        </div>
+                                        <button
+                                            onClick={() => setIsExportUsersModalOpen(true)}
+                                            className="bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-700 transition-colors text-sm font-semibold flex items-center"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                            </svg>
+                                            Export Users
+                                        </button>
+                                    </div>
+                                )}
+
 
                                 {/* Promotion Toggle */}
                                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
@@ -926,6 +1248,29 @@ const DataManagement: React.FC = () => {
                                             <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                                         </svg>
                                     </button>
+
+                                    {/* Merge Users Tool (Debug Only) */}
+                                    {DEV_TOOLS_ENABLED && (
+                                        <button
+                                            onClick={() => setIsMergeUsersModalOpen(true)}
+                                            className="w-full mt-3 flex items-center justify-between p-3 border border-dashed border-indigo-300 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors group"
+                                        >
+                                            <div className="flex items-center">
+                                                <div className="bg-indigo-100 p-2 rounded-full mr-3 group-hover:bg-indigo-200 transition-colors">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                                                    </svg>
+                                                </div>
+                                                <div className="text-left">
+                                                    <span className="text-indigo-700 font-semibold text-sm block">Debug: Merge Users</span>
+                                                    <span className="text-indigo-500 text-xs">Import users from another term</span>
+                                                </div>
+                                            </div>
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-400" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                                            </svg>
+                                        </button>
+                                    )}
                                 </div>
                             )}
 
@@ -1052,80 +1397,91 @@ const DataManagement: React.FC = () => {
                 variant="info"
                 confirmText="Save to Cloud"
             />
-            {isShareModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 animate-fade-in-scale">
-                    <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md m-4">
-                        <h3 className="text-lg leading-6 font-bold text-gray-900">Share Database via WhatsApp</h3>
-                        <p className="text-sm text-gray-600 mt-2">
-                            This will download a backup of your database. You'll then be redirected to WhatsApp to send the file.
-                        </p>
+            {
+                isShareModalOpen && (
+                    <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 animate-fade-in-scale">
+                        <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md m-4">
+                            <h3 className="text-lg leading-6 font-bold text-gray-900">Share Database via WhatsApp</h3>
+                            <p className="text-sm text-gray-600 mt-2">
+                                This will download a backup of your database. You'll then be redirected to WhatsApp to send the file.
+                            </p>
 
-                        {!showCustomInput ? (
-                            <div className="mt-4 space-y-3">
+                            {!showCustomInput ? (
+                                <div className="mt-4 space-y-3">
+                                    <button
+                                        onClick={() => handleShare(WHATSAPP_DEVELOPER_NUMBER)}
+                                        className="w-full flex items-center justify-center bg-green-500 text-white px-4 py-3 rounded-lg shadow font-semibold hover:bg-green-600 transition-colors"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" fill="currentColor" viewBox="0 0 16 16">
+                                            <path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z" />
+                                        </svg>
+                                        Send to Developer
+                                    </button>
+                                    <button
+                                        onClick={() => setShowCustomInput(true)}
+                                        className="w-full bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 font-semibold"
+                                    >
+                                        Send to a Custom Number
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="mt-4">
+                                    <label className="block text-sm font-medium text-gray-700">Enter WhatsApp Number</label>
+                                    <input
+                                        type="tel"
+                                        placeholder="e.g. 233241234567"
+                                        value={customNumber}
+                                        onChange={(e) => setCustomNumber(e.target.value.replace(/\D/g, ''))}
+                                        className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                    />
+                                    <button
+                                        onClick={() => handleShare(customNumber)}
+                                        disabled={!customNumber.trim()}
+                                        className="w-full mt-3 flex items-center justify-center bg-green-500 text-white px-4 py-3 rounded-lg shadow font-semibold hover:bg-green-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                    >
+                                        Share Now
+                                    </button>
+                                </div>
+                            )}
+
+                            <div className="mt-5 sm:mt-4 text-right">
                                 <button
-                                    onClick={() => handleShare(WHATSAPP_DEVELOPER_NUMBER)}
-                                    className="w-full flex items-center justify-center bg-green-500 text-white px-4 py-3 rounded-lg shadow font-semibold hover:bg-green-600 transition-colors"
+                                    type="button"
+                                    className="inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:w-auto sm:text-sm"
+                                    onClick={() => {
+                                        setIsShareModalOpen(false);
+                                        setShowCustomInput(false);
+                                        setCustomNumber('');
+                                    }}
                                 >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" fill="currentColor" viewBox="0 0 16 16">
-                                        <path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z" />
-                                    </svg>
-                                    Send to Developer
-                                </button>
-                                <button
-                                    onClick={() => setShowCustomInput(true)}
-                                    className="w-full bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 font-semibold"
-                                >
-                                    Send to a Custom Number
+                                    Cancel
                                 </button>
                             </div>
-                        ) : (
-                            <div className="mt-4">
-                                <label className="block text-sm font-medium text-gray-700">Enter WhatsApp Number</label>
-                                <input
-                                    type="tel"
-                                    placeholder="e.g. 233241234567"
-                                    value={customNumber}
-                                    onChange={(e) => setCustomNumber(e.target.value.replace(/\D/g, ''))}
-                                    className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                />
-                                <button
-                                    onClick={() => handleShare(customNumber)}
-                                    disabled={!customNumber.trim()}
-                                    className="w-full mt-3 flex items-center justify-center bg-green-500 text-white px-4 py-3 rounded-lg shadow font-semibold hover:bg-green-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-                                >
-                                    Share Now
-                                </button>
-                            </div>
-                        )}
-
-                        <div className="mt-5 sm:mt-4 text-right">
-                            <button
-                                type="button"
-                                className="inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:w-auto sm:text-sm"
-                                onClick={() => {
-                                    setIsShareModalOpen(false);
-                                    setShowCustomInput(false);
-                                    setCustomNumber('');
-                                }}
-                            >
-                                Cancel
-                            </button>
                         </div>
                     </div>
-                </div>
-            )}
-            {isUserManagementOpen && (
-                <AdminSetup
-                    mode="management"
-                    users={users}
-                    currentUser={currentUser}
-                    onComplete={(users) => handleUserManagementSave(users, true)} // Complete/Close
-                    onUpdate={(users) => handleUserManagementSave(users, false)} // Update/Keep Open
-                    onCancel={() => setIsUserManagementOpen(false)}
-                />
-            )}
+                )
+            }
+            {
+                isUserManagementOpen && (
+                    <AdminSetup
+                        mode="management"
+                        users={users}
+                        currentUser={currentUser}
+                        onComplete={(users) => handleUserManagementSave(users, true)} // Complete/Close
+                        onUpdate={(users) => handleUserManagementSave(users, false)} // Update/Keep Open
+                        onCancel={() => setIsUserManagementOpen(false)}
+                    />
+                )
+            }
+            <MergeUsersModal
+                isOpen={isMergeUsersModalOpen}
+                onClose={() => setIsMergeUsersModalOpen(false)}
+                currentUsers={users}
+                onMerge={(merged) => handleUserManagementSave(merged, false)}
+                setFeedback={setFeedback}
+            />
             <ReadyToShareModal />
-        </div>
+        </div >
     );
 };
 
