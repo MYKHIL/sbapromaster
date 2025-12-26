@@ -64,7 +64,17 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
         const restoreSession = async () => {
             try {
                 // -------------------------------------------------------------
-                // 1. CHECK FOR PENDING SELECTION (Active DB Switch)
+                // 1. CHECK IF USER IS ACTIVELY SELECTING A SCHOOL
+                // -------------------------------------------------------------
+                const isSelectingSchool = localStorage.getItem('selecting_school');
+                if (isSelectingSchool) {
+                    console.log('[AuthOverlay] User is selecting school - skipping session restore');
+                    setRestoringSession(false);
+                    return;
+                }
+
+                // -------------------------------------------------------------
+                // 2. CHECK FOR PENDING SELECTION (Active DB Switch)
                 // -------------------------------------------------------------
                 const pendingSelectionStr = localStorage.getItem('pending_school_selection');
                 if (pendingSelectionStr) {
@@ -187,6 +197,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             const success = await login(parseInt(savedUserId), savedUserPassword);
 
             if (success) {
+                localStorage.removeItem('selecting_school'); // Clear selection flag
                 setShowSessionRestore(false);
                 setCurrentStep('authenticated');
                 resumeSync();
@@ -224,6 +235,8 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
     };
 
     const handleLoginClick = () => {
+        // Set flag to prevent session restore from interfering
+        localStorage.setItem('selecting_school', 'true');
         setCurrentStep('school-list');
     };
 
@@ -523,6 +536,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
     };
 
     const handleBackToWelcome = () => {
+        localStorage.removeItem('selecting_school'); // Clear selection flag
         setSelectedSchool(null);
         setSelectedPeriod(null);
         setCurrentStep('welcome');
@@ -628,6 +642,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             localStorage.setItem('sba_user_password', adminPassword);
 
             // Complete authentication
+            localStorage.removeItem('selecting_school'); // Clear selection flag
             setCurrentStep('authenticated');
             resumeSync();
 
@@ -668,6 +683,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             localStorage.setItem('sba_user_password', password);
 
             // Complete authentication
+            localStorage.removeItem('selecting_school'); // Clear selection flag
             setCurrentStep('authenticated');
             resumeSync();
 
