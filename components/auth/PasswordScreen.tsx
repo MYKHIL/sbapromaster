@@ -11,7 +11,7 @@ const PasswordScreen: React.FC<PasswordScreenProps> = ({ school, onPasswordVerif
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState<React.ReactNode | null>(null);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -25,9 +25,26 @@ const PasswordScreen: React.FC<PasswordScreenProps> = ({ school, onPasswordVerif
             setLoading(true);
             setError(null);
 
-            const isValid = await verifySchoolPassword(school.docId, password);
+            const { isValid, isExpired } = await verifySchoolPassword(school.docId, password);
 
             if (isValid) {
+                if (isExpired) {
+                    setError(
+                        <span>
+                            Your school license has expired. Please contact the {' '}
+                            <a
+                                href="https://wa.me/233542410613"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-bold underline hover:text-red-800 transition-colors"
+                            >
+                                Support Team at 0542410613
+                            </a>{' '}
+                            to renew your subscription.
+                        </span>
+                    );
+                    return;
+                }
                 onPasswordVerified(password); // Pass the password to parent
             } else {
                 setError('Incorrect password. Please try again.');
@@ -92,7 +109,7 @@ const PasswordScreen: React.FC<PasswordScreenProps> = ({ school, onPasswordVerif
                         {/* Error Message */}
                         {error && (
                             <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
-                                <p className="text-red-600 text-sm">{error}</p>
+                                <div className="text-red-600 text-sm">{error}</div>
                             </div>
                         )}
 

@@ -58,6 +58,18 @@ export const FIREBASE_CONFIGS: { [key: number]: FirebaseConfig } = {
     measurementId: "G-EHHNKZ5FBG",
     isReserved: true,
     label: 'Reserved/Darko'
+  },
+  // INDEX 3: Secondary Public Database (Public Pool)
+  3: {
+    apiKey: "AIzaSyBnbpBSwA-AtorGzVefj5h3fWkAVfyDWuU",
+    authDomain: "sba-pro-master-e43d0.firebaseapp.com",
+    projectId: "sba-pro-master-e43d0",
+    storageBucket: "sba-pro-master-e43d0.firebasestorage.app",
+    messagingSenderId: "126627036834",
+    appId: "1:126627036834:web:4e32313e40e5c3f752a1fb",
+    measurementId: "G-N09YP3PZ9J",
+    isReserved: false,
+    label: 'Public 2'
   }
 };
 

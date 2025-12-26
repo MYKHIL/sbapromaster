@@ -1,8 +1,47 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // 1. HELPER FUNCTIONS
+    // Extracts 'AYIREBI SDA BASIC SCHOOL' from a path-friendly ID if needed
+    // and checks the subscription collection.
+    function isSubscriptionActive(schoolId) {
+      let baseId = schoolId.split('_')[0];
+      let subPath = /databases/$(database)/documents/subscriptions/$(baseId);
+      return exists(subPath) && get(subPath).data.expiryDate > request.time;
+    }
+
+    // 2. SUBSCRIPTIONS (The License Storage)
+    match /subscriptions/{schoolId} {
+      allow read: if true;
+      allow write: if request.resource.data.activationHash == "c93a215026f36ac783bcac8ba5e4bbea1c3cdb6c79d3824f9712143c44dbb0f3";
+    }
+
+    // 3. YEARS & TERMS (The specific fix for your console error)
+    // Your code is fetching periods for 'AYIREBI SDA BASIC SCHOOL'
+    match /years/{docId} {
+      allow read: if true; // Usually public so users can pick their school/year
+    }
+    match /terms/{docId} {
+      allow read: if true;
+    }
+
+    // 4. SCHOOLS DATA (The Main Data Tree)
+    match /schools/{schoolId} {
+      // Allow list/get for discovery and password verification.
+      // Core data (students, grades, etc.) is protected in subcollections.
+      allow read: if true;
+      
+      // Allow all subcollections (metadata, classes, subjects, assessments, etc.)
+      // Note: Removed request.auth check as per user request for pure rule-based security.
+      match /{allSubcollections=**} {
+        allow read, write: if isSubscriptionActive(schoolId);
+      }
+    }
+
+    // 5. GLOBAL FALLBACK
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }

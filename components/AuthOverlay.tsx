@@ -94,7 +94,12 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
 
                 if (result.status !== 'success' || !result.data) {
                     console.error('[AuthOverlay] Failed to restore session:', result.status);
-                    // Clear invalid session
+
+                    if (result.status === 'expired') {
+                        alert('Your school license has expired. Please renew your subscription to continue.');
+                    }
+
+                    // Clear invalid or expired session
                     localStorage.removeItem('sba_school_id');
                     localStorage.removeItem('sba_school_password');
                     localStorage.removeItem('sba_user_id');
@@ -265,10 +270,13 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             // -------------------------------------------------------------
             const schoolPrefix = docId.split('_')[0].toLowerCase();
 
+            // Fetch existing schools list (used for both duplicate check and fair distribution)
+            const { getSchoolList } = await import('../services/firebaseService');
+            let existingSchools: any[] = [];
+
             try {
                 // Leverage cached school list to check for duplicates (minimizes reads)
-                const { getSchoolList } = await import('../services/firebaseService');
-                const existingSchools = await getSchoolList();
+                existingSchools = await getSchoolList();
 
                 // Check if any school has the same prefix (name part)
                 const duplicate = existingSchools.find(school => {
@@ -294,14 +302,42 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             // 1. Check if school is mapped to a reserved/specific database
             let targetIndex = SCHOOL_DATABASE_MAPPING[schoolPrefix];
 
-            // 2. If not mapped, assign to a random PUBLIC database
+            // 2. If not mapped, assign to a random PUBLIC database with fair distribution
             if (!targetIndex) {
                 const publicIndices = Object.entries(FIREBASE_CONFIGS)
                     .filter(([_, cfg]) => !cfg.isReserved)
                     .map(([idx, _]) => Number(idx));
 
                 if (publicIndices.length > 0) {
-                    targetIndex = publicIndices[Math.floor(Math.random() * publicIndices.length)];
+                    // FAIR DISTRIBUTION: Weight selection inversely by current count
+                    // Get current school count per database from the cached list
+                    const dbCounts: { [key: number]: number } = {};
+                    publicIndices.forEach(idx => dbCounts[idx] = 0);
+
+                    existingSchools.forEach(school => {
+                        const idx = school._databaseIndex;
+                        if (idx !== undefined && dbCounts[idx] !== undefined) {
+                            dbCounts[idx]++;
+                        }
+                    });
+
+                    // Calculate weights (inverse of count + 1 to avoid division by zero)
+                    const weights = publicIndices.map(idx => 1 / (dbCounts[idx] + 1));
+                    const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+
+                    // Weighted random selection
+                    let random = Math.random() * totalWeight;
+                    targetIndex = publicIndices[0]; // Fallback
+
+                    for (let i = 0; i < publicIndices.length; i++) {
+                        random -= weights[i];
+                        if (random <= 0) {
+                            targetIndex = publicIndices[i];
+                            break;
+                        }
+                    }
+
+                    console.log(`[AuthOverlay] Fair distribution selected DB ${targetIndex}. Current counts:`, dbCounts);
                 } else {
                     targetIndex = 1; // Fallback to primary
                 }
@@ -310,8 +346,30 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             console.log(`[AuthOverlay] Targeted Database Index: ${targetIndex} for ${docId}`);
 
             // Register school: loginOrRegisterSchool(docId, password, initialData, createIfMissing, targetDbIndex)
-            // @ts-ignore - Argument to be added
             const result = await loginOrRegisterSchool(docId, password, initialData, true, targetIndex);
+
+            // -------------------------------------------------------------
+            // DEBUG AUTOMATION: Create Trial Subscription for Dummy School
+            // -------------------------------------------------------------
+            // @ts-ignore
+            if ((import.meta.env.DEV || import.meta.env.VITE_USE_EMULATOR === 'true') && schoolName === 'Dummy School') {
+                try {
+                    const { db } = await import('../services/firebaseService');
+                    const { doc, setDoc, Timestamp } = await import('firebase/firestore');
+                    const baseName = docId.split('_')[0];
+                    const subRef = doc(db, 'subscriptions', baseName);
+
+                    await setDoc(subRef, {
+                        maxClass: 9999,
+                        maxStudents: 9999,
+                        expiryDate: Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)), // 30 days
+                        activationHash: 'c93a215026f36ac783bcac8ba5e4bbea1c3cdb6c79d3824f9712143c44dbb0f3' // Match portal default for debug
+                    }, { merge: true });
+                    console.log(`[AuthOverlay] 🤖 Debug: Trial subscription created for ${baseName}`);
+                } catch (subError) {
+                    console.error('[AuthOverlay] ❌ Failed to create debug subscription:', subError);
+                }
+            }
 
             // -------------------------------------------------------------
             // HANDLE DATABASE SWITCH IF NEEDED
@@ -459,7 +517,12 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
 
             if (result.status !== 'success') {
                 console.error('[AuthOverlay] ❌ Login failed:', result.message || result.status);
-                alert(result.message || `Login failed: ${result.status}`);
+
+                if (result.status === 'expired') {
+                    alert(result.message || 'Your school license has expired. Please renew your subscription through the License Portal.');
+                } else {
+                    alert(result.message || `Login failed: ${result.status}`);
+                }
                 return;
             }
 

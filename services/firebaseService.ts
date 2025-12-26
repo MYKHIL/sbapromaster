@@ -1,5 +1,6 @@
 import { initializeApp, deleteApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
+import { getAuth, signInAnonymously, connectAuthEmulator } from "firebase/auth";
 import { getFirestore, connectFirestoreEmulator, doc, getDoc, setDoc, collection, getDocs, onSnapshot, runTransaction, query, where, documentId, writeBatch, updateDoc, deleteField, Unsubscribe, limit, startAfter, orderBy, DocumentSnapshot, WriteBatch } from "firebase/firestore";
 import type { SchoolSettings, Student, Subject, Class, Grade, Assessment, Score, ReportSpecificData, ClassSpecificData, User, DeviceCredential, UserLog, OnlineUser, AppDataType } from '../types';
 
@@ -18,7 +19,8 @@ export type { AppDataType };
 import { ACTIVE_DATABASE_INDEX, FIREBASE_CONFIGS } from '../constants';
 import { trackFirebaseRead, trackFirebaseWrite } from './analyticsTracking';
 
-const isEmulator = import.meta.env.VITE_USE_EMULATOR === 'true'; // @ts-ignore
+// @ts-ignore
+const isEmulator = (import.meta as any).env.VITE_USE_EMULATOR === 'true';
 
 // In Emulator Mode, we ALWAYS use Index 2 (sba-pro-master-40f08) because that's what the Emulator is started with.
 const targetIndex = isEmulator ? 2 : ACTIVE_DATABASE_INDEX;
@@ -27,16 +29,19 @@ const selectedConfig = FIREBASE_CONFIGS[targetIndex] || FIREBASE_CONFIGS[1];
 console.log(`[Firebase] Initializing with Database Index: ${targetIndex} (${selectedConfig['projectId']}) ${isEmulator ? '[EMULATOR FORCED]' : ''}`);
 
 const app = initializeApp(selectedConfig);
+export const auth = getAuth(app);
 const analytics = getAnalytics(app);
 export const db = getFirestore(app);
+export { analytics };
 
 // Check if we are in Debug/Emulator Mode
 // @ts-ignore
-if (import.meta.env.VITE_USE_EMULATOR === 'true') {
+if ((import.meta as any).env.VITE_USE_EMULATOR === 'true') {
     console.warn("⚠️ USING FIRESTORE EMULATOR ⚠️");
     try {
         connectFirestoreEmulator(db, '127.0.0.1', 8080);
-        console.log("✅ Main Firestore connected to emulator on 127.0.0.1:8080");
+        connectAuthEmulator(auth, "http://127.0.0.1:9099");
+        console.log("✅ Main Firestore & Auth connected to emulator");
     } catch (e) {
         console.error("Failed to connect to emulator:", e);
     }
@@ -572,18 +577,19 @@ export const getSchoolYearsAndTerms = async (schoolName: string, databaseIndex?:
 
 /**
  * Verify password for a school (Field-level read - only fetches password)
- * Read Cost: 1 document read (minimal data transfer)
+ * Also checks if the license is expired.
+ * Read Cost: 2 document reads (school doc + subscription doc)
  */
-export const verifySchoolPassword = async (docId: string, password: string): Promise<boolean> => {
+export const verifySchoolPassword = async (docId: string, password: string): Promise<{ isValid: boolean, isExpired: boolean }> => {
     try {
-        console.log(`[Auth] Verifying password for ${docId}...`);
+        console.log(`[Auth] Verifying password and license for ${docId}...`);
         const docRef = doc(db, 'schools', docId);
         trackFirebaseRead('verifySchoolPassword', 'schools', 1, 'Verifying password');
         const docSnap = await getDoc(docRef);
 
         if (!docSnap.exists()) {
             console.warn(`[Auth] School ${docId} not found`);
-            return false;
+            return { isValid: false, isExpired: false };
         }
 
         const data = docSnap.data();
@@ -591,15 +597,37 @@ export const verifySchoolPassword = async (docId: string, password: string): Pro
 
         if (!storedPassword) {
             console.warn(`[Auth] No password set for ${docId}`);
-            return false;
+            return { isValid: false, isExpired: false };
         }
 
         const isValid = storedPassword === password;
-        console.log(`[Auth] Password ${isValid ? 'valid' : 'invalid'}`);
-        return isValid;
+        if (!isValid) {
+            console.log(`[Auth] Password invalid`);
+            return { isValid: false, isExpired: false };
+        }
+
+        // Password is valid, now check license
+        const baseName = docId.split('_')[0];
+        const subRef = doc(db, 'subscriptions', baseName);
+        trackFirebaseRead('checkLicense', 'subscriptions', 1, 'Checking license status');
+        const subSnap = await getDoc(subRef);
+
+        if (!subSnap.exists()) {
+            console.warn(`[Auth] License not found for ${baseName}`);
+            return { isValid: true, isExpired: true }; // Missing license counts as expired/inactive
+        }
+
+        const subData = subSnap.data();
+        const expiryDate = subData.expiryDate?.toDate();
+        const isExpired = !expiryDate || new Date() > expiryDate;
+
+        console.log(`[Auth] License status for ${baseName}: ${isExpired ? 'EXPIRED' : 'ACTIVE'}`);
+
+        return { isValid: true, isExpired };
+
     } catch (error) {
-        console.error(`[Auth] Error verifying password:`, error);
-        return false;
+        console.error(`[Auth] Error verifying password/license:`, error);
+        return { isValid: false, isExpired: false };
     }
 };
 
@@ -666,6 +694,11 @@ export const saveDataTransaction = async (
     // Helper to manage batches
     const executeBatch = async (operations: ((batch: WriteBatch) => void)[]) => {
         const BATCH_SIZE = 450; // Safety margin below 500
+
+        // DEBUG: Check auth state before batch
+        const currentUser = auth.currentUser;
+        console.log(`[Firebase] Batch Save Starting. Auth UID: ${currentUser?.uid || 'NONE (Unauthenticated)'}`);
+
         for (let i = 0; i < operations.length; i += BATCH_SIZE) {
             const batch = writeBatch(db);
             const chunk = operations.slice(i, i + BATCH_SIZE);
@@ -929,7 +962,26 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
                 return { status: 'access_denied' };
             }
 
+            // LICENSE CHECK: Only check license for existing schools
+            const baseName = targetDocId.split('_')[0];
+            const subRef = doc(db, 'subscriptions', baseName);
+            trackFirebaseRead('loginOrRegisterSchool (license)', 'subscriptions', 1, 'Checking license status');
+            const subSnap = await getDoc(subRef);
+
+            if (!subSnap.exists()) {
+                console.warn(`[FIREBASE_DEBUG] License record for ${baseName} missing.`);
+                return { status: 'expired', message: 'No active license found for this school.' };
+            }
+
+            const subData = subSnap.data();
+            const expiryDate = subData.expiryDate?.toDate();
+            if (!expiryDate || new Date() > expiryDate) {
+                console.warn(`[FIREBASE_DEBUG] School license has expired.`);
+                return { status: 'expired', message: 'Your school license has expired. Please use the License Management Portal to renew.' };
+            }
+
             console.log(`[FIREBASE_DEBUG] Login successful. Returning data.`);
+
             // OPTIMIZATION: Return ONLY main data. Do not fan-in.
             return { status: 'success', data: data, docId: targetDocId };
         } else {

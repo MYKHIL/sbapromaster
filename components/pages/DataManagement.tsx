@@ -376,6 +376,7 @@ const DataManagement: React.FC = () => {
         setFeedback({ message: 'Generating database file...', type: 'info' });
         try {
             const fileData = await exportDatabase(dataContext);
+            // @ts-ignore - Uint8Array from sql.js may have SharedArrayBuffer conflict with BlobPart
             const blob = new Blob([fileData as any], { type: 'application/x-sqlite3' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -490,7 +491,8 @@ const DataManagement: React.FC = () => {
 
         try {
             const fileData = await exportDatabase(dataContext);
-            const blob = new Blob([fileData], { type: 'application/x-sqlite3' });
+            // @ts-ignore - Uint8Array from sql.js may have SharedArrayBuffer conflict with BlobPart
+            const blob = new Blob([fileData as any], { type: 'application/x-sqlite3' });
 
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
