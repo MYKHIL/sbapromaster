@@ -1081,7 +1081,75 @@ export const getSchoolHistory = async (schoolNamePrefix: string): Promise<AppDat
         trackFirebaseRead('getSchoolHistory', 'schools', 0, 'Fetching school history');
         const snapshot = await getDocs(q);
         trackFirebaseRead('getSchoolHistory', 'schools', snapshot.size, 'Fetched school history');
-        const data = snapshot.docs.map(d => d.data() as AppDataType);
+
+        console.log(`[getSchoolHistory] Found ${snapshot.size} historical terms for ${schoolNamePrefix}`);
+
+        // Fetch main documents and all subcollections
+        const data: AppDataType[] = [];
+
+        for (const docSnap of snapshot.docs) {
+            const mainData = docSnap.data() as AppDataType;
+            console.log(`[getSchoolHistory] Processing term: ${docSnap.id}`);
+
+            // Fetch students subcollection
+            const studentsRef = collection(db, "schools", docSnap.id, "students");
+            trackFirebaseRead('getSchoolHistory', 'students', 0, `Fetching students for ${docSnap.id}`);
+            const studentsSnapshot = await getDocs(studentsRef);
+            trackFirebaseRead('getSchoolHistory', 'students', studentsSnapshot.size, `Fetched students for ${docSnap.id}`);
+            const students = studentsSnapshot.docs.map(s => s.data() as Student);
+
+            // Fetch subjects subcollection
+            const subjectsRef = collection(db, "schools", docSnap.id, "subjects");
+            trackFirebaseRead('getSchoolHistory', 'subjects', 0, `Fetching subjects for ${docSnap.id}`);
+            const subjectsSnapshot = await getDocs(subjectsRef);
+            trackFirebaseRead('getSchoolHistory', 'subjects', subjectsSnapshot.size, `Fetched subjects for ${docSnap.id}`);
+            const subjects = subjectsSnapshot.docs.map(s => s.data() as Subject);
+
+            // Fetch classes subcollection
+            const classesRef = collection(db, "schools", docSnap.id, "classes");
+            trackFirebaseRead('getSchoolHistory', 'classes', 0, `Fetching classes for ${docSnap.id}`);
+            const classesSnapshot = await getDocs(classesRef);
+            trackFirebaseRead('getSchoolHistory', 'classes', classesSnapshot.size, `Fetched classes for ${docSnap.id}`);
+            const classes = classesSnapshot.docs.map(c => c.data() as Class);
+
+            // Fetch assessments subcollection
+            const assessmentsRef = collection(db, "schools", docSnap.id, "assessments");
+            trackFirebaseRead('getSchoolHistory', 'assessments', 0, `Fetching assessments for ${docSnap.id}`);
+            const assessmentsSnapshot = await getDocs(assessmentsRef);
+            trackFirebaseRead('getSchoolHistory', 'assessments', assessmentsSnapshot.size, `Fetched assessments for ${docSnap.id}`);
+            const assessments = assessmentsSnapshot.docs.map(a => a.data() as Assessment);
+
+            // Fetch scores from score_buckets
+            const scoreBucketsRef = collection(db, "schools", docSnap.id, "score_buckets");
+            trackFirebaseRead('getSchoolHistory', 'score_buckets', 0, `Fetching scores for ${docSnap.id}`);
+            const scoreBucketsSnapshot = await getDocs(scoreBucketsRef);
+            trackFirebaseRead('getSchoolHistory', 'score_buckets', scoreBucketsSnapshot.size, `Fetched score buckets for ${docSnap.id}`);
+
+            // Extract scores from all buckets
+            const scores: Score[] = [];
+            scoreBucketsSnapshot.docs.forEach(bucketDoc => {
+                const bucketData = bucketDoc.data();
+                if (bucketData.scoresMap) {
+                    Object.values(bucketData.scoresMap).forEach((score: any) => {
+                        scores.push(score as Score);
+                    });
+                }
+            });
+
+            console.log(`[getSchoolHistory] Loaded for ${docSnap.id}: ${students.length} students, ${subjects.length} subjects, ${classes.length} classes, ${assessments.length} assessments, ${scores.length} scores`);
+
+            // Merge all data
+            data.push({
+                ...mainData,
+                students,
+                subjects,
+                classes,
+                assessments,
+                scores
+            });
+        }
+
+        console.log(`[getSchoolHistory] Total historical terms loaded: ${data.length}`);
 
         // Update Cache
         historyCache.set(schoolNamePrefix, { timestamp: Date.now(), data });

@@ -102,7 +102,7 @@ export interface DataContextType {
     sendHeartbeat: (userId: number) => Promise<void>;
 
     // Lazy Loading
-    loadStudents: (limit?: number) => Promise<void>;
+    loadStudents: (limit?: number, force?: boolean) => Promise<void>;
     loadScores: (classId: number, subjectId: number) => Promise<void>;
     loadMetadata: () => Promise<void>;
 

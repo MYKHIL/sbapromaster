@@ -60,9 +60,9 @@ const StudentProgress: React.FC = () => {
     const contentRef = React.useRef<HTMLDivElement>(null);
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
-    // Lazy Load Data on Mount
+    // Lazy Load Data on Mount - Force refresh to ensure we have current data
     useEffect(() => {
-        loadStudents();
+        loadStudents(undefined, true); // Force refresh
         loadMetadata();
     }, [loadStudents, loadMetadata]);
 
@@ -74,12 +74,14 @@ const StudentProgress: React.FC = () => {
                 // Determine school name prefix from current ID
                 // ID format: schoolname_year_term
                 const prefix = schoolId.split('_')[0];
+                console.log('[StudentProgress] Fetching history for school prefix:', prefix);
                 if (prefix) {
                     const data = await getSchoolHistory(prefix);
+                    console.log('[StudentProgress] History data fetched:', data.length, 'terms');
                     setHistoryData(data);
                 }
             } catch (error) {
-                console.error("Failed to fetch history:", error);
+                console.error("[StudentProgress] Failed to fetch history:", error);
             } finally {
                 setIsLoadingHistory(false);
             }
@@ -92,6 +94,8 @@ const StudentProgress: React.FC = () => {
 
     // Compute history when students are selected
     useEffect(() => {
+        console.log('[StudentProgress] Computing history - students:', selectedStudents.length, 'history terms:', historyData.length);
+
         if (selectedStudents.length === 0 || historyData.length === 0) {
             setHistoriesMap({});
             return;
@@ -100,22 +104,29 @@ const StudentProgress: React.FC = () => {
         const newMap: Record<number, StudentHistory[]> = {};
 
         selectedStudents.forEach(student => {
+            console.log('[StudentProgress] Processing student:', student.name, 'ID:', student.id);
             const history: StudentHistory[] = [];
 
             historyData.forEach(termData => {
+                console.log('[StudentProgress]   Checking term:', termData.settings?.academicTerm, termData.settings?.academicYear);
                 let studentInTerm: Student | undefined;
                 const termStudents = termData.students || [];
+                console.log('[StudentProgress]     Term has', termStudents.length, 'students');
 
                 if (student.indexNumber) {
                     studentInTerm = termStudents.find(s => s.indexNumber === student.indexNumber);
+                    console.log('[StudentProgress]     Match by index:', studentInTerm ? 'FOUND' : 'NOT FOUND');
                 }
                 if (!studentInTerm) {
                     studentInTerm = termStudents.find(s => s.name.toLowerCase() === student.name.toLowerCase());
+                    console.log('[StudentProgress]     Match by name:', studentInTerm ? 'FOUND' : 'NOT FOUND');
                 }
 
                 if (studentInTerm) {
+                    console.log('[StudentProgress]     ✓ Student matched! studentInTerm ID:', studentInTerm.id);
                     const termScores = termData.scores || [];
                     const studentScores = termScores.filter(s => s.studentId === studentInTerm!.id);
+                    console.log('[StudentProgress]     Student has', studentScores.length, 'score records');
                     const subjectPerformances: SubjectPerformance[] = [];
                     const reportData = (termData.reportData || []).find(r => r.studentId === studentInTerm!.id);
 
@@ -172,6 +183,7 @@ const StudentProgress: React.FC = () => {
                     });
 
                     const average = subjectCount > 0 ? (totalPercentage / subjectCount) : 0;
+                    console.log('[StudentProgress]     Computed:', subjectCount, 'subjects, avg:', average.toFixed(1) + '%');
 
                     history.push({
                         studentId: student.id,
@@ -184,9 +196,12 @@ const StudentProgress: React.FC = () => {
                         scores: studentScores,
                         subjectPerformance: subjectPerformances
                     });
+                } else {
+                    console.log('[StudentProgress]     ✗ Student NOT found in this term');
                 }
             });
 
+            console.log('[StudentProgress] Final history for', student.name + ':', history.length, 'terms');
             history.sort((a, b) => a.termId.localeCompare(b.termId));
             newMap[student.id] = history;
         });
