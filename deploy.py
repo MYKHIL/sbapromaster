@@ -13,16 +13,23 @@ WEB_PRO_PATH = BASE_DIR
 APPROVAL_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "SBA Web Approval"))
 MY_WEBSITE_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "My website"))
 
-def run_command(command, cwd=None, error_message=None):
+def run_command(command, cwd=None, error_message=None, capture_output=False):
     try:
         # Run command and print output
-        process = subprocess.run(command, shell=True, check=True, text=True, cwd=cwd)
-        return True
+        if capture_output:
+            process = subprocess.run(command, shell=True, check=True, text=True, cwd=cwd, capture_output=True)
+            return True, process.stdout
+        else:
+            process = subprocess.run(command, shell=True, check=True, text=True, cwd=cwd)
+            return True
     except subprocess.CalledProcessError as e:
         if error_message:
             print(f"Error: {error_message}")
         else:
-            print(f"Command failed: {command}")
+            if not capture_output:
+                print(f"Command failed: {command}")
+        if capture_output:
+            return False, e.stderr
         return False
 
 def check_git_lock(path):
@@ -44,6 +51,42 @@ def check_git_lock(path):
 def configure_git(cwd):
     run_command(f'git config user.name "{USERNAME}"', cwd=cwd)
     run_command(f'git config user.email "{GIT_EMAIL}"', cwd=cwd)
+
+def push_with_retry(cwd, repo_name, branch="main", force_allowed=True):
+    print(f"Pushing to https://github.com/{USERNAME}/{repo_name}...")
+    
+    # Try regular push
+    success = run_command(f"git push -u origin {branch}", cwd=cwd)
+    
+    if success:
+        return True
+    
+    print("\n⚠️  PUSH REJECTED: Your local repository is out of sync with GitHub.")
+    print("This usually means there are changes on GitHub that you don't have locally.")
+    print("\nHow would you like to proceed?")
+    print("[1] Pull & Rebase (Try to integrate remote changes)")
+    if force_allowed:
+        print("[2] Force Push (OVERWRITE GitHub with your local version - CAUTION!)")
+    print("[3] Skip/Abort")
+    
+    choice = input("\nEnter choice (1/2/3): ").strip()
+    
+    if choice == '1':
+        print("Attempting pull and rebase...")
+        if run_command(f"git pull --rebase origin {branch}", cwd=cwd):
+            return run_command(f"git push -u origin {branch}", cwd=cwd)
+        else:
+            print("\n❌ CONFLICT: Automatic merge failed. You must resolve conflicts manually in:")
+            print(f"   {cwd}")
+            return False
+            
+    elif choice == '2' and force_allowed:
+        confirm = input("Are you SURE you want to overwrite the remote repository? (y/n): ").lower().strip()
+        if confirm == 'y':
+            print("Force pushing...")
+            return run_command(f"git push -u origin {branch} --force", cwd=cwd)
+            
+    return False
 
 def deploy_pro_master():
     print("\n🚀 DEPLOYING: SBA Pro Master - Web")
@@ -79,59 +122,45 @@ def deploy_pro_master():
     
     run_command("git branch -M main", cwd=WEB_PRO_PATH)
     
-    # 5. Pull latest changes to avoid rejection
-    print("Pulling latest changes from remote...")
-    run_command("git pull --rebase origin main", cwd=WEB_PRO_PATH)
-    
-    print(f"Pushing to https://github.com/{USERNAME}/{repo_name}...")
-    if run_command("git push -u origin main", cwd=WEB_PRO_PATH):
+    if push_with_retry(WEB_PRO_PATH, repo_name):
         print("\n✅ SUCCESS: SBA Pro Master Web pushed to GitHub.")
         print("\n[Manual Action Required]")
         print(f"1. Visit: https://github.com/{USERNAME}/{repo_name}/settings/pages")
         print("2. Ensure 'Build and deployment' source is set to 'GitHub Actions'.")
         return True
-    else:
-        print("\n❌ FAILED: Push rejected. Ensure the repository exists at GitHub.")
-        return False
+    return False
 
 def deploy_approval():
     print("\n🚀 DEPLOYING: SBA Web Approval (to User Pages)")
     print("-----------------------------------")
 
-    # 1. Check if SBA Web Approval exists locally
     if not os.path.exists(APPROVAL_PATH):
         print(f"Creating project folder: {APPROVAL_PATH}")
         os.makedirs(APPROVAL_PATH, exist_ok=True)
-        # Create a placeholder if totally empty
-        if not os.listdir(APPROVAL_PATH):
-            with open(os.path.join(APPROVAL_PATH, "index.html"), "w", encoding="utf-8") as f:
-                f.write("<!DOCTYPE html><html><body><h1>SBA Web Approval Portal</h1></body></html>")
     
-    # 2. Check if Main Website exists
     if not os.path.exists(MY_WEBSITE_PATH):
         print(f"❌ Error: Main website repo not found at {MY_WEBSITE_PATH}")
-        print("Please ensure 'd:\\Projects\\My website' exists.")
         return False
 
-    # 3. Copy files to /approvesba
+    # Copy files to /approvesba
     target_dir = os.path.join(MY_WEBSITE_PATH, "approvesba")
     os.makedirs(target_dir, exist_ok=True)
     
-    # Find the main file (user deleted license-portal.html, so we look for index.html)
+    # Check for index.html or other html files
     source_file = os.path.join(APPROVAL_PATH, "index.html")
     if not os.path.exists(source_file):
-        # Fallback to any html file if index isn't there
         html_files = [f for f in os.listdir(APPROVAL_PATH) if f.endswith(".html")]
         if html_files:
             source_file = os.path.join(APPROVAL_PATH, html_files[0])
         else:
-            print("❌ Error: No HTML files found in SBA Web Approval folder.")
-            return False
+            # Create a simple index.html if none found
+            source_file = os.path.join(APPROVAL_PATH, "index.html")
+            with open(source_file, "w", encoding="utf-8") as f:
+                f.write("<!DOCTYPE html><html><body><h1>SBA Web Approval Portal</h1></body></html>")
 
     print(f"Copying {os.path.basename(source_file)} to approvals folder...")
     shutil.copy2(source_file, os.path.join(target_dir, "index.html"))
     
-    # 4. Deploy Main Website
     if not check_git_lock(MY_WEBSITE_PATH): return False
     
     configure_git(MY_WEBSITE_PATH)
@@ -140,9 +169,7 @@ def deploy_approval():
     
     if status.stdout.strip():
         run_command('git commit -m "Update SBA Web Approval portal (/approvesba)"', cwd=MY_WEBSITE_PATH)
-    else:
-        print("No changes detected in website repository.")
-
+    
     repo_name = "mykhil.github.io"
     remote_url = f"https://github.com/{USERNAME}/{repo_name}.git"
 
@@ -155,44 +182,41 @@ def deploy_approval():
 
     run_command("git branch -M main", cwd=MY_WEBSITE_PATH)
 
-    # 5. Pull latest changes to avoid rejection
-    print("Pulling latest changes from remote...")
-    run_command("git pull --rebase origin main", cwd=MY_WEBSITE_PATH)
-
-    print(f"Pushing to https://github.com/{USERNAME}/{repo_name}...")
-    if run_command("git push origin main", cwd=MY_WEBSITE_PATH):
+    if push_with_retry(MY_WEBSITE_PATH, repo_name):
         print("\n✅ SUCCESS: SBA Web Approval is now live!")
         print(f"URL: https://{USERNAME.lower()}.github.io/approvesba")
         return True
-    else:
-        print("\n❌ FAILED: Push rejected. Ensure the repository exists at GitHub.")
-        return False
+    return False
 
 def main():
     while True:
-        print("\n==============================================")
-        print("      SBA UNIFIED DEPLOYMENT MANAGER")
-        print("==============================================")
-        print("Which project(s) do you want to deploy?")
-        print("[1] SBA Pro Master - Web      (sbapromaster.git)")
-        print("[2] SBA Web Approval Portal   (mykhil.github.io/approvesba)")
-        print("[3] Both Projects")
-        print("[Q] Quit")
-        
-        choice = input("\nEnter choice (1/2/3/Q): ").strip().upper()
-        
-        if choice == '1':
-            deploy_pro_master()
-        elif choice == '2':
-            deploy_approval()
-        elif choice == '3':
-            res1 = deploy_pro_master()
-            res2 = deploy_approval()
-        elif choice == 'Q':
-            print("Goodbye!")
+        try:
+            print("\n==============================================")
+            print("      SBA UNIFIED DEPLOYMENT MANAGER")
+            print("==============================================")
+            print("Which project(s) do you want to deploy?")
+            print("[1] SBA Pro Master - Web      (sbapromaster.git)")
+            print("[2] SBA Web Approval Portal   (mykhil.github.io/approvesba)")
+            print("[3] Both Projects")
+            print("[Q] Quit")
+            
+            choice = input("\nEnter choice (1/2/3/Q): ").strip().upper()
+            
+            if choice == '1':
+                deploy_pro_master()
+            elif choice == '2':
+                deploy_approval()
+            elif choice == '3':
+                deploy_pro_master()
+                deploy_approval()
+            elif choice == 'Q':
+                print("Goodbye!")
+                break
+            else:
+                print("Invalid selection. Please try again.")
+        except KeyboardInterrupt:
+            print("\nOperation cancelled by user.")
             break
-        else:
-            print("Invalid selection. Please try again.")
 
 if __name__ == "__main__":
     main()
