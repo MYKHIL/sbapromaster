@@ -79,6 +79,10 @@ def deploy_pro_master():
     
     run_command("git branch -M main", cwd=WEB_PRO_PATH)
     
+    # 5. Pull latest changes to avoid rejection
+    print("Pulling latest changes from remote...")
+    run_command("git pull --rebase origin main", cwd=WEB_PRO_PATH)
+    
     print(f"Pushing to https://github.com/{USERNAME}/{repo_name}...")
     if run_command("git push -u origin main", cwd=WEB_PRO_PATH):
         print("\n✅ SUCCESS: SBA Pro Master Web pushed to GitHub.")
@@ -150,6 +154,10 @@ def deploy_approval():
         run_command(f"git remote add origin {remote_url}", cwd=MY_WEBSITE_PATH)
 
     run_command("git branch -M main", cwd=MY_WEBSITE_PATH)
+
+    # 5. Pull latest changes to avoid rejection
+    print("Pulling latest changes from remote...")
+    run_command("git pull --rebase origin main", cwd=MY_WEBSITE_PATH)
 
     print(f"Pushing to https://github.com/{USERNAME}/{repo_name}...")
     if run_command("git push origin main", cwd=MY_WEBSITE_PATH):
