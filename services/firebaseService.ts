@@ -1,7 +1,7 @@
 import { initializeApp, deleteApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import { getAuth, signInAnonymously, connectAuthEmulator } from "firebase/auth";
-import { getFirestore, connectFirestoreEmulator, doc, getDoc, setDoc, collection, getDocs, onSnapshot, runTransaction, query, where, documentId, writeBatch, updateDoc, deleteField, Unsubscribe, limit, startAfter, orderBy, DocumentSnapshot, WriteBatch } from "firebase/firestore";
+import { getFirestore, connectFirestoreEmulator, doc, getDoc, setDoc, collection, getDocs, onSnapshot, runTransaction, query, where, documentId, writeBatch, updateDoc, deleteField, Unsubscribe, limit, startAfter, orderBy, DocumentSnapshot, WriteBatch, serverTimestamp } from "firebase/firestore";
 import type { SchoolSettings, Student, Subject, Class, Grade, Assessment, Score, ReportSpecificData, ClassSpecificData, User, DeviceCredential, UserLog, OnlineUser, AppDataType } from '../types';
 
 // CACHE STORAGE
@@ -9,6 +9,9 @@ import type { SchoolSettings, Student, Subject, Class, Grade, Assessment, Score,
 const historyCache = new Map<string, { timestamp: number, data: AppDataType[] }>();
 // @ts-ignore
 const searchCache = new Map<string, { timestamp: number, results: any }>();
+const inflightSchoolListPromises = new Map<string, Promise<SchoolListItem[]>>(); // CLEANUP: Prevent duplicate requests
+const inflightSchoolPromises = new Map<string, Promise<AppDataType | null>>();
+const inflightPeriodPromises = new Map<string, Promise<SchoolPeriod[]>>();
 const CACHE_TTL = 60 * 1000; // 1 Minute Cache for frequent lookups
 // Re-export AppDataType so it's available
 export type { AppDataType };
@@ -267,28 +270,35 @@ const sanitizeForFirestore = (obj: any): any => {
  * Removed "Fan-In" logic to prevent massive reads on login.
  */
 export const getSchoolData = async (docId: string, keysToFetch?: (keyof AppDataType)[]): Promise<AppDataType | null> => {
-    try {
-        const docRef = doc(db, "schools", docId);
-        trackFirebaseRead('getSchoolData', 'schools', 1, 'Loading main school data');
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-            // Only return the main document data. Subcollections must be fetched via specific hooks.
-            // If keysToFetch is provided, we technically could fetch them, but for optimization
-            // we prefer the UI to call the specialized fetch functions.
-            // However, to maintain some backward compatibility for scripts relying on strict keys:
-            if (keysToFetch && keysToFetch.length > 0) {
-                // Warning: This re-enables fan-in if keys are requested.
-                // We'll trust the caller (DataContext) to NOT request heavy keys on init.
-            }
-            return docSnap.data() as AppDataType;
-        } else {
-            return null;
-        }
-    } catch (error) {
-        console.error("Error getting school data:", error);
-        return null;
+    // 1. Check inflight (Clean Up: Prevent dual fetching)
+    if (inflightSchoolPromises.has(docId)) {
+        console.log(`[Firebase] Returning inflight promise for school data: ${docId}`);
+        return inflightSchoolPromises.get(docId)!;
     }
+
+    const fetchPromise = (async () => {
+        try {
+            const docRef = doc(db, "schools", docId);
+            trackFirebaseRead('getSchoolData', 'schools', 1, 'Loading main school data');
+            const docSnap = await getDoc(docRef);
+
+            if (docSnap.exists()) {
+                const data = docSnap.data() as AppDataType;
+                // Note: Fan-in logic removed for performance. Subcollections fetched on-demand.
+                return data;
+            } else {
+                return null;
+            }
+        } catch (error) {
+            console.error("Error getting school data:", error);
+            return null;
+        } finally {
+            inflightSchoolPromises.delete(docId);
+        }
+    })();
+
+    inflightSchoolPromises.set(docId, fetchPromise);
+    return fetchPromise;
 };
 
 /**
@@ -381,138 +391,138 @@ export interface SchoolPeriod {
 /**
  * Fetches the list of all registered schools across ALL configured databases.
  */
-export const getSchoolList = async (): Promise<SchoolListItem[]> => {
-    try {
-        const CACHE_KEY = 'cached_school_list';
-        const cached = getCachedData<SchoolListItem[]>(CACHE_KEY);
-        if (cached) {
-            console.log('[Firebase] Returning cached school list');
-            return cached;
-        }
+export const getSchoolList = async (prefix?: string): Promise<SchoolListItem[]> => {
+    const CACHE_KEY = prefix ? `cached_school_list_${prefix.toLowerCase()}` : 'cached_school_list';
 
-        console.log('[Firebase] Fetching global school list from all databases...');
-        trackFirebaseRead('global_discovery');
+    // 1. Try Memory Cache
+    const cached = getCachedData<SchoolListItem[]>(CACHE_KEY);
+    if (cached) {
+        console.log(`[Firebase] Returning cached school list${prefix ? ` for "${prefix}"` : ''}`);
+        return cached;
+    }
 
-        const allSchools: SchoolListItem[] = [];
+    // 2. Check for inflight promise (Clean Up: Prevent dual fetching)
+    if (inflightSchoolListPromises.has(CACHE_KEY)) {
+        console.log(`[Firebase] Returning inflight promise for school list: ${CACHE_KEY}`);
+        return inflightSchoolListPromises.get(CACHE_KEY)!;
+    }
 
-        // EMULATOR OVERRIDE: Single Database Only
-        if (isEmulator) {
-            console.log('[Firebase] Emulator detected - Querying ONLY the current emulator instance.');
-            const schoolsRef = collection(db, 'schools');
-            const snapshot = await getDocs(schoolsRef);
-            return snapshot.docs
-                .map(doc => {
-                    const data = doc.data();
-                    if (data.Access === false) return null;
-                    const item: SchoolListItem = {
-                        docId: doc.id,
-                        displayName: data.settings?.schoolName || data.schoolName || doc.id,
-                        settings: data.settings,
-                        _databaseIndex: 2 // Emulator forces Index 2 context
-                    };
-                    return item;
-                })
-                .filter((s): s is SchoolListItem => s !== null)
-                .sort((a, b) => a.displayName.localeCompare(b.displayName));
-        }
+    const fetchPromise = (async () => {
+        try {
+            console.log(`[Firebase] Fetching global school list from all databases${prefix ? ` (prefix: ${prefix})` : ''}...`);
+            trackFirebaseRead('global_discovery', 'schools', 0, prefix ? `Searching schools by prefix: ${prefix}` : 'General discovery');
 
-        const promises = Object.entries(FIREBASE_CONFIGS).map(async ([indexStr, config]) => {
-            const index = Number(indexStr);
-            const appName = `temp_discovery_${index}_${Date.now()}`;
+            const allSchools: SchoolListItem[] = [];
 
-            let tempApp: any = null;
-            try {
-                tempApp = initializeApp(config, appName);
-                const tempDb = getFirestore(tempApp);
-                const schoolsRef = collection(tempDb, 'schools');
+            // EMULATOR OVERRIDE: Single Database Only
+            if (isEmulator) {
+                console.log('[Firebase] Emulator detected - Querying ONLY the current emulator instance.');
+                const schoolsRef = collection(db, 'schools');
                 const snapshot = await getDocs(schoolsRef);
+                const list = snapshot.docs
+                    .map(doc => {
+                        const data = doc.data() as any;
+                        if (data.Access === false) return null;
+                        return {
+                            docId: doc.id,
+                            displayName: data.settings?.schoolName || data.schoolName || doc.id,
+                            settings: data.settings,
+                            _databaseIndex: 2
+                        } as SchoolListItem;
+                    })
+                    .filter((s): s is SchoolListItem => s !== null)
+                    .sort((a, b) => a.displayName.localeCompare(b.displayName));
 
-                const localList: SchoolListItem[] = [];
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    if (data.Access === false) return; // Skip invalid
-
-                    localList.push({
-                        docId: doc.id,
-                        displayName: data.settings?.schoolName || data.schoolName || doc.id,
-                        settings: data.settings,
-                        _databaseIndex: index
-                    });
-                });
-                return localList;
-            } catch (e) {
-                console.error(`[Firebase] Failed to query database ${index}:`, e);
-                return [];
-            } finally {
-                if (tempApp) await deleteApp(tempApp).catch(() => { });
+                setCachedData(CACHE_KEY, list, 5 * 60 * 1000); // 5 min cache for discovery
+                return list;
             }
-        });
 
-        const results = await Promise.all(promises);
+            const promises = Object.entries(FIREBASE_CONFIGS).map(async ([indexStr, config]) => {
+                const index = Number(indexStr);
+                const appName = `temp_discovery_${index}_${Date.now()}`;
 
-        // ---------------------------------------------------------------------
-        // DEDUPLICATION & RESERVED FILTERING
-        // ---------------------------------------------------------------------
-        const schoolGroups = new Map<string, SchoolListItem[]>();
-        const { SCHOOL_DATABASE_MAPPING } = await import('../constants');
+                let tempApp: any = null;
+                try {
+                    tempApp = initializeApp(config, appName);
+                    const tempDb = getFirestore(tempApp);
+                    const schoolsRef = collection(tempDb, 'schools');
 
-        // Group by Display Name (normalized to handle variations)
-        results.forEach(list => {
-            list.forEach(item => {
-                // Normalize for grouping (trim + lowercase)
+                    let q;
+                    if (prefix) {
+                        const sanitizedPrefix = prefix.toLowerCase();
+                        q = query(schoolsRef, where(documentId(), '>=', sanitizedPrefix), where(documentId(), '<=', sanitizedPrefix + '\uf8ff'), limit(20));
+                    } else {
+                        q = query(schoolsRef, limit(20));
+                    }
+
+                    const snapshot = await getDocs(q);
+                    const localList: SchoolListItem[] = [];
+                    snapshot.forEach(doc => {
+                        const data = doc.data() as any;
+                        if (data.Access === false) return; // Skip locked schools if explicitly marked
+                        localList.push({
+                            docId: doc.id,
+                            displayName: data.settings?.schoolName || data.schoolName || doc.id,
+                            settings: data.settings,
+                            _databaseIndex: index
+                        });
+                    });
+                    return localList;
+                } catch (e) {
+                    console.warn(`[Firebase Discovery] Failed to query database ${index}:`, e);
+                    return [];
+                } finally {
+                    if (tempApp) deleteApp(tempApp).catch(() => { });
+                }
+            });
+
+            const results = await Promise.all(promises);
+            results.forEach(list => allSchools.push(...list));
+
+            // DEDUPLICATION & RESERVED FILTERING
+            const schoolGroups = new Map<string, SchoolListItem[]>();
+            const { SCHOOL_DATABASE_MAPPING } = await import('../constants');
+
+            allSchools.forEach(item => {
                 const normalizedName = item.displayName.trim().toLowerCase();
                 if (!schoolGroups.has(normalizedName)) schoolGroups.set(normalizedName, []);
                 schoolGroups.get(normalizedName)?.push(item);
             });
-        });
 
-        // Filter and Flatten
-        schoolGroups.forEach((items) => {
-            if (items.length === 0) return;
-            const referenceItem = items[0];
+            const finalSchools: SchoolListItem[] = [];
+            schoolGroups.forEach((items) => {
+                if (items.length === 0) return;
+                const referenceItem = items[0];
+                const prefixStr = referenceItem.docId.split('_')[0].toLowerCase();
+                const reservedIndex = SCHOOL_DATABASE_MAPPING[prefixStr];
 
-            // Extract prefix logic (same as used in AuthOverlay)
-            const prefix = referenceItem.docId.split('_')[0].toLowerCase();
-            const reservedIndex = SCHOOL_DATABASE_MAPPING[prefix];
-
-            if (reservedIndex !== undefined) {
-                // STRICT: Only accept from reserved DB
-                const validItem = items.find(i => i._databaseIndex === reservedIndex);
-                if (validItem) {
-                    allSchools.push(validItem);
+                if (reservedIndex !== undefined) {
+                    const validItem = items.find(i => i._databaseIndex === reservedIndex);
+                    if (validItem) finalSchools.push(validItem);
                 } else {
-                    // School tagged for reserved DB but not found there - Skip it
-                    console.warn(`[getSchoolList] School "${referenceItem.displayName}" is tagged for DB ${reservedIndex} but not found there. Skipping all instances.`);
+                    finalSchools.push(items[0]);
                 }
-            } else {
-                // NORMAL: Deduplicate (take first available)
-                // If the same school exists on multiple DBs randomly, we just show one.
-                // Prefer the one on current or Primary? Doesn't matter much for display,
-                // but ideally we keep the one that actually works. 
-                // If not mapped, any public one is valid.
-                allSchools.push(items[0]);
-            }
-        });
+            });
 
-        // Sort alphabetically
-        allSchools.sort((a, b) => a.displayName.localeCompare(b.displayName));
+            finalSchools.sort((a, b) => a.displayName.localeCompare(b.displayName));
+            setCachedData(CACHE_KEY, finalSchools, 5 * 60 * 1000);
+            return finalSchools;
+        } catch (e) {
+            console.error("[Firebase] Global discovery failed:", e);
+            return [];
+        } finally {
+            inflightSchoolListPromises.delete(CACHE_KEY);
+        }
+    })();
 
-        // Cache result (1 hour)
-        setCachedData(CACHE_KEY, allSchools, 60 * 60 * 1000);
-
-        console.log(`[Firebase] Discovered ${allSchools.length} schools across ${results.length} databases.`);
-        return allSchools;
-
-    } catch (e) {
-        console.error("Global discovery failed", e);
-        return [];
-    }
+    inflightSchoolListPromises.set(CACHE_KEY, fetchPromise);
+    return fetchPromise;
 };
 
 /**
  * Get all available years and terms for a specific school (CACHED 1hr per school)
- * Read Cost: 1 list operation per school (only on cache miss)
- */
+         * Read Cost: 1 list operation per school (only on cache miss)
+         */
 export const getSchoolYearsAndTerms = async (schoolName: string, databaseIndex?: number): Promise<SchoolPeriod[]> => {
     // Include database index in cache key to prevent cross-database collisions
     const dbSuffix = databaseIndex !== undefined ? `_db${databaseIndex}` : '';
@@ -526,73 +536,88 @@ export const getSchoolYearsAndTerms = async (schoolName: string, databaseIndex?:
         return cached;
     }
 
-    console.log(`[Auth] Fetching periods for ${schoolName}${databaseIndex !== undefined ? ` from DB ${databaseIndex}` : ''}...`);
-
-    try {
-        // Determine which database to query
-        let targetDb = db;
-        let tempApp: any = null;
-
-        // If a specific database index is provided and it differs from active
-        if (databaseIndex !== undefined && !isEmulator) { // Disable cross-db query in Emulator
-            const { ACTIVE_DATABASE_INDEX } = await import('../constants');
-            if (databaseIndex !== ACTIVE_DATABASE_INDEX) {
-                // Use temporary app to query different database
-                const config = FIREBASE_CONFIGS[databaseIndex];
-                if (!config) {
-                    console.error(`[Auth] Invalid database index: ${databaseIndex}`);
-                    return [];
-                }
-
-                const appName = `temp_periods_${databaseIndex}_${Date.now()}`;
-                tempApp = initializeApp(config, appName);
-                targetDb = getFirestore(tempApp);
-                console.log(`[Auth] Querying periods from Database ${databaseIndex} (temp app)`);
-            }
-        }
-
-        const schoolsRef = collection(targetDb, 'schools');
-        trackFirebaseRead('getSchoolYearsAndTerms', 'schools', 0, 'Fetching years/terms');
-        const snapshot = await getDocs(schoolsRef);
-        trackFirebaseRead('getSchoolYearsAndTerms', 'schools', snapshot.size, 'Fetched years/terms');
-
-        const periods: SchoolPeriod[] = [];
-
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            const docSchoolName = data.settings?.schoolName;
-
-            // Match by actual school name
-            if (docSchoolName === schoolName) {
-                periods.push({
-                    year: data.settings?.academicYear || 'Unknown Year',
-                    term: data.settings?.academicTerm || 'Unknown Term',
-                    docId: doc.id
-                });
-            }
-        });
-
-        // Clean up temp app if used
-        if (tempApp) {
-            await deleteApp(tempApp).catch(() => { });
-        }
-
-        // Sort by year (descending) then term
-        periods.sort((a, b) => {
-            const yearCompare = b.year.localeCompare(a.year);
-            if (yearCompare !== 0) return yearCompare;
-            return a.term.localeCompare(b.term);
-        });
-
-        // Cache the result
-        setCachedData(CACHE_KEY, periods, TTL);
-        console.log(`[Auth] Found ${periods.length} periods for ${schoolName}`);
-
-        return periods;
-    } catch (error) {
-        console.error(`[Auth] Error fetching periods for ${schoolName}:`, error);
-        return [];
+    // Check inflight (Clean Up: Prevent dual fetching)
+    if (inflightPeriodPromises.has(CACHE_KEY)) {
+        console.log(`[Auth] Returning inflight promise for periods: ${schoolName}`);
+        return inflightPeriodPromises.get(CACHE_KEY)!;
     }
+
+    const fetchPromise = (async () => {
+        console.log(`[Auth] Fetching periods for ${schoolName}${databaseIndex !== undefined ? ` from DB ${databaseIndex}` : ''}...`);
+
+        try {
+            // Determine which database to query
+            let targetDb = db;
+            let tempApp: any = null;
+
+            // If a specific database index is provided and it differs from active
+            if (databaseIndex !== undefined && !isEmulator) { // Disable cross-db query in Emulator
+                const { ACTIVE_DATABASE_INDEX } = await import('../constants');
+                if (databaseIndex !== ACTIVE_DATABASE_INDEX) {
+                    // Use temporary app to query different database
+                    const config = FIREBASE_CONFIGS[databaseIndex];
+                    if (!config) {
+                        console.error(`[Auth] Invalid database index: ${databaseIndex}`);
+                        return [];
+                    }
+
+                    const appName = `temp_periods_${databaseIndex}_${Date.now()}`;
+                    tempApp = initializeApp(config, appName);
+                    targetDb = getFirestore(tempApp);
+                    console.log(`[Auth] Querying periods from Database ${databaseIndex} (temp app)`);
+                }
+            }
+
+            const schoolsRef = collection(targetDb, 'schools');
+            const sanitizedSchool = sanitizeSchoolName(schoolName);
+            const q = query(schoolsRef, where(documentId(), '>=', sanitizedSchool), where(documentId(), '<=', sanitizedSchool + '\uf8ff'));
+
+            trackFirebaseRead('getSchoolYearsAndTerms', 'schools', 0, `Fetching years/terms for pattern: ${sanitizedSchool}`);
+            const snapshot = await getDocs(q);
+            trackFirebaseRead('getSchoolYearsAndTerms', 'schools', snapshot.size, `Fetched ${snapshot.size} potential term matches`);
+
+            const periods: SchoolPeriod[] = [];
+
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const docSchoolName = data.settings?.schoolName;
+
+                // Match by actual school name
+                if (docSchoolName === schoolName) {
+                    periods.push({
+                        year: data.settings?.academicYear || 'Unknown Year',
+                        term: data.settings?.academicTerm || 'Unknown Term',
+                        docId: doc.id
+                    });
+                }
+            });
+
+            // Clean up temp app if used
+            if (tempApp) {
+                await deleteApp(tempApp).catch(() => { });
+            }
+
+            // Sort by year (descending) then term
+            periods.sort((a, b) => {
+                const yearCompare = b.year.localeCompare(a.year);
+                if (yearCompare !== 0) return yearCompare;
+                return a.term.localeCompare(b.term);
+            });
+
+            setCachedData(CACHE_KEY, periods, TTL);
+            console.log(`[Auth] Found ${periods.length} periods for ${schoolName}`);
+
+            return periods;
+        } catch (error) {
+            console.error(`[Auth] Error fetching periods for ${schoolName}:`, error);
+            return [];
+        } finally {
+            inflightPeriodPromises.delete(CACHE_KEY);
+        }
+    })();
+
+    inflightPeriodPromises.set(CACHE_KEY, fetchPromise);
+    return fetchPromise;
 };
 
 /**
@@ -679,10 +704,13 @@ export const subscribeToSchoolData = (docId: string, callback: (data: AppDataTyp
 export const subscribeToResource = (
     docId: string,
     resourceName: 'students' | 'classes' | 'subjects' | 'assessments',
-    callback: (data: any[]) => void
-) => {
+    callback: (data: any[]) => void,
+    limitCount?: number
+): Unsubscribe => {
     const colRef = collection(db, "schools", docId, resourceName);
-    return onSnapshot(colRef, (snapshot) => {
+    const q = limitCount ? query(colRef, limit(limitCount)) : colRef;
+
+    return onSnapshot(q, (snapshot) => {
         const items = snapshot.docs.map(d => d.data());
         callback(items);
     });
@@ -791,7 +819,25 @@ export const saveDataTransaction = async (
 
         if (Object.keys(mainUpdates).length > 0) {
             const docRef = doc(db, "schools", docId);
-            operations.push((batch) => batch.set(docRef, sanitizeForFirestore(mainUpdates), { merge: true }));
+
+            // --- METADATA TRACKING: Update lastUpdated for each modified key ---
+            const metadata: Record<string, any> = {};
+            Object.keys(updates).forEach(key => {
+                metadata[`metadata.lastUpdated.${key}`] = serverTimestamp();
+            });
+
+            operations.push((batch) => batch.set(docRef, {
+                ...sanitizeForFirestore(mainUpdates),
+                ...metadata
+            }, { merge: true }));
+        } else if (Object.keys(updates).length > 0) {
+            // Even if no main fields updated, update metadata for subcollections
+            const docRef = doc(db, "schools", docId);
+            const metadata: Record<string, any> = {};
+            Object.keys(updates).forEach(key => {
+                metadata[`metadata.lastUpdated.${key}`] = serverTimestamp();
+            });
+            operations.push((batch) => batch.update(docRef, metadata));
         }
 
         if (operations.length > 0) {

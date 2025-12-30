@@ -187,6 +187,9 @@ export interface AppDataType {
   Access?: boolean;
   password?: string;
   deviceCredentials?: DeviceCredential[];
+  metadata?: {
+    lastUpdated?: Record<string, any>;
+  };
 }
 
 export interface SchoolPeriod {

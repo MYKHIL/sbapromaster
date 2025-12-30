@@ -18,18 +18,28 @@ const SchoolListScreen: React.FC<SchoolListScreenProps> = ({ onSelectSchool, onB
     }, []);
 
     useEffect(() => {
-        // Filter schools based on search query
-        if (searchQuery.trim() === '') {
-            setFilteredSchools(schools);
-        } else {
-            const query = searchQuery.toLowerCase();
-            setFilteredSchools(
-                schools.filter(school =>
-                    school.displayName.toLowerCase().includes(query)
-                )
-            );
+        const timer = setTimeout(() => {
+            if (searchQuery.trim() === '') {
+                loadSchools();
+            } else if (searchQuery.length >= 2) {
+                searchServer(searchQuery);
+            }
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    const searchServer = async (query: string) => {
+        try {
+            setLoading(true);
+            const list = await getSchoolList(query);
+            setFilteredSchools(list);
+        } catch (err) {
+            console.error('Search failed:', err);
+        } finally {
+            setLoading(false);
         }
-    }, [searchQuery, schools]);
+    };
 
     const loadSchools = async (forceRefresh: boolean = false) => {
         try {
@@ -208,7 +218,7 @@ const SchoolListScreen: React.FC<SchoolListScreenProps> = ({ onSelectSchool, onB
                 {!loading && !error && (
                     <div className="text-center mt-4">
                         <p className="text-sm text-gray-600">
-                            Showing {filteredSchools.length} of {schools.length} schools
+                            {searchQuery ? `Found ${filteredSchools.length} matches` : `Showing ${filteredSchools.length} recommended schools`}
                         </p>
                     </div>
                 )}

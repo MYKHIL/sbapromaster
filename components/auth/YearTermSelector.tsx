@@ -11,10 +11,13 @@ const YearTermSelector: React.FC<YearTermSelectorProps> = ({ school, onSelectPer
     const [periods, setPeriods] = useState<SchoolPeriod[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const hasFetchedRef = React.useRef(false);
 
     useEffect(() => {
+        if (hasFetchedRef.current) return;
         loadPeriods();
-    }, [school.docId]); // Changed dependency to school.docId
+        hasFetchedRef.current = true;
+    }, [school.docId]);
 
     const loadPeriods = async (forceRefresh: boolean = false) => {
         try {

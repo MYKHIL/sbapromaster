@@ -36,8 +36,24 @@ Heavy datasets are fetched only when navigating to specific pages:
     *   This prevents loading millions of scores for the entire school when only one class/subject is being edited.
 
 ### 2.3. Real-time Synchronization (Selective)
-*   **Global**: `onSnapshot` is still used for the Main Document (Settings) to ensure admin changes (like locking terms) propagate instantly.
-*   **Resource-Specific**: Subcollections are fetched once via `getDocs` to save reads (`fetchSubcollection` helper). Real-time listeners on subcollections are disabled by default in this mode to prioritize cost savings, though `subscribeToResource` remains available for specific "live" views if needed.
+*   **Resource-Specific**: Subcollections are fetched once via `getDocs` to save reads (`fetchSubcollection` helper). Real-time listeners on subcollections are disabled by default in this mode to prioritize cost savings.
+
+### 2.4. Read Optimizations & Consistency Guards
+Recent improvements have added several layers of protection to minimize unnecessary reads:
+
+1.  **Fetch Deduplication (In-flight Promise Tracking)**:
+    -   The `DataContext` maintains an `inflightPromises` map.
+    -   If multiple components request the same data (e.g., `loadStudents`) simultaneously, the system returns the existing in-flight promise instead of triggering redundant Firestore calls.
+2.  **Metadata-Driven Consistency (`lastLoadedTimestamps`)**:
+    -   The application tracks the `lastUpdated` timestamp from the server for each collection.
+    -   We compare this against a local `_loaded_` marker. 
+    -   If the local data is already up-to-date with the server's version, the fetch is skipped entirely.
+3.  **Dirty State Protection (Data Loss Guard)**:
+    -   If a user has unsaved local changes (marked in `dirtyFields`), the automatic lazy-loaders will **SKIP** fetching data from the cloud.
+    -   This prevents the "Stale Overwrite" bug where a background fetch would wipe out a user's unpushed modifications.
+4.  **Stable Dependencies**:
+    -   Loading functions like `loadStudents` and `loadMetadata` have stable `useCallback` references (depending only on `schoolId`).
+    -   This prevents reactive re-fetches triggered by changes in local array lengths.
 
 ---
 
@@ -75,6 +91,30 @@ Immediately after a successful save:
 -   The system does **not** re-download the entire database.
 -   It calls `refreshFromCloud` with *only* the keys that were just modified (`keysToRefresh`).
 -   This ensures the UI reflects the server state (including any server-side timestamps or triggers) without incurring the cost of a full database read.
+
+### 3.4. Post-Save Metadata Synchronization
+To prevent immediate "stale" re-fetches after a successful save:
+-   `saveToCloud` proactively updates the local `_loaded_` timestamps to match the server's `lastUpdated` metadata.
+-   This "certifies" that the local state is identical to the cloud state, suppressing the next scheduled or page-driven lazy load.
+
+---
+
+## 4. Local Caching & Persistence
+
+The application employs a layered caching strategy to minimize both latency and API costs.
+
+### 4.1. localStorage Persistence
+-   Large data sets (`students`, `scores`, `classes`, etc.) are persisted in `localStorage` via the `useLocalStorage` hook.
+-   This allows the application to boot up with the last known good state, making it feel performant even on slow connections.
+
+### 4.2. Baseline Sync (`originalData`)
+-   A `useRef` called `originalData` stores the state of the database exactly as it was when last loaded from the cloud.
+-   **Smart Diffing**: Every write operation (add/edit/delete) compares the current state against `originalData`.
+-   **Dirty Tracking**: Only fields that differ from `originalData` are marked as dirty and uploaded during the next save.
+
+### 4.3. Correlation: Cache vs. Online
+-   **Writes**: Users interact with the local cache immediately (Optimistic UI). Operations are queued in an Internal `offlineQueue` if the network is unavailable.
+-   **Reads**: The online database is viewed as the "Source of Truth" for timestamps, but the local cache is the "Source of Truth" for display. An online read only occurs if the server's `lastUpdated` metadata is newer than the cache.
 
 ---
 
