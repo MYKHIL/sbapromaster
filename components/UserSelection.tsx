@@ -71,7 +71,7 @@ const UserSelection: React.FC<UserSelectionProps> = ({ users, onLogin, onSetPass
     };
 
     return (
-        <div className="fixed inset-0 bg-gray-900 bg-opacity-95 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-gray-900 bg-opacity-95 z-[100] flex items-center justify-center p-4">
             <div className="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full">
                 <div className="text-center mb-8">
                     <h2 className="text-3xl font-bold text-gray-800">Select Your Account</h2>

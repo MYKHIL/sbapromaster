@@ -53,19 +53,11 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
 
     // Pause sync during authentication
     useEffect(() => {
-        if (currentStep !== 'authenticated') {
+        if (currentStep !== 'authenticated' || !isAuthenticated) {
             console.log('[AuthOverlay] Pausing sync - authentication in progress');
             pauseSync();
         }
-    }, [currentStep, pauseSync]);
-
-    // React to manual logout (Switch Account)
-    useEffect(() => {
-        if (!isAuthenticated && currentStep === 'authenticated' && users.length > 0) {
-            console.log('[AuthOverlay] 🔄 User logged out but school active. Switching to user selection.');
-            setCurrentStep('user-selection');
-        }
-    }, [isAuthenticated, currentStep, users.length]);
+    }, [currentStep, isAuthenticated, pauseSync]);
 
     // Restore session on mount
     useEffect(() => {
@@ -109,16 +101,14 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 const savedUserId = localStorage.getItem('sba_user_id');
                 const savedUserPassword = localStorage.getItem('sba_user_password');
 
-                if (!savedSchoolId || !savedSchoolPassword || !savedUserId || !savedUserPassword) {
-                    console.log('[AuthOverlay] No saved session found');
+                if (!savedSchoolId || !savedSchoolPassword) {
+                    console.log('[AuthOverlay] No saved school session found');
                     return;
                 }
 
-                console.log('[AuthOverlay] Found saved session, fetching school data...');
+                console.log('[AuthOverlay] Found saved school session, fetching data...');
 
-                // DATABASE SWITCH CHECK:
-                // If the saved school ID implies a specific database (e.g. 'ayirebida' -> Index 2),
-                // we must ensure we are on the correct database index.
+                // ... (Database switch check remains same) ...
                 const { SCHOOL_DATABASE_MAPPING, ACTIVE_DATABASE_INDEX } = await import('../constants');
                 const schoolPrefix = savedSchoolId.split('_')[0].toLowerCase();
                 const requiredIndex = SCHOOL_DATABASE_MAPPING[schoolPrefix];
@@ -126,7 +116,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 if (requiredIndex && requiredIndex !== ACTIVE_DATABASE_INDEX) {
                     console.warn(`[AuthOverlay] Database mismatch for ${savedSchoolId}. Switching to Index ${requiredIndex}...`);
                     localStorage.setItem('active_database_index', requiredIndex.toString());
-                    window.location.reload(); // Reload to initialize Firebase with new config
+                    window.location.reload();
                     return;
                 }
 
@@ -134,42 +124,40 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 const result = await loginOrRegisterSchool(savedSchoolId, savedSchoolPassword, {} as AppDataType, false);
 
                 if (result.status !== 'success' || !result.data) {
-                    console.error('[AuthOverlay] Failed to restore session:', result.status);
-
+                    console.error('[AuthOverlay] Failed to restore school session:', result.status);
                     if (result.status === 'expired') {
                         alert('Your school license has expired. Please renew your subscription to continue.');
                     }
-
-                    // Clear invalid or expired session
+                    // Clear invalid school session
                     localStorage.removeItem('sba_school_id');
                     localStorage.removeItem('sba_school_password');
-                    localStorage.removeItem('sba_user_id');
-                    localStorage.removeItem('sba_user_password');
                     return;
                 }
 
-                // Find the user
-                const user = result.data.users?.find(u => u.id === parseInt(savedUserId));
-                if (!user) {
-                    console.error('[AuthOverlay] User not found in school data');
-                    return;
-                }
-
-                // Load school data
+                // Load basic school data
                 loadImportedData(result.data);
                 setSchoolData(result.data);
                 setCurrentSchoolId(result.docId || savedSchoolId);
                 setSchoolId(result.docId || savedSchoolId);
                 setUsers(result.data.users || []);
 
-                // Show session restore dialog
-                setSessionInfo({
-                    schoolName: result.data.settings?.schoolName || 'Unknown School',
-                    userName: user.name
-                });
-                setShowSessionRestore(true);
+                // CASE A: User session also exists -> Show Restore Dialog
+                if (savedUserId && savedUserPassword) {
+                    const user = result.data.users?.find(u => u.id === parseInt(savedUserId));
+                    if (user) {
+                        setSessionInfo({
+                            schoolName: result.data.settings?.schoolName || 'Unknown School',
+                            userName: user.name
+                        });
+                        setShowSessionRestore(true);
+                        console.log('[AuthOverlay] Full session data loaded, showing restore dialog');
+                        return;
+                    }
+                }
 
-                console.log('[AuthOverlay] Session data loaded, showing restore dialog');
+                // CASE B: Only school session exists (e.g. after Switch User) -> Jump to User Selection
+                console.log('[AuthOverlay] School restored, jumping to user selection');
+                setCurrentStep('user-selection');
             } catch (error) {
                 console.error('[AuthOverlay] Session restore error:', error);
             } finally {
@@ -771,7 +759,18 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
     }
 
     if (currentStep === 'authenticated') {
-        return <>{children}</>;
+        return (
+            <>
+                {children}
+                {!isAuthenticated && users.length > 0 && (
+                    <UserSelection
+                        users={users}
+                        onLogin={handleUserLogin}
+                        onSetPassword={handleSetPassword}
+                    />
+                )}
+            </>
+        );
     }
 
     // Render appropriate screen based on current step
