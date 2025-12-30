@@ -523,7 +523,7 @@ export const getSchoolList = async (prefix?: string): Promise<SchoolListItem[]> 
  * Get all available years and terms for a specific school (CACHED 1hr per school)
          * Read Cost: 1 list operation per school (only on cache miss)
          */
-export const getSchoolYearsAndTerms = async (schoolName: string, databaseIndex?: number): Promise<SchoolPeriod[]> => {
+export const getSchoolYearsAndTerms = async (schoolName: string, databaseIndex?: number, docIdPrefix?: string): Promise<SchoolPeriod[]> => {
     // Include database index in cache key to prevent cross-database collisions
     const dbSuffix = databaseIndex !== undefined ? `_db${databaseIndex}` : '';
     const CACHE_KEY = `auth_periods_${sanitizeSchoolName(schoolName)}${dbSuffix}`;
@@ -569,7 +569,7 @@ export const getSchoolYearsAndTerms = async (schoolName: string, databaseIndex?:
             }
 
             const schoolsRef = collection(targetDb, 'schools');
-            const sanitizedSchool = sanitizeSchoolName(schoolName);
+            const sanitizedSchool = docIdPrefix || sanitizeSchoolName(schoolName);
             const q = query(schoolsRef, where(documentId(), '>=', sanitizedSchool), where(documentId(), '<=', sanitizedSchool + '\uf8ff'));
 
             trackFirebaseRead('getSchoolYearsAndTerms', 'schools', 0, `Fetching years/terms for pattern: ${sanitizedSchool}`);

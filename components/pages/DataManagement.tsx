@@ -519,7 +519,8 @@ const ExportUsersModal: React.FC<ExportUsersModalProps> = ({ isOpen, onClose, cu
                 setIsLoading(true);
                 try {
                     // Fetch all terms for the CURRENT school only (Scoped)
-                    const list = await getSchoolYearsAndTerms(settings.schoolName);
+                    const docIdPrefix = schoolId ? schoolId.split('_')[0] : undefined;
+                    const list = await getSchoolYearsAndTerms(settings.schoolName, undefined, docIdPrefix);
                     // Filter out the current active term (can't export to self)
                     const validPeriods = list.filter(p => p.docId !== schoolId);
                     setPeriods(validPeriods);

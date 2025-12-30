@@ -33,8 +33,9 @@ const YearTermSelector: React.FC<YearTermSelectorProps> = ({ school, onSelectPer
                 console.log('[YearTermSelector] Cache cleared, fetching fresh data');
             }
 
-            // Pass school's database index to ensure correct database is queried
-            const periodList = await getSchoolYearsAndTerms(school.displayName, school._databaseIndex);
+            // Pass school's database index and precise docId prefix
+            const docIdPrefix = school.docId.split('_')[0];
+            const periodList = await getSchoolYearsAndTerms(school.displayName, school._databaseIndex, docIdPrefix);
             setPeriods(periodList);
         } catch (err) {
             console.error('Failed to load periods:', err);
