@@ -19,6 +19,7 @@ interface UserContextType {
     setUsers: (users: User[]) => void;
     login: (userId: number, password: string, userOverride?: User) => Promise<boolean>;
     logout: () => void;
+    switchAccount: () => void;
     setPassword: (userId: number, password: string) => Promise<void>;
     checkAutoLogin: (schoolId: string, users: User[]) => Promise<User | null>;
 }
@@ -129,7 +130,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     /**
-     * Logout current user
+     * Logout current user (Full logout - clears school context)
      */
     const logout = () => {
         if (currentUser) {
@@ -146,6 +147,22 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setIsAuthenticated(false);
     };
 
+    /**
+     * Switch account (Partial logout - preserves school context)
+     */
+    const switchAccount = () => {
+        if (currentUser) {
+            logUserAction(currentUser.id, currentUser.name, currentUser.role, 'Switch User');
+        }
+
+        // Clear only user persistence
+        localStorage.removeItem('sba_user_id');
+        localStorage.removeItem('sba_user_password');
+
+        setCurrentUser(null);
+        setIsAuthenticated(false);
+    };
+
     const value: UserContextType = {
         currentUser,
         deviceId,
@@ -154,6 +171,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUsers,
         login,
         logout,
+        switchAccount,
         setPassword,
         checkAutoLogin,
     };

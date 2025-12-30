@@ -6,7 +6,7 @@ import { NetworkIndicator } from './NetworkIndicator';
 import OnlineUsersModal from './OnlineUsersModal';
 
 const UserBadge: React.FC = () => {
-    const { currentUser, logout } = useUser();
+    const { currentUser, logout, switchAccount } = useUser();
 
     // Early return BEFORE other hooks to avoid React error #300
     if (!currentUser) return null;
@@ -19,7 +19,7 @@ const UserBadge: React.FC = () => {
 
     // Switch Account (Same School)
     const handleSwitchUser = () => {
-        logout();
+        switchAccount();
         // AuthOverlay will detect !isAuthenticated and switch to 'user-selection'
     };
 

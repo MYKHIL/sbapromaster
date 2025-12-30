@@ -59,6 +59,14 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
         }
     }, [currentStep, pauseSync]);
 
+    // React to manual logout (Switch Account)
+    useEffect(() => {
+        if (!isAuthenticated && currentStep === 'authenticated' && users.length > 0) {
+            console.log('[AuthOverlay] 🔄 User logged out but school active. Switching to user selection.');
+            setCurrentStep('user-selection');
+        }
+    }, [isAuthenticated, currentStep, users.length]);
+
     // Restore session on mount
     useEffect(() => {
         const restoreSession = async () => {
