@@ -38,9 +38,6 @@ interface StudentHistory {
     rawTermData: AppDataType; // For Broadsheet
 }
 
-// Module-level cache for persistence across page navigation but not app reloads
-let cachedSelectedStudentIds: number[] = [];
-
 const StudentProgress: React.FC = () => {
     const { settings, students, schoolId, loadStudents, loadMetadata } = useData();
     const { currentUser } = useUser();
@@ -51,17 +48,41 @@ const StudentProgress: React.FC = () => {
 
     // Selection State
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedStudents, setSelectedStudents] = useState<Student[]>(() => {
-        if (cachedSelectedStudentIds.length > 0) {
-            return students.filter(s => cachedSelectedStudentIds.includes(s.id));
-        }
-        return [];
-    });
+    const [selectedStudents, setSelectedStudents] = useState<Student[]>([]);
 
-    // Update cache when selection changes
+    // Persistence State
+    const [isSelectionLoaded, setIsSelectionLoaded] = useState(false);
+
+    // 1. Load Selection from LocalStorage on mount (once students are loaded)
     useEffect(() => {
-        cachedSelectedStudentIds = selectedStudents.map(s => s.id);
-    }, [selectedStudents]);
+        if (students.length > 0 && !isSelectionLoaded) {
+            try {
+                const saved = localStorage.getItem('studentProgress_selectedStudents');
+                if (saved) {
+                    const ids = JSON.parse(saved);
+                    const toSelect = students.filter(s => ids.includes(s.id));
+                    if (toSelect.length > 0) {
+                        setSelectedStudents(toSelect);
+                    }
+                }
+            } catch (e) {
+                console.warn("Failed to restore selection", e);
+            } finally {
+                setIsSelectionLoaded(true);
+            }
+        } else if (students.length > 0 && !isSelectionLoaded) {
+            // Even if no save, mark loaded so we can start saving
+            setIsSelectionLoaded(true);
+        }
+    }, [students, isSelectionLoaded]);
+
+    // 2. Persist Selection to LocalStorage
+    useEffect(() => {
+        if (isSelectionLoaded) {
+            const ids = selectedStudents.map(s => s.id);
+            localStorage.setItem('studentProgress_selectedStudents', JSON.stringify(ids));
+        }
+    }, [selectedStudents, isSelectionLoaded]);
 
     // Map: StudentID -> History Array
     const [historiesMap, setHistoriesMap] = useState<Record<number, StudentHistory[]>>({});
@@ -402,45 +423,123 @@ const StudentProgress: React.FC = () => {
             const margin = 15;
             let cursorY = margin;
 
-            // Helper: Capture chart as image
-            const captureChart = async (selector: string): Promise<string | null> => {
-                const element = document.querySelector(selector);
-                if (!element) return null;
-                const canvas = await html2canvas(element as HTMLElement, {
-                    scale: 2,
-                    logging: false,
-                    useCORS: true
+            const COLORS = ['#2563eb', '#16a34a', '#d97706', '#dc2626', '#7c3aed', '#db2777', '#0891b2', '#4b5563'];
+
+            // Vector Chart Helpers
+            const drawLineChart = (title: string, series: { name: string, data: { label: string, value: number }[], color: string }[], x: number, y: number, w: number, h: number) => {
+                pdf.setFontSize(10);
+                pdf.setTextColor(60);
+                pdf.text(title, x, y - 5);
+
+                // Chart Area
+                const chartY = y;
+                const chartH = h - 20; // Reserve space for legend/labels
+
+                // Draw Axes
+                pdf.setDrawColor(200);
+                pdf.setLineWidth(0.1);
+
+                // Grid lines (0, 25, 50, 75, 100)
+                [0, 25, 50, 75, 100].forEach(val => {
+                    const ly = chartY + chartH - (val / 100 * chartH);
+                    pdf.line(x, ly, x + w, ly);
+                    pdf.setFontSize(6);
+                    pdf.text(val.toString(), x - 2, ly + 1, { align: 'right' });
                 });
-                return canvas.toDataURL('image/png');
+
+                // X Labels
+                const allLabels = Array.from(new Set(series.flatMap(s => s.data.map(d => d.label)))).sort();
+                const stepX = w / (allLabels.length > 0 ? allLabels.length : 1);
+
+                allLabels.forEach((lbl, idx) => {
+                    const lx = x + (idx * stepX) + (stepX / 2);
+                    pdf.text(lbl, lx, chartY + chartH + 4, { align: 'center' });
+                });
+
+                // Plot Lines
+                series.forEach((s) => {
+                    pdf.setDrawColor(s.color);
+                    pdf.setLineWidth(0.5);
+                    const pts = s.data.map(d => {
+                        const idx = allLabels.indexOf(d.label);
+                        const px = x + (idx * stepX) + (stepX / 2);
+                        const py = chartY + chartH - (d.value / 100 * chartH);
+                        return { x: px, y: py };
+                    });
+
+                    for (let i = 0; i < pts.length - 1; i++) {
+                        pdf.line(pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y);
+                    }
+
+                    // Points
+                    pdf.setFillColor(s.color);
+                    pts.forEach(p => pdf.circle(p.x, p.y, 1, 'F'));
+                });
+
+                // Legend
+                let legX = x;
+                const legY = chartY + chartH + 10;
+                series.forEach(s => {
+                    pdf.setFillColor(s.color);
+                    pdf.circle(legX, legY - 1, 1.5, 'F');
+                    pdf.setTextColor(50);
+                    pdf.text(s.name, legX + 3, legY);
+                    legX += pdf.getTextWidth(s.name) + 10;
+                });
             };
 
-            // Helper: Safely add image to PDF  
-            const addImageToPdf = async (img: string | null, x: number, y: number, width: number, height: number): Promise<boolean> => {
-                if (!img) return false;
-                try {
-                    // Validate image data
-                    if (!img.startsWith('data:image/png') || img.length < 100) {
-                        console.warn('Invalid image data');
-                        return false;
-                    }
-                    pdf.addImage(img, 'PNG', x, y, width, height);
-                    return true;
-                } catch (error) {
-                    console.error('Failed to add image to PDF:', error);
-                    return false;
+            const drawBarChart = (title: string, data: { label: string, value: number, color?: string }[], x: number, y: number, w: number, h: number, maxVal: number = 100) => {
+                pdf.setFontSize(10);
+                pdf.setTextColor(60);
+                pdf.text(title, x, y - 5);
+
+                const chartY = y;
+                const chartH = h - 20;
+
+                // Axes
+                pdf.setDrawColor(200);
+                pdf.line(x, chartY + chartH, x + w, chartY + chartH); // X axis
+                pdf.line(x, chartY, x, chartY + chartH); // Y axis
+
+                // Grid (25% steps)
+                for (let i = 1; i <= 4; i++) {
+                    const ly = chartY + chartH - (i * 0.25 * chartH);
+                    pdf.setDrawColor(240);
+                    pdf.line(x, ly, x + w, ly);
                 }
+
+                if (data.length === 0) return;
+
+                const barW = (w / data.length) * 0.6;
+                const step = w / data.length;
+
+                data.forEach((d, i) => {
+                    const bx = x + (i * step) + (step - barW) / 2;
+                    const bH = (d.value / maxVal) * chartH;
+                    const by = chartY + chartH - bH;
+
+                    pdf.setFillColor(d.color || '#3b82f6');
+                    pdf.rect(bx, by, barW, bH, 'F');
+
+                    // Value label
+                    pdf.setFontSize(6);
+                    pdf.setTextColor(50);
+                    pdf.text(d.value.toFixed(0), bx + barW / 2, by - 1, { align: 'center' });
+
+                    // X Label
+                    // Truncate if too long
+                    let lbl = d.label;
+                    if (lbl.length > 8) lbl = lbl.substring(0, 6) + '..';
+                    pdf.text(lbl, bx + barW / 2, chartY + chartH + 4, { align: 'center' });
+                });
             };
 
 
             // Helper: Add broadsheet page for a term
-            const addBroadsheetPage = async (termData: AppDataType, selectedStudentIds: number[], termLabel: string) => {
-                const termStudents = (termData.students || []).filter(s =>
-                    selectedStudents.some(sel => sel.class === s.class)
-                );
-                if (termStudents.length === 0) return;
-
-                const targetClass = selectedStudents[0].class;
-                const classStudents = termStudents.filter(s => s.class === targetClass);
+            const addBroadsheetPage = async (termData: AppDataType, selectedStudentIds: number[], termLabel: string, targetClass: string) => {
+                // Filter student list to only those in the target class
+                const classStudents = (termData.students || []).filter(s => s.class === targetClass);
+                if (classStudents.length === 0) return;
 
                 const termAssessments = termData.assessments || [];
                 const termSubjects = termData.subjects || [];
@@ -483,13 +582,14 @@ const StudentProgress: React.FC = () => {
                     const rows = classStudents.map(student => {
                         const scoreObj = termScores.find(s => String(s.studentId) === String(student.id) && String(s.subjectId) === String(subject.id));
 
-                        const rawScores: string[] = [];
+                        const classRawScores: string[] = [];
                         let subTotalA = 0;
                         let subTotalB = 0;
+                        let examRawScore = '-';
 
                         classAss.forEach(ass => {
                             const rawArr = scoreObj?.assessmentScores?.[ass.id] || [];
-                            rawScores.push(rawArr.map(r => r.split('/')[0]).join(', ') || '-');
+                            classRawScores.push(rawArr.map(r => r.split('/')[0]).join(', ') || '-');
 
                             const rawSum = rawArr.reduce((a, b) => a + Number(b.split('/')[0]), 0);
                             const maxSum = rawArr.reduce((a, b) => a + (Number(b.split('/')[1]) || ass.weight), 0);
@@ -498,7 +598,7 @@ const StudentProgress: React.FC = () => {
 
                         if (examAss) {
                             const rawArr = scoreObj?.assessmentScores?.[examAss.id] || [];
-                            rawScores.push(rawArr.map(r => r.split('/')[0]).join(', ') || '-');
+                            examRawScore = rawArr.map(r => r.split('/')[0]).join(', ') || '-';
                             const avg = rawArr.length > 0 ? rawArr.reduce((a, b) => a + Number(b.split('/')[0]), 0) / rawArr.length : 0;
                             subTotalB += (avg / 100 * examAss.weight);
                         }
@@ -507,7 +607,8 @@ const StudentProgress: React.FC = () => {
                         return {
                             name: student.name,
                             indexNumber: student.indexNumber || '-',
-                            rawScores,
+                            classRawScores,
+                            examRawScore,
                             subTotalA: subTotalA.toFixed(1),
                             subTotalB: subTotalB.toFixed(1),
                             total: total.toFixed(0),
@@ -515,11 +616,33 @@ const StudentProgress: React.FC = () => {
                         };
                     }).sort((a, b) => Number(b.total) - Number(a.total));
 
-                    // Add position
+                    // Add position and construct FINAL ARRAY for AutoTable
                     const finalRows = rows.map((row, idx) => {
                         const pos = idx + 1;
                         const suffix = (["st", "nd", "rd"][((pos + 90) % 100 - 10) % 10 - 1] || "th");
-                        return [...Object.values({ ...row, position: `${pos}${suffix}`, isSelected: undefined }), row.isSelected];
+
+                        // Strict Column Mapping matching 'headers'
+                        // Name, Index, [ClassAss...], SubA, Exam, SubB, Total, Pos
+                        const rowArray = [
+                            row.name,
+                            row.indexNumber,
+                            ...row.classRawScores,
+                            row.subTotalA,
+                            row.examRawScore,
+                            row.subTotalB,
+                            row.total,
+                            `${pos}${suffix}`
+                        ];
+
+                        // Append 'isSelected' as metadata (not part of table cells, used in didParseCell)
+                        // Note: AutoTable body expects array of cells. Metadata must be handled carefully.
+                        // Actually, didParseCell receives `data.row.raw`.
+                        // If I pass array, `data.row.raw` IS the array.
+                        // I can attach metadata to the array object itself? Or pass object as row?
+                        // AutoTable supports object rows if columns key mapped.
+                        // But here I use array rows.
+                        // Hack: pass isSelected as last element, slice it off in body?
+                        return [...rowArray, row.isSelected];
                     });
 
                     const headers = ['Name', 'Index', ...classAss.map(a => a.name), 'Sub A', examAss?.name || 'Exam', 'Sub B', 'Total', 'Pos'];
@@ -555,7 +678,22 @@ const StudentProgress: React.FC = () => {
 
             if (isComparison) {
                 // COMPARISON PDF
-                // Note: Charts skipped - html2canvas not reliable in PDF context
+
+                // Draw Comparison Chart
+                const compSeries = selectedStudents.map((s, idx) => {
+                    const hist = historiesMap[s.id] || [];
+                    // Sort history by year/term logic if needed, but assuming history is time-ordered or we rely on labels
+                    // Actually labels "Term Year" sorted alphabetically might be wrong. Ideally rely on underlying data order.
+                    // But for simplicity use exact labels.
+                    const data = hist.map(h => ({
+                        label: `${h.academicTerm} ${h.academicYear.substring(2)}`,
+                        value: h.averageScore
+                    }));
+                    return { name: s.name, data, color: COLORS[idx % COLORS.length] };
+                });
+
+                drawLineChart("Performance Trend Comparison", compSeries, margin, cursorY, pageWidth - (margin * 2), 70);
+                cursorY += 80;
 
                 // Table 1: Average Scores Comparison
                 const terms = Array.from(new Set((Object.values(historiesMap) as StudentHistory[][]).flatMap(hArr => hArr.map(h => `${h.academicTerm} ${h.academicYear.substring(2)}`)))).sort();
@@ -593,35 +731,36 @@ const StudentProgress: React.FC = () => {
                 cursorY = (pdf as any).lastAutoTable.finalY + 10;
 
                 // Add broadsheet pages for ALL selected students across all their terms
-                const allTermsWithStudents: Array<{ data: AppDataType, studentIds: number[], label: string }> = [];
+                // Grouping by (Term Label + Class)
+                const broasheetGroups: Record<string, { data: AppDataType, studentIds: number[], label: string, className: string }> = {};
 
                 selectedStudents.forEach(student => {
                     const hist = historiesMap[student.id] || [];
                     hist.forEach(termHist => {
                         if (termHist.rawTermData) {
                             const termLabel = `${termHist.academicTerm} ${termHist.academicYear}`;
-                            // Check if this term already exists
-                            let existingTerm = allTermsWithStudents.find(t => t.label === termLabel);
-                            if (existingTerm) {
-                                // Add this student to existing term
-                                if (!existingTerm.studentIds.includes(student.id)) {
-                                    existingTerm.studentIds.push(student.id);
-                                }
-                            } else {
-                                // Create new term entry
-                                allTermsWithStudents.push({
+                            const className = termHist.class;
+                            const key = `${termLabel}_${className}`;
+
+                            if (!broasheetGroups[key]) {
+                                broasheetGroups[key] = {
                                     data: termHist.rawTermData,
-                                    studentIds: [student.id],
-                                    label: termLabel
-                                });
+                                    studentIds: [],
+                                    label: termLabel,
+                                    className: className
+                                };
+                            }
+                            if (!broasheetGroups[key].studentIds.includes(student.id)) {
+                                broasheetGroups[key].studentIds.push(student.id);
                             }
                         }
                     });
                 });
 
-                // Generate broadsheets for each unique term with all its students
-                for (const term of allTermsWithStudents) {
-                    await addBroadsheetPage(term.data, term.studentIds, term.label);
+                // Generate broadsheets
+                for (const key in broasheetGroups) {
+                    const group = broasheetGroups[key];
+                    await addBroadsheetPage(group.data, group.studentIds, group.label, group.className);
                 }
 
                 pdf.save(`Comparison_Report_${new Date().toISOString().split('T')[0]}.pdf`);
@@ -645,7 +784,43 @@ const StudentProgress: React.FC = () => {
                 pdf.text(`Class: ${singleStudent.class}`, margin + 5, cursorY + 22);
                 cursorY += 35;
 
-                // Note: Charts skipped - html2canvas not reliable in PDF context
+                // 1. Trend Chart & 2. Grade Distribution
+                const trendSeries = [{
+                    name: singleStudent.name,
+                    data: singleHistory.map(h => ({
+                        label: `${h.academicTerm} ${h.academicYear.substring(2)}`,
+                        value: h.averageScore
+                    })),
+                    color: COLORS[0]
+                }];
+
+                const colW = (pageWidth - (margin * 3)) / 2;
+                drawLineChart("Overall Trend", trendSeries, margin, cursorY, colW, 60);
+
+                const codes = singleLatestTerm?.detailedPerformance.map(d => d.grade) || [];
+                const counts = codes.reduce((acc: any, c: string) => { acc[c] = (acc[c] || 0) + 1; return acc; }, {});
+                const gradeData = Object.entries(counts).map(([k, v], i) => ({
+                    label: k, value: v as number, color: COLORS[(i + 1) % COLORS.length]
+                }));
+
+                drawBarChart("Grade Dist.", gradeData, margin + colW + margin, cursorY, colW, 60, Math.max(...(Object.values(counts) as number[]), 5));
+
+                cursorY += 70;
+
+                // 3. Subject Performance
+                const subjData = singleLatestTerm?.detailedPerformance.map((d, i) => ({
+                    label: d.subjectName,
+                    value: d.totalScore,
+                    color: COLORS[i % COLORS.length]
+                })) || [];
+
+                if (cursorY + 70 > pageHeight - margin) {
+                    pdf.addPage();
+                    cursorY = margin;
+                }
+
+                drawBarChart("Subject Performance", subjData, margin, cursorY, pageWidth - (margin * 2), 60);
+                cursorY += 70;
 
                 const subjects = Array.from(new Set(singleHistory.flatMap(h => h.subjectPerformance.map(s => s.subjectName)))).sort();
                 const terms = singleHistory.map(h => `${h.academicTerm} ${h.academicYear.substring(2)}`);
@@ -682,7 +857,8 @@ const StudentProgress: React.FC = () => {
                         await addBroadsheetPage(
                             termHist.rawTermData,
                             [singleStudent.id],
-                            `${termHist.academicTerm} ${termHist.academicYear}`
+                            `${termHist.academicTerm} ${termHist.academicYear}`,
+                            termHist.class
                         );
                     }
                 }
@@ -849,20 +1025,30 @@ const StudentProgress: React.FC = () => {
                                                             <span className="font-semibold text-gray-700">{term.academicTerm}</span>
                                                             <span className="text-gray-500 block text-[10px]">{term.academicYear}</span>
                                                         </div>
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                if (term.rawTermData) {
-                                                                    setBroadsheetModal({ isOpen: true, termData: term.rawTermData, targetClass: term.class });
-                                                                } else {
-                                                                    // Silent fallback
-                                                                }
-                                                            }}
-                                                            className="px-2 py-1 bg-white border border-blue-200 text-blue-600 font-medium rounded hover:bg-blue-50 transition-colors shadow-sm whitespace-nowrap"
-                                                            title="View Class Broadsheet"
-                                                        >
-                                                            Broadsheet
-                                                        </button>
+                                                        {(() => {
+                                                            const hasScores = term.rawTermData?.scores?.some(s => {
+                                                                const validStudents = term.rawTermData.students?.filter(st => st.class === term.class).map(st => st.id) || [];
+                                                                return validStudents.includes(s.studentId);
+                                                            });
+
+                                                            if (hasScores) {
+                                                                return (
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            if (term.rawTermData) {
+                                                                                setBroadsheetModal({ isOpen: true, termData: term.rawTermData, targetClass: term.class });
+                                                                            }
+                                                                        }}
+                                                                        className="px-2 py-1 bg-white border border-blue-200 text-blue-600 font-medium rounded hover:bg-blue-50 transition-colors shadow-sm whitespace-nowrap"
+                                                                        title="View Class Broadsheet"
+                                                                    >
+                                                                        Broadsheet
+                                                                    </button>
+                                                                );
+                                                            }
+                                                            return null;
+                                                        })()}
                                                     </div>
                                                 ))
                                             )}
@@ -943,15 +1129,27 @@ const StudentProgress: React.FC = () => {
                                                         </div>
                                                     </div>
 
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setBroadsheetModal({ isOpen: true, termData: item.rawTermData, targetClass: item.class });
-                                                        }}
-                                                        className="px-3 py-1 bg-white border border-blue-200 text-blue-600 text-xs font-semibold rounded hover:bg-blue-50 transition-colors shadow-sm"
-                                                    >
-                                                        View Broadsheet
-                                                    </button>
+                                                    {(() => {
+                                                        const hasScores = item.rawTermData?.scores?.some(s => {
+                                                            const validStudents = item.rawTermData.students?.filter(st => st.class === item.class).map(st => st.id) || [];
+                                                            return validStudents.includes(s.studentId);
+                                                        });
+
+                                                        if (hasScores) {
+                                                            return (
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setBroadsheetModal({ isOpen: true, termData: item.rawTermData, targetClass: item.class });
+                                                                    }}
+                                                                    className="px-3 py-1 bg-white border border-blue-200 text-blue-600 text-xs font-semibold rounded hover:bg-blue-50 transition-colors shadow-sm"
+                                                                >
+                                                                    View Broadsheet
+                                                                </button>
+                                                            );
+                                                        }
+                                                        return null;
+                                                    })()}
 
                                                     <svg
                                                         className={`w-6 h-6 text-gray-400 transition-transform ${isExpanded ? 'transform rotate-180' : ''}`}

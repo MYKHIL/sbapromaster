@@ -16,10 +16,34 @@ const BroadsheetModal: React.FC<BroadsheetModalProps> = ({ isOpen, onClose, term
 
     const subjects = termData.subjects || [];
     const assessments = termData.assessments || [];
+    const scores = termData.scores || [];
+    const studentsInClass = (termData.students || []).filter(s => s.class === targetClass);
 
     // Split assessments into Exam and Class
     const examAssessment = assessments.find(a => a.name.toLowerCase().includes('exam'));
     const classAssessments = assessments.filter(a => !examAssessment || a.id !== examAssessment.id);
+
+    // Filter subjects: only include those where at least one class student has scores
+    const filteredSubjects = useMemo(() => {
+        return subjects.filter(subject => {
+            return studentsInClass.some(student => {
+                const scoreObj = scores.find(s =>
+                    String(s.studentId) === String(student.id) &&
+                    String(s.subjectId) === String(subject.id)
+                );
+                if (!scoreObj) return false;
+
+                // Check if any assessment has scores
+                const hasClassScores = classAssessments.some(ass => {
+                    const rawArr = scoreObj.assessmentScores?.[ass.id] || [];
+                    return rawArr.length > 0;
+                });
+                const hasExamScores = examAssessment && (scoreObj.assessmentScores?.[examAssessment.id]?.length || 0) > 0;
+
+                return hasClassScores || hasExamScores;
+            });
+        });
+    }, [subjects, studentsInClass, scores, classAssessments, examAssessment]);
 
     // Calculate processed data for the table
     const tableData = useMemo(() => {
@@ -34,7 +58,7 @@ const BroadsheetModal: React.FC<BroadsheetModalProps> = ({ isOpen, onClose, term
             let totalWeightedScore = 0;
             let subjectCount = 0;
 
-            subjects.forEach(subject => {
+            filteredSubjects.forEach(subject => {
                 const scoreObj = studentScores.find(s => s.subjectId === subject.id);
                 if (scoreObj) {
                     // Helper to calc weighted score for a subject
@@ -118,7 +142,7 @@ const BroadsheetModal: React.FC<BroadsheetModalProps> = ({ isOpen, onClose, term
             };
 
         });
-    }, [termData, targetClass, subjects, assessments, classAssessments, examAssessment]);
+    }, [termData, targetClass, filteredSubjects, assessments, classAssessments, examAssessment]);
 
     // Helper to generate rows for a specific subject
     const generateRowsForSubject = React.useCallback((subjId: number) => {
@@ -169,21 +193,21 @@ const BroadsheetModal: React.FC<BroadsheetModalProps> = ({ isOpen, onClose, term
         });
     }, [tableData, classAssessments, examAssessment]);
 
-    const [selectedSubjectId, setSelectedSubjectId] = React.useState<number>(subjects[0]?.id || 0);
+    const [selectedSubjectId, setSelectedSubjectId] = React.useState<number>(filteredSubjects[0]?.id || 0);
 
     // Filter table data for selected subject
     const finalRows = useMemo(() => {
-        if (selectedSubjectId === 0 && subjects.length > 0) {
-            return generateRowsForSubject(subjects[0].id);
+        if (selectedSubjectId === 0 && filteredSubjects.length > 0) {
+            return generateRowsForSubject(filteredSubjects[0].id);
         }
         return generateRowsForSubject(selectedSubjectId);
-    }, [generateRowsForSubject, selectedSubjectId, subjects]);
+    }, [generateRowsForSubject, selectedSubjectId, filteredSubjects]);
 
 
     const handlePrint = () => {
         const doc = new jsPDF('l', 'mm', 'a4');
 
-        subjects.forEach((subject, index) => {
+        filteredSubjects.forEach((subject, index) => {
             if (index > 0) doc.addPage();
 
             const subjectRows = generateRowsForSubject(subject.id);
@@ -243,7 +267,7 @@ const BroadsheetModal: React.FC<BroadsheetModalProps> = ({ isOpen, onClose, term
                             onChange={(e) => setSelectedSubjectId(Number(e.target.value))}
                             className="px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none"
                         >
-                            {subjects.map(s => (
+                            {filteredSubjects.map(s => (
                                 <option key={s.id} value={s.id}>{s.subject}</option>
                             ))}
                         </select>
