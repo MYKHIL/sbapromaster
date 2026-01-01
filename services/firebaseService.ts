@@ -1187,6 +1187,18 @@ export const getSchoolHistory = async (schoolNamePrefix: string): Promise<AppDat
                 }
             });
 
+            // FALLBACK: If no scores found in buckets, try legacy 'scores' subcollection
+            if (scores.length === 0) {
+                console.log(`[getSchoolHistory] No scores in buckets for ${docSnap.id}. Trying legacy 'scores' collection...`);
+                const scoresRef = collection(db, "schools", docSnap.id, "scores");
+                trackFirebaseRead('getSchoolHistory', 'scores', 0, `Fetching legacy scores for ${docSnap.id}`);
+                const scoresSnapshot = await getDocs(scoresRef);
+                trackFirebaseRead('getSchoolHistory', 'scores', scoresSnapshot.size, `Fetched legacy scores for ${docSnap.id}`);
+                scoresSnapshot.docs.forEach(doc => {
+                    scores.push(doc.data() as Score);
+                });
+            }
+
             console.log(`[getSchoolHistory] Loaded for ${docSnap.id}: ${students.length} students, ${subjects.length} subjects, ${classes.length} classes, ${assessments.length} assessments, ${scores.length} scores`);
 
             // Merge all data

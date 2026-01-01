@@ -415,6 +415,7 @@ const { chromium } = require('playwright');
             console.log('🔍 Checking for unscored students (Gap Check)...');
             const jumpBtn = page.locator('button:has-text("unscored • Tap to jump")').first();
             let jumps = 0;
+            let modified = false;
             while (await jumpBtn.isVisible() && jumps < 100) {
                 jumps++;
                 console.log(`🎯 [Jump] Found unscored indicator. Jumping...`);
@@ -432,6 +433,7 @@ const { chromium } = require('playwright');
                         await page.keyboard.type(score);
                         await page.keyboard.press('Enter');
                         console.log(`✨ [Gap Fill] Entered ${score}/${maxWeight}`);
+                        modified = true;
                         await page.waitForTimeout(400);
                     } else {
                         const nextBtn = page.getByRole('button', { name: /Next/i });
@@ -440,6 +442,7 @@ const { chromium } = require('playwright');
                     }
                 } else break;
             }
+            return modified;
         };
 
         // ---------------------------------------------------------
@@ -449,6 +452,8 @@ const { chromium } = require('playwright');
         await navigateTo('Score Entry');
 
         while (true) {
+            let cycleModified = false;
+
             const classes = await getSelectOptions('#class-select');
             if (classes.length === 0) {
                 console.log('⚠️ No classes found. Rotating via random select...');
@@ -515,6 +520,7 @@ const { chromium } = require('playwright');
                                     await page.keyboard.type(score);
                                     await page.keyboard.press('Enter');
                                     console.log(`🎯 [Mobile] Entered ${score}/${finalWeight}`);
+                                    cycleModified = true;
                                     await page.waitForTimeout(200);
                                 }
 
@@ -526,7 +532,7 @@ const { chromium } = require('playwright');
                             }
 
                             // Final Gap Check (User's specific request)
-                            await fillUnscoredGaps(finalWeight);
+                            if (await fillUnscoredGaps(finalWeight)) cycleModified = true;
                         }
                     } else {
                         // Desktop Grid View
@@ -558,6 +564,7 @@ const { chromium } = require('playwright');
                                         await page.keyboard.press('Backspace');
                                         await page.keyboard.type(score);
                                         await page.keyboard.press('Enter');
+                                        cycleModified = true;
                                     }
                                 }
                                 if (rIdx % 40 === 0 && rIdx > 0) await triggerSave();
@@ -567,6 +574,13 @@ const { chromium } = require('playwright');
                     await triggerSave();
                 }
             }
+            if (!cycleModified) {
+                console.log('\n✅ [SUCCESS] All data has been entered! No gaps found in this full rotation.');
+                console.log('🎉 Bot Simulation Complete.');
+                // Optional: await page.pause(); // Uncomment to keep browser open
+                break;
+            }
+
             console.log('\n🔄 [Systematic] Finished full rotation. Starting over...');
             await page.waitForTimeout(5000);
         }

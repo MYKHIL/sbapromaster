@@ -7,10 +7,20 @@ import { BarChart, LineChart, PieChart, MultiLineChart } from '../../components/
 import jsPDF from 'jspdf';
 // @ts-ignore
 import autoTable from 'jspdf-autotable';
+import html2canvas from 'html2canvas';
+import BroadsheetModal from '../modals/BroadsheetModal';
 
 interface SubjectPerformance {
     subjectName: string;
     average: number;
+    grade: string;
+}
+
+interface DetailedSubjectScore {
+    subjectName: string;
+    classScore: number; // Weighted
+    examScore: number; // Weighted
+    totalScore: number;
     grade: string;
 }
 
@@ -24,6 +34,8 @@ interface StudentHistory {
     position: string;
     scores: Score[];
     subjectPerformance: SubjectPerformance[];
+    detailedPerformance: DetailedSubjectScore[];
+    rawTermData: AppDataType; // For Broadsheet
 }
 
 // Module-level cache for persistence across page navigation but not app reloads
@@ -59,6 +71,14 @@ const StudentProgress: React.FC = () => {
 
     const contentRef = React.useRef<HTMLDivElement>(null);
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+    const [expandedTermIds, setExpandedTermIds] = useState<string[]>([]);
+    const [broadsheetModal, setBroadsheetModal] = useState<{ isOpen: boolean, termData?: AppDataType, targetClass?: string }>({ isOpen: false });
+
+    const toggleTerm = (termId: string) => {
+        setExpandedTermIds(prev =>
+            prev.includes(termId) ? prev.filter(id => id !== termId) : [...prev, termId]
+        );
+    };
 
     // Lazy Load Data on Mount - Force refresh to ensure we have current data
     useEffect(() => {
@@ -103,67 +123,119 @@ const StudentProgress: React.FC = () => {
 
         const newMap: Record<number, StudentHistory[]> = {};
 
+        // Helper: Calculate Weighted Score (Reused logic)
+        const calculateScoreForStudentSubject = (
+            sId: number,
+            subId: number,
+            termScores: Score[],
+            specificAssessments: any[]
+        ) => {
+            const scoreObj = termScores.find(s => String(s.studentId) === String(sId) && String(s.subjectId) === String(subId));
+            if (!scoreObj) return 0;
+
+            return specificAssessments.reduce((total, assessment) => {
+                const scoresArr = scoreObj.assessmentScores?.[assessment.id] || [];
+                if (scoresArr.length === 0) return total;
+                const isExam = assessment.name.toLowerCase().includes('exam');
+                if (isExam) {
+                    const sumOfScores = scoresArr.reduce((sum: number, scoreStr: string) => sum + Number(scoreStr.split('/')[0]), 0);
+                    const averageScoreOutOf100 = sumOfScores / scoresArr.length;
+                    return total + ((averageScoreOutOf100 / 100) * assessment.weight);
+                } else {
+                    const totalScore = scoresArr.reduce((sum: number, scoreStr: string) => sum + Number(scoreStr.split('/')[0]), 0);
+                    const totalMaxPossibleScore = scoresArr.reduce((sum: number, scoreStr: string) => sum + (Number(scoreStr.split('/')[1]) || assessment.weight), 0);
+                    if (totalMaxPossibleScore === 0) return total;
+                    return total + ((totalScore / totalMaxPossibleScore) * assessment.weight);
+                }
+            }, 0);
+        };
+
+        // 1. Pre-calculate Ranks for each Term
+        const termRankings = historyData.map(termData => {
+            const tScores = termData.scores || [];
+            const tStudents = termData.students || [];
+            const tAssessments = termData.assessments || [];
+            const tSubjects = termData.subjects || [];
+
+            const examAss = tAssessments.find(a => a.name.toLowerCase().includes('exam'));
+            const classAss = tAssessments.filter(a => !examAss || a.id !== examAss.id);
+
+            // Group students by CLASS first for correct ranking
+            const classGroups: Record<string, typeof tStudents> = {};
+            tStudents.forEach(s => {
+                if (!classGroups[s.class]) classGroups[s.class] = [];
+                classGroups[s.class].push(s);
+            });
+
+            // Calculate ranks per class
+            const ranksPerClass: Record<string, { id: number, avg: number }[]> = {};
+
+            Object.keys(classGroups).forEach(className => {
+                const students = classGroups[className];
+                const avgs = students.map(s => {
+                    let totalPct = 0;
+                    let count = 0;
+                    const myScores = tScores.filter(sc => String(sc.studentId) === String(s.id));
+
+                    tSubjects.forEach(sub => {
+                        if (myScores.some(sc => String(sc.subjectId) === String(sub.id))) {
+                            const cScore = calculateScoreForStudentSubject(s.id, sub.id, myScores, classAss);
+                            const eScore = examAss ? calculateScoreForStudentSubject(s.id, sub.id, myScores, [examAss]) : 0;
+                            if ((cScore + eScore) > 0) {
+                                totalPct += (cScore + eScore);
+                                count++;
+                            }
+                        }
+                    });
+                    return { id: s.id, avg: count > 0 ? totalPct / count : 0 };
+                });
+
+                avgs.sort((a, b) => b.avg - a.avg);
+                ranksPerClass[className] = avgs;
+            });
+
+            return {
+                uniqueId: createDocumentId(termData.settings.schoolName, termData.settings.academicYear, termData.settings.academicTerm),
+                ranksPerClass // Now keyed by class name
+            };
+        });
+
+        // 2. Build History
         selectedStudents.forEach(student => {
             console.log('[StudentProgress] Processing student:', student.name, 'ID:', student.id);
             const history: StudentHistory[] = [];
 
-            historyData.forEach(termData => {
-                console.log('[StudentProgress]   Checking term:', termData.settings?.academicTerm, termData.settings?.academicYear);
+            historyData.forEach((termData, termIdx) => {
                 let studentInTerm: Student | undefined;
                 const termStudents = termData.students || [];
-                console.log('[StudentProgress]     Term has', termStudents.length, 'students');
 
                 if (student.indexNumber) {
                     studentInTerm = termStudents.find(s => s.indexNumber === student.indexNumber);
-                    console.log('[StudentProgress]     Match by index:', studentInTerm ? 'FOUND' : 'NOT FOUND');
                 }
                 if (!studentInTerm) {
                     studentInTerm = termStudents.find(s => s.name.toLowerCase() === student.name.toLowerCase());
-                    console.log('[StudentProgress]     Match by name:', studentInTerm ? 'FOUND' : 'NOT FOUND');
                 }
 
                 if (studentInTerm) {
-                    console.log('[StudentProgress]     ✓ Student matched! studentInTerm ID:', studentInTerm.id);
                     const termScores = termData.scores || [];
-                    const studentScores = termScores.filter(s => s.studentId === studentInTerm!.id);
-                    console.log('[StudentProgress]     Student has', studentScores.length, 'score records');
+                    const studentScores = termScores.filter(s => String(s.studentId) === String(studentInTerm!.id));
+
                     const subjectPerformances: SubjectPerformance[] = [];
-                    const reportData = (termData.reportData || []).find(r => r.studentId === studentInTerm!.id);
-
-                    let totalPercentage = 0;
-                    let subjectCount = 0;
-
-                    const calculateWeightedScore = (sId: number, subId: number, specificAssessments: any[]) => {
-                        const scoreObj = studentScores.find(s => s.subjectId === subId);
-                        if (!scoreObj) return 0;
-
-                        return specificAssessments.reduce((total, assessment) => {
-                            const scoresArr = scoreObj.assessmentScores?.[assessment.id] || [];
-                            if (scoresArr.length === 0) return total;
-                            const isExam = assessment.name.toLowerCase().includes('exam');
-                            if (isExam) {
-                                const sumOfScores = scoresArr.reduce((sum: number, scoreStr: string) => sum + Number(scoreStr.split('/')[0]), 0);
-                                const averageScoreOutOf100 = sumOfScores / scoresArr.length;
-                                return total + ((averageScoreOutOf100 / 100) * assessment.weight);
-                            } else {
-                                const totalScore = scoresArr.reduce((sum: number, scoreStr: string) => sum + Number(scoreStr.split('/')[0]), 0);
-                                const totalMaxPossibleScore = scoresArr.reduce((sum: number, scoreStr: string) => sum + (Number(scoreStr.split('/')[1]) || assessment.weight), 0);
-                                if (totalMaxPossibleScore === 0) return total;
-                                return total + ((totalScore / totalMaxPossibleScore) * assessment.weight);
-                            }
-                        }, 0);
-                    };
+                    const detailedPerformance: DetailedSubjectScore[] = [];
 
                     const termAssessments = termData.assessments || [];
                     const examAssessment = termAssessments.find(a => a.name.toLowerCase().includes('exam'));
                     const classAssessments = termAssessments.filter(a => !examAssessment || a.id !== examAssessment.id);
                     const termSubjects = termData.subjects || [];
 
+                    let totalPercentage = 0;
+                    let subjectCount = 0;
+
                     termSubjects.forEach(subject => {
-                        const hasScore = studentScores.some(s => s.subjectId === subject.id);
+                        const hasScore = studentScores.some(s => String(s.subjectId) === String(subject.id));
                         if (hasScore) {
-                            const classScore = calculateWeightedScore(studentInTerm!.id, subject.id, classAssessments);
-                            const examScore = examAssessment ? calculateWeightedScore(studentInTerm!.id, subject.id, [examAssessment]) : 0;
+                            const classScore = calculateScoreForStudentSubject(studentInTerm!.id, subject.id, studentScores, classAssessments);
+                            const examScore = examAssessment ? calculateScoreForStudentSubject(studentInTerm!.id, subject.id, studentScores, [examAssessment]) : 0;
                             const totalScore = classScore + examScore;
 
                             if (totalScore > 0) {
@@ -173,17 +245,38 @@ const StudentProgress: React.FC = () => {
                                 const termGrades = termData.grades || [];
                                 const sortedGrades = [...termGrades].sort((a, b) => b.minScore - a.minScore);
                                 const gradeInfo = sortedGrades.find(g => roundedMark >= g.minScore && roundedMark <= g.maxScore);
+                                const grade = gradeInfo?.name || 'F';
+
                                 subjectPerformances.push({
                                     subjectName: subject.subject,
                                     average: totalScore,
-                                    grade: gradeInfo?.name || 'F'
+                                    grade: grade
+                                });
+
+                                detailedPerformance.push({
+                                    subjectName: subject.subject,
+                                    classScore: classScore,
+                                    examScore: examScore,
+                                    totalScore: totalScore,
+                                    grade: grade
                                 });
                             }
                         }
                     });
 
                     const average = subjectCount > 0 ? (totalPercentage / subjectCount) : 0;
-                    console.log('[StudentProgress]     Computed:', subjectCount, 'subjects, avg:', average.toFixed(1) + '%');
+
+                    // Determine Rank - WITHIN CLASS
+                    const tRankMap = termRankings[termIdx];
+                    const classRanks = tRankMap.ranksPerClass[studentInTerm!.class] || [];
+                    const rankIndex = classRanks.findIndex(r => String(r.id) === String(studentInTerm!.id));
+                    const mRank = rankIndex + 1;
+                    const resultSuffix = (["st", "nd", "rd"][((mRank + 90) % 100 - 10) % 10 - 1] || "th");
+                    const positionStr = mRank > 0 ? `${mRank}${resultSuffix}` : 'N/A';
+
+                    // Count total students in class for context (e.g. 5th / 30)
+                    const totalStudentsInClass = classRanks.length;
+                    const positionDisplay = mRank > 0 ? `${positionStr} / ${totalStudentsInClass}` : 'N/A';
 
                     history.push({
                         studentId: student.id,
@@ -192,16 +285,15 @@ const StudentProgress: React.FC = () => {
                         academicTerm: termData.settings.academicTerm,
                         class: studentInTerm.class,
                         averageScore: average,
-                        position: reportData?.interest || 'N/A', // Using interest field for Position temporarily as tracked in legacy logic?
+                        position: positionDisplay,
                         scores: studentScores,
-                        subjectPerformance: subjectPerformances
+                        subjectPerformance: subjectPerformances,
+                        detailedPerformance: detailedPerformance,
+                        rawTermData: termData
                     });
-                } else {
-                    console.log('[StudentProgress]     ✗ Student NOT found in this term');
                 }
             });
 
-            console.log('[StudentProgress] Final history for', student.name + ':', history.length, 'terms');
             history.sort((a, b) => a.termId.localeCompare(b.termId));
             newMap[student.id] = history;
         });
@@ -306,8 +398,150 @@ const StudentProgress: React.FC = () => {
         try {
             const pdf = new jsPDF('p', 'mm', 'a4');
             const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
             const margin = 15;
             let cursorY = margin;
+
+            // Helper: Capture chart as image
+            const captureChart = async (selector: string): Promise<string | null> => {
+                const element = document.querySelector(selector);
+                if (!element) return null;
+                const canvas = await html2canvas(element as HTMLElement, {
+                    scale: 2,
+                    logging: false,
+                    useCORS: true
+                });
+                return canvas.toDataURL('image/png');
+            };
+
+            // Helper: Safely add image to PDF  
+            const addImageToPdf = async (img: string | null, x: number, y: number, width: number, height: number): Promise<boolean> => {
+                if (!img) return false;
+                try {
+                    // Validate image data
+                    if (!img.startsWith('data:image/png') || img.length < 100) {
+                        console.warn('Invalid image data');
+                        return false;
+                    }
+                    pdf.addImage(img, 'PNG', x, y, width, height);
+                    return true;
+                } catch (error) {
+                    console.error('Failed to add image to PDF:', error);
+                    return false;
+                }
+            };
+
+
+            // Helper: Add broadsheet page for a term
+            const addBroadsheetPage = async (termData: AppDataType, selectedStudentIds: number[], termLabel: string) => {
+                const termStudents = (termData.students || []).filter(s =>
+                    selectedStudents.some(sel => sel.class === s.class)
+                );
+                if (termStudents.length === 0) return;
+
+                const targetClass = selectedStudents[0].class;
+                const classStudents = termStudents.filter(s => s.class === targetClass);
+
+                const termAssessments = termData.assessments || [];
+                const termSubjects = termData.subjects || [];
+                const termScores = termData.scores || [];
+
+                const examAss = termAssessments.find(a => a.name.toLowerCase().includes('exam'));
+                const classAss = termAssessments.filter(a => !examAss || a.id !== examAss.id);
+
+                // Filter subjects: only include those where at least one class student has scores
+                const subjectsWithScores = termSubjects.filter(subject => {
+                    return classStudents.some(student => {
+                        const scoreObj = termScores.find(s =>
+                            String(s.studentId) === String(student.id) &&
+                            String(s.subjectId) === String(subject.id)
+                        );
+                        if (!scoreObj) return false;
+
+                        // Check if any assessment has scores
+                        const hasClassScores = classAss.some(ass => {
+                            const rawArr = scoreObj.assessmentScores?.[ass.id] || [];
+                            return rawArr.length > 0;
+                        });
+                        const hasExamScores = examAss && (scoreObj.assessmentScores?.[examAss.id]?.length || 0) > 0;
+
+                        return hasClassScores || hasExamScores;
+                    });
+                });
+
+                // Generate broadsheet for each subject with scores
+                for (const subject of subjectsWithScores) {
+                    pdf.addPage();
+
+                    pdf.setFontSize(14);
+                    pdf.setFont("helvetica", "bold");
+                    pdf.text(`Broadsheet: ${termLabel}`, pageWidth / 2, 15, { align: 'center' });
+                    pdf.setFontSize(10);
+                    pdf.setFont("helvetica", "normal");
+                    pdf.text(`Class: ${targetClass} | Subject: ${subject.subject}`, pageWidth / 2, 22, { align: 'center' });
+
+                    const rows = classStudents.map(student => {
+                        const scoreObj = termScores.find(s => String(s.studentId) === String(student.id) && String(s.subjectId) === String(subject.id));
+
+                        const rawScores: string[] = [];
+                        let subTotalA = 0;
+                        let subTotalB = 0;
+
+                        classAss.forEach(ass => {
+                            const rawArr = scoreObj?.assessmentScores?.[ass.id] || [];
+                            rawScores.push(rawArr.map(r => r.split('/')[0]).join(', ') || '-');
+
+                            const rawSum = rawArr.reduce((a, b) => a + Number(b.split('/')[0]), 0);
+                            const maxSum = rawArr.reduce((a, b) => a + (Number(b.split('/')[1]) || ass.weight), 0);
+                            if (maxSum > 0) subTotalA += (rawSum / maxSum * ass.weight);
+                        });
+
+                        if (examAss) {
+                            const rawArr = scoreObj?.assessmentScores?.[examAss.id] || [];
+                            rawScores.push(rawArr.map(r => r.split('/')[0]).join(', ') || '-');
+                            const avg = rawArr.length > 0 ? rawArr.reduce((a, b) => a + Number(b.split('/')[0]), 0) / rawArr.length : 0;
+                            subTotalB += (avg / 100 * examAss.weight);
+                        }
+
+                        const total = subTotalA + subTotalB;
+                        return {
+                            name: student.name,
+                            indexNumber: student.indexNumber || '-',
+                            rawScores,
+                            subTotalA: subTotalA.toFixed(1),
+                            subTotalB: subTotalB.toFixed(1),
+                            total: total.toFixed(0),
+                            isSelected: selectedStudentIds.includes(student.id)
+                        };
+                    }).sort((a, b) => Number(b.total) - Number(a.total));
+
+                    // Add position
+                    const finalRows = rows.map((row, idx) => {
+                        const pos = idx + 1;
+                        const suffix = (["st", "nd", "rd"][((pos + 90) % 100 - 10) % 10 - 1] || "th");
+                        return [...Object.values({ ...row, position: `${pos}${suffix}`, isSelected: undefined }), row.isSelected];
+                    });
+
+                    const headers = ['Name', 'Index', ...classAss.map(a => a.name), 'Sub A', examAss?.name || 'Exam', 'Sub B', 'Total', 'Pos'];
+
+                    (autoTable as any)(pdf, {
+                        startY: 30,
+                        head: [headers],
+                        body: finalRows.map(r => r.slice(0, -1)),
+                        margin: { left: margin, right: margin },
+                        styles: { fontSize: 7, cellPadding: 1.5 },
+                        theme: 'grid',
+                        didParseCell: function (data: any) {
+                            const rowData = finalRows[data.row.index];
+                            if (rowData && rowData[rowData.length - 1]) { // isSelected
+                                data.cell.styles.fillColor = [255, 252, 200]; // Light yellow
+                                data.cell.styles.fontStyle = 'bold';
+                                data.cell.styles.textColor = [0, 0, 0];
+                            }
+                        }
+                    });
+                }
+            };
 
             // Header
             pdf.setFontSize(18);
@@ -321,17 +555,10 @@ const StudentProgress: React.FC = () => {
 
             if (isComparison) {
                 // COMPARISON PDF
-                // Chart
-                pdf.setFontSize(12);
-                pdf.setTextColor(40);
-                pdf.text("Performance Trends", margin, cursorY);
-                cursorY += 5;
-                // Since drawing multi-line chart manually in PDF is complex, we'll strip it to a simple summary table for now or best-effort lines
-
-                // Let's use autoTable for the comparison
-                const terms = Array.from(new Set(Object.values(historiesMap).flatMap(hArr => hArr.map(h => `${h.academicTerm} ${h.academicYear.substring(2)}`)))).sort();
+                // Note: Charts skipped - html2canvas not reliable in PDF context
 
                 // Table 1: Average Scores Comparison
+                const terms = Array.from(new Set((Object.values(historiesMap) as StudentHistory[][]).flatMap(hArr => hArr.map(h => `${h.academicTerm} ${h.academicYear.substring(2)}`)))).sort();
                 const head = [['Student', ...terms, 'Overall Avg']];
                 const body = selectedStudents.map(s => {
                     const hist = historiesMap[s.id] || [];
@@ -363,45 +590,47 @@ const StudentProgress: React.FC = () => {
                     theme: 'grid'
                 });
 
-                cursorY = (pdf as any).lastAutoTable.finalY + 15;
+                cursorY = (pdf as any).lastAutoTable.finalY + 10;
 
-                // Table 2: Latest Performance Snapshot (Latest Term found)
-                pdf.text("Latest Term Snapshot", margin, cursorY);
-                cursorY += 5;
+                // Add broadsheet pages for ALL selected students across all their terms
+                const allTermsWithStudents: Array<{ data: AppDataType, studentIds: number[], label: string }> = [];
 
-                // Create columns for subjects
-                const allSubjects = Array.from(new Set(Object.values(historiesMap).flatMap(h => {
-                    const latest = h[h.length - 1]; // naive latest
-                    return latest ? latest.subjectPerformance.map(sp => sp.subjectName) : [];
-                }))).sort();
-
-                const snapHead = [['Student', ...allSubjects]];
-                const snapBody = selectedStudents.map(s => {
-                    const hist = historiesMap[s.id] || [];
-                    const latest = hist[hist.length - 1];
-                    const row = [s.name];
-                    allSubjects.forEach(sub => {
-                        const perf = latest?.subjectPerformance.find(p => p.subjectName === sub);
-                        row.push(perf ? `${perf.average.toFixed(0)}` : '-');
+                selectedStudents.forEach(student => {
+                    const hist = historiesMap[student.id] || [];
+                    hist.forEach(termHist => {
+                        if (termHist.rawTermData) {
+                            const termLabel = `${termHist.academicTerm} ${termHist.academicYear}`;
+                            // Check if this term already exists
+                            let existingTerm = allTermsWithStudents.find(t => t.label === termLabel);
+                            if (existingTerm) {
+                                // Add this student to existing term
+                                if (!existingTerm.studentIds.includes(student.id)) {
+                                    existingTerm.studentIds.push(student.id);
+                                }
+                            } else {
+                                // Create new term entry
+                                allTermsWithStudents.push({
+                                    data: termHist.rawTermData,
+                                    studentIds: [student.id],
+                                    label: termLabel
+                                });
+                            }
+                        }
                     });
-                    return row;
                 });
 
-                (autoTable as any)(pdf, {
-                    startY: cursorY,
-                    head: snapHead,
-                    body: snapBody,
-                    margin: { left: margin, right: margin },
-                    styles: { fontSize: 7, cellPadding: 1 },
-                });
+                // Generate broadsheets for each unique term with all its students
+                for (const term of allTermsWithStudents) {
+                    await addBroadsheetPage(term.data, term.studentIds, term.label);
+                }
 
                 pdf.save(`Comparison_Report_${new Date().toISOString().split('T')[0]}.pdf`);
 
             } else {
-                // SINGLE STUDENT PDF (Legacy Logic adapted)
+                // SINGLE STUDENT PDF
                 if (!singleStudent) return;
 
-                // Draw Student Info
+                // Student Info
                 pdf.setDrawColor(200);
                 pdf.setFillColor(248, 250, 252);
                 pdf.rect(margin, cursorY, pageWidth - (margin * 2), 25, 'FD');
@@ -416,7 +645,8 @@ const StudentProgress: React.FC = () => {
                 pdf.text(`Class: ${singleStudent.class}`, margin + 5, cursorY + 22);
                 cursorY += 35;
 
-                // Detailed Table
+                // Note: Charts skipped - html2canvas not reliable in PDF context
+
                 const subjects = Array.from(new Set(singleHistory.flatMap(h => h.subjectPerformance.map(s => s.subjectName)))).sort();
                 const terms = singleHistory.map(h => `${h.academicTerm} ${h.academicYear.substring(2)}`);
                 const tHead = [['Subject', ...terms, 'Avg']];
@@ -446,6 +676,17 @@ const StudentProgress: React.FC = () => {
                     margin: { left: margin, right: margin },
                 });
 
+                // Add broadsheet pages for each term
+                for (const termHist of singleHistory) {
+                    if (termHist.rawTermData) {
+                        await addBroadsheetPage(
+                            termHist.rawTermData,
+                            [singleStudent.id],
+                            `${termHist.academicTerm} ${termHist.academicYear}`
+                        );
+                    }
+                }
+
                 pdf.save(`${singleStudent.name}_Progress_Report.pdf`);
             }
         } catch (error) {
@@ -468,7 +709,7 @@ const StudentProgress: React.FC = () => {
     }
 
     return (
-        <div className="max-w-7xl mx-auto space-y-6 pb-10 animate-fade-in relative">
+        <div className="max-w-7xl mx-auto space-y-6 pb-10 pt-16 animate-fade-in relative">
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-800">Student Progress</h1>
@@ -571,27 +812,61 @@ const StudentProgress: React.FC = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {selectedStudents.map(s => {
                                 const h = historiesMap[s.id] || [];
-                                const latest = h[h.length - 1];
-                                const avg = latest ? latest.averageScore : 0;
-                                const prev = h[h.length - 2];
-                                const change = prev ? avg - prev.averageScore : 0;
+
+                                // Calculate cumulative average across all terms with data
+                                const termsWithData = h.filter(t => t.averageScore > 0);
+                                const cumulativeAvg = termsWithData.length > 0
+                                    ? termsWithData.reduce((sum, t) => sum + t.averageScore, 0) / termsWithData.length
+                                    : 0;
+
+                                // For trend: compare cumulative of all terms vs cumulative of all-but-last
+                                const prev = termsWithData.length > 1
+                                    ? termsWithData.slice(0, -1).reduce((sum, t) => sum + t.averageScore, 0) / (termsWithData.length - 1)
+                                    : undefined;
+                                const change = prev ? cumulativeAvg - prev : 0;
 
                                 return (
-                                    <div key={s.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm relative overflow-hidden">
-                                        <div className="flex justify-between items-start">
+                                    <div key={s.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm relative overflow-hidden flex flex-col h-full">
+                                        <div className="flex justify-between items-start mb-4">
                                             <div>
-                                                <h3 className="font-bold text-gray-800">{s.name}</h3>
-                                                <p className="text-xs text-gray-500">{latest ? `${latest.academicTerm} ${latest.academicYear}` : 'No Data'}</p>
+                                                <h3 className="font-bold text-gray-800 text-lg">{s.name}</h3>
+                                                <p className="text-xs text-gray-500">{s.class} • {termsWithData.length} term{termsWithData.length !== 1 ? 's' : ''}</p>
                                             </div>
-                                            <div className={`text-xl font-bold ${avg >= 70 ? 'text-green-600' : 'text-blue-600'}`}>
-                                                {avg.toFixed(1)}%
+                                            <div className={`text-xl font-bold ${cumulativeAvg >= 70 ? 'text-green-600' : 'text-blue-600'}`}>
+                                                {cumulativeAvg.toFixed(1)}% <span className="text-xs font-normal text-gray-400 block text-right">Cumulative</span>
                                             </div>
                                         </div>
-                                        {prev && (
-                                            <div className={`mt-2 text-xs font-semibold ${change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                                {change >= 0 ? '↑' : '↓'} {Math.abs(change).toFixed(1)}% vs prev term
-                                            </div>
-                                        )}
+
+                                        <div className="mt-auto space-y-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                                            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Available Terms</p>
+                                            {h.length === 0 ? (
+                                                <p className="text-xs text-gray-400 italic">No history found</p>
+                                            ) : (
+                                                // Reverse to show latest first
+                                                [...h].reverse().map((term) => (
+                                                    <div key={term.termId} className="flex items-center justify-between text-xs bg-gray-50 p-2 rounded border border-gray-100">
+                                                        <div>
+                                                            <span className="font-semibold text-gray-700">{term.academicTerm}</span>
+                                                            <span className="text-gray-500 block text-[10px]">{term.academicYear}</span>
+                                                        </div>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (term.rawTermData) {
+                                                                    setBroadsheetModal({ isOpen: true, termData: term.rawTermData, targetClass: term.class });
+                                                                } else {
+                                                                    // Silent fallback
+                                                                }
+                                                            }}
+                                                            className="px-2 py-1 bg-white border border-blue-200 text-blue-600 font-medium rounded hover:bg-blue-50 transition-colors shadow-sm whitespace-nowrap"
+                                                            title="View Class Broadsheet"
+                                                        >
+                                                            Broadsheet
+                                                        </button>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
                                     </div>
                                 );
                             })}
@@ -627,37 +902,107 @@ const StudentProgress: React.FC = () => {
                         )}
 
                         {/* Recent History Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {singleHistory.map((item, index) => {
-                                const prevTerm = singleHistory[index - 1];
-                                const change = prevTerm ? item.averageScore - prevTerm.averageScore : 0;
-                                const isPositive = change > 0;
-                                return (
-                                    <div key={item.termId} className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow relative overflow-hidden group">
-                                        <div className="absolute top-0 right-0 p-2 opacity-5 scale-150 rotate-12 transition-transform group-hover:scale-125">
-                                            <span className="text-4xl">📊</span>
-                                        </div>
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div>
-                                                <h3 className="font-bold text-gray-800 text-lg">{item.academicTerm}</h3>
-                                                <p className="text-sm text-gray-500 font-medium">{item.academicYear}</p>
+                        <div className="space-y-4">
+                            <h3 className="text-xl font-bold text-gray-800">Detailed Academic History</h3>
+                            {singleHistory.length === 0 ? (
+                                <p className="text-gray-500 italic">No academic history found.</p>
+                            ) : (
+                                singleHistory.map((item, index) => {
+                                    const prevTerm = singleHistory[index - 1];
+                                    const change = prevTerm ? item.averageScore - prevTerm.averageScore : 0;
+                                    const isPositive = change > 0;
+                                    const isExpanded = expandedTermIds.includes(item.termId);
+
+                                    return (
+                                        <div key={item.termId} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                            {/* Term Header (Clickable) */}
+                                            <div
+                                                onClick={() => toggleTerm(item.termId)}
+                                                className="p-5 flex flex-col md:flex-row md:items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+                                            >
+                                                <div className="flex items-center gap-4">
+                                                    <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
+                                                        {singleHistory.length - index}
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="text-lg font-bold text-gray-800">{item.academicTerm} {item.academicYear}</h4>
+                                                        <p className="text-sm text-gray-500">{item.class} • Position: <span className="font-medium text-gray-700">{item.position}</span></p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center gap-6 mt-4 md:mt-0">
+                                                    <div className="text-right">
+                                                        <p className="text-xs text-gray-500 uppercase font-semibold">Average</p>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-2xl font-bold text-blue-600">{item.averageScore.toFixed(1)}%</span>
+                                                            {prevTerm && (
+                                                                <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${isPositive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                                    {isPositive ? '↑' : '↓'} {Math.abs(change).toFixed(1)}%
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setBroadsheetModal({ isOpen: true, termData: item.rawTermData, targetClass: item.class });
+                                                        }}
+                                                        className="px-3 py-1 bg-white border border-blue-200 text-blue-600 text-xs font-semibold rounded hover:bg-blue-50 transition-colors shadow-sm"
+                                                    >
+                                                        View Broadsheet
+                                                    </button>
+
+                                                    <svg
+                                                        className={`w-6 h-6 text-gray-400 transition-transform ${isExpanded ? 'transform rotate-180' : ''}`}
+                                                        fill="none"
+                                                        viewBox="0 0 24 24"
+                                                        stroke="currentColor"
+                                                    >
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                    </svg>
+                                                </div>
                                             </div>
-                                            <span className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-full uppercase tracking-wider">{item.class}</span>
+
+                                            {/* Expanded Details Table */}
+                                            {isExpanded && (
+                                                <div className="border-t border-gray-100 bg-gray-50 p-6 animate-fade-in-down">
+                                                    <div className="overflow-x-auto">
+                                                        <table className="min-w-full text-sm">
+                                                            <thead>
+                                                                <tr className="text-left text-gray-500 border-b border-gray-200">
+                                                                    <th className="pb-3 font-medium">Subject</th>
+                                                                    <th className="pb-3 font-medium text-center">Class Score</th>
+                                                                    <th className="pb-3 font-medium text-center">Exam Score</th>
+                                                                    <th className="pb-3 font-medium text-center">Total</th>
+                                                                    <th className="pb-3 font-medium text-center">Grade</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody className="divide-y divide-gray-100">
+                                                                {item.detailedPerformance.map((subj, idx) => (
+                                                                    <tr key={idx}>
+                                                                        <td className="py-3 font-medium text-gray-800">{subj.subjectName}</td>
+                                                                        <td className="py-3 text-center text-gray-600">{subj.classScore.toFixed(1)}</td>
+                                                                        <td className="py-3 text-center text-gray-600">{subj.examScore.toFixed(1)}</td>
+                                                                        <td className="py-3 text-center font-bold text-gray-900">{subj.totalScore.toFixed(0)}</td>
+                                                                        <td className="py-3 text-center">
+                                                                            <span className={`px-2 py-0.5 rounded text-xs font-bold ${subj.grade === 'A1' || subj.grade === 'B2' ? 'bg-green-100 text-green-700' :
+                                                                                subj.grade.startsWith('F') ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
+                                                                                }`}>
+                                                                                {subj.grade}
+                                                                            </span>
+                                                                        </td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
-                                        <div className="mt-4">
-                                            <p className="text-sm text-gray-500">Average Performance</p>
-                                            <div className="flex items-end space-x-2">
-                                                <span className="text-3xl font-extrabold text-blue-600">{item.averageScore.toFixed(1)}%</span>
-                                                {prevTerm && (
-                                                    <span className={`text-sm font-semibold mb-1 ${isPositive ? 'text-green-600' : 'text-red-500'} flex items-center`}>
-                                                        {isPositive ? '↑' : '↓'} {Math.abs(change).toFixed(1)}%
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })
+                            )}
                         </div>
 
                         {/* Insights */}
@@ -705,6 +1050,15 @@ const StudentProgress: React.FC = () => {
                     </div>
                 )}
             </div>
+            {/* Broadsheet Modal */}
+            {broadsheetModal.isOpen && broadsheetModal.termData && broadsheetModal.targetClass && (
+                <BroadsheetModal
+                    isOpen={broadsheetModal.isOpen}
+                    onClose={() => setBroadsheetModal({ isOpen: false })}
+                    termData={broadsheetModal.termData}
+                    targetClass={broadsheetModal.targetClass}
+                />
+            )}
         </div>
     );
 };
