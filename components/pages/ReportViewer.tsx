@@ -74,7 +74,12 @@ const ReportViewer: React.FC = () => {
   }, [students, classes, selectedClassId]);
 
   const accessibleClasses = useMemo(() => {
-    return sortClassesByName(getAvailableClasses(currentUser, classes));
+    const available = getAvailableClasses(currentUser, classes);
+    // De-duplicate by class name to prevent redundant entries in the dropdown
+    const unique = available.filter((cls, index, self) =>
+      index === self.findIndex((t) => t.name.trim() === cls.name.trim())
+    );
+    return sortClassesByName(unique);
   }, [classes, currentUser]);
 
   // Auto-select Class

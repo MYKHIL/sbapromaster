@@ -13,11 +13,44 @@ const YearTermSelector: React.FC<YearTermSelectorProps> = ({ school, onSelectPer
     const [error, setError] = useState<string | null>(null);
     const hasFetchedRef = React.useRef(false);
 
+    const [mostRecentDocId, setMostRecentDocId] = useState<string | null>(null);
+
     useEffect(() => {
         if (hasFetchedRef.current) return;
         loadPeriods();
         hasFetchedRef.current = true;
     }, [school.docId]);
+
+    // Determine "Most Recent" logic whenever periods change
+    useEffect(() => {
+        if (periods.length === 0) {
+            setMostRecentDocId(null);
+            return;
+        }
+
+        try {
+            // 1. Check History (Last Accessed)
+            const lastId = localStorage.getItem(`last_accessed_period_${school.docId}`);
+            if (lastId && periods.some(p => p.docId === lastId)) {
+                setMostRecentDocId(lastId);
+                return;
+            }
+
+            // 2. Smart Default: Chronologically Latest
+            // Note: periods are sorted Year DESC, Term ASC. We want Year DESC, Term DESC.
+            const sorted = [...periods].sort((a, b) => {
+                const yearCompare = b.year.localeCompare(a.year); // Year Descending
+                if (yearCompare !== 0) return yearCompare;
+                return b.term.localeCompare(a.term); // Term Descending (Term 3 > Term 1)
+            });
+
+            if (sorted.length > 0) {
+                setMostRecentDocId(sorted[0].docId);
+            }
+        } catch (e) {
+            console.error("Error calculating most recent period details:", e);
+        }
+    }, [periods, school.docId]);
 
     const loadPeriods = async (forceRefresh: boolean = false) => {
         try {
@@ -43,6 +76,16 @@ const YearTermSelector: React.FC<YearTermSelectorProps> = ({ school, onSelectPer
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleSelectPeriod = (period: SchoolPeriod) => {
+        // Save to MRU
+        try {
+            localStorage.setItem(`last_accessed_period_${school.docId}`, period.docId);
+        } catch (e) {
+            console.warn('Failed to save MRU preference:', e);
+        }
+        onSelectPeriod(period);
     };
 
     return (
@@ -83,7 +126,7 @@ const YearTermSelector: React.FC<YearTermSelectorProps> = ({ school, onSelectPer
                         <div className="text-center py-12">
                             <p className="text-red-600 mb-4">{error}</p>
                             <button
-                                onClick={loadPeriods}
+                                onClick={() => loadPeriods()}
                                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
                             >
                                 Retry
@@ -95,38 +138,41 @@ const YearTermSelector: React.FC<YearTermSelectorProps> = ({ school, onSelectPer
                         </div>
                     ) : (
                         <div className="space-y-3">
-                            {periods.map((period, index) => (
-                                <button
-                                    key={period.docId}
-                                    onClick={() => onSelectPeriod(period)}
-                                    className={`w-full text-left p-4 rounded-xl border-2 transition-all duration-200 group ${index === 0
-                                        ? 'border-blue-500 bg-blue-50'
-                                        : 'border-gray-200 hover:border-blue-500 hover:bg-blue-50'
-                                        }`}
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <h3 className="font-semibold text-gray-900 group-hover:text-blue-600">
-                                                {period.year}
-                                            </h3>
-                                            <p className="text-sm text-gray-600 mt-1">{period.term}</p>
-                                            {index === 0 && (
-                                                <span className="inline-block mt-2 text-xs bg-blue-600 text-white px-2 py-1 rounded-full">
-                                                    Most Recent
-                                                </span>
-                                            )}
+                            {periods.map((period) => {
+                                const isMostRecent = period.docId === mostRecentDocId;
+                                return (
+                                    <button
+                                        key={period.docId}
+                                        onClick={() => handleSelectPeriod(period)}
+                                        className={`w-full text-left p-4 rounded-xl border-2 transition-all duration-200 group ${isMostRecent
+                                            ? 'border-blue-500 bg-blue-50'
+                                            : 'border-gray-200 hover:border-blue-500 hover:bg-blue-50'
+                                            }`}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <h3 className="font-semibold text-gray-900 group-hover:text-blue-600">
+                                                    {period.year}
+                                                </h3>
+                                                <p className="text-sm text-gray-600 mt-1">{period.term}</p>
+                                                {isMostRecent && (
+                                                    <span className="inline-block mt-2 text-xs bg-blue-600 text-white px-2 py-1 rounded-full">
+                                                        Most Recent
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <svg
+                                                className="h-6 w-6 text-gray-400 group-hover:text-blue-600 transition-colors"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                            >
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                            </svg>
                                         </div>
-                                        <svg
-                                            className="h-6 w-6 text-gray-400 group-hover:text-blue-600 transition-colors"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                        >
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                        </svg>
-                                    </div>
-                                </button>
-                            ))}
+                                    </button>
+                                );
+                            })}
                         </div>
                     )}
 

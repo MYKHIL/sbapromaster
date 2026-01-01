@@ -62,6 +62,27 @@ def start_firestore_emulator():
         return None
 
 
+def start_visual_bot(url):
+    """Starts the Playwright visual bot."""
+    print(f"Launching Visual Simulation Bot targeting {url}...")
+    bot_path = os.path.join(PROJECT_ROOT, 'Load Testing', 'visual_bot.cjs')
+    cmd = ["node", bot_path, url]
+    
+    try:
+        # Start in background
+        proc = subprocess.Popen(
+            cmd,
+            cwd=os.path.join(PROJECT_ROOT, 'Load Testing'),
+            shell=True,
+            stdout=sys.stdout,
+            stderr=sys.stderr
+        )
+        return proc
+    except Exception as e:
+        print(f"Failed to start visual bot: {e}")
+        return None
+
+
 def ensure_firebase_config():
     """Ensures firebase.json and .firebaserc exist to prevent init warnings."""
     config_path = os.path.join(PROJECT_ROOT, 'firebase.json')
@@ -221,18 +242,79 @@ def wait_for_server(url, timeout=30.0):
     return False
 
 
+def run_approval_portal():
+    print("\n----------------------------------------------------------------")
+    print("🚀 LAUNCHING SBA WEB APPROVAL / LICENSE PORTAL 🚀")
+    print("----------------------------------------------------------------")
+    
+    approval_path = os.path.join(os.path.dirname(PROJECT_ROOT), 'SBA Web Approval')
+    port = 5000 
+    
+    # Check if port is in use
+    while socket_check('localhost', port):
+        port += 1
+        
+    url = f"http://localhost:{port}/index.html"
+    
+    print(f"Serving Approval App from {approval_path} on {url}")
+    
+    try:
+        # Start http.server in subprocess
+        cmd = [sys.executable, "-m", "http.server", str(port)]
+        proc = subprocess.Popen(
+            cmd,
+            cwd=approval_path,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+        
+        # Give it a tiny bit to start
+        time.sleep(1.5)
+        webbrowser.open(url)
+        
+        print("\nPortal is running. Press Ctrl+C directly to stop the server.")
+        print("Note: The server will be automatically terminated when this script exits.")
+        
+        # Instead of waiting (which blocks), we'll return the process and let main handle it
+        # But actually, the user wants a simple way to run it.
+        # Let's just wait here for now.
+        proc.wait()
+    except KeyboardInterrupt:
+        print("\nShutting down portal...")
+        proc.terminate()
+        sys.exit(0)
+    except Exception as e:
+        print(f"Failed to start portal: {e}")
+        sys.exit(1)
+
+
 def main():
     print('Start script running in:', PROJECT_ROOT)
 
     # Ask user for mode
     print("\n----------------------------------------------------------------")
-    print("SELECT RUN MODE:")
+    print("SELECT RUN MODE (v2.0-VISUAL):")
     print("1) DEBUG MODE   (Firestore Emulator - Safe for testing)")
     print("2) PUBLISH MODE (Real Firestore - Production Data)")
+    print("3) LOAD TEST    (Dashboard / Stress Engine)")
+    print("4) VISUAL BOT   (Actually opens browser & operates app)")
+    print("5) APPROVE SBA   (License Management Portal)")
     print("----------------------------------------------------------------")
-    choice = input("Enter 1 or 2 [Default: 2]: ").strip()
+    choice = input("Enter 1, 2, 3, 4 or 5 [Default: 2]: ").strip()
     
     DEBUG_MODE = (choice == '1')
+    LOAD_TEST_MODE = (choice == '3')
+    VISUAL_BOT_MODE = (choice == '4')
+    APPROVE_SBA_MODE = (choice == '5')
+    
+    RUN_DIR = PROJECT_ROOT
+    if LOAD_TEST_MODE:
+        RUN_DIR = os.path.join(PROJECT_ROOT, 'Load Testing')
+        print(f"Switching to Load Testing directory: {RUN_DIR}")
+    
+    if APPROVE_SBA_MODE:
+        run_approval_portal()
+        return
 
     emulator_proc = None
 
@@ -283,11 +365,14 @@ def main():
         print("----------------------------------------------------------------")
         if 'VITE_USE_EMULATOR' in os.environ:
             del os.environ['VITE_USE_EMULATOR']
+        
+        # Disable debug/dummy UI for visual tests and live runs
+        os.environ['VITE_LIVE_MODE'] = 'true'
 
 
     # Step 1: find & kill existing processes on ports 5173-5180
     # We check a range because Vite might have incremented the port if 5173 was busy.
-    ports_to_check = range(3000, 3010)
+    ports_to_check = range(PORT, PORT + 10)
     all_pids = set()
     for p in ports_to_check:
         found = find_pids_on_port(p)
@@ -326,9 +411,9 @@ def main():
         try:
             if npm_exec:
                 install_cmd = [npm_exec, 'install']
-                subprocess.check_call(install_cmd, cwd=PROJECT_ROOT, shell=False)
+                subprocess.check_call(install_cmd, cwd=RUN_DIR, shell=False)
             else:
-                subprocess.check_call('npm install', cwd=PROJECT_ROOT, shell=True)
+                subprocess.check_call('npm install', cwd=RUN_DIR, shell=True)
         except subprocess.CalledProcessError as e:
             print('`npm install` failed with exit code', e.returncode)
             print('Please run `npm install` manually and then re-run this script.')
@@ -342,10 +427,10 @@ def main():
         # Pass current environment (including VITE_USE_EMULATOR)
         if isinstance(npm_cmd, list):
             print('Starting dev server:', ' '.join(npm_cmd))
-            proc = subprocess.Popen(npm_cmd, cwd=PROJECT_ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='replace', shell=False, env=os.environ)
+            proc = subprocess.Popen(npm_cmd, cwd=RUN_DIR, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='replace', shell=False, env=os.environ)
         else:
             print('Starting dev server (shell):', npm_cmd)
-            proc = subprocess.Popen(npm_cmd, cwd=PROJECT_ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='replace', shell=True, env=os.environ)
+            proc = subprocess.Popen(npm_cmd, cwd=RUN_DIR, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='replace', shell=True, env=os.environ)
     except FileNotFoundError:
         print('Error: `npm` not found. Make sure Node.js and npm are installed and available in your PATH.')
         print('You can download Node.js from https://nodejs.org/')
@@ -393,11 +478,17 @@ def main():
             print(f'Detected URL from logs: {url} — verifying responsiveness...')
             responsive = wait_for_server(url, timeout=12.0)
             if responsive:
-                print(f'Server is up at {url} — opening browser...')
-                try:
-                    webbrowser.open(url)
-                except Exception as e:
-                    print('Failed to open browser:', e)
+                print(f"Server is up at {url} — opening browser...")
+                
+                if VISUAL_BOT_MODE:
+                    # Give it a second extra to settle
+                    time.sleep(2)
+                    start_visual_bot(url)
+                else:
+                    try:
+                        webbrowser.open(url)
+                    except Exception as e:
+                        print('Failed to open browser:', e)
             else:
                 # Provide diagnostic attempt: one more try with default host/port
                 print(f'URL announced ({url}) but server did not respond within 12s. Attempting direct connection for diagnostics...')

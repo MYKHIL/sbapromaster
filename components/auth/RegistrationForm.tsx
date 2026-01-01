@@ -71,7 +71,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister, onBack 
 
                     {/* DEBUG AUTOMATION */}
                     {/* @ts-ignore - DEV and VITE_USE_EMULATOR exist in Vite env */}
-                    {(import.meta.env.DEV || import.meta.env.VITE_USE_EMULATOR === 'true') && (
+                    {(import.meta.env.DEV && import.meta.env.VITE_LIVE_MODE !== 'true' || import.meta.env.VITE_USE_EMULATOR === 'true') && (
                         <button
                             type="button"
                             onClick={() => {

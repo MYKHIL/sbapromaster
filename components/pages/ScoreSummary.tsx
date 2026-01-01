@@ -67,7 +67,12 @@ const ScoreSummary: React.FC = () => {
     const summaryData = useMemo(() => {
         if (!classes || !students || !assessments || !subjects) return [];
 
-        return sortClassesByName(classes).map(cls => {
+        // De-duplicate classes by name to avoid duplicate summary cards
+        const uniqueClasses = classes.filter((cls, index, self) =>
+            index === self.findIndex((t) => t.name.trim() === cls.name.trim())
+        );
+
+        return sortClassesByName(uniqueClasses).map(cls => {
             const classStudents = students.filter(s => s.class === cls.name);
 
             // If no students in class, return basic info with complete structure to prevent crashes

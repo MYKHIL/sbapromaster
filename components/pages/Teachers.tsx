@@ -5,7 +5,7 @@ import SaveButton from '../SaveButton';
 import type { Class } from '../../types';
 import ConfirmationModal from '../ConfirmationModal';
 import { enhanceImage } from '../../services/geminiService';
-import { AI_FEATURES_ENABLED } from '../../constants';
+import { AI_FEATURES_ENABLED, AUTO_SANITIZE_TEACHERS } from '../../constants';
 import ReadOnlyWrapper from '../ReadOnlyWrapper';
 import { useUser } from '../../context/UserContext';
 import { compressImage } from '../../utils/imageUtils';
@@ -47,6 +47,28 @@ const Teachers: React.FC = () => {
 
         return result;
     }, [classes, searchQuery]);
+
+    // AUTO-SANITIZATION: Remove duplicate Class+Teacher entries
+    React.useEffect(() => {
+        if (!AUTO_SANITIZE_TEACHERS || !isAdmin || classes.length === 0) return;
+
+        const seen = new Set<string>();
+        const duplicates: number[] = [];
+
+        classes.forEach(cls => {
+            const key = `${cls.name.trim().toLowerCase()}_${cls.teacherName.trim().toLowerCase()}`;
+            if (seen.has(key)) {
+                duplicates.push(cls.id);
+            } else {
+                seen.add(key);
+            }
+        });
+
+        if (duplicates.length > 0) {
+            console.warn(`[Teachers] Auto-sanitizing ${duplicates.length} duplicate teacher-class entries...`);
+            duplicates.forEach(id => deleteClass(id));
+        }
+    }, [classes, isAdmin, deleteClass]);
 
     // Check if current user can edit a specific class
     const canEditClass = (cls: Class) => {
@@ -153,6 +175,18 @@ const Teachers: React.FC = () => {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!currentClassData) return;
+
+        // DUPLICATE PREVENTION: Check if Class Name + Teacher Name already exists
+        const isDuplicate = classes.some(cls =>
+            cls.name.trim().toLowerCase() === currentClassData.name.trim().toLowerCase() &&
+            cls.teacherName.trim().toLowerCase() === currentClassData.teacherName.trim().toLowerCase() &&
+            ('id' in currentClassData ? cls.id !== currentClassData.id : true)
+        );
+
+        if (isDuplicate) {
+            alert(`A teacher named "${currentClassData.teacherName}" is already assigned to "${currentClassData.name}". Duplicates are not allowed.`);
+            return;
+        }
 
         if ('id' in currentClassData) {
             updateClass(currentClassData);

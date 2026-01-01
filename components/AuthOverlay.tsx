@@ -256,8 +256,9 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             // -------------------------------------------------------------
             let usersArray: User[] = [];
             // @ts-ignore - DEV and VITE_USE_EMULATOR exist in Vite env
-            if ((import.meta.env.DEV || import.meta.env.VITE_USE_EMULATOR === 'true') && schoolName === 'Dummy School') {
-                console.log('[AuthOverlay] 🤖 Debug Mode: Pre-creating admin for Dummy School...');
+            const isBotSchool = schoolName === 'Dummy School' || schoolName === 'SBA Academy Live';
+            if (import.meta.env.DEV && isBotSchool) {
+                console.log('[AuthOverlay] 🤖 Bot/Debug Mode: Pre-creating admin...');
                 const { hashPassword } = await import('../services/authService');
                 const hashedPassword = await hashPassword('password');
 
@@ -289,7 +290,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 classData: INITIAL_CLASS_DATA,
                 users: usersArray,
                 password,
-                Access: true,
+                Access: isBotSchool || true, // Force access true for now to avoid pending dialog blocks
                 activeSessions: {},
                 userLogs: []
             };
@@ -378,10 +379,10 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             const result = await loginOrRegisterSchool(docId, password, initialData, true, targetIndex);
 
             // -------------------------------------------------------------
-            // DEBUG AUTOMATION: Create Trial Subscription for Dummy School
+            // DEBUG AUTOMATION: Create Trial Subscription for Bot/Dummy Schools
             // -------------------------------------------------------------
             // @ts-ignore
-            if ((import.meta.env.DEV || import.meta.env.VITE_USE_EMULATOR === 'true') && schoolName === 'Dummy School') {
+            if (import.meta.env.DEV && isBotSchool) {
                 try {
                     const { db } = await import('../services/firebaseService');
                     const { doc, setDoc, Timestamp } = await import('firebase/firestore');
@@ -394,9 +395,9 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                         expiryDate: Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)), // 30 days
                         activationHash: 'c93a215026f36ac783bcac8ba5e4bbea1c3cdb6c79d3824f9712143c44dbb0f3' // Match portal default for debug
                     }, { merge: true });
-                    console.log(`[AuthOverlay] 🤖 Debug: Trial subscription created for ${baseName}`);
+                    console.log(`[AuthOverlay] 🤖 Bot: Trial subscription created for ${baseName}`);
                 } catch (subError) {
-                    console.error('[AuthOverlay] ❌ Failed to create debug subscription:', subError);
+                    console.error('[AuthOverlay] ❌ Failed to create bot subscription:', subError);
                 }
             }
 

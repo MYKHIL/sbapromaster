@@ -98,7 +98,14 @@ const ScoreEntry: React.FC = () => {
     );
 
     // Filter available data based on permissions
-    const classes = useMemo(() => sortClassesByName(getAvailableClasses(currentUser, allClasses)), [currentUser, allClasses]);
+    const classes = useMemo(() => {
+        const available = getAvailableClasses(currentUser, allClasses);
+        // De-duplicate by class name to prevent redundant entries in the dropdown
+        const unique = available.filter((cls, index, self) =>
+            index === self.findIndex((t) => t.name.trim() === cls.name.trim())
+        );
+        return sortClassesByName(unique);
+    }, [currentUser, allClasses]);
 
     // Safe initialization for selectedClass (must be before subjects useMemo)
     const [selectedClass, setSelectedClass] = useState<string>(() => {

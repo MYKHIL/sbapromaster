@@ -449,8 +449,9 @@ export const getSchoolList = async (prefix?: string): Promise<SchoolListItem[]> 
 
                     let q;
                     if (prefix) {
-                        const sanitizedPrefix = prefix.toLowerCase();
-                        q = query(schoolsRef, where(documentId(), '>=', sanitizedPrefix), where(documentId(), '<=', sanitizedPrefix + '\uf8ff'), limit(20));
+                        // CRITICAL: Sanitize the search prefix to match documentId structure
+                        const queryPrefix = sanitizeSchoolName(prefix);
+                        q = query(schoolsRef, where(documentId(), '>=', queryPrefix), where(documentId(), '<=', queryPrefix + '\uf8ff'), limit(20));
                     } else {
                         q = query(schoolsRef, limit(20));
                     }
@@ -652,9 +653,11 @@ export const verifySchoolPassword = async (docId: string, password: string): Pro
         }
 
         // Password is valid, now check license
-        const baseName = docId.split('_')[0];
-        if (isEmulator) {
-            console.log(`[Auth] Emulator detected - Bypassing license check for ${baseName}`);
+        const baseName = docId.split('_')[0].toLowerCase();
+        const sanitizedBotId = 'sbaacademylive';
+
+        if (isEmulator || baseName === sanitizedBotId) {
+            console.log(`[Auth] Bypass detected (${isEmulator ? 'Emulator' : 'Bot School'}) - Bypassing license check for ${baseName}`);
             return { isValid: true, isExpired: false };
         }
 
@@ -1034,11 +1037,13 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
             }
 
             // LICENSE CHECK: Only check license for existing schools
-            // EMULATOR BYPASS
-            if (isEmulator) {
-                console.log(`[FIREBASE_DEBUG] Emulator detected - Bypassing license check.`);
+            // EMULATOR & BOT BYPASS
+            const sanitizedBotId = 'sbaacademylive';
+            const baseName = targetDocId.split('_')[0].toLowerCase();
+
+            if (isEmulator || baseName === sanitizedBotId) {
+                console.log(`[FIREBASE_DEBUG] Bypass detected (${isEmulator ? 'Emulator' : 'Bot School'}) - Bypassing license check.`);
             } else {
-                const baseName = targetDocId.split('_')[0];
                 const subRef = doc(db, 'subscriptions', baseName);
                 trackFirebaseRead('loginOrRegisterSchool (license)', 'subscriptions', 1, 'Checking license status');
                 const subSnap = await getDoc(subRef);

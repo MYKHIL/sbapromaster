@@ -64,7 +64,14 @@ const Students: React.FC = () => {
     }, [students, currentUser, isAuthenticated]);
 
     // Derived list of classes available for "Add Student" or filtering
-    const availableClasses = useMemo(() => sortClassesByName(getAvailableClasses(currentUser, classes)), [currentUser, classes]);
+    const availableClasses = useMemo(() => {
+        const available = getAvailableClasses(currentUser, classes);
+        // De-duplicate by class name to prevent redundant entries in the dropdown
+        const unique = available.filter((cls, index, self) =>
+            index === self.findIndex((t) => t.name.trim() === cls.name.trim())
+        );
+        return sortClassesByName(unique);
+    }, [currentUser, classes]);
 
     // Initialize default class selection to first available class (only once on mount)
     useEffect(() => {
