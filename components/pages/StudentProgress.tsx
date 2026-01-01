@@ -645,14 +645,18 @@ const StudentProgress: React.FC = () => {
                         return [...rowArray, row.isSelected];
                     });
 
-                    const headers = ['Name', 'Index', ...classAss.map(a => a.name), 'Sub A', examAss?.name || 'Exam', 'Sub B', 'Total', 'Pos'];
+                    const headers = ['Name', 'Index', ...classAss.map(a => a.name), 'Sub Total (A)', examAss?.name || 'Exam', 'Sub Total (B)', 'Total', 'Pos'];
 
                     (autoTable as any)(pdf, {
                         startY: 30,
                         head: [headers],
                         body: finalRows.map(r => r.slice(0, -1)),
                         margin: { left: margin, right: margin },
-                        styles: { fontSize: 7, cellPadding: 1.5 },
+                        styles: { fontSize: 7, cellPadding: 1.5, halign: 'center' },
+                        columnStyles: {
+                            0: { halign: 'left' },
+                            1: { halign: 'left' }
+                        },
                         theme: 'grid',
                         didParseCell: function (data: any) {
                             const rowData = finalRows[data.row.index];

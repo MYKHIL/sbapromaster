@@ -244,7 +244,11 @@ const BroadsheetModal: React.FC<BroadsheetModalProps> = ({ isOpen, onClose, term
                 startY: 30,
                 head: [headers],
                 body: body,
-                styles: { fontSize: 8 },
+                styles: { fontSize: 8, halign: 'center' },
+                columnStyles: {
+                    0: { halign: 'left' },
+                    1: { halign: 'left' }
+                },
                 theme: 'grid'
             });
         });
