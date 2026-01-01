@@ -261,29 +261,31 @@ const BroadsheetModal: React.FC<BroadsheetModalProps> = ({ isOpen, onClose, term
                         <h2 className="text-2xl font-bold text-gray-800">Class Broadsheet</h2>
                         <p className="text-gray-500 text-sm md:text-base">{termData.settings.academicYear} • {termData.settings.academicTerm} • {targetClass}</p>
                     </div>
-                    <div className="flex flex-wrap justify-center items-center gap-2 md:gap-3 w-full md:w-auto">
+                    <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 w-full md:w-auto">
                         <select
                             value={selectedSubjectId}
                             onChange={(e) => setSelectedSubjectId(Number(e.target.value))}
-                            className="px-3 py-2 text-sm md:text-base rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none max-w-[150px] sm:max-w-none"
+                            className="px-3 py-2 text-sm md:text-base rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none w-full md:w-auto"
                         >
                             {filteredSubjects.map(s => (
                                 <option key={s.id} value={s.id}>{s.subject}</option>
                             ))}
                         </select>
-                        <button
-                            onClick={handlePrint}
-                            className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm md:text-base rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
-                        >
-                            <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                            Export PDF
-                        </button>
-                        <button
-                            onClick={onClose}
-                            className="p-2 text-gray-400 hover:text-gray-600 transition-colors bg-white rounded-lg border border-gray-200 hover:bg-gray-100"
-                        >
-                            <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                        </button>
+                        <div className="flex items-center gap-2 w-full md:w-auto">
+                            <button
+                                onClick={handlePrint}
+                                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm md:text-base rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                            >
+                                <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                Export PDF
+                            </button>
+                            <button
+                                onClick={onClose}
+                                className="p-2 text-gray-400 hover:text-gray-600 transition-colors bg-white rounded-lg border border-gray-200 hover:bg-gray-100"
+                            >
+                                <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
