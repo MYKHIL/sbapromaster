@@ -16,7 +16,7 @@ import SessionRestoreDialog from './auth/SessionRestoreDialog';
 import RegistrationPendingDialog from './auth/RegistrationPendingDialog';
 import AdminSetup from './AdminSetup';
 import UserSelection from './UserSelection';
-import SubscriptionRequestModal from './auth/SubscriptionRequestModal';
+import SubscriptionRequestModal from './SubscriptionRequestModal';
 
 type AuthStep = 'welcome' | 'school-list' | 'password' | 'year-term' | 'register' | 'admin-setup' | 'user-selection' | 'authenticated';
 

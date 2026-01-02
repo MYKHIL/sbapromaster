@@ -453,7 +453,7 @@ export const getSchoolList = async (prefix?: string): Promise<SchoolListItem[]> 
                         const queryPrefix = sanitizeSchoolName(prefix);
                         q = query(schoolsRef, where(documentId(), '>=', queryPrefix), where(documentId(), '<=', queryPrefix + '\uf8ff'), limit(20));
                     } else {
-                        q = query(schoolsRef, limit(20));
+                        q = query(schoolsRef, limit(500));
                     }
 
                     const snapshot = await getDocs(q);
