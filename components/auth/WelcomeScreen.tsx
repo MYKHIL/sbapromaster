@@ -4,9 +4,10 @@ import { APP_VERSION } from '../../constants';
 interface WelcomeScreenProps {
     onRegister: () => void;
     onLogin: () => void;
+    onSubscribe: () => void;
 }
 
-const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onRegister, onLogin }) => {
+const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onRegister, onLogin, onSubscribe }) => {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
             <div className="w-full max-w-md">
@@ -35,7 +36,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onRegister, onLogin }) =>
                             </svg>
                             <span>Login to Existing School</span>
                         </button>
-                        
+
                         {/* Register New School Button */}
                         <button
                             onClick={onRegister}
@@ -45,6 +46,17 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onRegister, onLogin }) =>
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                             </svg>
                             <span>Register New School</span>
+                        </button>
+
+                        {/* Pay / Subscription Button */}
+                        <button
+                            onClick={onSubscribe}
+                            className="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold py-4 px-6 rounded-xl border-2 border-indigo-200 transition-all duration-200 transform hover:scale-105 flex items-center justify-center gap-3"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                            </svg>
+                            <span>Pay / Subscription</span>
                         </button>
                     </div>
 

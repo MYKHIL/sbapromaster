@@ -147,3 +147,15 @@ export const INITIAL_SCORES: Score[] = [];
 export const INITIAL_REPORT_DATA: ReportSpecificData[] = [];
 
 export const INITIAL_CLASS_DATA: ClassSpecificData[] = [];
+
+export const ADMIN_EMAIL = 'darkmic50@gmail.com';
+
+export const SUBSCRIPTION_TIERS = [
+  { name: 'Trial', maxStudents: 10, maxClass: 1, duration: '1 Month', price: 'Free' },
+  { name: 'Basic', maxStudents: 50, maxClass: 5, duration: '12 Months', price: 'GHS 100' },
+  { name: 'Standard', maxStudents: 200, maxClass: 10, duration: '12 Months', price: 'GHS 200' },
+  { name: 'Premium', maxStudents: 500, maxClass: 20, duration: '12 Months', price: 'GHS 350' },
+  { name: 'Professional', maxStudents: 1000, maxClass: 50, duration: '12 Months', price: 'GHS 600' },
+  { name: 'Enterprise', maxStudents: 10000, maxClass: 1000, duration: '12 Months', price: 'GHS 900' },
+  { name: 'Full / Custom', maxStudents: 100000, maxClass: 10000, duration: '12 Months', price: 'Quote' },
+];

@@ -16,6 +16,7 @@ import SessionRestoreDialog from './auth/SessionRestoreDialog';
 import RegistrationPendingDialog from './auth/RegistrationPendingDialog';
 import AdminSetup from './AdminSetup';
 import UserSelection from './UserSelection';
+import SubscriptionRequestModal from './auth/SubscriptionRequestModal';
 
 type AuthStep = 'welcome' | 'school-list' | 'password' | 'year-term' | 'register' | 'admin-setup' | 'user-selection' | 'authenticated';
 
@@ -38,6 +39,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
     const [sessionInfo, setSessionInfo] = useState<{ schoolName: string; userName: string } | null>(null);
     const [showRegistrationPending, setShowRegistrationPending] = useState<boolean>(false);
     const [pendingSchoolName, setPendingSchoolName] = useState<string>('');
+    const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
 
     // Loading state
     const [restoringSession, setRestoringSession] = useState(true);
@@ -779,14 +781,22 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
     // Show registration pending dialog
     if (showRegistrationPending) {
         return (
-            <RegistrationPendingDialog
-                schoolName={pendingSchoolName}
-                onClose={() => {
-                    setShowRegistrationPending(false);
-                    setPendingSchoolName('');
-                    setCurrentStep('welcome');
-                }}
-            />
+            <>
+                <RegistrationPendingDialog
+                    schoolName={pendingSchoolName}
+                    onClose={() => {
+                        setShowRegistrationPending(false);
+                        setPendingSchoolName('');
+                        setCurrentStep('welcome');
+                    }}
+                    onSubscribe={() => setIsSubscriptionModalOpen(true)}
+                />
+                <SubscriptionRequestModal
+                    isOpen={isSubscriptionModalOpen}
+                    onClose={() => setIsSubscriptionModalOpen(false)}
+                    initialSchoolName={pendingSchoolName}
+                />
+            </>
         );
     }
 
@@ -809,10 +819,17 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
     switch (currentStep) {
         case 'welcome':
             return (
-                <WelcomeScreen
-                    onRegister={handleRegisterClick}
-                    onLogin={handleLoginClick}
-                />
+                <>
+                    <WelcomeScreen
+                        onRegister={handleRegisterClick}
+                        onLogin={handleLoginClick}
+                        onSubscribe={() => setIsSubscriptionModalOpen(true)}
+                    />
+                    <SubscriptionRequestModal
+                        isOpen={isSubscriptionModalOpen}
+                        onClose={() => setIsSubscriptionModalOpen(false)}
+                    />
+                </>
             );
 
         case 'school-list':
