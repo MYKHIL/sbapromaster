@@ -20,7 +20,7 @@ const EMPTY_TEACHER_FORM: Omit<Class, 'id'> = {
 const SIGNATURE_PLACEHOLDER = 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTUwIDUwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0yIDI1LjVDMiAyNS41IDE1LjUgMTUuNSAyOS41IDI4QzQzLjUgNDAuNSA1MyAyNS41IDY2LjUgMjAuNUM4MCAxNS41IDg4LjUgMjkgMTAwIDI5QzExMS41IDI5IDEyMyAxNS41IDEzNyAyOS41IiBzdHJva2U9IiM5Y2EzYWYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+';
 
 const Teachers: React.FC = () => {
-    const { classes, addClass, updateClass, deleteClass, saveClasses, isDirty, isSyncing, isOnline } = useData();
+    const { classes, addClass, updateClass, deleteClass, saveClasses, isDirty, isSyncing, isOnline, subscription } = useData();
     const { currentUser } = useUser();
     const isAdmin = currentUser?.role === 'Admin';
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -29,6 +29,7 @@ const Teachers: React.FC = () => {
     const [itemIdToDelete, setItemIdToDelete] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [isEnhancing, setIsEnhancing] = useState(false);
+    const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
 
     const inputStyles = "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500";
     const searchInputStyles = "w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
@@ -105,6 +106,7 @@ const Teachers: React.FC = () => {
     const handleCloseModal = () => {
         setIsModalOpen(false);
         setCurrentClassData(null);
+        setSaveFeedback(null);
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -192,12 +194,45 @@ const Teachers: React.FC = () => {
             updateClass(currentClassData);
         } else {
             addClass(currentClassData);
+
+            // Check if limit is reached AFTER this addition
+            const maxClasses = subscription?.maxClass || Infinity;
+            if (classes.length + 1 >= maxClasses) {
+                handleCloseModal();
+                return;
+            }
+
+            // STAY OPEN ON ADD
+            setSaveFeedback("Class Added Successfully!");
+            setCurrentClassData(EMPTY_TEACHER_FORM);
+
+            // Vanish after 3s
+            setTimeout(() => setSaveFeedback(null), 3000);
+            return; // Don't close modal
         }
         handleCloseModal();
     };
+    const maxClasses = subscription?.maxClass || Infinity;
+    const isLimitReached = classes.length >= maxClasses;
 
     return (
         <div className="space-y-6">
+            {isLimitReached && (
+                <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-md shadow-sm animate-pulse mb-4">
+                    <div className="flex">
+                        <div className="flex-shrink-0">
+                            <svg className="h-5 w-5 text-amber-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                        </div>
+                        <div className="ml-3">
+                            <p className="text-sm text-amber-700">
+                                <span className="font-bold">License Limit Reached:</span> You have reached the maximum number of classes ({maxClasses}) allowed by your current subscription. Please upgrade your license to add more classes.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
             <h1 className="text-3xl font-bold text-gray-800">Manage Teachers &amp; Classes</h1>
 
             <div className="bg-gray-100 py-4">
@@ -217,7 +252,11 @@ const Teachers: React.FC = () => {
                     <ReadOnlyWrapper allowedRoles={['Admin', 'Teacher']}>
                         {isAdmin && (
                             <div className="flex items-center gap-3">
-                                <button onClick={handleAddNew} className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-sm">
+                                <button
+                                    onClick={handleAddNew}
+                                    disabled={isLimitReached}
+                                    className={`flex items-center space-x-2 px-4 py-2 text-white rounded-lg transition shadow-sm ${isLimitReached ? 'bg-gray-400 cursor-not-allowed opacity-75' : 'bg-blue-600 hover:bg-blue-700'}`}
+                                >
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                                     </svg>
@@ -334,7 +373,13 @@ const Teachers: React.FC = () => {
 
             {isModalOpen && currentClassData && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                    <div className="bg-white p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-lg m-4">
+                    <div className="bg-white p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-lg m-4 relative pt-12">
+                        {/* Vanishing Feedback Header */}
+                        {saveFeedback && (
+                            <div className="absolute top-0 left-0 right-0 bg-green-500 text-white py-2 px-4 text-center font-bold animate-fade-in-down z-10 rounded-t-xl text-sm">
+                                {saveFeedback}
+                            </div>
+                        )}
                         <h2 className="text-2xl font-bold mb-6 text-gray-800">{'id' in currentClassData ? 'Edit Teacher/Class' : 'Add New Teacher/Class'}</h2>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>

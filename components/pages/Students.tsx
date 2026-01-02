@@ -41,7 +41,7 @@ const calculateAge = (dobString: string): string => {
 
 
 const Students: React.FC = () => {
-    const { students, classes, addStudent, updateStudent, deleteStudent, saveStudents, isDirty, isSyncing, isOnline, settings, updateSettings, loadStudents } = useData();
+    const { students, classes, addStudent, updateStudent, deleteStudent, saveStudents, isDirty, isSyncing, isOnline, settings, updateSettings, loadStudents, subscription } = useData();
     const { currentUser, isAuthenticated } = useUser();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentStudent, setCurrentStudent] = useState<Student | Omit<Student, 'id'> | null>(null);
@@ -50,6 +50,7 @@ const Students: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedClass, setSelectedClass] = useState<string>('');
     const [isEnhancing, setIsEnhancing] = useState(false);
+    const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
     const hasSetDefaultClass = useRef(false);
 
     const inputStyles = "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500";
@@ -213,6 +214,7 @@ const Students: React.FC = () => {
     const handleCloseModal = () => {
         setIsModalOpen(false);
         setCurrentStudent(null);
+        setSaveFeedback(null);
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -284,12 +286,49 @@ const Students: React.FC = () => {
             }
 
             addStudent(studentToAdd);
+
+            // Check if limit is reached AFTER this addition
+            const maxStudents = subscription?.maxStudents || Infinity;
+            if (students.length + 1 >= maxStudents) {
+                handleCloseModal();
+                return;
+            }
+
+            // STAY OPEN ON ADD
+            setSaveFeedback("Student Added Successfully!");
+            setCurrentStudent({
+                ...EMPTY_STUDENT_FORM,
+                class: studentToAdd.class, // Maintain context
+                gender: studentToAdd.gender
+            });
+
+            // Vanish after 3s
+            setTimeout(() => setSaveFeedback(null), 3000);
+            return; // Don't close modal
         }
         handleCloseModal();
     };
+    const maxStudents = subscription?.maxStudents || Infinity;
+    const isLimitReached = students.length >= maxStudents;
 
     return (
         <div className="space-y-6">
+            {isLimitReached && (
+                <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-md shadow-sm animate-pulse">
+                    <div className="flex">
+                        <div className="flex-shrink-0">
+                            <svg className="h-5 w-5 text-amber-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                        </div>
+                        <div className="ml-3">
+                            <p className="text-sm text-amber-700">
+                                <span className="font-bold">License Limit Reached:</span> You have reached the maximum number of students ({maxStudents}) allowed by your current subscription. Please upgrade your license to add more students.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
             <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold text-gray-800">Manage Students</h1>
 
@@ -329,7 +368,11 @@ const Students: React.FC = () => {
                     <ReadOnlyWrapper allowedRoles={['Admin', 'Teacher']}>
                         {(currentUser?.role === 'Admin' || (currentUser?.role === 'Teacher' && currentUser.allowedClasses.length > 0)) && (
                             <div className="flex items-center gap-3">
-                                <button onClick={handleAddNew} className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-sm">
+                                <button
+                                    onClick={handleAddNew}
+                                    disabled={isLimitReached}
+                                    className={`flex items-center space-x-2 px-4 py-2 text-white rounded-lg transition shadow-sm ${isLimitReached ? 'bg-gray-400 cursor-not-allowed opacity-75' : 'bg-blue-600 hover:bg-blue-700'}`}
+                                >
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                                     </svg>
@@ -463,7 +506,13 @@ const Students: React.FC = () => {
 
             {isModalOpen && currentStudent && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                    <div className="bg-white p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-lg m-4 overflow-y-auto max-h-[90vh]">
+                    <div className="bg-white p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-lg m-4 overflow-y-auto max-h-[90vh] relative pt-12">
+                        {/* Vanishing Feedback Header */}
+                        {saveFeedback && (
+                            <div className="absolute top-0 left-0 right-0 bg-green-500 text-white py-2 px-4 text-center font-bold animate-fade-in-down z-10 rounded-t-xl text-sm">
+                                {saveFeedback}
+                            </div>
+                        )}
                         <h2 className="text-2xl font-bold mb-6 text-gray-800">{'id' in currentStudent ? 'Edit Student' : 'Add New Student'}</h2>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>

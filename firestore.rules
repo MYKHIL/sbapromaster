@@ -9,6 +9,12 @@ service cloud.firestore {
       return exists(subPath) && get(subPath).data.expiryDate > request.time;
     }
 
+    function getSubscriptionData(schoolId) {
+      let baseId = schoolId.split('_')[0];
+      let subPath = /databases/$(database)/documents/subscriptions/$(baseId);
+      return get(subPath).data;
+    }
+
     match /subscriptions/{schoolId} {
       allow read: if true;
       allow write: if request.resource.data.activationHash == "c93a215026f36ac783bcac8ba5e4bbea1c3cdb6c79d3824f9712143c44dbb0f3";
@@ -19,17 +25,30 @@ service cloud.firestore {
 
     // 4. SCHOOLS DATA
     match /schools/{schoolId} {
-      // FIX: Allow creation of the school document itself during registration
-      // Also allows reading for the "discovery" phase mentioned in your logs.
       allow read: if true;
-      allow create: if true; // Allow initial registration
+      allow create: if true; 
       allow update: if isSubscriptionActive(schoolId);
 
+      // Enforce Student Limits
+      match /students/{studentId} {
+        allow read: if true;
+        allow write: if isSubscriptionActive(schoolId) && 
+                     (request.method == 'delete' || 
+                      !studentId.matches('^\\d+$') || 
+                      int(studentId) <= getSubscriptionData(schoolId).maxStudents);
+      }
+
+      // Enforce Class Limits
+      match /classes/{classId} {
+        allow read: if true;
+        allow write: if isSubscriptionActive(schoolId) && 
+                     (request.method == 'delete' || 
+                      !classId.matches('^\\d+$') || 
+                      int(classId) <= getSubscriptionData(schoolId).maxClass);
+      }
+
       match /{allSubcollections=**} {
-        // Allow reads so the app can check if data exists
         allow read: if true; 
-        
-        // Protect writes: Only active subscriptions can save data/grades
         allow write: if isSubscriptionActive(schoolId);
       }
     }

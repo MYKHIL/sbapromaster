@@ -135,7 +135,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 }
 
                 // Load basic school data
-                loadImportedData(result.data);
+                loadImportedData(result.data, true, (result as any).subscription);
                 setSchoolData(result.data);
                 setCurrentSchoolId(result.docId || savedSchoolId);
                 setSchoolId(result.docId || savedSchoolId);
@@ -257,7 +257,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             let usersArray: User[] = [];
             // @ts-ignore - DEV and VITE_USE_EMULATOR exist in Vite env
             const isBotSchool = schoolName === 'Dummy School' || schoolName === 'SBA Academy Live';
-            if (import.meta.env.DEV && isBotSchool) {
+            if ((import.meta as any).env.DEV && isBotSchool) {
                 console.log('[AuthOverlay] 🤖 Bot/Debug Mode: Pre-creating admin...');
                 const { hashPassword } = await import('../services/authService');
                 const hashedPassword = await hashPassword('password');
@@ -391,7 +391,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             // DEBUG AUTOMATION: Create Trial Subscription for Bot/Dummy Schools
             // -------------------------------------------------------------
             // @ts-ignore
-            if (import.meta.env.DEV && isBotSchool) {
+            if ((import.meta as any).env.DEV && isBotSchool) {
                 try {
                     const { db } = await import('../services/firebaseService');
                     const { doc, setDoc, Timestamp } = await import('firebase/firestore');
@@ -452,7 +452,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 console.log('[AuthOverlay] ✅ School registered successfully (Bot Mode)');
 
                 // Load data and proceed to admin setup
-                loadImportedData(result.data);
+                loadImportedData(result.data, false, (result as any).subscription);
                 setSchoolData(result.data);
                 setCurrentSchoolId(result.docId || docId);
                 setSchoolId(result.docId || docId);
@@ -468,7 +468,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 // DEBUG AUTOMATION: Auto-login for Dummy School
                 // -------------------------------------------------------------
                 // @ts-ignore - DEV and VITE_USE_EMULATOR exist in Vite env
-                if ((import.meta.env.DEV || import.meta.env.VITE_USE_EMULATOR === 'true') && schoolName === 'Dummy School') {
+                if (((import.meta as any).env.DEV || (import.meta as any).env.VITE_USE_EMULATOR === 'true') && schoolName === 'Dummy School') {
                     try {
                         console.log('[AuthOverlay] 🤖 Debug Mode: Auto-logging in as admin...');
                         setUsers(usersArray);
@@ -526,7 +526,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 // But if it DOES return pending (e.g. security rules), we handle it.
 
                 // @ts-ignore - DEV and VITE_USE_EMULATOR exist in Vite env
-                if ((import.meta.env.DEV || import.meta.env.VITE_USE_EMULATOR === 'true') && schoolName === 'Dummy School') {
+                if (((import.meta as any).env.DEV || (import.meta as any).env.VITE_USE_EMULATOR === 'true') && schoolName === 'Dummy School') {
                     // Force Admin Setup anyway? No, if pending, we can't login usually.
                     // But for emulator, we might want to allow it.
                     console.log('[AuthOverlay] 🤖 Debug Mode: Ignoring pending status for Dummy School');
@@ -596,7 +596,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             console.log('[AuthOverlay] ✅ School data loaded successfully');
 
             // Load data into context
-            loadImportedData(result.data);
+            loadImportedData(result.data, true, (result as any).subscription);
             setSchoolData(result.data);
             setCurrentSchoolId(result.docId || docId);
             setSchoolId(result.docId || docId);

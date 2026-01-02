@@ -966,8 +966,12 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
                 if (docSnap.exists()) {
                     const data = docSnap.data() as AppDataType;
                     if (data.password !== password) return { status: 'wrong_password' };
+                    // Fetch subscription for existing school in other DB
+                    const subRef = doc(tempDb, 'subscriptions', docId.split('_')[0]);
+                    const subSnap = await getDoc(subRef);
+                    const subscription = subSnap.exists() ? subSnap.data() : null;
                     // Return success with data, but caller (AuthOverlay) will initiate the DB switch
-                    return { status: 'success', data: data, docId };
+                    return { status: 'success', data: data, docId, subscription };
                 } else {
                     if (!createIfMissing) return { status: 'not_found' };
 
@@ -976,7 +980,10 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
                     await setDoc(docRef, newData);
 
                     if (newData.Access === true) {
-                        return { status: 'success', data: newData, docId };
+                        const subRef = doc(tempDb, 'subscriptions', docId.split('_')[0]);
+                        const subSnap = await getDoc(subRef);
+                        const subscription = subSnap.exists() ? subSnap.data() : null;
+                        return { status: 'success', data: newData, docId, subscription };
                     } else {
                         return { status: 'created_pending_access' };
                     }
@@ -1061,10 +1068,14 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
                 }
             }
 
+            const subRef = doc(db, 'subscriptions', baseName);
+            const subSnap = await getDoc(subRef);
+            const subscription = subSnap.exists() ? subSnap.data() : null;
+
             console.log(`[FIREBASE_DEBUG] Login successful. Returning data.`);
 
             // OPTIMIZATION: Return ONLY main data. Do not fan-in.
-            return { status: 'success', data: data, docId: targetDocId };
+            return { status: 'success', data: data, docId: targetDocId, subscription };
         } else {
             if (!createIfMissing) {
                 console.log(`[FIREBASE_DEBUG] Document not found and createIfMissing is false.`);
@@ -1078,7 +1089,10 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
             // If Access is true, return success (debug mode). Otherwise, pending.
             if (newData.Access === true) {
                 console.log(`[FIREBASE_DEBUG] New document created with Access=true. Returning 'success'.`);
-                return { status: 'success', data: newData, docId: docId };
+                const subRef = doc(db, 'subscriptions', docId.split('_')[0]);
+                const subSnap = await getDoc(subRef);
+                const subscription = subSnap.exists() ? subSnap.data() : null;
+                return { status: 'success', data: newData, docId: docId, subscription };
             } else {
                 console.log(`[FIREBASE_DEBUG] New document created with Access=false. Returning 'created_pending_access'.`);
                 return { status: 'created_pending_access' };

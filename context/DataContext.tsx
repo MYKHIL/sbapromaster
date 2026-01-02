@@ -82,6 +82,7 @@ export interface DataContextType {
     saveGrades: () => Promise<void>;
     saveAssessments: () => Promise<void>;
     saveScores: () => Promise<void>;
+    subscription: any | null;
 
     refreshFromCloud: () => Promise<void>;
     schoolId: string | null;
@@ -179,6 +180,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [users, setUsersInternal] = useState<User[]>([]);
     const [userLogs, setUserLogs] = useState<UserLog[]>([]);
     const [activeSessions, setActiveSessions] = useState<Record<string, string>>({});
+    const [subscription, setSubscription] = useState<any | null>(null);
 
     // Wrapped setUsers with logging to track all changes
     const setUsers = (value: React.SetStateAction<User[]>) => {
@@ -247,7 +249,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const lastLoadedTimestamps = React.useRef<Record<string, any>>({});
     const inflightPromises = React.useRef<Map<string, Promise<any>>>(new Map());
 
-    const loadImportedData = (data: Partial<AppDataType>, isRemote: boolean = false) => {
+    const loadImportedData = (data: Partial<AppDataType>, isRemote: boolean = false, sub?: any) => {
+        if (sub) setSubscription(sub);
         // CRITICAL: Mark this as a remote update to prevent syncing back to cloud
         // ONLY if it's a remote update. If it's a local file import, we WANT to mark as dirty.
         if (isRemote) {
@@ -928,7 +931,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     ) => ({
         add: (item: Omit<T, 'id'>) => {
             markDirty(fieldKey, true);
-            setItems(prev => [...prev, { ...item, id: Date.now() } as T]);
+            // Ignore legacy timestamp IDs when calculating next sequential ID
+            const sequentialIds = items.map(i => typeof i.id === 'number' ? i.id : 0).filter(id => id < 1000000);
+            const maxId = sequentialIds.length > 0 ? Math.max(...sequentialIds) : 0;
+            setItems(prev => [...prev, { ...item, id: maxId + 1 } as T]);
         },
         update: (updatedItem: T) => {
             markDirty(fieldKey, true);
@@ -1922,6 +1928,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         draftVersion,
         pendingCount,
         isPageDirty,
+        subscription,
     };
 
     // Initialize originalData from local storage on load/schoolId change
