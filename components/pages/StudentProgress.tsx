@@ -10,6 +10,21 @@ import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 import BroadsheetModal from '../modals/BroadsheetModal';
 
+// Helper for distinct colors (Golden Angle approximation)
+const getDistinctColor = (index: number) => {
+    const hue = (index * 137.508) % 360;
+    const saturation = 70;
+    const lightness = 50;
+    const s = saturation / 100;
+    const l = lightness / 100;
+    const k = (n: number) => (n + hue / 30) % 12;
+    const a = s * Math.min(l, 1 - l);
+    const f = (n: number) =>
+        l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+    const toHex = (x: number) => Math.round(255 * x).toString(16).padStart(2, '0');
+    return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
+};
+
 interface SubjectPerformance {
     subjectName: string;
     average: number;
@@ -401,10 +416,9 @@ const StudentProgress: React.FC = () => {
     // Multi (Comparison)
     const comparisonSeries = selectedStudents.map((s, i) => {
         const hist = historiesMap[s.id] || [];
-        const palette = ['#2563eb', '#dc2626', '#16a34a', '#d97706', '#9333ea', '#db2777', '#0891b2', '#4f46e5'];
         return {
             label: s.name,
-            color: palette[i % palette.length],
+            color: getDistinctColor(i),
             data: hist.map(h => ({
                 label: `${h.academicTerm} ${h.academicYear.substring(2)}`,
                 value: h.averageScore
@@ -422,8 +436,6 @@ const StudentProgress: React.FC = () => {
             const pageHeight = pdf.internal.pageSize.getHeight();
             const margin = 15;
             let cursorY = margin;
-
-            const COLORS = ['#2563eb', '#16a34a', '#d97706', '#dc2626', '#7c3aed', '#db2777', '#0891b2', '#4b5563'];
 
             // Vector Chart Helpers
             const drawLineChart = (title: string, series: { name: string, data: { label: string, value: number }[], color: string }[], x: number, y: number, w: number, h: number) => {
@@ -694,7 +706,7 @@ const StudentProgress: React.FC = () => {
                         label: `${h.academicTerm} ${h.academicYear.substring(2)}`,
                         value: h.averageScore
                     }));
-                    return { name: s.name, data, color: COLORS[idx % COLORS.length] };
+                    return { name: s.name, data, color: getDistinctColor(idx) };
                 });
 
                 drawLineChart("Performance Trend Comparison", compSeries, margin, cursorY, pageWidth - (margin * 2), 70);
@@ -796,7 +808,7 @@ const StudentProgress: React.FC = () => {
                         label: `${h.academicTerm} ${h.academicYear.substring(2)}`,
                         value: h.averageScore
                     })),
-                    color: COLORS[0]
+                    color: getDistinctColor(0)
                 }];
 
                 const colW = (pageWidth - (margin * 3)) / 2;
@@ -805,7 +817,7 @@ const StudentProgress: React.FC = () => {
                 const codes = singleLatestTerm?.detailedPerformance.map(d => d.grade) || [];
                 const counts = codes.reduce((acc: any, c: string) => { acc[c] = (acc[c] || 0) + 1; return acc; }, {});
                 const gradeData = Object.entries(counts).map(([k, v], i) => ({
-                    label: k, value: v as number, color: COLORS[(i + 1) % COLORS.length]
+                    label: k, value: v as number, color: getDistinctColor(i + 1)
                 }));
 
                 drawBarChart("Grade Dist.", gradeData, margin + colW + margin, cursorY, colW, 60, Math.max(...(Object.values(counts) as number[]), 5));
@@ -816,7 +828,7 @@ const StudentProgress: React.FC = () => {
                 const subjData = singleLatestTerm?.detailedPerformance.map((d, i) => ({
                     label: d.subjectName,
                     value: d.totalScore,
-                    color: COLORS[i % COLORS.length]
+                    color: getDistinctColor(i)
                 })) || [];
 
                 if (cursorY + 70 > pageHeight - margin) {

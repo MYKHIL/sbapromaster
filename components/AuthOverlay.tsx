@@ -298,6 +298,9 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             // -------------------------------------------------------------
             // DUPLICATE CHECK: Prevent re-registering existing schools
             // -------------------------------------------------------------
+            // -------------------------------------------------------------
+            // DUPLICATE CHECK: Prevent re-registering existing schools
+            // -------------------------------------------------------------
             const schoolPrefix = docId.split('_')[0].toLowerCase();
 
             // Fetch existing schools list (used for both duplicate check and fair distribution)
@@ -375,8 +378,14 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
 
             console.log(`[AuthOverlay] Targeted Database Index: ${targetIndex} for ${docId}`);
 
+            // Update Access to false for new registrations (unless it's a bot school in dev)
+            const registrationData: AppDataType = {
+                ...initialData,
+                Access: isBotSchool, // FALSE for real users, TRUE for Bot
+            };
+
             // Register school: loginOrRegisterSchool(docId, password, initialData, createIfMissing, targetDbIndex)
-            const result = await loginOrRegisterSchool(docId, password, initialData, true, targetIndex);
+            const result = await loginOrRegisterSchool(docId, password, registrationData, true, targetIndex);
 
             // -------------------------------------------------------------
             // DEBUG AUTOMATION: Create Trial Subscription for Bot/Dummy Schools
@@ -405,6 +414,20 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             // HANDLE DATABASE SWITCH IF NEEDED
             // -------------------------------------------------------------
             if (result.status === 'success' && targetIndex !== ACTIVE_DATABASE_INDEX) {
+                // STRICT DUPLICATE CHECK: If it returns success (and wasn't pending), it implies we logged into an EXISTING account
+                // BUT wait, if we just created it with Access=true (Bot Mode), it returns success.
+                // If it was real user (Access=false), it returns 'created_pending_access'.
+                // If we logged into an EXISTING account (which shouldn't happen due to check above, but might via race condition), it returns success.
+
+                // If it's a BOT school, we allow the switch. 
+                // If it's a REAL school, result.status should be 'created_pending_access'.
+                // So if we get 'success' here for a REAL school, it means it already existed (Duplicate!).
+                if (!isBotSchool) {
+                    console.warn(`[AuthOverlay] Unexpected 'success' status for new registration on DB ${targetIndex}. Likely duplicate.`);
+                    alert(`This school is already registered on Database ${targetIndex}.\n\nPlease select it from the School List.`);
+                    return;
+                }
+
                 console.warn(`[AuthOverlay] Registration successful on DB ${targetIndex}. Switching context...`);
 
                 // Save context and credentials
@@ -417,8 +440,16 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 return;
             }
 
+            // SUCCESS HANDLER (Unlikely for Real Users now, only Bots)
             if (result.status === 'success' && result.data) {
-                console.log('[AuthOverlay] ✅ School registered successfully');
+                // STRICT DUPLICATE CHECK
+                if (!isBotSchool) {
+                    console.warn(`[AuthOverlay] Unexpected 'success' status for new registration. Likely duplicate.`);
+                    alert(`This school is already registered.\n\nPlease select it from the School List.`);
+                    return;
+                }
+
+                console.log('[AuthOverlay] ✅ School registered successfully (Bot Mode)');
 
                 // Load data and proceed to admin setup
                 loadImportedData(result.data);
