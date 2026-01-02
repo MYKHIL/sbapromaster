@@ -58,6 +58,18 @@ const Settings: React.FC = () => {
 
   const inputStyles = "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500";
 
+  // Format date to readable string
+  const formatDateString = (dateString: string): string => {
+    if (!dateString) return '';
+    const date = new Date(dateString + 'T00:00:00');
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     updateSettings({ [name]: value });
@@ -66,6 +78,22 @@ const Settings: React.FC = () => {
 
 
   // Update handlers inside Settings component
+  const vacationRef = React.useRef<HTMLInputElement>(null);
+  const reopeningRef = React.useRef<HTMLInputElement>(null);
+
+  const handleDateClick = (ref: React.RefObject<HTMLInputElement>) => {
+    try {
+      if (ref.current) {
+        ref.current.showPicker();
+      }
+    } catch (error) {
+      console.error("Error opening date picker:", error);
+      // Fallback: try to focus/click if showPicker fails (though rare on modern browsers)
+      ref.current?.focus();
+      ref.current?.click();
+    }
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, field: 'logo' | 'headmasterSignature') => {
     if (e.target.files && e.target.files[0]) {
       const reader = new FileReader();
@@ -156,14 +184,202 @@ const Settings: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Vacation Date</label>
-              <input type="date" name="vacationDate" value={settings.vacationDate} onChange={handleChange} className={inputStyles} disabled={!isAdmin} />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Vacation Date (This Term)</label>
+              <div className="relative">
+                <input
+                  ref={vacationRef}
+                  type="date"
+                  name="vacationDate"
+                  value={settings.vacationDate}
+                  onChange={handleChange}
+                  className="absolute opacity-0 pointer-events-none w-0 h-0"
+                  tabIndex={-1}
+                  disabled={!isAdmin}
+                />
+                <div
+                  onClick={() => isAdmin && handleDateClick(vacationRef)}
+                  className={`${inputStyles} flex items-center justify-between ${!isAdmin ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:border-blue-400 transition-colors'}`}
+                >
+                  <span className={settings.vacationDate ? 'text-gray-900 font-medium' : 'text-gray-400'}>
+                    {settings.vacationDate ? formatDateString(settings.vacationDate) : 'Select vacation date'}
+                  </span>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Reopening Date</label>
-              <input type="date" name="reopeningDate" value={settings.reopeningDate} onChange={handleChange} className={inputStyles} disabled={!isAdmin} />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Reopening Date (Next Term)</label>
+              <div className="relative">
+                <input
+                  ref={reopeningRef}
+                  type="date"
+                  name="reopeningDate"
+                  value={settings.reopeningDate}
+                  onChange={handleChange}
+                  className="absolute opacity-0 pointer-events-none w-0 h-0"
+                  tabIndex={-1}
+                  disabled={!isAdmin}
+                />
+                <div
+                  onClick={() => isAdmin && handleDateClick(reopeningRef)}
+                  className={`${inputStyles} flex items-center justify-between ${!isAdmin ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:border-blue-400 transition-colors'}`}
+                >
+                  <span className={settings.reopeningDate ? 'text-gray-900 font-medium' : 'text-gray-400'}>
+                    {settings.reopeningDate ? formatDateString(settings.reopeningDate) : 'Select reopening date'}
+                  </span>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
+
+          {/* Weeks Calculator */}
+          {(settings.vacationDate || settings.reopeningDate) && (
+            <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+              {(() => {
+                const now = new Date();
+                now.setHours(0, 0, 0, 0);
+                const vacation = settings.vacationDate ? new Date(settings.vacationDate + 'T00:00:00') : null;
+                const reopening = settings.reopeningDate ? new Date(settings.reopeningDate + 'T00:00:00') : null;
+
+                // Validation: Check if reopening date is before vacation date
+                if (vacation && reopening && reopening < vacation) {
+                  return (
+                    <div className="flex items-start space-x-2 text-red-700">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      <div>
+                        <p className="font-semibold">Invalid Date Configuration</p>
+                        <p className="text-sm">Reopening date (next term) must be after the vacation date (this term).</p>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Calculate time difference
+                const calculateTimeDifference = (targetDate: Date) => {
+                  const nowMs = now.getTime();
+                  const targetMs = targetDate.getTime();
+                  const diffMs = targetMs - nowMs;
+                  const isPast = diffMs < 0;
+                  const absDiffMs = Math.abs(diffMs);
+                  const totalDays = Math.floor(absDiffMs / (1000 * 60 * 60 * 24));
+
+                  let start = new Date(now);
+                  let end = new Date(targetDate);
+
+                  if (isPast) {
+                    [start, end] = [end, start];
+                  }
+
+                  let tempDate = new Date(start);
+
+                  // 1. Calculate Full Years
+                  let years = 0;
+                  while (true) {
+                    let nextYear = new Date(tempDate);
+                    nextYear.setFullYear(tempDate.getFullYear() + 1);
+                    if (nextYear <= end) {
+                      years++;
+                      tempDate = nextYear;
+                    } else {
+                      break;
+                    }
+                  }
+
+                  // 2. Calculate Full Months
+                  let months = 0;
+                  while (true) {
+                    let nextMonth = new Date(tempDate);
+                    nextMonth.setMonth(tempDate.getMonth() + 1);
+                    if (nextMonth <= end) {
+                      months++;
+                      tempDate = nextMonth;
+                    } else {
+                      break;
+                    }
+                  }
+
+                  // 3. Calculate remaining days between modified start and end
+                  const remainingMs = end.getTime() - tempDate.getTime();
+                  const remainingDays = Math.floor(remainingMs / (1000 * 60 * 60 * 24));
+
+                  // 4. Split remaining days into Weeks and Days
+                  const weeks = Math.floor(remainingDays / 7);
+                  const days = remainingDays % 7;
+
+                  return { years, months, weeks, days, totalDays, isPast };
+                };
+
+                // Determine which date to show
+                let targetDate: Date | null = null;
+                let label = '';
+                let icon = '';
+
+                if (vacation && now < vacation) {
+                  // Show countdown to vacation
+                  targetDate = vacation;
+                  label = '🏖️ Time until vacation (this term)';
+                  icon = 'countdown';
+                } else if (reopening && now < reopening) {
+                  // Show countdown to reopening
+                  targetDate = reopening;
+                  label = '🎓 Time until school reopens (next term)';
+                  icon = 'countdown';
+                } else if (reopening) {
+                  // Past both dates, show time since reopening
+                  targetDate = reopening;
+                  label = '📅 Time since reopening date';
+                  icon = 'past';
+                } else if (vacation) {
+                  // Only vacation date set and it's past
+                  targetDate = vacation;
+                  label = '📅 Time since vacation date';
+                  icon = 'past';
+                }
+
+                if (!targetDate) {
+                  return null;
+                }
+
+                const { years, months, weeks, days, totalDays, isPast } = calculateTimeDifference(targetDate);
+
+                const parts = [];
+                if (years > 0) parts.push(`${years} year${years !== 1 ? 's' : ''}`);
+                if (months > 0) parts.push(`${months} month${months !== 1 ? 's' : ''}`);
+                if (weeks > 0) parts.push(`${weeks} week${weeks !== 1 ? 's' : ''}`);
+                if (days > 0) parts.push(`${days} day${days !== 1 ? 's' : ''}`);
+
+                const timeString = parts.length > 0 ? parts.join(', ') : '0 days';
+
+                return (
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      {icon === 'countdown' ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-600" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                        </svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                      <p className="font-semibold text-gray-800">{label}</p>
+                    </div>
+                    <div className="pl-7">
+                      <p className="text-2xl font-bold text-indigo-700">{timeString}</p>
+                      <p className="text-sm text-gray-600 mt-1">({totalDays} total day{totalDays !== 1 ? 's' : ''})</p>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
 
           <hr />
 
