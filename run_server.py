@@ -284,7 +284,50 @@ def run_approval_portal():
         proc.terminate()
         sys.exit(0)
     except Exception as e:
-        print(f"Failed to start website: {e}")
+        print(f"Failed to start portal: {e}")
+        sys.exit(1)
+
+
+def run_my_website():
+    print("\n----------------------------------------------------------------")
+    print("🚀 LAUNCHING MY WEBSITE 🚀")
+    print("----------------------------------------------------------------")
+    
+    website_path = os.path.join(os.path.dirname(PROJECT_ROOT), 'My website')
+    port = 5500 
+    
+    # Check if port is in use
+    while socket_check('localhost', port):
+        port += 1
+        
+    url = f"http://localhost:{port}/index.html"
+    
+    print(f"Serving My Website from {website_path} on {url}")
+    
+    try:
+        # Start http.server in subprocess
+        cmd = [sys.executable, "-m", "http.server", str(port)]
+        proc = subprocess.Popen(
+            cmd,
+            cwd=website_path,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+        
+        # Give it a tiny bit to start
+        time.sleep(1.5)
+        webbrowser.open(url)
+        
+        print("\nWebsite is running. Press Ctrl+C directly to stop the server.")
+        print("Note: The server will be automatically terminated when this script exits.")
+        
+        proc.wait()
+    except KeyboardInterrupt:
+        print("\nShutting down website server...")
+        proc.terminate()
+        sys.exit(0)
+    except Exception as e:
+        print(f"Failed to start website server: {e}")
         sys.exit(1)
 
 
@@ -299,7 +342,7 @@ def main():
     print("3) LOAD TEST    (Dashboard / Stress Engine)")
     print("4) VISUAL BOT   (Actually opens browser & operates app)")
     print("5) APPROVE SBA   (License Management Portal)")
-    print("6) MY WEBSITE    (SBA Pro Master Website)")
+    print("6) MY WEBSITE    (Main Portfolio/Pricing Page)")
     print("----------------------------------------------------------------")
     choice = input("Enter 1, 2, 3, 4, 5 or 6 [Default: 2]: ").strip()
     

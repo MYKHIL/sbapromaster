@@ -42,7 +42,38 @@ def configure_git(cwd):
     run_command(f'git config user.name "{USERNAME}"', cwd=cwd)
     run_command(f'git config user.email "{GIT_EMAIL}"', cwd=cwd)
 
+def is_rebase_in_progress(cwd):
+    rebase_merge = os.path.join(cwd, ".git", "rebase-merge")
+    rebase_apply = os.path.join(cwd, ".git", "rebase-apply")
+    return os.path.exists(rebase_merge) or os.path.exists(rebase_apply)
+
+def handle_rebase_lock(cwd):
+    if is_rebase_in_progress(cwd):
+        print(f"\n  ATTENTION: A Git rebase is already in progress in {os.path.basename(cwd)}!")
+        print("This usually happens if a previous 'Pull & Rebase' was interrupted.")
+        print("[1] Abort the current rebase (Clean Up)")
+        print("[2] Try to continue/skip (Advanced)")
+        print("[3] Ignore and proceed anyway (Not recommended)")
+        print("[Q] Quit")
+        
+        choice = input("\nEnter choice (1/2/3/Q): ").strip().upper()
+        if choice == '1':
+            run_command("git rebase --abort", cwd=cwd)
+            print(" Rebase aborted.")
+            return True
+        elif choice == '2':
+            print(" Please resolve conflicts manually in another terminal, then press Enter here.")
+            input("Press Enter to continue...")
+            return True
+        elif choice == '3':
+            return True
+        return False
+    return True
+
 def push_with_retry(cwd, repo_name, branch="main"):
+    if not handle_rebase_lock(cwd):
+        return False
+
     print(f"\nPushing to https://github.com/{USERNAME}/{repo_name}...")
     
     # Check if remote exists first (ls-remote)
@@ -61,20 +92,30 @@ def push_with_retry(cwd, repo_name, branch="main"):
     if success:
         return True
     
-    print("\n  PUSH REJECTED: Your local repository is out of sync with GitHub.")
-    print("[1] Pull & Rebase")
-    print("[2] Force Push (Overwrite GitHub)")
-    print("[3] Abort")
+    print("\n  PUSH REJECTED: Your local repository is out of sync with GitHub or blocked.")
+    print("  (Check for 'GitHub Push Protection' or 'non-fast-forward' errors above)")
+    print("\nHow would you like to proceed?")
+    print("[1] Pull & Rebase (Merge remote changes)")
+    print("[2] Force Push (OVERWRITE GitHub - Use with caution!)")
+    print("[3] Fix Rebase Lock (If rebase is stuck)")
+    print("[Q] Abort")
     
-    choice = input("\nEnter choice (1/2/3): ").strip()
+    choice = input("\nEnter choice (1/2/3/Q): ").strip().upper()
     
     if choice == '1':
+        print("\nAttempting 'git pull --rebase'...")
         if run_command(f"git pull --rebase origin {branch}", cwd=cwd):
             return run_command(f"git push -u origin {branch}", cwd=cwd)
+        else:
+            print("\n  REBASE FAILED: There might be conflicts.")
+            return handle_rebase_lock(cwd) and push_with_retry(cwd, repo_name, branch)
     elif choice == '2':
-        confirm = input("Confirm Force Push? (y/n): ").lower().strip()
+        confirm = input("Confirm Force Push? This will overwrite remote history! (y/n): ").lower().strip()
         if confirm == 'y':
             return run_command(f"git push -u origin {branch} --force", cwd=cwd)
+    elif choice == '3' or choice == 'FIX':
+        handle_rebase_lock(cwd)
+        return push_with_retry(cwd, repo_name, branch)
             
     return False
 
