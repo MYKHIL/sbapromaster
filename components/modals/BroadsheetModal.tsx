@@ -222,11 +222,11 @@ const BroadsheetModal: React.FC<BroadsheetModalProps> = ({ isOpen, onClose, term
                 'Name',
                 'Index No',
                 ...classAssessments.map(a => a.name),
-                'Sub Total (A)',
+                'Sub Total\n(A)',
                 examAssessment?.name || 'Exam',
-                'Sub Total (B)',
-                'Total',
-                'Pos'
+                'Sub Total\n(B)',
+                'Total\n(A + B)',
+                'Position'
             ];
 
             const body = subjectRows.map(row => [
@@ -244,7 +244,7 @@ const BroadsheetModal: React.FC<BroadsheetModalProps> = ({ isOpen, onClose, term
                 startY: 30,
                 head: [headers],
                 body: body,
-                styles: { fontSize: 8, halign: 'center' },
+                styles: { fontSize: 8, halign: 'center', valign: 'middle' },
                 columnStyles: {
                     0: { halign: 'left' },
                     1: { halign: 'left' }
@@ -303,11 +303,26 @@ const BroadsheetModal: React.FC<BroadsheetModalProps> = ({ isOpen, onClose, term
                                 {classAssessments.map(a => (
                                     <th key={a.id} className="px-4 py-3 text-center font-semibold text-gray-700 border-b shadow-sm bg-blue-50/50">{a.name}</th>
                                 ))}
-                                <th className="px-4 py-3 text-center font-bold text-blue-800 border-b shadow-sm bg-blue-100">Sub Total (A)</th>
+                                <th className="px-4 py-3 text-center border-b shadow-sm bg-blue-100">
+                                    <div className="leading-tight">
+                                        <div className="font-bold text-blue-800">Sub Total</div>
+                                        <div className="text-sm font-semibold text-blue-700">(A)</div>
+                                    </div>
+                                </th>
                                 <th className="px-4 py-3 text-center font-semibold text-gray-700 border-b shadow-sm bg-orange-50/50">{examAssessment?.name || 'Exam'}</th>
-                                <th className="px-4 py-3 text-center font-bold text-orange-800 border-b shadow-sm bg-orange-100">Sub Total (B)</th>
-                                <th className="px-4 py-3 text-center font-black text-gray-900 border-b shadow-sm bg-gray-100">Total</th>
-                                <th className="px-4 py-3 text-center font-bold text-gray-900 border-b shadow-sm">Pos</th>
+                                <th className="px-4 py-3 text-center border-b shadow-sm bg-orange-100">
+                                    <div className="leading-tight">
+                                        <div className="font-bold text-orange-800">Sub Total</div>
+                                        <div className="text-sm font-semibold text-orange-700">(B)</div>
+                                    </div>
+                                </th>
+                                <th className="px-4 py-3 text-center border-b shadow-sm bg-gray-100">
+                                    <div className="leading-tight">
+                                        <div className="font-black text-gray-900">Total</div>
+                                        <div className="text-sm font-semibold text-gray-700">(A+B)</div>
+                                    </div>
+                                </th>
+                                <th className="px-4 py-3 text-center font-bold text-gray-900 border-b shadow-sm">Position</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200 bg-white">
