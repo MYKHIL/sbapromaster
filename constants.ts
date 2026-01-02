@@ -151,7 +151,7 @@ export const INITIAL_CLASS_DATA: ClassSpecificData[] = [];
 export const ADMIN_EMAIL = 'darkmic50@gmail.com';
 
 export const SUBSCRIPTION_TIERS = [
-  { name: 'Trial', maxStudents: 10, maxClass: 1, duration: '1 Month', price: 'Free' },
+  { name: 'Trial', maxStudents: 10, maxClass: 1, duration: '1 Week', price: 'Free' },
   { name: 'Basic', maxStudents: 50, maxClass: 5, duration: '12 Months', price: 'GHS 100' },
   { name: 'Standard', maxStudents: 200, maxClass: 10, duration: '12 Months', price: 'GHS 200' },
   { name: 'Premium', maxStudents: 500, maxClass: 20, duration: '12 Months', price: 'GHS 350' },
