@@ -1,4 +1,4 @@
-import subprocess
+﻿import subprocess
 import os
 import sys
 import shutil
@@ -11,6 +11,7 @@ GIT_EMAIL = "darkmic50@gmail.com"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 WEB_PRO_PATH = BASE_DIR
 APPROVAL_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "SBA Web Approval"))
+MY_WEBSITE_PATH = os.path.abspath(os.path.join(BASE_DIR, "..", "My website"))
 
 def run_command(command, cwd=None, error_message=None):
     try:
@@ -24,15 +25,15 @@ def run_command(command, cwd=None, error_message=None):
 def check_git_lock(path):
     lock_file = os.path.join(path, ".git", "index.lock")
     if os.path.exists(lock_file):
-        print(f"\n⚠️  WARNING: Git lock file detected in {path}!")
+        print(f"\n  WARNING: Git lock file detected in {path}!")
         response = input("Remove lock file and proceed? (y/n): ").lower().strip()
         if response in ['y', 'yes']:
             try:
                 os.remove(lock_file)
-                print("✓ Lock file removed successfully.")
+                print(" Lock file removed successfully.")
                 return True
             except Exception as e:
-                print(f"✗ Failed to remove lock file: {e}")
+                print(f" Failed to remove lock file: {e}")
                 return False
         return False
     return True
@@ -48,7 +49,7 @@ def push_with_retry(cwd, repo_name, branch="main"):
     remote_exists = run_command(f"git ls-remote https://github.com/{USERNAME}/{repo_name}.git", cwd=cwd)
     
     if not remote_exists:
-        print(f"\n⚠️  REPOSITORY NOT FOUND: {USERNAME}/{repo_name}")
+        print(f"\n  REPOSITORY NOT FOUND: {USERNAME}/{repo_name}")
         print(f"Please create it manually at: https://github.com/new")
         print(f"Name the repository precisely: {repo_name}")
         print("After creating it, run this script again.")
@@ -60,7 +61,7 @@ def push_with_retry(cwd, repo_name, branch="main"):
     if success:
         return True
     
-    print("\n⚠️  PUSH REJECTED: Your local repository is out of sync with GitHub.")
+    print("\n  PUSH REJECTED: Your local repository is out of sync with GitHub.")
     print("[1] Pull & Rebase")
     print("[2] Force Push (Overwrite GitHub)")
     print("[3] Abort")
@@ -78,7 +79,7 @@ def push_with_retry(cwd, repo_name, branch="main"):
     return False
 
 def deploy_pro_master():
-    print("\n🚀 DEPLOYING: SBA Pro Master - Web")
+    print("\n DEPLOYING: SBA Pro Master - Web")
     print("-----------------------------------")
     if not check_git_lock(WEB_PRO_PATH): return False
     if not os.path.exists(os.path.join(WEB_PRO_PATH, ".git")):
@@ -102,12 +103,12 @@ def deploy_pro_master():
     run_command("git branch -M main", cwd=WEB_PRO_PATH)
     
     if push_with_retry(WEB_PRO_PATH, repo_name):
-        print("\n✅ SUCCESS: SBA Pro Master Web pushed to GitHub.")
+        print("\n SUCCESS: SBA Pro Master Web pushed to GitHub.")
         return True
     return False
 
 def deploy_approval():
-    print("\n🚀 DEPLOYING: SBA Web Approval (Standalone)")
+    print("\n DEPLOYING: SBA Web Approval (Standalone)")
     print("-----------------------------------")
 
     # Ensure local path exists
@@ -143,10 +144,45 @@ def deploy_approval():
     run_command("git branch -M main", cwd=APPROVAL_PATH)
 
     if push_with_retry(APPROVAL_PATH, repo_name):
-        print("\n✅ SUCCESS: SBA Web Approval is now live!")
+        print("\n SUCCESS: SBA Web Approval is now live!")
         print(f"URL: https://{USERNAME.lower()}.github.io/approvesba")
-        print("\n[IMPORTANT ACTION]")
-        print("Go to Settings > Pages for the 'approvesba' repo and ensure the source is 'Deploy from branch (main)'.")
+        return True
+    return False
+
+def deploy_my_website():
+    print("\n DEPLOYING: My Website (mykhil.github.io)")
+    print("-----------------------------------")
+    
+    if not os.path.exists(MY_WEBSITE_PATH):
+        print(f"Folder not found: {MY_WEBSITE_PATH}")
+        return False
+        
+    if not check_git_lock(MY_WEBSITE_PATH): return False
+
+    if not os.path.exists(os.path.join(MY_WEBSITE_PATH, ".git")):
+        print("Initializing Git in My Website...")
+        run_command("git init", cwd=MY_WEBSITE_PATH)
+
+    configure_git(MY_WEBSITE_PATH)
+    run_command("git add .", cwd=MY_WEBSITE_PATH)
+    status = subprocess.run("git status --porcelain", shell=True, text=True, capture_output=True, cwd=MY_WEBSITE_PATH)
+    if status.stdout.strip():
+        run_command('git commit -m "Deployment Update"', cwd=MY_WEBSITE_PATH)
+    
+    repo_name = "mykhil.github.io"
+    remote_url = f"https://github.com/{USERNAME}/{repo_name}.git"
+
+    remotes = subprocess.run("git remote", shell=True, text=True, capture_output=True, cwd=MY_WEBSITE_PATH).stdout
+    if "origin" in remotes:
+        run_command(f"git remote set-url origin {remote_url}", cwd=MY_WEBSITE_PATH)
+    else:
+        run_command(f"git remote add origin {remote_url}", cwd=MY_WEBSITE_PATH)
+
+    run_command("git branch -M main", cwd=MY_WEBSITE_PATH)
+
+    if push_with_retry(MY_WEBSITE_PATH, repo_name):
+        print("\n SUCCESS: My Website is now live!")
+        print(f"URL: https://{USERNAME.lower()}.github.io")
         return True
     return False
 
@@ -159,18 +195,22 @@ def main():
             print("Which project(s) do you want to deploy?")
             print("[1] SBA Pro Master - Web      (sbapromaster.git)")
             print("[2] SBA Web Approval Portal   (approvesba.git)")
-            print("[3] Both Projects")
+            print("[3] My website                (mykhil.github.io)")
+            print("[4] Deploy All Projects")
             print("[Q] Quit")
             
-            choice = input("\nEnter choice (1/2/3/Q): ").strip().upper()
+            choice = input("\nEnter choice (1/2/3/4/Q): ").strip().upper()
             
             if choice == '1':
                 deploy_pro_master()
             elif choice == '2':
                 deploy_approval()
             elif choice == '3':
+                deploy_my_website()
+            elif choice == '4':
                 deploy_pro_master()
                 deploy_approval()
+                deploy_my_website()
             elif choice == 'Q':
                 print("Goodbye!")
                 break

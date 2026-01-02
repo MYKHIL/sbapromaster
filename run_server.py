@@ -284,7 +284,7 @@ def run_approval_portal():
         proc.terminate()
         sys.exit(0)
     except Exception as e:
-        print(f"Failed to start portal: {e}")
+        print(f"Failed to start website: {e}")
         sys.exit(1)
 
 
@@ -299,13 +299,15 @@ def main():
     print("3) LOAD TEST    (Dashboard / Stress Engine)")
     print("4) VISUAL BOT   (Actually opens browser & operates app)")
     print("5) APPROVE SBA   (License Management Portal)")
+    print("6) MY WEBSITE    (SBA Pro Master Website)")
     print("----------------------------------------------------------------")
-    choice = input("Enter 1, 2, 3, 4 or 5 [Default: 2]: ").strip()
+    choice = input("Enter 1, 2, 3, 4, 5 or 6 [Default: 2]: ").strip()
     
     DEBUG_MODE = (choice == '1')
     LOAD_TEST_MODE = (choice == '3')
     VISUAL_BOT_MODE = (choice == '4')
     APPROVE_SBA_MODE = (choice == '5')
+    MY_WEBSITE_MODE = (choice == '6')
     
     RUN_DIR = PROJECT_ROOT
     if LOAD_TEST_MODE:
@@ -316,6 +318,9 @@ def main():
         run_approval_portal()
         return
 
+    if MY_WEBSITE_MODE:
+        run_my_website()
+        return
     emulator_proc = None
 
     # Step 0: Check for Debug Mode and Emulators
