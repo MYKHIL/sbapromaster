@@ -1,6 +1,6 @@
 // Runtime toggle: set this value directly in code to enable/disable all logs.
 // You can also call `setLoggingEnabled()` to persist the choice to localStorage.
-export let LOGGING_ENABLED: boolean = true;
+export let LOGGING_ENABLED: boolean = false;
 
 const STORAGE_KEY = 'sba_logging_enabled';
 
