@@ -1,0 +1,415 @@
+import React, { useState } from 'react';
+import { useData } from '../context/DataContext';
+import { useUser } from '../context/UserContext';
+import PreviewDataModal from './PreviewDataModal';
+import { Page } from '../types';
+import NotificationCenter from './NotificationCenter';
+
+interface GlobalActionBarProps {
+    onOpenDebugModal?: () => void;
+    currentPage?: Page;
+    onNavigate?: (page: Page) => void;
+}
+
+const GlobalActionBar: React.FC<GlobalActionBarProps> = ({ onOpenDebugModal, currentPage, onNavigate }) => {
+    const {
+        saveToCloud,
+        refreshFromCloud,
+        hasLocalChanges,
+        pendingCount,
+        isSyncing,
+        isFetching,
+        isOnline,
+        getPendingUploadData,
+        // Data for humanizing preview
+        students,
+        subjects,
+        assessments,
+        classes
+    } = useData();
+    const { currentUser } = useUser();
+    const { loadImportedData } = useData();
+
+    const [isDebugModalOpen, setIsDebugModalOpen] = useState(false);
+    const [debugData, setDebugData] = useState<any>(null);
+    const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    // Auto-expand when pending count > 0 or notification unread count > 0 (only if not already expanded)
+    React.useEffect(() => {
+        if (pendingCount > 0) {
+            setIsExpanded(true);
+        }
+    }, [pendingCount]);
+
+    // Only show for authenticated users
+    if (!currentUser) return null;
+
+    const isAdmin = currentUser.role === 'Admin';
+    const notifications = currentUser.notifications || [];
+    const unreadCount = notifications.filter(n => !n.read).length;
+
+    const handleShowDebugData = () => {
+        const data = getPendingUploadData();
+        setDebugData(data);
+        setIsDebugModalOpen(true);
+    };
+
+    const handleCloseDebugModal = () => {
+        setIsDebugModalOpen(false);
+        setDebugData(null);
+    };
+
+    // Notification Handlers
+    const handleMarkRead = (id: string, all: boolean = false) => {
+        // Since we can't update user from here directly without refreshing all data or having a setUser
+        // We use loadImportedData to patch the user
+        // Wait, loadImportedData might be heavy? No, it's fine.
+        // Or we assume `currentUser` is from context state that we can update? 
+        // We need to update the global `users` list where this user resides.
+
+        // This logic mirrors Dashboard.tsx
+        // Ideally should be in a hook `useNotifications` but inline is fine for now.
+        // We'll need `users` from useData.
+
+        // Let's grab `users` from useData
+        // We didn't deconstruct it yet. see below.
+    };
+
+    // Helper functions for humanizing data
+    const getStudentName = (id: number) => students.find(s => s.id === id)?.name || `Student #${id}`;
+    const getSubjectName = (id: number) => subjects.find(s => s.id === id)?.subject || `Subject #${id}`;
+    const getAssessmentName = (id: number) => {
+        const a = assessments.find(x => x.id === id);
+        return a ? (a.title || a.name) : `Assessment #${id}`;
+    };
+    const getClassName = (id: number) => classes.find(c => c.id === id)?.name || `Class #${id}`;
+
+    return (
+        <WrappedActionBar
+            {...{ onOpenDebugModal, currentPage, currentUser, isAdmin, handleShowDebugData, notifications, unreadCount, isNotificationOpen, setIsNotificationOpen, saveToCloud, refreshFromCloud, isSyncing, isOnline, pendingCount, isFetching, hasLocalChanges, isDebugModalOpen, handleCloseDebugModal, debugData, onNavigate, isExpanded, setIsExpanded }}
+        />
+    );
+};
+
+// Extracted for state handling cleanliness
+const WrappedActionBar: React.FC<any> = ({
+    onOpenDebugModal, currentPage, currentUser, isAdmin, handleShowDebugData, notifications, unreadCount,
+    isNotificationOpen, setIsNotificationOpen, saveToCloud, refreshFromCloud, isSyncing, isOnline,
+    pendingCount, isFetching, hasLocalChanges, isDebugModalOpen, handleCloseDebugModal, debugData,
+    onNavigate, isExpanded, setIsExpanded
+}) => {
+    const { users, loadImportedData } = useData();
+
+    const updateNotifications = (newNotifications: any[]) => {
+        if (!users) return;
+        const updatedUsers = users.map(u => {
+            if (u.id === currentUser.id) {
+                return { ...u, notifications: newNotifications };
+            }
+            return u;
+        });
+        loadImportedData({ users: updatedUsers }, false);
+    };
+
+    const handleMarkRead = (id: string) => {
+        // Find notification before marking it
+        const notification = currentUser.notifications?.find((n: any) => n.id === id);
+
+        // Update local state
+        const updated = (currentUser.notifications || []).map((n: any) => n.id === id ? { ...n, read: true } : n);
+
+        let usersCopy = users ? [...users] : [];
+        if (usersCopy.length > 0) {
+            // 1. Update current user notifications
+            usersCopy = usersCopy.map(u => u.id === currentUser.id ? { ...u, notifications: updated } : u);
+
+            // 2. Dispatch Read Receipt if it's a direct message (has sender) and wasn't already read
+            if (notification && !notification.read && notification.senderId && notification.senderId !== currentUser.id) {
+                const readReceipt = {
+                    id: Date.now().toString(),
+                    senderId: currentUser.id,
+                    senderName: currentUser.name,
+                    type: 'system',
+                    message: `Read Receipt: ${currentUser.name} read your message: "${notification.message.substring(0, 30)}${notification.message.length > 30 ? '...' : ''}"`,
+                    read: false,
+                    date: new Date().toISOString()
+                };
+
+                usersCopy = usersCopy.map(u => {
+                    if (u.id === notification.senderId) {
+                        return {
+                            ...u,
+                            notifications: [...(u.notifications || []), readReceipt]
+                        };
+                    }
+                    return u;
+                });
+            }
+
+            loadImportedData({ users: usersCopy }, false);
+        } else {
+            updateNotifications(updated);
+        }
+
+        // Close the panel as requested
+        setIsNotificationOpen(false);
+    };
+
+    const handleReply = (id: string, message: string) => {
+        // Find notification
+        const notification = notifications.find((n: any) => n.id === id);
+        if (!notification || !notification.senderId) return;
+
+        // Create new notification for the SENDER
+        const replyNotification = {
+            id: Date.now().toString(),
+            senderId: currentUser.id,
+            senderName: currentUser.name,
+            type: 'feedback',
+            message: `Reply from ${currentUser.name}: ${message}`,
+            read: false,
+            date: new Date().toISOString(),
+            replies: []
+        };
+
+        // Also add reply to current thread?
+        const updatedCurrent = notifications.map((n: any) => {
+            if (n.id === id) {
+                return {
+                    ...n,
+                    replies: [...(n.replies || []), { senderId: currentUser.id, senderName: currentUser.name, message, date: new Date().toISOString() }]
+                };
+            }
+            return n;
+        });
+
+        // We need to update BOTH users. The current user (thread update) and the sender (new notification).
+        if (!users) return;
+
+        let usersCopy = [...users];
+
+        // 1. Update current user
+        usersCopy = usersCopy.map(u => u.id === currentUser.id ? { ...u, notifications: updatedCurrent } : u);
+
+        // 2. Update target user (sender of original msg)
+        usersCopy = usersCopy.map(u => {
+            if (u.id === notification.senderId) {
+                return {
+                    ...u,
+                    notifications: [...(u.notifications || []), replyNotification]
+                };
+            }
+            return u;
+        });
+
+        loadImportedData({ users: usersCopy }, false);
+    };
+
+    // Assuming we need a way to navigate. 
+    // GlobalActionBar is rendered in App.tsx but doesn't have Access to `setCurrentPage` directly? 
+    // Wait, App.tsx passes `currentPage`. 
+    // We might need to initiate navigation via event dispatch or Context.
+    // Or just reload? No.
+    // Actually NotificationCenter needs onNavigate.
+    // Let's assume GlobalActionBar receives onNavigate? No it doesn't in props.
+    // We should fix App.tsx to pass onNavigate to GlobalActionBar or use a Context.
+    // Dashboard receives it.
+    // Let's modify App.tsx to pass onNavigate to GlobalActionBar? 
+    // OR we can make a simple hack: emit a custom event or check if we can access provided context.
+    // `useData` `useUser` don't have navigation.
+    // The cleanest way is to pass `onNavigate` to GlobalActionBar.
+
+    // For now, let's just scaffold it and I will update App.tsx in next step to pass onNavigate.
+
+    // Temp dummy
+    const handleNavigate = (page: Page) => {
+        if (onNavigate) {
+            onNavigate(page);
+        } else {
+            // Fallback if prop missing (though verified it is passed)
+            window.dispatchEvent(new CustomEvent('navigate-to-page', { detail: page }));
+        }
+    };
+
+    // Auto-Open Notification Center on Login if Unread Check
+    const [hasAutoOpened, setHasAutoOpened] = useState(false);
+
+    // Using a ref to track if we've checked since mount, effectively "session start" for this component
+    // Since GlobalActionBar is top-level, it mounts once.
+    React.useEffect(() => {
+        if (!hasAutoOpened && unreadCount > 0) {
+            // Small delay to allow UI to settle?
+            const timer = setTimeout(() => {
+                setIsNotificationOpen(true);
+                setHasAutoOpened(true);
+            }, 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [unreadCount, hasAutoOpened]);
+
+    return (
+        <div className="flex flex-col items-end gap-1">
+            <div className={`relative z-[50] transition-all duration-300 ${!isExpanded ? 'scale-90 opacity-80 hover:opacity-100 hover:scale-95' : 'scale-100'}`}>
+                <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-2xl shadow-lg border border-gray-200 backdrop-blur-md bg-white/90 lg:bg-white/95 lg:px-3 lg:py-2">
+                    {/* Expand/Collapse Toggle Button (Mobile Only or Minimal State) */}
+                    <button
+                        onClick={() => setIsExpanded(!isExpanded)}
+                        className={`p-1.5 rounded-lg transition-colors ${isExpanded ? 'text-blue-600 bg-blue-50' : 'text-gray-500 hover:bg-gray-100'}`}
+                        title={isExpanded ? "Collapse Controls" : "Expand Controls"}
+                    >
+                        {isExpanded ? (
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                            </svg>
+                        ) : (
+                            <div className="flex items-center gap-1">
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                                {pendingCount > 0 && (
+                                    <span className="flex h-2 w-2 rounded-full bg-amber-500 animate-ping"></span>
+                                )}
+                            </div>
+                        )}
+                    </button>
+
+                    {isExpanded && (
+                        <>
+                            <div className="w-px h-6 bg-gray-200 mx-0.5"></div>
+
+                            {/* Notification Bell */}
+                            <div className="relative">
+                                <button
+                                    onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                                    className={`p-2 rounded-full transition-colors relative ${isNotificationOpen ? 'bg-blue-100 text-blue-600' : 'text-gray-500 hover:text-blue-600 hover:bg-gray-100'}`}
+                                    title="Notifications"
+                                >
+                                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                    </svg>
+                                    {unreadCount > 0 && (
+                                        <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-red-100 transform translate-x-1/4 -translate-y-1/4 bg-red-600 rounded-full animate-pulse">
+                                            {unreadCount}
+                                        </span>
+                                    )}
+                                </button>
+
+                                <NotificationCenter
+                                    isOpen={isNotificationOpen}
+                                    onClose={() => setIsNotificationOpen(false)}
+                                    notifications={notifications}
+                                    onMarkRead={handleMarkRead}
+                                    onReply={handleReply}
+                                    onNavigate={handleNavigate}
+                                />
+                            </div>
+
+                            <div className="w-px h-6 bg-gray-200 mx-0.5"></div>
+
+                            {/* Preview Button */}
+                            {pendingCount > 0 && (
+                                <button
+                                    onClick={handleShowDebugData}
+                                    className="p-2 text-gray-500 hover:text-blue-600 bg-gray-50 hover:bg-blue-100 rounded-lg transition-colors border border-gray-100 relative lg:p-2.5"
+                                    title="Preview changes"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                </button>
+                            )}
+
+                            {/* Refresh Button (Admin Only) */}
+                            {isAdmin && (
+                                <button
+                                    onClick={() => refreshFromCloud()}
+                                    disabled={isSyncing || !isOnline}
+                                    className={`p-2 text-gray-500 hover:text-green-600 bg-gray-50 hover:bg-green-100 rounded-lg transition-colors border border-gray-100 lg:p-2.5 ${(isSyncing || !isOnline) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    title="Refresh data"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${isSyncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    </svg>
+                                </button>
+                            )}
+                        </>
+                    )}
+
+                    {!isExpanded ? (
+                        isAdmin && (
+                            <button
+                                onClick={() => refreshFromCloud()}
+                                disabled={isSyncing || !isOnline}
+                                className="p-2 text-gray-500 hover:text-green-600 rounded-lg transition-colors"
+                                title="Refresh data"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${isSyncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                            </button>
+                        )
+                    ) : (
+                        /* Save Button */
+                        <button
+                            onClick={async () => {
+                                // Local syncing state for instant feedback
+                                let localSyncing = true;
+                                try {
+                                    // Optionally: set local syncing state if needed
+                                    await saveToCloud(true);
+                                } catch (err) {
+                                    // Optionally: show error feedback here
+                                } finally {
+                                    localSyncing = false;
+                                }
+                            }}
+                            disabled={pendingCount === 0 || isSyncing || !isOnline}
+                            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all shadow-sm lg:px-5 lg:py-2.5 lg:shadow-md ${(pendingCount === 0 || isSyncing || !isOnline)
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg'
+                                }`}
+                        >
+                            {isSyncing ? (
+                                <>
+                                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span className="text-xs font-bold lg:text-sm">{isFetching ? '...' : 'Saving'}</span>
+                                </>
+                            ) : (
+                                <>
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                    </svg>
+                                    <span className="text-xs font-bold lg:text-sm">Save {pendingCount > 0 ? `(${pendingCount})` : ''}</span>
+                                </>
+                            )}
+                        </button>
+                    )}
+                </div>
+                {isExpanded && pendingCount > 0 && (
+                    <div className="text-[10px] font-bold text-amber-600 text-right mt-1 px-1 leading-tight max-w-[200px] shadow-sm backdrop-blur-sm bg-white/80 rounded p-1 ml-auto animate-pulse">
+                        Please SAVE when you complete all modifications
+                    </div>
+                )}
+            </div>
+
+            {/* Debug Data Modal */}
+            <PreviewDataModal
+                isOpen={isDebugModalOpen}
+                onClose={handleCloseDebugModal}
+                debugData={debugData}
+                pendingCount={pendingCount}
+                onSave={() => saveToCloud(true)}
+                isSyncing={isSyncing}
+                isOnline={isOnline}
+                hasLocalChanges={hasLocalChanges}
+            />
+        </div>
+    );
+};
+
+export default GlobalActionBar;

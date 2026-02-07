@@ -1,0 +1,465 @@
+import React, { useState, useMemo } from 'react';
+import CameraCapture from '../CameraCapture';
+import { useData } from '../../context/DataContext';
+import SaveButton from '../SaveButton';
+import type { Class } from '../../types';
+import ConfirmationModal from '../ConfirmationModal';
+import { enhanceImage } from '../../services/geminiService';
+import { AI_FEATURES_ENABLED, AUTO_SANITIZE_TEACHERS } from '../../constants';
+import ReadOnlyWrapper from '../ReadOnlyWrapper';
+import { useUser } from '../../context/UserContext';
+import { compressImage } from '../../utils/imageUtils';
+import { exportToExcel, exportToPDF } from '../../utils/exportUtils';
+
+const EMPTY_TEACHER_FORM: Omit<Class, 'id'> = {
+    name: '',
+    teacherName: '',
+    teacherSignature: '',
+};
+
+const SIGNATURE_PLACEHOLDER = 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTUwIDUwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0yIDI1LjVDMiAyNS41IDE1LjUgMTUuNSAyOS41IDI4QzQzLjUgNDAuNSA1MyAyNS41IDY2LjUgMjAuNUM4MCAxNS41IDg4LjUgMjkgMTAwIDI5QzExMS41IDI5IDEyMyAxNS41IDEzNyAyOS41IiBzdHJva2U9IiM5Y2EzYWYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+';
+
+const Teachers: React.FC = () => {
+    const { classes, addClass, updateClass, deleteClass, saveClasses, isDirty, isSyncing, isOnline, subscription } = useData();
+    const { currentUser } = useUser();
+    const isAdmin = currentUser?.role === 'Admin';
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [currentClassData, setCurrentClassData] = useState<Class | Omit<Class, 'id'> | null>(null);
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [itemIdToDelete, setItemIdToDelete] = useState<number | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isEnhancing, setIsEnhancing] = useState(false);
+    const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
+
+    const inputStyles = "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500";
+    const searchInputStyles = "w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
+
+    const filteredClasses = useMemo(() => {
+        const query = searchQuery.toLowerCase();
+        let result = classes;
+
+        // Filter by search query
+        if (query) {
+            result = result.filter(cls =>
+                cls.name.toLowerCase().includes(query) ||
+                cls.teacherName.toLowerCase().includes(query)
+            );
+        }
+
+        return result;
+    }, [classes, searchQuery]);
+
+    // AUTO-SANITIZATION: Remove duplicate Class+Teacher entries
+    React.useEffect(() => {
+        if (!AUTO_SANITIZE_TEACHERS || !isAdmin || classes.length === 0) return;
+
+        const seen = new Set<string>();
+        const duplicates: number[] = [];
+
+        classes.forEach(cls => {
+            const key = `${cls.name.trim().toLowerCase()}_${cls.teacherName.trim().toLowerCase()}`;
+            if (seen.has(key)) {
+                duplicates.push(cls.id);
+            } else {
+                seen.add(key);
+            }
+        });
+
+        if (duplicates.length > 0) {
+            console.warn(`[Teachers] Auto-sanitizing ${duplicates.length} duplicate teacher-class entries...`);
+            duplicates.forEach(id => deleteClass(id));
+        }
+    }, [classes, isAdmin, deleteClass]);
+
+    // Check if current user can edit a specific class
+    const canEditClass = (cls: Class) => {
+        if (isAdmin) return true;
+        if (!currentUser) return false;
+        return currentUser.allowedClasses?.includes(cls.name);
+    };
+
+    const handleAddNew = () => {
+        setCurrentClassData(EMPTY_TEACHER_FORM);
+        setIsModalOpen(true);
+    };
+
+    const handleEdit = (cls: Class) => {
+        if (canEditClass(cls)) {
+            setCurrentClassData(cls);
+            setIsModalOpen(true);
+        }
+    };
+
+    const handleDeleteClick = (id: number) => {
+        setItemIdToDelete(id);
+        setIsConfirmOpen(true);
+    };
+
+    const handleConfirmDelete = () => {
+        if (itemIdToDelete !== null) {
+            deleteClass(itemIdToDelete);
+        }
+        setIsConfirmOpen(false);
+        setItemIdToDelete(null);
+    };
+
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setCurrentClassData(null);
+        setSaveFeedback(null);
+    };
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setCurrentClassData(prev => prev ? { ...prev, [name]: value } : null);
+    };
+
+
+
+    const handleExportExcel = () => {
+        const headers = ['Class Name', 'Teacher Name'];
+        const keys = ['name', 'teacherName'];
+        exportToExcel(filteredClasses, headers, keys, 'Teachers_List', 'Teachers');
+    };
+
+    const handleExportPDF = () => {
+        const headers = ['Class Name', 'Teacher Name'];
+        const data = filteredClasses.map(c => [c.name, c.teacherName]);
+        exportToPDF('Teachers List', headers, data, 'Teachers_List');
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                const raw = event.target?.result as string;
+                try {
+                    const compressed = await compressImage(raw);
+                    setCurrentClassData(prev => prev ? { ...prev, teacherSignature: compressed } : null);
+                } catch {
+                    setCurrentClassData(prev => prev ? { ...prev, teacherSignature: raw } : null);
+                }
+            };
+            reader.readAsDataURL(e.target.files[0]);
+        }
+    };
+
+    const handleCameraCapture = async (imageData: string) => {
+        try {
+            const compressed = await compressImage(imageData);
+            setCurrentClassData(prev => prev ? { ...prev, teacherSignature: compressed } : null);
+        } catch {
+            setCurrentClassData(prev => prev ? { ...prev, teacherSignature: imageData } : null);
+        }
+    };
+
+    const handleClearImage = () => {
+        setCurrentClassData(prev => prev ? { ...prev, teacherSignature: '' } : null);
+    };
+
+    const handleEnhanceImage = async () => {
+        if (!currentClassData?.teacherSignature) {
+            alert("Please upload a signature first.");
+            return;
+        }
+        setIsEnhancing(true);
+        try {
+            const enhancedImage = await enhanceImage(currentClassData.teacherSignature);
+            setCurrentClassData(prev => prev ? { ...prev, teacherSignature: enhancedImage } : null);
+        } catch (error) {
+            console.error(error);
+            alert((error as Error).message);
+        } finally {
+            setIsEnhancing(false);
+        }
+    };
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!currentClassData) return;
+
+        // DUPLICATE PREVENTION: Check if Class Name + Teacher Name already exists
+        const isDuplicate = classes.some(cls =>
+            cls.name.trim().toLowerCase() === currentClassData.name.trim().toLowerCase() &&
+            cls.teacherName.trim().toLowerCase() === currentClassData.teacherName.trim().toLowerCase() &&
+            ('id' in currentClassData ? cls.id !== currentClassData.id : true)
+        );
+
+        if (isDuplicate) {
+            alert(`A teacher named "${currentClassData.teacherName}" is already assigned to "${currentClassData.name}". Duplicates are not allowed.`);
+            return;
+        }
+
+        if ('id' in currentClassData) {
+            updateClass(currentClassData);
+        } else {
+            addClass(currentClassData);
+
+            // Check if limit is reached AFTER this addition
+            const maxClasses = subscription?.maxClass || Infinity;
+            if (classes.length + 1 >= maxClasses) {
+                handleCloseModal();
+                return;
+            }
+
+            // STAY OPEN ON ADD
+            setSaveFeedback("Class Added Successfully!");
+            setCurrentClassData(EMPTY_TEACHER_FORM);
+
+            // Vanish after 3s
+            setTimeout(() => setSaveFeedback(null), 3000);
+            return; // Don't close modal
+        }
+        handleCloseModal();
+    };
+    const maxClasses = subscription?.maxClass || Infinity;
+    const isLimitReached = classes.length >= maxClasses;
+
+    return (
+        <div className="space-y-6">
+            {isLimitReached && (
+                <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-md shadow-sm animate-pulse mb-4">
+                    <div className="flex">
+                        <div className="flex-shrink-0">
+                            <svg className="h-5 w-5 text-amber-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                        </div>
+                        <div className="ml-3">
+                            <p className="text-sm text-amber-700">
+                                <span className="font-bold">License Limit Reached:</span> You have reached the maximum number of classes ({maxClasses}) allowed by your current subscription. Please upgrade your license to add more classes.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+            <h1 className="text-3xl font-bold text-gray-800">Manage Teachers &amp; Classes</h1>
+
+            <div className="bg-gray-100 py-4">
+                <div className="flex flex-col md:flex-row justify-start items-center gap-4">
+                    <div className="relative w-full md:w-1/3">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Search by class or teacher name..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className={searchInputStyles}
+                        />
+                    </div>
+                    <ReadOnlyWrapper allowedRoles={['Admin', 'Teacher']}>
+                        {isAdmin && (
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={handleAddNew}
+                                    disabled={isLimitReached}
+                                    className={`flex items-center space-x-2 px-4 py-2 text-white rounded-lg transition shadow-sm ${isLimitReached ? 'bg-gray-400 cursor-not-allowed opacity-75' : 'bg-blue-600 hover:bg-blue-700'}`}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                    </svg>
+                                    <span>Add New Teacher/Class</span>
+                                </button>
+                                <button
+                                    onClick={handleExportExcel}
+                                    className="p-2 hover:bg-gray-100 rounded-full transition-colors group"
+                                    title="Export to Excel"
+                                >
+                                    <svg className="w-8 h-8 text-green-600 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M9.293 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.707A1 1 0 0 0 13.707 4L10 .293A1 1 0 0 0 9.293 0zM9.5 3.5v-2l3 3h-2a1 1 0 0 1-1-1zM5.884 6.68 8 9.219l2.116-2.54a.5.5 0 1 1 .768.641L8.651 10l2.233 2.68a.5.5 0 0 1-.768.64L8 10.781l-2.116 2.54a.5.5 0 0 1-.768-.641L7.349 10 5.116 7.32a.5.5 0 1 1 .768-.64z" />
+                                    </svg>
+                                </button>
+                                <button
+                                    onClick={handleExportPDF}
+                                    className="p-2 hover:bg-gray-100 rounded-full transition-colors group"
+                                    title="Export to PDF"
+                                >
+                                    <svg className="w-8 h-8 text-red-600 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M20 2H8c-1.1 0-2 .9-2 2v12H4v5c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5v1.5H19v2h-1.5V7h2V8.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z" />
+                                    </svg>
+                                </button>
+                            </div>
+                        )}
+                    </ReadOnlyWrapper>
+
+                    {/* Save Button */}
+                    {/* Save Button Removed - Using Global Action Bar */}
+                </div>
+            </div>
+
+            {/* Desktop Table View */}
+            <ReadOnlyWrapper allowedRoles={['Admin', 'Teacher']}>
+                <div className="hidden lg:block bg-white p-6 rounded-xl shadow-md border border-gray-200">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead>
+                                <tr className="bg-gray-50 border-b">
+                                    <th className="p-4 font-semibold text-gray-600">#</th>
+                                    <th className="p-4 font-semibold text-gray-600">Class Name</th>
+                                    <th className="p-4 font-semibold text-gray-600">Teacher Name</th>
+                                    <th className="p-4 font-semibold text-gray-600">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredClasses.length > 0 ? (
+                                    filteredClasses.map((cls, index) => (
+                                        <tr key={cls.id} className="border-b hover:bg-gray-50">
+                                            <td className="p-4 text-gray-600 font-semibold">{index + 1}</td>
+                                            <td className="p-4 font-medium text-gray-900">{cls.name}</td>
+                                            <td className="p-4 text-gray-900">{cls.teacherName}</td>
+                                            <td className="p-4 space-x-4 flex items-center">
+                                                {canEditClass(cls) && (
+                                                    <button onClick={() => handleEdit(cls)} className="text-blue-600 hover:text-blue-800" title="Edit">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
+                                                    </button>
+                                                )}
+                                                {isAdmin && (
+                                                    <button onClick={() => handleDeleteClick(cls.id)} className="text-red-600 hover:text-red-800" title="Delete">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                    </button>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan={4} className="text-center p-8 text-gray-500">
+                                            No data found matching your search.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="lg:hidden space-y-4">
+                    {filteredClasses.length > 0 ? (
+                        filteredClasses.map((cls, index) => (
+                            <div key={cls.id} className="bg-white p-4 rounded-xl shadow-md border border-gray-200 flex justify-between items-center">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                        <span className="text-blue-700 font-bold text-sm">{index + 1}</span>
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-gray-800">{cls.teacherName}</p>
+                                        <p className="text-sm text-gray-600">Class Teacher for: {cls.name}</p>
+                                    </div>
+                                </div>
+                                <div className="flex space-x-2 flex-shrink-0">
+                                    {canEditClass(cls) && (
+                                        <button onClick={() => handleEdit(cls)} className="text-blue-600 p-2 rounded-full hover:bg-blue-100" title="Edit">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
+                                        </button>
+                                    )}
+                                    {isAdmin && (
+                                        <button onClick={() => handleDeleteClick(cls.id)} className="text-red-600 p-2 rounded-full hover:bg-red-100" title="Delete">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="text-center p-8 text-gray-500 bg-white rounded-xl shadow-md border border-gray-200">
+                            No data found matching your search.
+                        </div>
+                    )}
+                </div>
+            </ReadOnlyWrapper>
+
+            {isModalOpen && currentClassData && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+                    <div className="bg-white p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-lg m-4 relative pt-12">
+                        {/* Vanishing Feedback Header */}
+                        {saveFeedback && (
+                            <div className="absolute top-0 left-0 right-0 bg-green-500 text-white py-2 px-4 text-center font-bold animate-fade-in-down z-10 rounded-t-xl text-sm">
+                                {saveFeedback}
+                            </div>
+                        )}
+                        <h2 className="text-2xl font-bold mb-6 text-gray-800">{'id' in currentClassData ? 'Edit Teacher/Class' : 'Add New Teacher/Class'}</h2>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Class Name</label>
+                                <input
+                                    type="text"
+                                    name="name"
+                                    value={currentClassData.name}
+                                    onChange={handleChange}
+                                    required
+                                    className={inputStyles}
+                                    disabled={!isAdmin && 'id' in currentClassData} // Disable editing class name for non-admins if editing
+                                />
+                                {/* Clarification for teachers why this is disabled */}
+                                {!isAdmin && 'id' in currentClassData && (
+                                    <p className="text-xs text-gray-500 mt-1">Class assignment cannot be changed.</p>
+                                )}
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Teacher's Name</label>
+                                <input type="text" name="teacherName" value={currentClassData.teacherName} onChange={handleChange} required className={inputStyles} />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Teacher's Signature</label>
+                                <div className="mt-1 flex items-center space-x-4">
+                                    <img src={currentClassData.teacherSignature || SIGNATURE_PLACEHOLDER} alt="Signature Preview" className="h-12 w-36 object-contain border p-1 rounded-md bg-gray-50" />
+                                    <div className="space-y-2 w-full">
+                                        <input type="file" accept="image/*" onChange={handleFileChange} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                                        <CameraCapture onCapture={handleCameraCapture} label="Take Signature Photo" />
+                                        {currentClassData.teacherSignature && (
+                                            <button
+                                                type="button"
+                                                onClick={handleClearImage}
+                                                className="flex items-center px-3 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors text-sm font-medium w-full justify-center"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                                Clear Signature
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                                {AI_FEATURES_ENABLED && (
+                                    <div className="mt-2">
+                                        <button
+                                            type="button"
+                                            onClick={handleEnhanceImage}
+                                            disabled={!currentClassData.teacherSignature || isEnhancing}
+                                            className="flex items-center text-sm bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full font-semibold hover:bg-indigo-200 disabled:bg-gray-200 disabled:text-gray-500 transition-colors"
+                                        >
+                                            {isEnhancing ? (
+                                                <>
+                                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                    Enhancing...
+                                                </>
+                                            ) : '✨ Enhance Image'}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex justify-end pt-4 space-x-2">
+                                <button type="button" onClick={handleCloseModal} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancel</button>
+                                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+            <ConfirmationModal
+                isOpen={isConfirmOpen}
+                onClose={() => setIsConfirmOpen(false)}
+                onConfirm={handleConfirmDelete}
+                title="Delete Teacher/Class"
+                message="Are you sure you want to delete this entry? This action cannot be undone."
+            />
+        </div>
+    );
+};
+export default Teachers;

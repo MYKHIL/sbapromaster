@@ -1,0 +1,276 @@
+#!/usr/bin/env python3
+"""
+start_server.py
+
+Kills any process listening on the Vite default port (5173), starts `npm run dev`,
+streams the server logs to stdout, waits until the server responds, and opens the
+default browser to the server URL.
+
+Designed for Windows (PowerShell) but should work on other platforms with minor
+adjustments.
+"""
+
+import subprocess
+import sys
+import time
+import re
+import threading
+import urllib.request
+import urllib.parse
+import webbrowser
+import os
+import signal
+import shutil
+
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+PORT = 5173
+HOST = 'localhost'
+URL = f'http://{HOST}:{PORT}/'
+
+# ------------------------------------------------------------------------------
+# GLOBAL DEBUG CONFIG
+# ------------------------------------------------------------------------------
+# Default to False, but will be overridden by user input
+# ------------------------------------------------------------------------------
+
+def start_firestore_emulator():
+    """Starts the Firestore emulator in a separate process."""
+    print("Starting Firestore Emulator...")
+    cwd = PROJECT_ROOT
+    # Force the emulator to use the specific project ID and the DEBUG config (open rules)
+    # This prevents "Demo" project mode and ensures UI matches App.
+    cmd = ["npx", "firebase", "emulators:start", "--only", "firestore", "--project", "sba-pro-master-40f08", "--config", "firebase.debug.json"]
+    
+    # Check if npx exists (should be there if npm is there)
+    if os.name == 'nt':
+        cmd = ["npx.cmd", "firebase", "emulators:start", "--only", "firestore", "--project", "sba-pro-master-40f08", "--config", "firebase.debug.json"]
+
+    try:
+        # We start it as a background process.
+        # We pipe stdout/stderr to the console so the user can see what's happening.
+        print(f"Executing: {' '.join(cmd)}")
+        proc = subprocess.Popen(
+            cmd, 
+            cwd=cwd, 
+            shell=True,
+            stdout=sys.stdout, # Inherit stdout to show logs
+            stderr=sys.stderr  # Inherit stderr to show errors
+        )
+        return proc
+    except Exception as e:
+        print(f"Failed to start emulator: {e}")
+        return None
+
+
+def start_visual_bot():
+    """Starts the Playwright visual bot."""
+    print("Launching Visual Simulation Bot...")
+    bot_path = os.path.join(PROJECT_ROOT, 'Load Testing', 'visual_bot.js')
+    cmd = ["node", bot_path]
+    
+    try:
+        # Start in background
+        proc = subprocess.Popen(
+            cmd,
+            cwd=os.path.join(PROJECT_ROOT, 'Load Testing'),
+            shell=True,
+            stdout=sys.stdout,
+            stderr=sys.stderr
+        )
+        return proc
+    except Exception as e:
+        print(f"Failed to start visual bot: {e}")
+        return None
+
+
+def ensure_firebase_config():
+    """Ensures firebase.json and .firebaserc exist to prevent init warnings."""
+    config_path = os.path.join(PROJECT_ROOT, 'firebase.json')
+    rc_path = os.path.join(PROJECT_ROOT, '.firebaserc')
+
+    # 1. Ensure firebase.json
+    if not os.path.exists(config_path):
+        print("Creating firebase.json for emulator configuration...")
+        with open(config_path, 'w') as f:
+            f.write('''{
+    "emulators": {
+        "firestore": {
+            "port": 8080
+        },
+        "ui": {
+            "enabled": true,
+            "port": 4000
+        },
+        "singleProjectMode": true
+    }
+}''')
+
+    # 2. Ensure .firebaserc
+    if not os.path.exists(rc_path):
+        print("Creating .firebaserc for project alias...")
+        with open(rc_path, 'w') as f:
+            f.write('''{
+  "projects": {
+    "default": "sba-pro-master-40f08"
+  }
+}''')
+
+
+
+def find_pids_on_port(port):
+    """Return a set of PIDs listening on the given TCP port (Windows `netstat -ano`)."""
+    try:
+        output = subprocess.check_output(['netstat', '-ano'], stderr=subprocess.DEVNULL, text=True)
+    except Exception:
+        return set()
+
+    pids = set()
+    # Look for lines containing :{port} and "LISTENING" or "ESTABLISHED"
+    # Example line (Windows): TCP    0.0.0.0:5173         0.0.0.0:0              LISTENING       1234
+    for line in output.splitlines():
+        if f':{port} ' in line or f':{port}\r' in line or line.strip().endswith(f':{port}'):
+            parts = re.split(r"\s+", line.strip())
+            if parts:
+                pid = parts[-1]
+                if pid.isdigit():
+                    pids.add(int(pid))
+    return pids
+
+
+def kill_pids(pids):
+    for pid in pids:
+        try:
+            print(f'Killing PID {pid}...')
+            subprocess.check_call(['taskkill', '/PID', str(pid), '/F'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except subprocess.CalledProcessError:
+            print(f'Failed to kill PID {pid} (may already be gone).')
+
+
+def stream_process_output(proc, url_event, detected_url_container):
+    ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+    try:
+        for line in proc.stdout:
+            try:
+                sys.stdout.write(line)
+                sys.stdout.flush()
+            except Exception:
+                pass
+            # Attempt to detect a URL in the Vite output, e.g.:
+            # "  Local:   http://localhost:3000/"
+            if not url_event.is_set():
+                clean_line = ansi_escape.sub('', line)
+                # Capture host (including bracketed IPv6) and optional port.
+                m = re.search(r"(https?://(\[[^\]]+\]|[^:/\s]+)(?::(\d+))?)", clean_line)
+                if m:
+                    detected_raw = m.group(1).strip()
+                    host_part = m.group(2)
+                    port_part = m.group(3)
+                    scheme = 'http'
+                    try:
+                        if detected_raw.startswith('http'):
+                            scheme = urllib.parse.urlparse(detected_raw).scheme or 'http'
+                    except Exception:
+                        scheme = 'http'
+
+                    # Normalize host display: ensure bracketed for IPv6
+                    host_display = host_part
+                    if host_display.startswith('[') and host_display.endswith(']'):
+                        host_unbracketed = host_display[1:-1]
+                        host_display = f'[{host_unbracketed}]'
+                    else:
+                        # if it contains a colon (likely IPv6) but not bracketed, bracket it
+                        if ':' in host_display and not host_display.startswith('['):
+                            host_display = f'[{host_display}]'
+
+                    if port_part:
+                        normalized = f"{scheme}://{host_display}:{int(port_part)}/"
+                    else:
+                        normalized = f"{scheme}://{host_display}/"
+
+                    # Guarantee exactly one trailing slash
+                    normalized = normalized.rstrip('/') + '/'
+
+                    # Append to candidate list
+                    try:
+                        detected_url_container[1].append(normalized)
+                    except Exception:
+                        detected_url_container[1] = [normalized]
+
+                    # If this candidate includes an explicit port, prefer it and set the event
+                    if port_part:
+                        detected_url_container[0] = normalized
+                        url_event.set()
+    except Exception:
+        pass
+
+
+def socket_check(host, port, timeout=2.0):
+    import socket
+    try:
+        # Resolve host to addresses (handles localhost -> IPv4/IPv6)
+        host_sock = host
+        if host_sock.startswith('[') and host_sock.endswith(']'):
+            host_sock = host_sock[1:-1]
+        addrs = socket.getaddrinfo(host_sock, port, proto=socket.IPPROTO_TCP)
+        for family, socktype, proto, canonname, sockaddr in addrs:
+            try:
+                s = socket.socket(family, socktype, proto)
+                s.settimeout(timeout)
+                s.connect(sockaddr)
+                s.close()
+                return True
+            except Exception:
+                try:
+                    s.close()
+                except Exception:
+                    pass
+        return False
+    except Exception:
+        return False
+
+
+def wait_for_server(url, timeout=30.0):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            with urllib.request.urlopen(url, timeout=2) as resp:
+                if resp.status < 400:
+                    return True
+        except Exception:
+            pass
+        time.sleep(0.5)
+    return False
+
+
+def main():
+    print('Start script running in:', PROJECT_ROOT)
+
+    # Ask user for mode
+    print("\n----------------------------------------------------------------")
+    print("SELECT RUN MODE:")
+    print("1) DEBUG MODE   (Firestore Emulator - Safe for testing)")
+    print("2) PUBLISH MODE (Real Firestore - Production Data)")
+    print("3) LOAD TEST    (Dashboard / Stress Engine)")
+    print("4) VISUAL BOT   (Actually opens browser & operates app)")
+    print("----------------------------------------------------------------")
+    choice = input("Enter 1, 2, 3 or 4 [Default: 2]: ").strip()
+    
+    DEBUG_MODE = (choice == '1')
+    LOAD_TEST_MODE = (choice == '3')
+    VISUAL_BOT_MODE = (choice == '4')
+    
+    RUN_DIR = PROJECT_ROOT
+    if LOAD_TEST_MODE:
+        RUN_DIR = os.path.join(PROJECT_ROOT, 'Load Testing')
+        print(f"Switching to Load Testing directory: {RUN_DIR}")
+    
+    if VISUAL_BOT_MODE:
+        print("Visual Bot Mode selected. Will start main app and then the bot.")
+
+    emulator_proc = None
+
+    # Step 0: Check for Debug Mode and Emulators
+    if DEBUG_MODE:
+        ensure_firebase_config()
+
+        print("-------

@@ -1,0 +1,13 @@
+
+export const content = `
+using System.Windows.Controls;
+namespace SBAProMaster.WPF.Views;
+
+public partial class SidebarView : UserControl
+{
+    public SidebarView()
+    {
+        InitializeComponent();
+    }
+}
+`;

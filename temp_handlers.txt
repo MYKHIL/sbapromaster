@@ -1,0 +1,40 @@
+// Temporary file with correct handler functions
+const handleToggleAutoAssign = () => {
+    const newValue = !settings.autoAssignIndexNumbers;
+    loadImportedData({ settings: { ...settings, autoAssignIndexNumbers: newValue } }, false);
+    setFeedback({
+        message: `Auto-assignment ${newValue ? 'enabled' : 'disabled'}. Click SAVE to persist changes.`,
+        type: 'success'
+    });
+    setTimeout(() => setFeedback(null), 3000);
+};
+
+const handleSaveIndexNumberConfig = () => {
+    // Validate pattern
+    const validationError = validateIndexNumberPattern(tempPattern);
+    if (validationError) {
+        setFeedback({ message: validationError, type: 'error' });
+        return;
+    }
+
+    // Validate counter
+    if (tempCounter < 1) {
+        setFeedback({ message: 'Counter must be at least 1', type: 'error' });
+        return;
+    }
+
+    // Update settings
+    loadImportedData({
+        settings: {
+            ...settings,
+            indexNumberPattern: tempPattern,
+            indexNumberCounter: tempCounter
+        }
+    }, false);
+
+    setFeedback({
+        message: 'Index number configuration updated. Click SAVE to persist changes.',
+        type: 'success'
+    });
+    setTimeout(() => setFeedback(null), 3000);
+};
