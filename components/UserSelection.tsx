@@ -5,9 +5,10 @@ interface UserSelectionProps {
     users: User[];
     onLogin: (userId: number, password: string) => Promise<boolean>;
     onSetPassword: (userId: number, password: string) => Promise<void>;
+    onBack: () => void;
 }
 
-const UserSelection: React.FC<UserSelectionProps> = ({ users, onLogin, onSetPassword }) => {
+const UserSelection: React.FC<UserSelectionProps> = ({ users, onLogin, onSetPassword, onBack }) => {
     const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -85,30 +86,44 @@ const UserSelection: React.FC<UserSelectionProps> = ({ users, onLogin, onSetPass
                 )}
 
                 {!selectedUserId ? (
-                    <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
-                        {users.map(user => (
+                    <>
+                        <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+                            {users.map(user => (
+                                <button
+                                    key={user.id}
+                                    onClick={() => handleUserSelect(user.id)}
+                                    className="w-full flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition group"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition">
+                                            <span className="text-blue-600 font-bold text-lg">
+                                                {user.name.charAt(0).toUpperCase()}
+                                            </span>
+                                        </div>
+                                        <div className="text-left">
+                                            <div className="font-semibold text-gray-800">{user.name}</div>
+                                            <div className="text-sm text-gray-500">{user.role}</div>
+                                        </div>
+                                    </div>
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 group-hover:text-blue-600 transition" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                </button>
+                            ))}
+                        </div>
+                        {/* Back Button */}
+                        <div className="mt-6 pt-6 border-t border-gray-200">
                             <button
-                                key={user.id}
-                                onClick={() => handleUserSelect(user.id)}
-                                className="w-full flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition group"
+                                onClick={onBack}
+                                className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2"
                             >
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition">
-                                        <span className="text-blue-600 font-bold text-lg">
-                                            {user.name.charAt(0).toUpperCase()}
-                                        </span>
-                                    </div>
-                                    <div className="text-left">
-                                        <div className="font-semibold text-gray-800">{user.name}</div>
-                                        <div className="text-sm text-gray-500">{user.role}</div>
-                                    </div>
-                                </div>
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 group-hover:text-blue-600 transition" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                                 </svg>
+                                <span>Back</span>
                             </button>
-                        ))}
-                    </div>
+                        </div>
+                    </>
                 ) : (
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center gap-3">

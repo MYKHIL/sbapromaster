@@ -30,8 +30,18 @@ const YearTermSelector: React.FC<YearTermSelectorProps> = ({ school, onSelectPer
 
         try {
             // 1. Check History (Last Accessed)
-            const lastId = localStorage.getItem(`last_accessed_period_${school.docId}`);
+            const storageKey = `last_accessed_period_${school.docId}`;
+            const lastId = localStorage.getItem(storageKey);
+
+            console.log('[YearTermSelector] Determining Last Accessed:', {
+                schoolId: school.docId,
+                storageKey,
+                lastId,
+                periodsCount: periods.length
+            });
+
             if (lastId && periods.some(p => p.docId === lastId)) {
+                console.log('[YearTermSelector] Found Last Accessed in periods:', lastId);
                 setMostRecentDocId(lastId);
                 return;
             }
@@ -45,6 +55,7 @@ const YearTermSelector: React.FC<YearTermSelectorProps> = ({ school, onSelectPer
             });
 
             if (sorted.length > 0) {
+                console.log('[YearTermSelector] Defaulting to Chronologically Latest:', sorted[0].docId);
                 setMostRecentDocId(sorted[0].docId);
             }
         } catch (e) {
@@ -81,7 +92,9 @@ const YearTermSelector: React.FC<YearTermSelectorProps> = ({ school, onSelectPer
     const handleSelectPeriod = (period: SchoolPeriod) => {
         // Save to MRU
         try {
-            localStorage.setItem(`last_accessed_period_${school.docId}`, period.docId);
+            const storageKey = `last_accessed_period_${school.docId}`;
+            console.log('[YearTermSelector] Saving Last Accessed:', { storageKey, docId: period.docId });
+            localStorage.setItem(storageKey, period.docId);
         } catch (e) {
             console.warn('Failed to save MRU preference:', e);
         }
@@ -157,7 +170,7 @@ const YearTermSelector: React.FC<YearTermSelectorProps> = ({ school, onSelectPer
                                                 <p className="text-sm text-gray-600 mt-1">{period.term}</p>
                                                 {isMostRecent && (
                                                     <span className="inline-block mt-2 text-xs bg-blue-600 text-white px-2 py-1 rounded-full">
-                                                        Most Recent
+                                                        Last Accessed
                                                     </span>
                                                 )}
                                             </div>

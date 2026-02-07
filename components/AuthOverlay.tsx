@@ -807,6 +807,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                         users={users}
                         onLogin={handleUserLogin}
                         onSetPassword={handleSetPassword}
+                        onBack={handleLogoutSession}
                     />
                 )}
             </>
@@ -885,6 +886,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                             users={users}
                             onLogin={handleUserLogin}
                             onSetPassword={handleSetPassword}
+                            onBack={handleLogoutSession}
                         />
                     </div>
                 </div>

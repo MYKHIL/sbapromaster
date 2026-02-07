@@ -668,6 +668,62 @@ const ExportUsersModal: React.FC<ExportUsersModalProps> = ({ isOpen, onClose, cu
     );
 };
 
+const PasswordScopeModal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: (scope: 'current' | 'all') => void;
+    termCount: number;
+    currentTermName: string;
+}> = ({ isOpen, onClose, onConfirm, termCount, currentTermName }) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-[70] animate-fade-in-scale">
+            <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md m-4">
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-blue-100 rounded-full">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900">Update Password Scope</h3>
+                </div>
+
+                <p className="text-gray-600 mb-6">
+                    You have <strong>{termCount - 1}</strong> {termCount - 1 === 1 ? 'other term' : 'other terms'} for this school. How would you like to apply the new password?
+                </p>
+
+                <div className="space-y-3">
+
+
+                    <button
+                        onClick={() => onConfirm('all')}
+                        className="w-full text-left p-4 border-2 border-blue-100 bg-blue-50 rounded-xl hover:bg-blue-100 hover:border-blue-400 transition-all group"
+                    >
+                        <div className="font-semibold text-blue-800">Apply to All Terms</div>
+                        <div className="text-sm text-blue-600">Update for all {termCount} terms in history</div>
+                    </button><button
+                        onClick={() => onConfirm('current')}
+                        className="w-full text-left p-4 border rounded-xl hover:bg-gray-50 hover:border-blue-300 transition-all group"
+                    >
+                        <div className="font-semibold text-gray-800 group-hover:text-blue-600">Current Term Only</div>
+                        <div className="text-sm text-gray-500">Only update for {currentTermName}</div>
+                    </button>
+                </div>
+
+                <div className="mt-6 text-center">
+                    <button
+                        onClick={onClose}
+                        className="text-gray-500 hover:text-gray-700 text-sm font-medium"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const DataManagement: React.FC = () => {
     const dataContext = useData();
     const { settings, loadImportedData, saveToCloud, schoolId, updateSettings } = dataContext;
@@ -892,21 +948,69 @@ const DataManagement: React.FC = () => {
         loadPwd();
     }, [schoolId]);
 
+    // State for Password Scope Modal
+    const [isPasswordScopeModalOpen, setIsPasswordScopeModalOpen] = useState(false);
+    const [relatedTerms, setRelatedTerms] = useState<SchoolPeriod[]>([]);
+    const [isBatchUpdating, setIsBatchUpdating] = useState(false);
+
     const handleSaveSchoolPassword = async () => {
         if (!schoolId) {
             setFeedback({ message: 'No active school to update', type: 'error' });
             return;
         }
+
         setIsSavingSchoolPassword(true);
         try {
+            // 1. Check for other terms
+            const docIdPrefix = schoolId.split('_')[0];
+            const terms = await getSchoolYearsAndTerms(settings.schoolName, undefined, docIdPrefix);
+
+            if (terms.length > 1) {
+                // Multiple terms found -> Ask user
+                setRelatedTerms(terms);
+                setIsPasswordScopeModalOpen(true);
+                setIsSavingSchoolPassword(false); // Valid pause
+                return;
+            }
+
+            // Single term -> Save immediately
             await saveDataTransaction(schoolId, { password: schoolPassword });
             setFeedback({ message: 'School password updated successfully.', type: 'success' });
         } catch (e) {
             console.error('Failed to save school password', e);
             setFeedback({ message: 'Failed to save school password.', type: 'error' });
         } finally {
+            if (!isPasswordScopeModalOpen) {
+                setIsSavingSchoolPassword(false);
+                setTimeout(() => setFeedback(null), 3000);
+            }
+        }
+    };
+
+    const handleConfirmPasswordUpdate = async (scope: 'current' | 'all') => {
+        setIsPasswordScopeModalOpen(false);
+        setIsBatchUpdating(true);
+        setFeedback({ message: scope === 'all' ? 'Updating password for all terms...' : 'Updating password...', type: 'info' });
+
+        try {
+            if (scope === 'current') {
+                await saveDataTransaction(schoolId!, { password: schoolPassword });
+                setFeedback({ message: 'Password updated for current term only.', type: 'success' });
+            } else {
+                // Batch update
+                const updatePromises = relatedTerms.map(term =>
+                    saveDataTransaction(term.docId, { password: schoolPassword })
+                );
+                await Promise.all(updatePromises);
+                setFeedback({ message: `Password updated for all ${relatedTerms.length} terms.`, type: 'success' });
+            }
+        } catch (e) {
+            console.error('Batch password update failed', e);
+            setFeedback({ message: 'Failed to update password(s).', type: 'error' });
+        } finally {
+            setIsBatchUpdating(false);
             setIsSavingSchoolPassword(false);
-            setTimeout(() => setFeedback(null), 3000);
+            setTimeout(() => setFeedback(null), 4000);
         }
     };
 
@@ -1526,6 +1630,15 @@ const DataManagement: React.FC = () => {
                 variant="info"
                 confirmText="Save to Cloud"
             />
+
+            <PasswordScopeModal
+                isOpen={isPasswordScopeModalOpen}
+                onClose={() => { setIsPasswordScopeModalOpen(false); setIsSavingSchoolPassword(false); }}
+                onConfirm={handleConfirmPasswordUpdate}
+                termCount={relatedTerms.length}
+                currentTermName={settings.academicTerm || 'Current Term'}
+            />
+
             {
                 isShareModalOpen && (
                     <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 animate-fade-in-scale">
