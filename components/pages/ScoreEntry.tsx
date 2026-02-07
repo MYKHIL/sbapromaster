@@ -301,7 +301,8 @@ const ScoreEntry: React.FC = () => {
                 studentId: student.id,
                 studentName: student.name
             });
-            updateStudentScores(student.id, selectedSubjectId, assessment.id, []);
+            // FIX: Use [''] instead of [] to ensure change is detected
+            updateStudentScores(student.id, selectedSubjectId, assessment.id, ['']);
             setScoreModified(false); // Clear modification flag
             return;
         }
@@ -406,7 +407,12 @@ const ScoreEntry: React.FC = () => {
         const { student, assessment } = modalData;
         const currentScores = getStudentScores(student.id, selectedSubjectId, assessment.id);
         const updatedScores = currentScores.filter((_, i) => i !== index);
-        updateStudentScores(student.id, selectedSubjectId, assessment.id, updatedScores);
+        // FIX: If all scores deleted, set to [''] to ensure it is saved as "Empty" instead of "No Data"
+        if (updatedScores.length === 0) {
+            updateStudentScores(student.id, selectedSubjectId, assessment.id, ['']);
+        } else {
+            updateStudentScores(student.id, selectedSubjectId, assessment.id, updatedScores);
+        }
     };
 
     const handleUpdateScore = (index: number, updatedScore: string) => {

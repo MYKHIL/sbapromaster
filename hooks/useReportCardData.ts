@@ -43,7 +43,14 @@ export const calculateReportData = (student: Student, data: DataContextType) => 
     const relevantSubjectIds = new Set<number>();
     scores.forEach(score => {
         if (classmateIds.has(score.studentId)) {
-            relevantSubjectIds.add(score.subjectId);
+            // FIX: Only include subject if there is ACTUAL data (non-empty strings)
+            // This prevents "cleared" scores (['']) from triggering the subject to appear
+            // @ts-ignore
+            const hasValidData = score.assessmentScores && Object.values(score.assessmentScores).some((val: any) => Array.isArray(val) && val.some((s: string) => s.trim() !== ''));
+
+            if (hasValidData) {
+                relevantSubjectIds.add(score.subjectId);
+            }
         }
     });
     const relevantSubjects = subjects.filter(subject => relevantSubjectIds.has(subject.id));

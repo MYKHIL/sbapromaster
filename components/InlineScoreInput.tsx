@@ -50,6 +50,11 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
     const [modifiedFields, setModifiedFields] = useState<Set<number>>(new Set()); // Track which fields user has modified
     const originalValues = useRef<{ [key: number]: string }>({}); // Track original values for comparison
 
+    // Reset original values when student changes
+    useEffect(() => {
+        originalValues.current = {};
+    }, [student.id]);
+
     useEffect(() => {
         const initialValues: { [key: number]: string } = {};
         assessments.forEach(assessment => {
@@ -63,9 +68,10 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
                 initialValues[assessment.id] = val;
             }
             // Store ORIGINAL saved value (not draft) for comparison
-            const savedScores = getStudentScores(student.id, subjectId, assessment.id);
-            const savedVal = savedScores[0] || '';
-            if (originalValues.current[assessment.id] === undefined || originalValues.current[assessment.id] !== savedVal) {
+            // CRITICAL FIX: Only initialize once - do not update on every effect run
+            if (!(assessment.id in originalValues.current)) {
+                const savedScores = getStudentScores(student.id, subjectId, assessment.id);
+                const savedVal = savedScores[0] || '';
                 originalValues.current[assessment.id] = savedVal;
             }
         });
@@ -138,20 +144,27 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
         if (!rawScoreInput) {
             console.log('[InlineScoreInput] Empty score - clearing:', {
                 studentId: student.id,
-                studentName: student.name
+                studentName: student.name,
+                assessmentId,
+                subjectId
             });
-            updateStudentScores(student.id, subjectId, assessment.id, []);
 
-            // Update original value to empty string since we just saved an empty/cleared score
+            // Explicitly clear the inline value to show empty field
+            setInlineValues(prev => ({ ...prev, [assessmentId]: '' }));
+
+            // Clear the score and keep it marked as modified so save button stays enabled
+            // FIX: Use [''] instead of [] to ensure DataContext treats this as an explicit "Empty" value
+            // that is different from "No Data" or legacy empty arrays.
+            updateStudentScores(student.id, subjectId, assessment.id, ['']);
+
+            // Update originalValues to the cleared state so future comparisons work correctly
+            // This ensures that if user moves away and returns, the cleared state is recognized as the baseline
             originalValues.current[assessmentId] = '';
 
-            // Clear modification flag after save
-            setModifiedFields(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(assessmentId);
-                return newSet;
-            });
-            // Unregister pending change / remove from draft
+            // Only mark as modified (if not already) to keep the global save button enabled
+            setModifiedFields(prev => new Set(prev).add(assessmentId));
+
+            // Remove from draft since we've already updated the local state
             removeDraftScore(student.id, assessmentId);
             return;
         }

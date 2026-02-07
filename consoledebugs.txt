@@ -1,268 +1,953 @@
-(index):64  cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation
+  cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation
 (anonymous) @ (index):64
 (anonymous) @ (index):64
-react-dom-client.development.js:28004 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
-firebaseService.ts:32 [Firebase] Initializing with Database Index: 1 (sba-pro-master-759f6) 
-geminiService.ts:8  Gemini API key not found. AI features will be disabled.
-(anonymous) @ geminiService.ts:8
-syncLogger.ts:31 [SyncLogger] Log initialized: SyncLog_2026-02-07T18-14-56.txt
-syncLogger.ts:32 [SyncLogger] Logs will be saved to browser when you call downloadLog()
-syncLogger.ts:59 [SYNC_LOG] AuthOverlay component mounted
-AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
-DataContext.tsx:1499 [DataContext] Sync PAUSED
-AuthOverlay.tsx:112 [AuthOverlay] Found saved school session, fetching data...
-FirebaseAnalyticsContext.tsx:68 [Firebase Analytics] Tracking registered globally
-DataContext.tsx:892 [DataContext] 📥 Fetching initial data from cloud (Auto-Sync Disabled)...
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Loading main school data (1 doc)
-firebaseService.ts:90 [Firestore Read] getSchoolData/gyewanidabasicschool_20252026_Second-Term -> schools/gyewanidabasicschool_20252026_Second-Term
-syncLogger.ts:59 [SYNC_LOG] AuthOverlay component unmounting
-syncLogger.ts:31 [SyncLogger] Log initialized: SyncLog_2026-02-07T18-14-56.txt
-syncLogger.ts:32 [SyncLogger] Logs will be saved to browser when you call downloadLog()
-syncLogger.ts:59 [SYNC_LOG] AuthOverlay component mounted
-AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
-DataContext.tsx:1499 [DataContext] Sync PAUSED
-AuthOverlay.tsx:112 [AuthOverlay] Found saved school session, fetching data...
-FirebaseAnalyticsContext.tsx:68 [Firebase Analytics] Tracking registered globally
-DataContext.tsx:892 [DataContext] 📥 Fetching initial data from cloud (Auto-Sync Disabled)...
-firebaseService.ts:330 [Firebase] Returning inflight promise for school data: gyewanidabasicschool_20252026_Second-Term
-firebaseService.ts:1168 [FIREBASE_DEBUG] loginOrRegisterSchool called for docId: gyewanidabasicschool_20252026_Second-Term, createIfMissing: false
-firebaseService.ts:1173 [FIREBASE_DEBUG] Fetching document: schools/gyewanidabasicschool_20252026_Second-Term
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Checking school existence: gyewanidabasicschool_20252026_Second-Term (1 doc)
-firebaseService.ts:90 [Firestore Read] loginOrRegisterSchool/gyewanidabasicschool_20252026_Second-Term -> schools/gyewanidabasicschool_20252026_Second-Term
-firebaseService.ts:1168 [FIREBASE_DEBUG] loginOrRegisterSchool called for docId: gyewanidabasicschool_20252026_Second-Term, createIfMissing: false
-firebaseService.ts:1173 [FIREBASE_DEBUG] Fetching document: schools/gyewanidabasicschool_20252026_Second-Term
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Checking school existence: gyewanidabasicschool_20252026_Second-Term (1 doc)
-firebaseService.ts:90 [Firestore Read] loginOrRegisterSchool/gyewanidabasicschool_20252026_Second-Term -> schools/gyewanidabasicschool_20252026_Second-Term
-AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
-DataContext.tsx:1499 [DataContext] Sync PAUSED
-firebaseService.ts:92 [Firestore Read] getSchoolData/gyewanidabasicschool_20252026_Second-Term -> exists=true
-DataContext.tsx:895 [DataContext] ✅ Initial data received via one-time fetch
-syncLogger.ts:59 [SYNC_LOG] Initial data loaded. Users: 15, Scores: 0
-DataContext.tsx:279 [DataContext] 📦 loadImportedData called (isRemote=false) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 0, …}
-DataContext.tsx:355 [DataContext] 🚫 Skipping scores update - data is empty/undefined
+ Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+ [Firebase] Initializing with Database Index: 1 (sba-pro-master-759f6) 
+  Gemini API key not found. AI features will be disabled.
+(anonymous) @ geminiService.ts:4
+ [SyncLogger] Log initialized: SyncLog_2026-02-07T19-51-12.txt
+ [SyncLogger] Logs will be saved to browser when you call downloadLog()
+ [SYNC_LOG] AuthOverlay component mounted
+ [AuthOverlay] Pausing sync - authentication in progress
+ [DataContext] Sync PAUSED
+ [AuthOverlay] Found saved school session, fetching data...
+ [Firebase Analytics] Tracking registered globally
+ [DataContext] 📥 Fetching initial data from cloud (Auto-Sync Disabled)...
+ [Firebase Analytics] 📖 READ: Loading main school data (1 doc)
+ [SYNC_LOG] AuthOverlay component unmounting
+ [SyncLogger] Log initialized: SyncLog_2026-02-07T19-51-16.txt
+ [SyncLogger] Logs will be saved to browser when you call downloadLog()
+ [SYNC_LOG] AuthOverlay component mounted
+ [AuthOverlay] Pausing sync - authentication in progress
+ [DataContext] Sync PAUSED
+ [AuthOverlay] Found saved school session, fetching data...
+ [Firebase Analytics] Tracking registered globally
+ [DataContext] 📥 Fetching initial data from cloud (Auto-Sync Disabled)...
+ [Firebase] Returning inflight promise for school data: gyewanidabasicschool_20252026_Second-Term
+ [FIREBASE_DEBUG] loginOrRegisterSchool called for docId: gyewanidabasicschool_20252026_Second-Term, createIfMissing: false
+ [FIREBASE_DEBUG] Fetching document: schools/gyewanidabasicschool_20252026_Second-Term
+ [Firebase Analytics] 📖 READ: Checking school existence: gyewanidabasicschool_20252026_Second-Term (1 doc)
+ [FIREBASE_DEBUG] loginOrRegisterSchool called for docId: gyewanidabasicschool_20252026_Second-Term, createIfMissing: false
+ [FIREBASE_DEBUG] Fetching document: schools/gyewanidabasicschool_20252026_Second-Term
+ [Firebase Analytics] 📖 READ: Checking school existence: gyewanidabasicschool_20252026_Second-Term (1 doc)
+ [AuthOverlay] Pausing sync - authentication in progress
+ [DataContext] Sync PAUSED
+ [DataContext] ✅ Initial data received via one-time fetch
+ [SYNC_LOG] Initial data loaded. Users: 15, Scores: 0
+ [DataContext] 📦 loadImportedData called (isRemote=false) with: Object
+ [DataContext] 🚫 Skipping scores update - data is empty/undefined
+ [SYNC_LOG] loadImportedData: Loading users from document. Count: 15
+ [DataContext] ✅ Updating users: 15
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 15
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1770493626741:59:36)
+    at loadImportedData (DataContext.tsx?t=1770493626741:218:9)
+    at fetchInitialData (DataContext.tsx?t=1770493626741:626:11)
+ [DataContext] 💾 Local file import: Marking fields as dirty for verification
+ [DataContext] 🚀 Eagerly loading Metadata for app initialization...
+ [DataContext] 🔍 loadMetadata Check: Object
+ [DataContext] 🧠 Metadata up-to-date (Metadata Match). Skipping read.
+ [DataContext] ✅ Initial data received via one-time fetch
+ [SYNC_LOG] Initial data loaded. Users: 15, Scores: 0
+ [DataContext] 📦 loadImportedData called (isRemote=false) with: Object
+ [DataContext] 🚫 Skipping scores update - data is empty/undefined
+ [SYNC_LOG] loadImportedData: Loading users from document. Count: 15
+ [DataContext] ✅ Updating users: 15
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 15
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1770493626741:59:36)
+    at loadImportedData (DataContext.tsx?t=1770493626741:218:9)
+    at fetchInitialData (DataContext.tsx?t=1770493626741:626:11)
+ [DataContext] 💾 Local file import: Marking fields as dirty for verification
+ [DataContext] 🚀 Eagerly loading Metadata for app initialization...
+ [DataContext] 🔍 loadMetadata Check: Object
+ [DataContext] 🧠 Metadata up-to-date (Metadata Match). Skipping read.
+ [FIREBASE_DEBUG] Document exists? true
+ [FIREBASE_DEBUG] Processing existing document...
+ [Firebase Analytics] 📖 READ: Checking license status (1 doc)
+ [FIREBASE_DEBUG] Document exists? true
+ [FIREBASE_DEBUG] Processing existing document...
+ [Firebase Analytics] 📖 READ: Checking license status (1 doc)
+ [AuthOverlay] Pausing sync - authentication in progress
+ [DataContext] Sync PAUSED
+ [AuthOverlay] Pausing sync - authentication in progress
+ [DataContext] Sync PAUSED
+ [FIREBASE_DEBUG] Login successful. Returning data.
+ [DataContext] 📦 loadImportedData called (isRemote=true) with: Object
+ [DataContext] 🚫 Skipping scores update - data is empty/undefined
+ [SYNC_LOG] loadImportedData: Loading users from document. Count: 15
+ [DataContext] ✅ Updating users: 15
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 15
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1770493626741:59:36)
+    at loadImportedData (DataContext.tsx?t=1770493626741:218:9)
+    at restoreSession (AuthOverlay.tsx?t=1770493626741:101:9)
+ [DataContext] 🧹 Selectively cleared dirty fields after remote data load
+ [AuthOverlay] Full session data loaded, showing restore dialog
+ [FIREBASE_DEBUG] Login successful. Returning data.
+ [DataContext] 📦 loadImportedData called (isRemote=true) with: Object
+ [DataContext] 🚫 Skipping scores update - data is empty/undefined
+ [SYNC_LOG] loadImportedData: Loading users from document. Count: 15
+ [DataContext] ✅ Updating users: 15
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 15
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1770493626741:59:36)
+    at loadImportedData (DataContext.tsx?t=1770493626741:218:9)
+    at restoreSession (AuthOverlay.tsx?t=1770493626741:101:9)
+ [DataContext] 🧹 Selectively cleared dirty fields after remote data load
+ [AuthOverlay] Full session data loaded, showing restore dialog
+ [AuthOverlay] Pausing sync - authentication in progress
+ [DataContext] Sync PAUSED
+ [AuthOverlay] Pausing sync - authentication in progress
+ [DataContext] Sync PAUSED
+ [Firebase Analytics] 📖 READ: Fetching all students (0 docs)
+ [Firebase Analytics] 📖 READ: Fetching all students (0 docs)
+ Logging user login activity for: MYKIL
+ [AuthOverlay] Pausing sync - authentication in progress
+ [DataContext] Sync PAUSED
+ Login activity logged successfully
+ [DataContext] Sync RESUMED
+ [AuthOverlay] ✅ Session restored successfully
+ [Firebase Analytics] 📖 READ: Loading main school data (1 doc)
+ [Firebase] Returning inflight promise for school data: gyewanidabasicschool_20252026_Second-Term
+ [DataContext] 📥 Lazy Loading Scores for Subject 9...
+ [Firebase Analytics] 📖 READ: Fetching bucket: subject_9 (1 doc)
+ [Firebase] Returning inflight promise for school data: gyewanidabasicschool_20252026_Second-Term
+ [Firebase] Returning inflight promise for school data: gyewanidabasicschool_20252026_Second-Term
+ [Firebase Analytics] 📖 READ: Fetched all students (280 docs)
+ [Firebase] 🎓 Student bucket missing but students exist. Creating bucket for gyewanidabasicschool_20252026_Second-Term...
+ [Firebase Analytics] ✍️ WRITE: Writing student_bucket for gyewanidabasicschool_20252026_Second-Term
+ [Firebase Analytics] 📖 READ: Fetched all students (280 docs)
+ [Firebase] 🎓 Student bucket missing but students exist. Creating bucket for gyewanidabasicschool_20252026_Second-Term...
+ [Firebase Analytics] ✍️ WRITE: Writing student_bucket for gyewanidabasicschool_20252026_Second-Term
+ [DataContext] ✅ Loaded 4 scores.
+ [ScoreEntry - Mobile] commitScore called: Object
+ [ScoreEntry - Mobile] Fraction conversion: Object
+ [ScoreEntry - Mobile] ✅ Score validated and formatted: Object
+ [ScoreEntry - Mobile] 💾 Calling updateStudentScores (saving to local cache)...
+ [ScoreEntry - Mobile] ✅ Score committed successfully
+ [ScoreEntry] 🧹 Clearing score for: ANNAN DONKOR ALFRED
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [ScoreEntry - Mobile] commitScore called: Object
+ [ScoreEntry - Mobile] Empty score - clearing: Object
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [ScoreEntry - Mobile] commitScore called: Object
+ [ScoreEntry - Mobile] Fraction conversion: Object
+ [ScoreEntry - Mobile] ✅ Score validated and formatted: Object
+ [ScoreEntry - Mobile] 💾 Calling updateStudentScores (saving to local cache)...
+ [ScoreEntry - Mobile] ✅ Score committed successfully
+ [ScoreEntry] 🧹 Clearing score for: ACQUAH KINGSFORD
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [ScoreEntry - Mobile] commitScore called: Object
+ [ScoreEntry - Mobile] Empty score - clearing: Object
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [ScoreEntry - Mobile] commitScore called: Object
+ [ScoreEntry - Mobile] Empty score - clearing: Object
+ [ScoreEntry - Mobile] commitScore called: Object
+ [ScoreEntry - Mobile] Empty score - clearing: Object
+ [ScoreEntry - Mobile] User input: Object
+ [ScoreEntry - Mobile] commitScore called: Object
+ [ScoreEntry - Mobile] Direct score: Object
+ [ScoreEntry - Mobile] ✅ Score validated and formatted: Object
+ [ScoreEntry - Mobile] 💾 Calling updateStudentScores (saving to local cache)...
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [ScoreEntry - Mobile] ✅ Score committed successfully
+ [DataContext] ➕ Adding new score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [DataContext] ➕ Adding new score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [ScoreEntry - Mobile] commitScore called: Object
+ [ScoreEntry - Mobile] Empty score - clearing: Object
+ [ScoreEntry - Mobile] commitScore called: Object
+ [ScoreEntry - Mobile] Fraction conversion: Object
+ [ScoreEntry - Mobile] ✅ Score validated and formatted: Object
+ [ScoreEntry - Mobile] 💾 Calling updateStudentScores (saving to local cache)...
+ [ScoreEntry - Mobile] ✅ Score committed successfully
+ [ScoreEntry] 🧹 Clearing score for: AVIE FELIX
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [ScoreEntry - Mobile] commitScore called: Object
+ [ScoreEntry - Mobile] Empty score - clearing: Object
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+  [Firestore Write] updateStudentBucket/gyewanidabasicschool_20252026_Second-Term ERROR -> schools/gyewanidabasicschool_20252026_Second-Term/config/student_bucket: 
+loggedSetDoc @ firebaseService.ts?t=1770490311963:91
+  [Firebase] Failed to update student bucket: 
+updateStudentBucket @ firebaseService.ts?t=1770490311963:571
+  [Firebase] Error ensuring student bucket exists: 
+ensureStudentBucketExists @ firebaseService.ts?t=1770490311963:587
+ [InlineScoreInput] User input: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Direct score: Object
+ [InlineScoreInput] ✅ Score validated and formatted: Object
+ [InlineScoreInput] 💾 Calling updateStudentScores (saving to local cache)...
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [InlineScoreInput] ✅ Score committed successfully
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [DataContext] 📥 Manual refresh initiated - fetching data from cloud [FULL]...
+ [Firebase Analytics] 📖 READ: Loading main school data (1 doc)
+ [DataContext] ✅ Main document fetched, applying updates...
+ [DataContext] 🧹 Cleared score subject cache to force fresh fetch on next load
+ [DataContext] 📦 loadImportedData called (isRemote=false) with: Object
+ [DataContext] 🚫 Skipping scores update - data is empty/undefined
+ [SYNC_LOG] loadImportedData: Loading users from document. Count: 15
+ [DataContext] 💾 Local file import: Marking fields as dirty for verification
+ [DataContext] 🔄 Force refreshing Metadata (Classes, Subjects, Assessments)...
+ [DataContext] 🔍 loadMetadata Check: Object
+ [DataContext] 📥 Loading Metadata (Classes, Subjects, Assessments)...
+ [Firebase Analytics] 📖 READ: Attempting bundle read (0 docs)
+ [DataContext] 🔄 Force refreshing Students subcollection...
+ [DataContext] 🔍 loadStudents Check: Object
+ [DataContext] 📥 Loading Students...
+ [Firebase Analytics] 📖 READ: Fetching all students (0 docs)
+ [DataContext] 🔄 Force refreshing Score Buckets for loaded subjects...
+  [Firestore Write] updateStudentBucket/gyewanidabasicschool_20252026_Second-Term ERROR -> schools/gyewanidabasicschool_20252026_Second-Term/config/student_bucket: 
+loggedSetDoc @ firebaseService.ts?t=1770490311963:91
+  [Firebase] Failed to update student bucket: 
+updateStudentBucket @ firebaseService.ts?t=1770490311963:571
+  [Firebase] Error ensuring student bucket exists: 
+ensureStudentBucketExists @ firebaseService.ts?t=1770490311963:587
+ [Firebase] ⚠️ Bundle missing, falling back to individual reads
+ [Firebase Analytics] 📖 READ: Bundle missing - fetching classes (0 docs)
+ [Firebase Analytics] 📖 READ: Bundle missing - fetching subjects (0 docs)
+ [Firebase Analytics] 📖 READ: Bundle missing - fetching assessments (0 docs)
+ [Firebase Analytics] 📖 READ: Fetching all classes (0 docs)
+ [Firebase Analytics] 📖 READ: Fetching all subjects (0 docs)
+ [Firebase Analytics] 📖 READ: Fetching all assessments (0 docs)
+ [Firebase Analytics] 📖 READ: Fetched all students (280 docs)
+ [DataContext] ✅ Loaded 280 students.
+ [Firebase Analytics] 📖 READ: Fetched all classes (11 docs)
+ [Firebase Analytics] 📖 READ: Fetched all subjects (14 docs)
+ [Firebase Analytics] 📖 READ: Fetched all assessments (5 docs)
+ [Firebase Analytics] 📖 READ: Fallback fetched 11 classes (11 docs)
+ [Firebase Analytics] 📖 READ: Fallback fetched 14 subjects (14 docs)
+ [Firebase Analytics] 📖 READ: Fallback fetched 5 assessments (5 docs)
+ [DataContext] ✅ Metadata Loaded: 11 Classes, 14 Subjects, 5 Assessments
+ [DataContext] 🎉 Manual refresh complete
+ [Firebase Analytics] 📖 READ: Fetching all students (0 docs)
+ [DataContext] 📥 Lazy Loading Scores for Subject 9...
+ [Firebase Analytics] 📖 READ: Fetching bucket: subject_9 (1 doc)
+ [Firebase Analytics] 📖 READ: Fetched all students (280 docs)
+ [Firebase] 🎓 Student bucket missing but students exist. Creating bucket for gyewanidabasicschool_20252026_Second-Term...
+ [Firebase Analytics] ✍️ WRITE: Writing student_bucket for gyewanidabasicschool_20252026_Second-Term
+ [DataContext] ✅ Loaded 4 scores.
+ [InlineScoreInput] User input: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Direct score: Object
+ [InlineScoreInput] ✅ Score validated and formatted: Object
+ [InlineScoreInput] 💾 Calling updateStudentScores (saving to local cache)...
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [InlineScoreInput] ✅ Score committed successfully
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [InlineScoreInput] User input: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [InlineScoreInput] User input: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+  [Firestore Write] updateStudentBucket/gyewanidabasicschool_20252026_Second-Term ERROR -> schools/gyewanidabasicschool_20252026_Second-Term/config/student_bucket: 
+loggedSetDoc @ firebaseService.ts?t=1770490311963:91
+  [Firebase] Failed to update student bucket: 
+updateStudentBucket @ firebaseService.ts?t=1770490311963:571
+  [Firebase] Error ensuring student bucket exists: 
+ensureStudentBucketExists @ firebaseService.ts?t=1770490311963:587
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [DataContext] 📥 Manual refresh initiated - fetching data from cloud [FULL]...
+ [Firebase Analytics] 📖 READ: Loading main school data (1 doc)
+ [DataContext] ✅ Main document fetched, applying updates...
+ [DataContext] 🧹 Cleared score subject cache to force fresh fetch on next load
+ [DataContext] 📦 loadImportedData called (isRemote=false) with: Object
+ [DataContext] 🚫 Skipping scores update - data is empty/undefined
+ [SYNC_LOG] loadImportedData: Loading users from document. Count: 15
+ [DataContext] 💾 Local file import: Marking fields as dirty for verification
+ [DataContext] 🔄 Force refreshing Metadata (Classes, Subjects, Assessments)...
+ [DataContext] 🔍 loadMetadata Check: Object
+ [DataContext] 📥 Loading Metadata (Classes, Subjects, Assessments)...
+ [Firebase Analytics] 📖 READ: Attempting bundle read (0 docs)
+ [DataContext] 🔄 Force refreshing Students subcollection...
+ [DataContext] 🔍 loadStudents Check: Object
+ [DataContext] 📥 Loading Students...
+ [Firebase Analytics] 📖 READ: Fetching all students (0 docs)
+ [DataContext] 🔄 Force refreshing Score Buckets for loaded subjects...
+ [Firebase] ⚠️ Bundle missing, falling back to individual reads
+ [Firebase Analytics] 📖 READ: Bundle missing - fetching classes (0 docs)
+ [Firebase Analytics] 📖 READ: Bundle missing - fetching subjects (0 docs)
+ [Firebase Analytics] 📖 READ: Bundle missing - fetching assessments (0 docs)
+ [Firebase Analytics] 📖 READ: Fetching all classes (0 docs)
+ [Firebase Analytics] 📖 READ: Fetching all subjects (0 docs)
+ [Firebase Analytics] 📖 READ: Fetching all assessments (0 docs)
+ [Firebase Analytics] 📖 READ: Fetched all students (280 docs)
+ [DataContext] ✅ Loaded 280 students.
+ [Firebase Analytics] 📖 READ: Fetched all classes (11 docs)
+ [Firebase Analytics] 📖 READ: Fetched all subjects (14 docs)
+ [Firebase Analytics] 📖 READ: Fetched all assessments (5 docs)
+ [Firebase Analytics] 📖 READ: Fallback fetched 11 classes (11 docs)
+ [Firebase Analytics] 📖 READ: Fallback fetched 14 subjects (14 docs)
+ [Firebase Analytics] 📖 READ: Fallback fetched 5 assessments (5 docs)
+ [DataContext] ✅ Metadata Loaded: 11 Classes, 14 Subjects, 5 Assessments
+ [DataContext] 🎉 Manual refresh complete
+ [Firebase Analytics] 📖 READ: Fetching all students (0 docs)
+ [DataContext] 📥 Lazy Loading Scores for Subject 9...
+ [Firebase Analytics] 📖 READ: Fetching bucket: subject_9 (1 doc)
+ [Firebase Analytics] 📖 READ: Fetched all students (280 docs)
+ [Firebase] 🎓 Student bucket missing but students exist. Creating bucket for gyewanidabasicschool_20252026_Second-Term...
+ [Firebase Analytics] ✍️ WRITE: Writing student_bucket for gyewanidabasicschool_20252026_Second-Term
+ [DataContext] ✅ Loaded 4 scores.
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [InlineScoreInput] User input: Object
+ [InlineScoreInput] User input: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [InlineScoreInput] User input: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [InlineScoreInput] User input: Object
+ [InlineScoreInput] User input: Object
+ [InlineScoreInput] User input: Object
+ [InlineScoreInput] User input: Object
+  [Firestore Write] updateStudentBucket/gyewanidabasicschool_20252026_Second-Term ERROR -> schools/gyewanidabasicschool_20252026_Second-Term/config/student_bucket: 
+loggedSetDoc @ firebaseService.ts?t=1770490311963:91
+  [Firebase] Failed to update student bucket: 
+updateStudentBucket @ firebaseService.ts?t=1770490311963:571
+  [Firebase] Error ensuring student bucket exists: 
+ensureStudentBucketExists @ firebaseService.ts?t=1770490311963:587
+ [InlineScoreInput] User input: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [DataContext] 📥 Manual refresh initiated - fetching data from cloud [FULL]...
+ [Firebase Analytics] 📖 READ: Loading main school data (1 doc)
+ [DataContext] ✅ Main document fetched, applying updates...
+ [DataContext] 🧹 Cleared score subject cache to force fresh fetch on next load
+ [DataContext] 📦 loadImportedData called (isRemote=false) with: Object
+ [DataContext] 🚫 Skipping scores update - data is empty/undefined
+ [SYNC_LOG] loadImportedData: Loading users from document. Count: 15
+ [DataContext] 💾 Local file import: Marking fields as dirty for verification
+ [DataContext] 🔄 Force refreshing Metadata (Classes, Subjects, Assessments)...
+ [DataContext] 🔍 loadMetadata Check: Object
+ [DataContext] 📥 Loading Metadata (Classes, Subjects, Assessments)...
+ [Firebase Analytics] 📖 READ: Attempting bundle read (0 docs)
+ [DataContext] 🔄 Force refreshing Students subcollection...
+ [DataContext] 🔍 loadStudents Check: Object
+ [DataContext] 📥 Loading Students...
+ [Firebase Analytics] 📖 READ: Fetching all students (0 docs)
+ [DataContext] 🔄 Force refreshing Score Buckets for loaded subjects...
+ [Firebase] ⚠️ Bundle missing, falling back to individual reads
+ [Firebase Analytics] 📖 READ: Bundle missing - fetching classes (0 docs)
+ [Firebase Analytics] 📖 READ: Bundle missing - fetching subjects (0 docs)
+ [Firebase Analytics] 📖 READ: Bundle missing - fetching assessments (0 docs)
+ [Firebase Analytics] 📖 READ: Fetching all classes (0 docs)
+ [Firebase Analytics] 📖 READ: Fetching all subjects (0 docs)
+ [Firebase Analytics] 📖 READ: Fetching all assessments (0 docs)
+ [Firebase Analytics] 📖 READ: Fetched all students (280 docs)
+ [DataContext] ✅ Loaded 280 students.
+ [Firebase Analytics] 📖 READ: Fetched all classes (11 docs)
+ [Firebase Analytics] 📖 READ: Fetched all subjects (14 docs)
+ [Firebase Analytics] 📖 READ: Fetched all assessments (5 docs)
+ [Firebase Analytics] 📖 READ: Fallback fetched 11 classes (11 docs)
+ [Firebase Analytics] 📖 READ: Fallback fetched 14 subjects (14 docs)
+ [Firebase Analytics] 📖 READ: Fallback fetched 5 assessments (5 docs)
+ [DataContext] ✅ Metadata Loaded: 11 Classes, 14 Subjects, 5 Assessments
+ [DataContext] 🎉 Manual refresh complete
+ [Firebase Analytics] 📖 READ: Fetching all students (0 docs)
+ [DataContext] 📥 Lazy Loading Scores for Subject 9...
+ [Firebase Analytics] 📖 READ: Fetching bucket: subject_9 (1 doc)
+ [Firebase Analytics] 📖 READ: Fetched all students (280 docs)
+ [Firebase] 🎓 Student bucket missing but students exist. Creating bucket for gyewanidabasicschool_20252026_Second-Term...
+ [Firebase Analytics] ✍️ WRITE: Writing student_bucket for gyewanidabasicschool_20252026_Second-Term
+ [DataContext] ✅ Loaded 4 scores.
+  [Firestore Write] updateStudentBucket/gyewanidabasicschool_20252026_Second-Term ERROR -> schools/gyewanidabasicschool_20252026_Second-Term/config/student_bucket: 
+loggedSetDoc @ firebaseService.ts?t=1770490311963:91
+  [Firebase] Failed to update student bucket: 
+updateStudentBucket @ firebaseService.ts?t=1770490311963:571
+  [Firebase] Error ensuring student bucket exists: 
+ensureStudentBucketExists @ firebaseService.ts?t=1770490311963:587
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Fraction conversion: Object
+ [InlineScoreInput] ✅ Score validated and formatted: Object
+ [InlineScoreInput] 💾 Calling updateStudentScores (saving to local cache)...
+ [InlineScoreInput] ✅ Score committed successfully
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Fraction conversion: Object
+ [InlineScoreInput] ✅ Score validated and formatted: Object
+ [InlineScoreInput] 💾 Calling updateStudentScores (saving to local cache)...
+ [InlineScoreInput] ✅ Score committed successfully
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [InlineScoreInput] User input: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [InlineScoreInput] User input: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Direct score: Object
+ [InlineScoreInput] ✅ Score validated and formatted: Object
+ [InlineScoreInput] 💾 Calling updateStudentScores (saving to local cache)...
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [InlineScoreInput] ✅ Score committed successfully
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [InlineScoreInput] User input: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [InlineScoreInput] User input: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Direct score: Object
+ [InlineScoreInput] ✅ Score validated and formatted: Object
+ [InlineScoreInput] 💾 Calling updateStudentScores (saving to local cache)...
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [InlineScoreInput] ✅ Score committed successfully
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [InlineScoreInput] User input: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [InlineScoreInput] User input: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Direct score: Object
+ [InlineScoreInput] ✅ Score validated and formatted: Object
+ [InlineScoreInput] 💾 Calling updateStudentScores (saving to local cache)...
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [InlineScoreInput] ✅ Score committed successfully
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [InlineScoreInput] User input: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Direct score: Object
+ [InlineScoreInput] ✅ Score validated and formatted: Object
+ [InlineScoreInput] 💾 Calling updateStudentScores (saving to local cache)...
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [InlineScoreInput] ✅ Score committed successfully
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [InlineScoreInput] User input: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Direct score: Object
+ [InlineScoreInput] ✅ Score validated and formatted: Object
+ [InlineScoreInput] 💾 Calling updateStudentScores (saving to local cache)...
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [InlineScoreInput] ✅ Score committed successfully
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [InlineScoreInput] User input: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [InlineScoreInput] User input: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [InlineScoreInput] User input: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [DataContext] 📥 Manual refresh initiated - fetching data from cloud [FULL]...
+ [Firebase Analytics] 📖 READ: Loading main school data (1 doc)
+ [DataContext] ✅ Main document fetched, applying updates...
+ [DataContext] 🧹 Cleared score subject cache to force fresh fetch on next load
+ [DataContext] 📦 loadImportedData called (isRemote=false) with: Object
+ [DataContext] 🚫 Skipping scores update - data is empty/undefined
 syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users from document. Count: 15
-DataContext.tsx:373 [DataContext] ✅ Updating users: 15
-syncLogger.ts:59 [SYNC_LOG] setUsers called. Current count: 0, New count: 15
-syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
-    at setUsers (DataContext.tsx:189:40)
-    at loadImportedData (DataContext.tsx:374:17)
-    at fetchInitialData (DataContext.tsx:899:21)
 DataContext.tsx:444 [DataContext] 💾 Local file import: Marking fields as dirty for verification
-DataContext.tsx:909 [DataContext] 🚀 Eagerly loading Metadata for app initialization...
-DataContext.tsx:1872 [DataContext] 🔍 loadMetadata Check: {hasData: true, previouslyLoaded: false, isUpToDate: true, inflight: false}
-DataContext.tsx:1887 [DataContext] 🧠 Metadata up-to-date (Metadata Match). Skipping read.
-DataContext.tsx:895 [DataContext] ✅ Initial data received via one-time fetch
-syncLogger.ts:59 [SYNC_LOG] Initial data loaded. Users: 15, Scores: 0
-DataContext.tsx:279 [DataContext] 📦 loadImportedData called (isRemote=false) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 0, …}
-DataContext.tsx:355 [DataContext] 🚫 Skipping scores update - data is empty/undefined
-syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users from document. Count: 15
-DataContext.tsx:373 [DataContext] ✅ Updating users: 15
-syncLogger.ts:59 [SYNC_LOG] setUsers called. Current count: 0, New count: 15
-syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
-    at setUsers (DataContext.tsx:189:40)
-    at loadImportedData (DataContext.tsx:374:17)
-    at fetchInitialData (DataContext.tsx:899:21)
-DataContext.tsx:444 [DataContext] 💾 Local file import: Marking fields as dirty for verification
-DataContext.tsx:909 [DataContext] 🚀 Eagerly loading Metadata for app initialization...
-DataContext.tsx:1872 [DataContext] 🔍 loadMetadata Check: {hasData: true, previouslyLoaded: false, isUpToDate: true, inflight: false}
-DataContext.tsx:1887 [DataContext] 🧠 Metadata up-to-date (Metadata Match). Skipping read.
-firebaseService.ts:92 [Firestore Read] loginOrRegisterSchool/gyewanidabasicschool_20252026_Second-Term -> exists=true
-firebaseService.ts:1176 [FIREBASE_DEBUG] Document exists? true
-firebaseService.ts:1199 [FIREBASE_DEBUG] Processing existing document...
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Checking license status (1 doc)
-firebaseService.ts:90 [Firestore Read] loginOrRegisterSchool_license/gyewanidabasicschool -> subscriptions/gyewanidabasicschool
-firebaseService.ts:92 [Firestore Read] loginOrRegisterSchool/gyewanidabasicschool_20252026_Second-Term -> exists=true
-firebaseService.ts:1176 [FIREBASE_DEBUG] Document exists? true
-firebaseService.ts:1199 [FIREBASE_DEBUG] Processing existing document...
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Checking license status (1 doc)
-firebaseService.ts:90 [Firestore Read] loginOrRegisterSchool_license/gyewanidabasicschool -> subscriptions/gyewanidabasicschool
-AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
-DataContext.tsx:1499 [DataContext] Sync PAUSED
-AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
-DataContext.tsx:1499 [DataContext] Sync PAUSED
-firebaseService.ts:92 [Firestore Read] loginOrRegisterSchool_license/gyewanidabasicschool -> exists=true
-firebaseService.ts:90 [Firestore Read] loginOrRegisterSchool_sub/gyewanidabasicschool -> subscriptions/gyewanidabasicschool
-firebaseService.ts:92 [Firestore Read] loginOrRegisterSchool_license/gyewanidabasicschool -> exists=true
-firebaseService.ts:90 [Firestore Read] loginOrRegisterSchool_sub/gyewanidabasicschool -> subscriptions/gyewanidabasicschool
-firebaseService.ts:92 [Firestore Read] loginOrRegisterSchool_sub/gyewanidabasicschool -> exists=true
-firebaseService.ts:1243 [FIREBASE_DEBUG] Login successful. Returning data.
-DataContext.tsx:279 [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 0, …}
-DataContext.tsx:355 [DataContext] 🚫 Skipping scores update - data is empty/undefined
-syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users from document. Count: 15
-DataContext.tsx:373 [DataContext] ✅ Updating users: 15
-syncLogger.ts:59 [SYNC_LOG] setUsers called. Current count: 0, New count: 15
-syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
-    at setUsers (DataContext.tsx:189:40)
-    at loadImportedData (DataContext.tsx:374:17)
-    at restoreSession (AuthOverlay.tsx:141:17)
-DataContext.tsx:421 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
-AuthOverlay.tsx:156 [AuthOverlay] Full session data loaded, showing restore dialog
-firebaseService.ts:92 [Firestore Read] loginOrRegisterSchool_sub/gyewanidabasicschool -> exists=true
-firebaseService.ts:1243 [FIREBASE_DEBUG] Login successful. Returning data.
-DataContext.tsx:279 [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 0, …}
-DataContext.tsx:355 [DataContext] 🚫 Skipping scores update - data is empty/undefined
-syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users from document. Count: 15
-DataContext.tsx:373 [DataContext] ✅ Updating users: 15
-syncLogger.ts:59 [SYNC_LOG] setUsers called. Current count: 0, New count: 15
-syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
-    at setUsers (DataContext.tsx:189:40)
-    at loadImportedData (DataContext.tsx:374:17)
-    at restoreSession (AuthOverlay.tsx:141:17)
-DataContext.tsx:421 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
-AuthOverlay.tsx:156 [AuthOverlay] Full session data loaded, showing restore dialog
-AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
-DataContext.tsx:1499 [DataContext] Sync PAUSED
-AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
-DataContext.tsx:1499 [DataContext] Sync PAUSED
-UserContext.tsx:98 Logging user login activity for: MYKIL
-AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
-DataContext.tsx:1499 [DataContext] Sync PAUSED
-UserContext.tsx:100 Login activity logged successfully
-DataContext.tsx:1505 [DataContext] Sync RESUMED
-AuthOverlay.tsx:192 [AuthOverlay] ✅ Session restored successfully
-FreshLoginModal.tsx:19 [FreshLoginModal] Fresh login detected for user: MYKIL
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Loading main school data (1 doc)
-firebaseService.ts:90 [Firestore Read] getSchoolData/gyewanidabasicschool_20252026_Second-Term -> schools/gyewanidabasicschool_20252026_Second-Term
-firebaseService.ts:330 [Firebase] Returning inflight promise for school data: gyewanidabasicschool_20252026_Second-Term
-DataContext.tsx:1755 [DataContext] 🔍 loadStudents Check: {studentsCount: 280, serverTS: _Timestamp, loadedTS: undefined, isUpToDate: false, hasInflight: false}
-DataContext.tsx:1785 [DataContext] 📥 Loading Students...
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching all students (0 docs)
-firebaseService.ts:102 [Firestore Read] fetchSubcollection/gyewanidabasicschool_20252026_Second-Term/students -> fetching
-firebaseService.ts:330 [Firebase] Returning inflight promise for school data: gyewanidabasicschool_20252026_Second-Term
-firebaseService.ts:330 [Firebase] Returning inflight promise for school data: gyewanidabasicschool_20252026_Second-Term
-DataContext.tsx:1755 [DataContext] 🔍 loadStudents Check: {studentsCount: 280, serverTS: _Timestamp, loadedTS: undefined, isUpToDate: false, hasInflight: true}
-DataContext.tsx:1778 [DataContext] ⏳ Students fetch already in progress. Deduping...
-firebaseService.ts:92 [Firestore Read] getSchoolData/gyewanidabasicschool_20252026_Second-Term -> exists=true
-firebaseService.ts:104 [Firestore Read] fetchSubcollection/gyewanidabasicschool_20252026_Second-Term/students -> docs=280
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched all students (280 docs)
-DataContext.tsx:1789 [DataContext] ✅ Loaded 280 students.
-FreshLoginModal.tsx:28 [FreshLoginModal] User clicked Refresh Data button
-DataContext.tsx:821 [DataContext] 📥 Manual refresh initiated - fetching data from cloud [FULL]...
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Loading main school data (1 doc)
-firebaseService.ts:90 [Firestore Read] getSchoolData/gyewanidabasicschool_20252026_Second-Term -> schools/gyewanidabasicschool_20252026_Second-Term
-firebaseService.ts:92 [Firestore Read] getSchoolData/gyewanidabasicschool_20252026_Second-Term -> exists=true
-DataContext.tsx:827 [DataContext] ✅ Main document fetched, applying updates...
-DataContext.tsx:279 [DataContext] 📦 loadImportedData called (isRemote=false) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 0, …}
-DataContext.tsx:355 [DataContext] 🚫 Skipping scores update - data is empty/undefined
-syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users from document. Count: 15
-DataContext.tsx:444 [DataContext] 💾 Local file import: Marking fields as dirty for verification
-DataContext.tsx:844 [DataContext] 🔄 Force refreshing Metadata (Classes, Subjects, Assessments)...
-DataContext.tsx:1872 [DataContext] 🔍 loadMetadata Check: {hasData: true, previouslyLoaded: false, isUpToDate: false, inflight: false}
-DataContext.tsx:1901 [DataContext] 📥 Loading Metadata (Classes, Subjects, Assessments)...
+DataContext.tsx:847 [DataContext] 🔄 Force refreshing Metadata (Classes, Subjects, Assessments)...
+DataContext.tsx:1943 [DataContext] 🔍 loadMetadata Check: Object
+DataContext.tsx:1972 [DataContext] 📥 Loading Metadata (Classes, Subjects, Assessments)...
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Attempting bundle read (0 docs)
-firebaseService.ts:90 [Firestore Read] fetchMetadataBundle/gyewanidabasicschool_20252026_Second-Term -> schools/gyewanidabasicschool_20252026_Second-Term/config/metadata_bundle
-DataContext.tsx:850 [DataContext] 🔄 Force refreshing Students subcollection...
-DataContext.tsx:1755 [DataContext] 🔍 loadStudents Check: {studentsCount: 280, serverTS: _Timestamp, loadedTS: _Timestamp, isUpToDate: false, hasInflight: false}
-DataContext.tsx:1785 [DataContext] 📥 Loading Students...
+DataContext.tsx:853 [DataContext] 🔄 Force refreshing Students subcollection...
+DataContext.tsx:1819 [DataContext] 🔍 loadStudents Check: Object
+DataContext.tsx:1849 [DataContext] 📥 Loading Students...
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching all students (0 docs)
-firebaseService.ts:102 [Firestore Read] fetchSubcollection/gyewanidabasicschool_20252026_Second-Term/students -> fetching
-firebaseService.ts:92 [Firestore Read] fetchMetadataBundle/gyewanidabasicschool_20252026_Second-Term -> exists=false
-firebaseService.ts:820 [Firebase] ⚠️ Bundle missing, falling back to individual reads
+DataContext.tsx:859 [DataContext] 🔄 Force refreshing Score Buckets for loaded subjects...
+firebaseService.ts:849 [Firebase] ⚠️ Bundle missing, falling back to individual reads
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Bundle missing - fetching classes (0 docs)
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Bundle missing - fetching subjects (0 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Bundle missing - fetching assessments (0 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching all classes (0 docs)
-firebaseService.ts:102 [Firestore Read] fetchSubcollection/gyewanidabasicschool_20252026_Second-Term/classes -> fetching
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching all subjects (0 docs)
-firebaseService.ts:102 [Firestore Read] fetchSubcollection/gyewanidabasicschool_20252026_Second-Term/subjects -> fetching
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching all assessments (0 docs)
-firebaseService.ts:102 [Firestore Read] fetchSubcollection/gyewanidabasicschool_20252026_Second-Term/assessments -> fetching
-firebaseService.ts:104 [Firestore Read] fetchSubcollection/gyewanidabasicschool_20252026_Second-Term/students -> docs=280
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched all students (280 docs)
-DataContext.tsx:1789 [DataContext] ✅ Loaded 280 students.
-firebaseService.ts:104 [Firestore Read] fetchSubcollection/gyewanidabasicschool_20252026_Second-Term/classes -> docs=11
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched all classes (11 docs)
-firebaseService.ts:104 [Firestore Read] fetchSubcollection/gyewanidabasicschool_20252026_Second-Term/subjects -> docs=14
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched all subjects (14 docs)
-firebaseService.ts:104 [Firestore Read] fetchSubcollection/gyewanidabasicschool_20252026_Second-Term/assessments -> docs=5
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched all assessments (5 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fallback fetched 11 classes (11 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fallback fetched 14 subjects (14 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fallback fetched 5 assessments (5 docs)
-DataContext.tsx:1914 [DataContext] ✅ Metadata Loaded: 11 Classes, 14 Subjects, 5 Assessments
-DataContext.tsx:860 [DataContext] 🎉 Manual refresh complete
-FreshLoginModal.tsx:30 [FreshLoginModal] Data refreshed successfully
-useLocalStorage.ts:27  [useLocalStorage] Storage quota exceeded for key "sba-gyewanidabasicschool_20252026_Second-Term-classes". Data will not be persisted to localStorage.
-(anonymous) @ useLocalStorage.ts:27
-react_stack_bottom_frame @ react-dom-client.development.js:25989
-runWithFiberInDEV @ react-dom-client.development.js:871
-commitHookEffectListMount @ react-dom-client.development.js:13249
-commitHookPassiveMountEffects @ react-dom-client.development.js:13336
-commitPassiveMountOnFiber @ react-dom-client.development.js:15484
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15519
-flushPassiveEffects @ react-dom-client.development.js:18432
-(anonymous) @ react-dom-client.development.js:17923
-performWorkUntilDeadline @ scheduler.development.js:45
-DataContext.tsx:821 [DataContext] 📥 Manual refresh initiated - fetching data from cloud [FULL]...
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Loading main school data (1 doc)
-firebaseService.ts:90 [Firestore Read] getSchoolData/gyewanidabasicschool_20252026_Second-Term -> schools/gyewanidabasicschool_20252026_Second-Term
-firebaseService.ts:92 [Firestore Read] getSchoolData/gyewanidabasicschool_20252026_Second-Term -> exists=true
-DataContext.tsx:827 [DataContext] ✅ Main document fetched, applying updates...
-DataContext.tsx:279 [DataContext] 📦 loadImportedData called (isRemote=false) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 0, …}
-DataContext.tsx:355 [DataContext] 🚫 Skipping scores update - data is empty/undefined
-syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users from document. Count: 15
-DataContext.tsx:444 [DataContext] 💾 Local file import: Marking fields as dirty for verification
-DataContext.tsx:844 [DataContext] 🔄 Force refreshing Metadata (Classes, Subjects, Assessments)...
-DataContext.tsx:1872 [DataContext] 🔍 loadMetadata Check: {hasData: true, previouslyLoaded: true, isUpToDate: false, inflight: false}
-DataContext.tsx:1901 [DataContext] 📥 Loading Metadata (Classes, Subjects, Assessments)...
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Attempting bundle read (0 docs)
-firebaseService.ts:90 [Firestore Read] fetchMetadataBundle/gyewanidabasicschool_20252026_Second-Term -> schools/gyewanidabasicschool_20252026_Second-Term/config/metadata_bundle
-DataContext.tsx:850 [DataContext] 🔄 Force refreshing Students subcollection...
-DataContext.tsx:1755 [DataContext] 🔍 loadStudents Check: {studentsCount: 280, serverTS: _Timestamp, loadedTS: _Timestamp, isUpToDate: false, hasInflight: false}
-DataContext.tsx:1785 [DataContext] 📥 Loading Students...
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching all students (0 docs)
-firebaseService.ts:102 [Firestore Read] fetchSubcollection/gyewanidabasicschool_20252026_Second-Term/students -> fetching
-firebaseService.ts:92 [Firestore Read] fetchMetadataBundle/gyewanidabasicschool_20252026_Second-Term -> exists=false
-firebaseService.ts:820 [Firebase] ⚠️ Bundle missing, falling back to individual reads
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Bundle missing - fetching classes (0 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Bundle missing - fetching subjects (0 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Bundle missing - fetching assessments (0 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching all classes (0 docs)
-firebaseService.ts:102 [Firestore Read] fetchSubcollection/gyewanidabasicschool_20252026_Second-Term/classes -> fetching
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching all subjects (0 docs)
-firebaseService.ts:102 [Firestore Read] fetchSubcollection/gyewanidabasicschool_20252026_Second-Term/subjects -> fetching
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching all assessments (0 docs)
-firebaseService.ts:102 [Firestore Read] fetchSubcollection/gyewanidabasicschool_20252026_Second-Term/assessments -> fetching
-firebaseService.ts:104 [Firestore Read] fetchSubcollection/gyewanidabasicschool_20252026_Second-Term/students -> docs=280
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched all students (280 docs)
-DataContext.tsx:1789 [DataContext] ✅ Loaded 280 students.
-firebaseService.ts:104 [Firestore Read] fetchSubcollection/gyewanidabasicschool_20252026_Second-Term/classes -> docs=11
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched all classes (11 docs)
-firebaseService.ts:104 [Firestore Read] fetchSubcollection/gyewanidabasicschool_20252026_Second-Term/subjects -> docs=14
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched all subjects (14 docs)
-firebaseService.ts:104 [Firestore Read] fetchSubcollection/gyewanidabasicschool_20252026_Second-Term/assessments -> docs=5
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched all assessments (5 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fallback fetched 11 classes (11 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fallback fetched 14 subjects (14 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fallback fetched 5 assessments (5 docs)
-DataContext.tsx:1914 [DataContext] ✅ Metadata Loaded: 11 Classes, 14 Subjects, 5 Assessments
-DataContext.tsx:860 [DataContext] 🎉 Manual refresh complete
-useLocalStorage.ts:27  [useLocalStorage] Storage quota exceeded for key "sba-gyewanidabasicschool_20252026_Second-Term-classes". Data will not be persisted to localStorage.
-(anonymous) @ useLocalStorage.ts:27
-react_stack_bottom_frame @ react-dom-client.development.js:25989
-runWithFiberInDEV @ react-dom-client.development.js:871
-commitHookEffectListMount @ react-dom-client.development.js:13249
-commitHookPassiveMountEffects @ react-dom-client.development.js:13336
-commitPassiveMountOnFiber @ react-dom-client.development.js:15484
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15476
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15718
-recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
-commitPassiveMountOnFiber @ react-dom-client.development.js:15519
-flushPassiveEffects @ react-dom-client.development.js:18432
-(anonymous) @ react-dom-client.development.js:17923
-performWorkUntilDeadline @ scheduler.development.js:45
+ [Firebase Analytics] 📖 READ: Bundle missing - fetching assessments (0 docs)
+ [Firebase Analytics] 📖 READ: Fetching all classes (0 docs)
+ [Firebase Analytics] 📖 READ: Fetching all subjects (0 docs)
+ [Firebase Analytics] 📖 READ: Fetching all assessments (0 docs)
+ [Firebase Analytics] 📖 READ: Fetched all students (280 docs)
+ [DataContext] ✅ Loaded 280 students.
+ [Firebase Analytics] 📖 READ: Fetched all classes (11 docs)
+ [Firebase Analytics] 📖 READ: Fetched all subjects (14 docs)
+ [Firebase Analytics] 📖 READ: Fetched all assessments (5 docs)
+ [Firebase Analytics] 📖 READ: Fallback fetched 11 classes (11 docs)
+ [Firebase Analytics] 📖 READ: Fallback fetched 14 subjects (14 docs)
+ [Firebase Analytics] 📖 READ: Fallback fetched 5 assessments (5 docs)
+ [DataContext] ✅ Metadata Loaded: 11 Classes, 14 Subjects, 5 Assessments
+ [DataContext] 🎉 Manual refresh complete
+ [Firebase Analytics] 📖 READ: Fetching all students (0 docs)
+ [DataContext] 📥 Lazy Loading Scores for Subject 9...
+ [Firebase Analytics] 📖 READ: Fetching bucket: subject_9 (1 doc)
+ [Firebase Analytics] 📖 READ: Fetched all students (280 docs)
+ [Firebase] 🎓 Student bucket missing but students exist. Creating bucket for gyewanidabasicschool_20252026_Second-Term...
+ [Firebase Analytics] ✍️ WRITE: Writing student_bucket for gyewanidabasicschool_20252026_Second-Term
+ [DataContext] ✅ Loaded 4 scores.
+ [InlineScoreInput] User input: Object
+ [InlineScoreInput] User input: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+  [Firestore Write] updateStudentBucket/gyewanidabasicschool_20252026_Second-Term ERROR -> schools/gyewanidabasicschool_20252026_Second-Term/config/student_bucket: 
+loggedSetDoc @ firebaseService.ts?t=1770490311963:91
+  [Firebase] Failed to update student bucket: 
+updateStudentBucket @ firebaseService.ts?t=1770490311963:571
+  [Firebase] Error ensuring student bucket exists: 
+ensureStudentBucketExists @ firebaseService.ts?t=1770490311963:587
+ [InlineScoreInput] User input: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [InlineScoreInput] User input: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [DataContext] 📥 Manual refresh initiated - fetching data from cloud [FULL]...
+ [Firebase Analytics] 📖 READ: Loading main school data (1 doc)
+ [DataContext] ✅ Main document fetched, applying updates...
+ [DataContext] 🧹 Cleared score subject cache to force fresh fetch on next load
+ [DataContext] 📦 loadImportedData called (isRemote=false) with: Object
+ [DataContext] 🚫 Skipping scores update - data is empty/undefined
+ [SYNC_LOG] loadImportedData: Loading users from document. Count: 15
+ [DataContext] 💾 Local file import: Marking fields as dirty for verification
+ [DataContext] 🔄 Force refreshing Metadata (Classes, Subjects, Assessments)...
+ [DataContext] 🔍 loadMetadata Check: Object
+ [DataContext] 📥 Loading Metadata (Classes, Subjects, Assessments)...
+ [Firebase Analytics] 📖 READ: Attempting bundle read (0 docs)
+ [DataContext] 🔄 Force refreshing Students subcollection...
+ [DataContext] 🔍 loadStudents Check: Object
+ [DataContext] 📥 Loading Students...
+ [Firebase Analytics] 📖 READ: Fetching all students (0 docs)
+ [DataContext] 🔄 Force refreshing Score Buckets for loaded subjects...
+ [Firebase] ⚠️ Bundle missing, falling back to individual reads
+ [Firebase Analytics] 📖 READ: Bundle missing - fetching classes (0 docs)
+ [Firebase Analytics] 📖 READ: Bundle missing - fetching subjects (0 docs)
+ [Firebase Analytics] 📖 READ: Bundle missing - fetching assessments (0 docs)
+ [Firebase Analytics] 📖 READ: Fetching all classes (0 docs)
+ [Firebase Analytics] 📖 READ: Fetching all subjects (0 docs)
+ [Firebase Analytics] 📖 READ: Fetching all assessments (0 docs)
+ [Firebase Analytics] 📖 READ: Fetched all students (280 docs)
+ [DataContext] ✅ Loaded 280 students.
+ [Firebase Analytics] 📖 READ: Fetched all classes (11 docs)
+ [Firebase Analytics] 📖 READ: Fetched all subjects (14 docs)
+ [Firebase Analytics] 📖 READ: Fetched all assessments (5 docs)
+ [Firebase Analytics] 📖 READ: Fallback fetched 11 classes (11 docs)
+ [Firebase Analytics] 📖 READ: Fallback fetched 14 subjects (14 docs)
+ [Firebase Analytics] 📖 READ: Fallback fetched 5 assessments (5 docs)
+ [DataContext] ✅ Metadata Loaded: 11 Classes, 14 Subjects, 5 Assessments
+ [DataContext] 🎉 Manual refresh complete
+ [Firebase Analytics] 📖 READ: Fetching all students (0 docs)
+ [DataContext] 📥 Lazy Loading Scores for Subject 9...
+ [Firebase Analytics] 📖 READ: Fetching bucket: subject_9 (1 doc)
+ [Firebase Analytics] 📖 READ: Fetched all students (280 docs)
+ [Firebase] 🎓 Student bucket missing but students exist. Creating bucket for gyewanidabasicschool_20252026_Second-Term...
+ [Firebase Analytics] ✍️ WRITE: Writing student_bucket for gyewanidabasicschool_20252026_Second-Term
+ [DataContext] ✅ Loaded 4 scores.
+ [InlineScoreInput] User input: Object
+ [InlineScoreInput] User input: Object
+ [InlineScoreInput] User input: Object
+ [InlineScoreInput] User input: Object
+  [Firestore Write] updateStudentBucket/gyewanidabasicschool_20252026_Second-Term ERROR -> schools/gyewanidabasicschool_20252026_Second-Term/config/student_bucket: 
+loggedSetDoc @ firebaseService.ts?t=1770490311963:91
+  [Firebase] Failed to update student bucket: 
+updateStudentBucket @ firebaseService.ts?t=1770490311963:571
+  [Firebase] Error ensuring student bucket exists: 
+ensureStudentBucketExists @ firebaseService.ts?t=1770490311963:587
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [InlineScoreInput] User input: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [InlineScoreInput] User input: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [InlineScoreInput] handleSave called: Object
+ [InlineScoreInput] Empty score - clearing: Object
+ [ScoreEntry - Mobile] commitScore called: Object
+ [ScoreEntry - Mobile] Empty score - clearing: Object
+ [ScoreEntry - Mobile] commitScore called: Object
+ [ScoreEntry - Mobile] Empty score - clearing: Object
+ [ScoreEntry - Mobile] commitScore called: Object
+ [ScoreEntry - Mobile] Empty score - clearing: Object
+ [ScoreEntry - Mobile] commitScore called: Object
+ [ScoreEntry - Mobile] Empty score - clearing: Object
+ [DataContext] 📥 Manual refresh initiated - fetching data from cloud [FULL]...
+ [Firebase Analytics] 📖 READ: Loading main school data (1 doc)
+ [DataContext] ✅ Main document fetched, applying updates...
+ [DataContext] 🧹 Cleared score subject cache to force fresh fetch on next load
+ [DataContext] 📦 loadImportedData called (isRemote=false) with: Object
+ [DataContext] 🚫 Skipping scores update - data is empty/undefined
+ [SYNC_LOG] loadImportedData: Loading users from document. Count: 15
+ [DataContext] 💾 Local file import: Marking fields as dirty for verification
+ [DataContext] 🔄 Force refreshing Metadata (Classes, Subjects, Assessments)...
+ [DataContext] 🔍 loadMetadata Check: Object
+ [DataContext] 📥 Loading Metadata (Classes, Subjects, Assessments)...
+ [Firebase Analytics] 📖 READ: Attempting bundle read (0 docs)
+ [DataContext] 🔄 Force refreshing Students subcollection...
+ [DataContext] 🔍 loadStudents Check: Object
+ [DataContext] 📥 Loading Students...
+ [Firebase Analytics] 📖 READ: Fetching all students (0 docs)
+ [DataContext] 🔄 Force refreshing Score Buckets for loaded subjects...
+ [Firebase] ⚠️ Bundle missing, falling back to individual reads
+ [Firebase Analytics] 📖 READ: Bundle missing - fetching classes (0 docs)
+ [Firebase Analytics] 📖 READ: Bundle missing - fetching subjects (0 docs)
+ [Firebase Analytics] 📖 READ: Bundle missing - fetching assessments (0 docs)
+ [Firebase Analytics] 📖 READ: Fetching all classes (0 docs)
+ [Firebase Analytics] 📖 READ: Fetching all subjects (0 docs)
+ [Firebase Analytics] 📖 READ: Fetching all assessments (0 docs)
+ [Firebase Analytics] 📖 READ: Fetched all students (280 docs)
+ [DataContext] ✅ Loaded 280 students.
+ [Firebase Analytics] 📖 READ: Fetched all classes (11 docs)
+ [Firebase Analytics] 📖 READ: Fetched all subjects (14 docs)
+ [Firebase Analytics] 📖 READ: Fetched all assessments (5 docs)
+ [Firebase Analytics] 📖 READ: Fallback fetched 11 classes (11 docs)
+ [Firebase Analytics] 📖 READ: Fallback fetched 14 subjects (14 docs)
+ [Firebase Analytics] 📖 READ: Fallback fetched 5 assessments (5 docs)
+ [DataContext] ✅ Metadata Loaded: 11 Classes, 14 Subjects, 5 Assessments
+ [DataContext] 🎉 Manual refresh complete
+ [Firebase Analytics] 📖 READ: Fetching all students (0 docs)
+ [DataContext] 📥 Lazy Loading Scores for Subject 9...
+ [Firebase Analytics] 📖 READ: Fetching bucket: subject_9 (1 doc)
+ [Firebase Analytics] 📖 READ: Fetched all students (280 docs)
+ [Firebase] 🎓 Student bucket missing but students exist. Creating bucket for gyewanidabasicschool_20252026_Second-Term...
+ [Firebase Analytics] ✍️ WRITE: Writing student_bucket for gyewanidabasicschool_20252026_Second-Term
+ [DataContext] ✅ Loaded 4 scores.
+ [ScoreEntry - Mobile] commitScore called: Object
+ [ScoreEntry - Mobile] Fraction conversion: Object
+ [ScoreEntry - Mobile] ✅ Score validated and formatted: Object
+ [ScoreEntry - Mobile] 💾 Calling updateStudentScores (saving to local cache)...
+ [ScoreEntry - Mobile] ✅ Score committed successfully
+ [ScoreEntry] 🧹 Clearing score for: ACQUAH KINGSFORD
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [ScoreEntry - Mobile] commitScore called: Object
+ [ScoreEntry - Mobile] Empty score - clearing: Object
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+  [Firestore Write] updateStudentBucket/gyewanidabasicschool_20252026_Second-Term ERROR -> schools/gyewanidabasicschool_20252026_Second-Term/config/student_bucket: 
+loggedSetDoc @ firebaseService.ts?t=1770490311963:91
+  [Firebase] Failed to update student bucket: 
+updateStudentBucket @ firebaseService.ts?t=1770490311963:571
+  [Firebase] Error ensuring student bucket exists: 
+ensureStudentBucketExists @ firebaseService.ts?t=1770490311963:587
+ [ScoreEntry - Mobile] commitScore called: Object
+ [ScoreEntry - Mobile] Fraction conversion: Object
+ [ScoreEntry - Mobile] ✅ Score validated and formatted: Object
+ [ScoreEntry - Mobile] 💾 Calling updateStudentScores (saving to local cache)...
+ [ScoreEntry - Mobile] ✅ Score committed successfully
+ [DataContext] 📥 Manual refresh initiated - fetching data from cloud [FULL]...
+ [Firebase Analytics] 📖 READ: Loading main school data (1 doc)
+ [DataContext] ✅ Main document fetched, applying updates...
+ [DataContext] 🧹 Cleared score subject cache to force fresh fetch on next load
+ [DataContext] 📦 loadImportedData called (isRemote=false) with: Object
+ [DataContext] 🚫 Skipping scores update - data is empty/undefined
+ [SYNC_LOG] loadImportedData: Loading users from document. Count: 15
+ [DataContext] 💾 Local file import: Marking fields as dirty for verification
+ [DataContext] 🔄 Force refreshing Metadata (Classes, Subjects, Assessments)...
+ [DataContext] 🔍 loadMetadata Check: Object
+ [DataContext] 📥 Loading Metadata (Classes, Subjects, Assessments)...
+ [Firebase Analytics] 📖 READ: Attempting bundle read (0 docs)
+ [DataContext] 🔄 Force refreshing Students subcollection...
+ [DataContext] 🔍 loadStudents Check: Object
+ [DataContext] 📥 Loading Students...
+ [Firebase Analytics] 📖 READ: Fetching all students (0 docs)
+ [DataContext] 🔄 Force refreshing Score Buckets for loaded subjects...
+ [Firebase] ⚠️ Bundle missing, falling back to individual reads
+ [Firebase Analytics] 📖 READ: Bundle missing - fetching classes (0 docs)
+ [Firebase Analytics] 📖 READ: Bundle missing - fetching subjects (0 docs)
+ [Firebase Analytics] 📖 READ: Bundle missing - fetching assessments (0 docs)
+ [Firebase Analytics] 📖 READ: Fetching all classes (0 docs)
+ [Firebase Analytics] 📖 READ: Fetching all subjects (0 docs)
+ [Firebase Analytics] 📖 READ: Fetching all assessments (0 docs)
+ [Firebase Analytics] 📖 READ: Fetched all students (280 docs)
+ [DataContext] ✅ Loaded 280 students.
+ [Firebase Analytics] 📖 READ: Fetched all classes (11 docs)
+ [Firebase Analytics] 📖 READ: Fetched all subjects (14 docs)
+ [Firebase Analytics] 📖 READ: Fetched all assessments (5 docs)
+ [Firebase Analytics] 📖 READ: Fallback fetched 11 classes (11 docs)
+ [Firebase Analytics] 📖 READ: Fallback fetched 14 subjects (14 docs)
+ [Firebase Analytics] 📖 READ: Fallback fetched 5 assessments (5 docs)
+ [DataContext] ✅ Metadata Loaded: 11 Classes, 14 Subjects, 5 Assessments
+ [DataContext] 🎉 Manual refresh complete
+ [Firebase Analytics] 📖 READ: Fetching all students (0 docs)
+ [DataContext] 📥 Lazy Loading Scores for Subject 9...
+ [Firebase Analytics] 📖 READ: Fetching bucket: subject_9 (1 doc)
+ [Firebase Analytics] 📖 READ: Fetched all students (280 docs)
+ [Firebase] 🎓 Student bucket missing but students exist. Creating bucket for gyewanidabasicschool_20252026_Second-Term...
+ [Firebase Analytics] ✍️ WRITE: Writing student_bucket for gyewanidabasicschool_20252026_Second-Term
+ [DataContext] ✅ Loaded 4 scores.
+ [ScoreEntry - Mobile] commitScore called: Object
+ [ScoreEntry - Mobile] Fraction conversion: Object
+ [ScoreEntry - Mobile] ✅ Score validated and formatted: Object
+ [ScoreEntry - Mobile] 💾 Calling updateStudentScores (saving to local cache)...
+ [ScoreEntry - Mobile] ✅ Score committed successfully
+ [ScoreEntry] 🧹 Clearing score for: ACQUAH KINGSFORD
+ [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+ [DataContext] 📥 updateStudentScores called: Object
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+ [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ [DataContext] 🔄 Updating existing score entry
+ [DataContext] ✅ Score saved to local cache (React state)
+DataContext.tsx:1231 [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+ScoreEntry.tsx:283 [ScoreEntry - Mobile] commitScore called: Object
+ScoreEntry.tsx:300 [ScoreEntry - Mobile] Empty score - clearing: Object
+DataContext.tsx:1141 [DataContext] 🕵️ Smart Dirty Check DEBUG: Object
+DataContext.tsx:1188 [DataContext] 📥 updateStudentScores called: Object
+DataContext.tsx:1203 [DataContext] 🔄 Updating existing score entry
+DataContext.tsx:1230 [DataContext] ✅ Score saved to local cache (React state)
+DataContext.tsx:1231 [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+DataContext.tsx:1203 [DataContext] 🔄 Updating existing score entry
+DataContext.tsx:1230 [DataContext] ✅ Score saved to local cache (React state)
+DataContext.tsx:1231 [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+firebaseService.ts:133  [Firestore Write] updateStudentBucket/gyewanidabasicschool_20252026_Second-Term ERROR -> schools/gyewanidabasicschool_20252026_Second-Term/config/student_bucket: FirebaseError: Document 'projects/sba-pro-master-759f6/databases/(default)/documents/schools/gyewanidabasicschool_20252026_Second-Term/config/student_bucket' cannot be written because its size (2,947,393 bytes) exceeds the maximum allowed size of 1,048,576 bytes.
+loggedSetDoc @ firebaseService.ts:133
+firebaseService.ts:926  [Firebase] Failed to update student bucket: FirebaseError: Document 'projects/sba-pro-master-759f6/databases/(default)/documents/schools/gyewanidabasicschool_20252026_Second-Term/config/student_bucket' cannot be written because its size (2,947,393 bytes) exceeds the maximum allowed size of 1,048,576 bytes.
+updateStudentBucket @ firebaseService.ts:926
+firebaseService.ts:949  [Firebase] Error ensuring student bucket exists: FirebaseError: Document 'projects/sba-pro-master-759f6/databases/(default)/documents/schools/gyewanidabasicschool_20252026_Second-Term/config/student_bucket' cannot be written because its size (2,947,393 bytes) exceeds the maximum allowed size of 1,048,576 bytes.
+ensureStudentBucketExists @ firebaseService.ts:949

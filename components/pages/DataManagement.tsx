@@ -170,7 +170,7 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
 
             // STOP HERE: Do not switch yet. Show confirmation.
             setCreatedTermId(newDocId);
-            setFeedback({ message: 'New term created successfully!', type: 'success' });
+            setFeedback({ message: `New term for ${newSettings.academicYear} - ${newSettings.academicTerm} created successfully!`, type: 'success' });
 
         } catch (error: any) {
             console.error("Failed to create term:", error);
@@ -184,7 +184,7 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
         if (!createdTermId) return;
 
         try {
-            setFeedback({ message: 'Switching to ' + createdTermId + '...', type: 'info' });
+            setFeedback({ message: `Switching to ${newYear} - ${newTerm}...`, type: 'info' });
 
             // 1. Update Persistent Storage (Critical for preventing fallback on refresh)
             localStorage.setItem('sba_school_id', createdTermId);
@@ -208,7 +208,7 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
                 saveDeviceCredential(createdTermId, currentUserId);
             }
 
-            setFeedback({ message: 'Successfully switched to ' + createdTermId, type: 'success' });
+            setFeedback({ message: `Successfully switched to ${newYear} - ${newTerm}`, type: 'success' });
 
             // Close the modal
             onClose();
@@ -1129,7 +1129,7 @@ const DataManagement: React.FC = () => {
         };
 
         return (
-            <div 
+            <div
                 onClick={() => setFeedback(null)}
                 className={`fixed top-28 right-6 z-50 w-full max-w-md p-4 rounded-xl shadow-lg border animate-fade-in-scale cursor-pointer ${colors[feedback.type]}`}
             >

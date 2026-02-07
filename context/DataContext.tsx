@@ -774,6 +774,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // Update hasLocalChanges based on remaining dirty fields
             setHasLocalChanges(dirtyFields.current.size > 0);
 
+            // FIX: Explicitly clear pending score changes and force pendingCount update
+            // This ensures that scores are no longer marked as "Pending" even if deepEqual logic has edge cases
+            if (fieldsToSave.includes('scores')) {
+                pendingScoreChanges.current.clear();
+            }
+            setDirtyVersion(v => v + 1);
+
             setIsSyncing(false);
             isSyncingRef.current = false;
         } catch (error) {
@@ -829,6 +836,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 // 2. Clear relevant pending states
                 if (!keysToRefresh || keysToRefresh.includes('scores')) {
                     pendingScoreChanges.current.clear();
+                    // CRITICAL FIX: Clear the score cache so fresh scores are fetched when user navigates back
+                    loadedSubjects.current.clear();
+                    console.log('[DataContext] 🧹 Cleared score subject cache to force fresh fetch on next load');
                 }
 
                 // 3. Mark as remote update & Apply Main Doc Data
@@ -851,6 +861,30 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     promises.push(loadStudents(undefined, true));
                 }
 
+                // C) Scores - Reload any currently viewed scores to show fresh data immediately
+                if (!keysToRefresh || keysToRefresh.includes('scores')) {
+                    console.log('[DataContext] 🔄 Force refreshing Score Buckets for loaded subjects...');
+                    // For each subject that was already loaded, force reload its scores
+                    const loadedSubjectsArray = Array.from(loadedSubjects.current) as number[];
+                    if (loadedSubjectsArray.length > 0) {
+                        console.log(`[DataContext] 📊 Reloading ${loadedSubjectsArray.length} subject score buckets`);
+                        const scoreRefreshPromises = loadedSubjectsArray.map((subjectId: number) =>
+                            fetchScoresForClass(schoolId, 0, subjectId)
+                                .then(freshScores => {
+                                    // Merge fresh scores into state
+                                    if (freshScores && freshScores.length > 0) {
+                                        setScores(prev => {
+                                            const scoreMap = new Map(prev.map(s => [s.id, s]));
+                                            freshScores.forEach(s => scoreMap.set(s.id, s));
+                                            return Array.from(scoreMap.values());
+                                        });
+                                    }
+                                    return freshScores;
+                                })
+                        );
+                        promises.push(Promise.all(scoreRefreshPromises));
+                    }
+                }
 
                 // D) Users - Loaded via Main Document (No Subcollection)
 
@@ -1107,14 +1141,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const originalScore = originalData.current.scores?.find(s => s.id === scoreId);
         const originalAssessmentScores = originalScore?.assessmentScores?.[assessmentId] || [];
 
-        // Normalize: Treat [''] same as []
-        const cleanScores = (s: string[]) => s.filter(val => val.trim() !== '');
-        const isActuallyChanged = !deepEqual(cleanScores(newScores), cleanScores(originalAssessmentScores));
+        // Compare actual values WITHOUT normalizing - clearing a score [''] is different from original ['95']
+        // This ensures that clearing/deleting scores is recognized as a valid change
+        const isActuallyChanged = !deepEqual(newScores, originalAssessmentScores);
 
         console.log('[DataContext] 🕵️ Smart Dirty Check DEBUG:', {
             id: scoreId,
-            new: cleanScores(newScores),
-            orig: cleanScores(originalAssessmentScores),
+            new: newScores,
+            orig: originalAssessmentScores,
             changed: isActuallyChanged,
             originalFound: !!originalScore
         });
@@ -1616,37 +1650,40 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
                         // Special handling for SCORES to match saveToCloud logic
                         if (field === 'scores') {
+
+                            // 1. Normalize: Treat [''] same as []
+                            // FIX: Preserve empty strings to ensure [''] is treated as a valid value distinct from []
+                            const cleanScores = (s: string[]) => s.map(val => val.trim());
+
+                            // 2. Check if it's a NEW item (no original)
                             if (!originalItem) {
-                                // NEW ITEM CHECK: Prevent "Ghost" overwrites
-                                // Exception: If the user explicitly modified this score (it's in pendingScoreChanges),
-                                // we MUST send it, even if it appears to be a "Ghost" (e.g. they cleared a stale original).
+                                // If the user explicitly modified this score (it's in pendingScoreChanges),
+                                // we MUST send it, even if it appears to be a "Ghost".
                                 const isPending = pendingScoreChanges.current.has(String(item.id));
                                 if (isPending) return true;
 
                                 // If it's a new item (or one we didn't know about), check if it's effectively empty.
                                 // If it is empty, DO NOT SEND IT. This prevents overwriting valid server data with empty local placeholders.
+                                // FIX: Allow [''] (explicit empty string) to count as "Data" so we can clear values on server
                                 // @ts-ignore
-                                const hasData = item.assessmentScores && Object.values(item.assessmentScores).some(scores => Array.isArray(scores) && scores.some(s => s.trim() !== ''));
+                                const hasData = item.assessmentScores && Object.values(item.assessmentScores).some(scores => Array.isArray(scores) && (scores.some(s => s.trim() !== '') || (scores.length === 1 && scores[0] === '')));
                                 if (!hasData) return false;
-                                return true;
+                                return true; // It has data and is new, so save it
                             }
 
-                            // Normalize: Treat [''] same as []
-                            // We can't easily modify the item structure here for deepEqual without cloning.
-                            const cleanScores = (s: string[]) => s.filter(val => val.trim() !== '');
+                            // 3. Check if it's an EXISTING item (compare against original)
                             // @ts-ignore
                             const itemScores = item.assessmentScores || {};
                             // @ts-ignore
                             const origScores = originalItem.assessmentScores || {};
 
                             // Check deep equality on cleaned scores
-                            // This is expensive but necessary for accurate preview
                             // Simplified: Just compare the assessment keys present
                             const allKeys = new Set([...Object.keys(itemScores), ...Object.keys(origScores)]);
                             for (const key of allKeys) {
                                 const s1 = cleanScores(itemScores[key] || []);
                                 const s2 = cleanScores(origScores[key] || []);
-                                if (!deepEqual(s1, s2)) return true;
+                                if (!deepEqual(s1, s2)) return true; // Found a difference!
                             }
                             return false; // No changes found after normalization
                         }
@@ -1827,7 +1864,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     // Mark as loaded even if serverTimestamp is undefined
                     lastLoadedTimestamps.current['_loaded_students'] = serverTimestamp || 'loaded_once';
                     setStudents(newStudents);
-                    
+
                     // OPTIMIZATION: Ensure student bucket exists (create if missing)
                     if (newStudents.length > 0) {
                         ensureStudentBucketExists(schoolId).catch(e => {
@@ -1943,7 +1980,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setIsFetching(true);
             try {
                 console.log(`[DataContext] 📥 Loading Metadata (Classes, Subjects, Assessments)...`);
-                
+
                 // Use composite bundle strategy: 1 read for all metadata vs 3 separate reads
                 const { classes: fetchedClasses, subjects: fetchedSubjects, assessments: fetchedAssessments } = await fetchMetadataBundle(schoolId);
 

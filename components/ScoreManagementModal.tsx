@@ -75,7 +75,16 @@ const ScoreManagementModal: React.FC<ScoreManagementModalProps> = ({ isOpen, onC
     };
 
     const handleUpdateScore = (index: number, value: string) => {
-        if (scores[index] === value.trim()) {
+        const trimmedValue = value.trim();
+        
+        // Allow clearing/deleting a score by emptying the input
+        if (!trimmedValue) {
+            setEditErrors(prev => ({ ...prev, [index]: undefined }));
+            onDeleteScore(index);
+            return;
+        }
+        
+        if (scores[index] === trimmedValue) {
             setEditErrors(prev => ({ ...prev, [index]: undefined }));
             return;
         }
