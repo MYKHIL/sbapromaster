@@ -731,8 +731,8 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 await updateUsers(currentSchoolId, updatedUsers);
             }
 
-            // Auto-login after setting password - call UserContext.login with (userId, password)
-            await login(user.id, password);
+            // Auto-login after setting password - call UserContext.login with (userId, password, userOverride)
+            await login(user.id, password, updatedUser);
             setUserPassword(password);
 
             // Save user credentials
