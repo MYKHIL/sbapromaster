@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useUser } from '../context/UserContext';
 import { useData } from '../context/DataContext';
 import ConfirmationModal from './ConfirmationModal';
-import { NetworkIndicator } from './NetworkIndicator';
 import OnlineUsersModal from './OnlineUsersModal';
 
 const UserBadge: React.FC = () => {
@@ -15,7 +14,26 @@ const UserBadge: React.FC = () => {
     const [showConfirm, setShowConfirm] = useState(false);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [showOnlineUsers, setShowOnlineUsers] = useState(false);
+    const [showTermInfo, setShowTermInfo] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
+    const termInfoRef = React.useRef<HTMLDivElement>(null);
+
+    // Close on click outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (showTermInfo && termInfoRef.current && !termInfoRef.current.contains(event.target as Node)) {
+                setShowTermInfo(false);
+            }
+        };
+
+        if (showTermInfo) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showTermInfo]);
 
     // Switch Account (Same School)
     const handleSwitchUser = () => {
@@ -133,8 +151,76 @@ const UserBadge: React.FC = () => {
                             </div>
                         )}
 
-                        {/* Network Indicator - Always Visible */}
-                        <NetworkIndicator isOnline={isOnline} isSyncing={isSyncing} queuedCount={queuedCount} />
+                        {/* Term Info Indicator - Replaces Network Indicator */}
+                        <div className="relative" ref={termInfoRef}>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowTermInfo(!showTermInfo);
+                                }}
+                                className="flex flex-col items-center gap-0.5 ml-2 cursor-pointer group"
+                                title="View Term Information"
+                            >
+                                <div className="p-1.5 rounded-full bg-blue-50 text-blue-600 group-hover:bg-blue-100 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                </div>
+                                <span className="text-[9px] font-medium text-blue-600 opacity-80">
+                                    Term Info
+                                </span>
+                            </button>
+
+                            {/* Term Info Popup */}
+                            {showTermInfo && (
+                                <div
+                                    className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-xl border border-blue-100 p-4 z-[70] animate-in fade-in zoom-in-95 duration-200"
+                                    onClick={() => setShowTermInfo(false)}
+                                >
+                                    <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
+                                        <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        </div>
+                                        <h3 className="font-semibold text-gray-800 text-sm">Current Term Details</h3>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-gray-500">Academic Year</span>
+                                            <span className="font-medium text-gray-900 bg-gray-50 px-2 py-0.5 rounded">{settings?.academicYear || 'N/A'}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-gray-500">Current Term</span>
+                                            <span className="font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{settings?.academicTerm || 'N/A'}</span>
+                                        </div>
+
+                                        <div className="pt-2 border-t border-gray-50"></div>
+
+                                        <div className="space-y-1">
+                                            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Important Dates</p>
+                                            <div className="flex justify-between items-center text-sm py-1">
+                                                <span className="text-gray-600">Vacation Date</span>
+                                                <span className="font-medium text-gray-900">
+                                                    {settings?.vacationDate ? new Date(settings.vacationDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not Set'}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-sm py-1">
+                                                <span className="text-gray-600">Reopening Date</span>
+                                                <span className="font-medium text-gray-900">
+                                                    {settings?.reopeningDate ? new Date(settings.reopeningDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not Set'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-3 pt-2 text-[10px] text-center text-gray-400 border-t border-gray-50">
+                                        Dates are set in System Settings
+                                    </div>
+                                </div>
+                            )}
+                        </div>
 
                         {/* Always Visible Logout Button */}
                         <button
@@ -154,7 +240,7 @@ const UserBadge: React.FC = () => {
                                 cursor: 'pointer',
                                 transition: 'all 0.2s',
                             }}
-                            className="hover:bg-red-100"
+                            className="hover:bg-red-100 ml-1"
                             title="Logout from School"
                             onMouseEnter={(e) => {
                                 e.currentTarget.style.backgroundColor = 'rgba(254, 226, 226, 0.5)';
@@ -195,7 +281,7 @@ const UserBadge: React.FC = () => {
                         {/* Collapse/Expand Toggle */}
                         <button
                             onClick={() => setIsExpanded(!isExpanded)}
-                            className="p-1 rounded-full hover:bg-white/30 transition-colors"
+                            className="p-1 rounded-full hover:bg-white/30 transition-colors ml-1"
                             title={isExpanded ? "Collapse" : "Expand"}
                         >
                             <svg
