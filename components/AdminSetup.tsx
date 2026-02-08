@@ -234,7 +234,31 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
             setSavedScrollPosition(existingUsersListRef.current.scrollTop);
         }
         setEditingUserId(user.id);
-        setUsers([{ ...user }]);
+
+        // Fix for editing: If user has allowedSubjects but no classSubjects (legacy or simple mode),
+        // we need to materialize them into the classSubjects map for the UI to show them as selected.
+        const editingUser: User = { ...user };
+
+        // Ensure classSubjects object exists
+        if (!editingUser.classSubjects) {
+            editingUser.classSubjects = {};
+        }
+
+        // Check if we need to auto-populate
+        const hasGlobalSubjects = editingUser.allowedSubjects && editingUser.allowedSubjects.length > 0;
+        const hasClassMappings = editingUser.classSubjects && Object.keys(editingUser.classSubjects).length > 0;
+
+        if (hasGlobalSubjects && !hasClassMappings && editingUser.allowedClasses) {
+            // Auto-populate: Assign all allowedSubjects to all allowedClasses
+            editingUser.allowedClasses.forEach(className => {
+                if (editingUser.classSubjects) {
+                    editingUser.classSubjects[className] = [...editingUser.allowedSubjects];
+                }
+            });
+            console.log('[AdminSetup] Auto-populated classSubjects from allowedSubjects for editing:', editingUser.classSubjects);
+        }
+
+        setUsers([editingUser]);
     };
 
     const handleUpdateExistingUser = async () => {
@@ -735,19 +759,19 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                         Close
                     </button>
                 </div>
-                        {/* Unsaved changes warning modal */}
-                        <ConfirmationModal
-                            isOpen={showCloseWarning}
-                            onClose={() => setShowCloseWarning(false)}
-                            onConfirm={() => {
-                                setShowCloseWarning(false);
-                                if (onCancel) onCancel();
-                            }}
-                            title="Unsaved Changes"
-                            message="You have unsaved changes. Are you sure you want to close without saving?"
-                            variant="warning"
-                            confirmText="Close Without Saving"
-                        />
+                {/* Unsaved changes warning modal */}
+                <ConfirmationModal
+                    isOpen={showCloseWarning}
+                    onClose={() => setShowCloseWarning(false)}
+                    onConfirm={() => {
+                        setShowCloseWarning(false);
+                        if (onCancel) onCancel();
+                    }}
+                    title="Unsaved Changes"
+                    message="You have unsaved changes. Are you sure you want to close without saving?"
+                    variant="warning"
+                    confirmText="Close Without Saving"
+                />
             </div>
 
             {/* Reset Password Confirmation Modal */}
