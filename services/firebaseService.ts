@@ -426,29 +426,69 @@ export const fetchStudents = async (
     }
 
     const fetchPromise = (async () => {
-        // 1. Try fetching from the "Bucket" first (schools/{schoolId}/config/student_bucket)
+        // 1. Try fetching from the "Bucket" first (schools/{schoolId}/config/student_bucket_manifest)
         try {
-            const bucketRef = doc(db, "schools", docId, "config", "student_bucket");
-            trackFirebaseRead('fetchStudents', 'config', 1, 'Attempting student bucket read');
-            const bucketSnap = await loggedGetDoc(bucketRef, `fetchStudents/bucket/${docId}`);
+            const manifestRef = doc(db, "schools", docId, "config", "student_bucket_manifest");
+            trackFirebaseRead('fetchStudents', 'config', 1, 'Checking student bucket manifest');
+            const manifestSnap = await loggedGetDoc(manifestRef, `fetchStudents/manifest/${docId}`);
 
-            if (bucketSnap.exists()) {
-                const data = bucketSnap.data() as any;
-                if (data.studentsMap) {
-                    const allStudents = Object.values(data.studentsMap) as Student[];
-                    // If pagination requested, apply it in-memory
-                    if (pageSize && pageSize > 0) {
-                        const startIdx = lastVisible ? allStudents.findIndex(s => s.id === (lastVisible as any).id) + 1 : 0;
-                        const page = allStudents.slice(startIdx, startIdx + pageSize);
-                        const lastDoc = page.length > 0 ? page[page.length - 1] : null;
-                        return { students: page, lastDoc: lastDoc as any };
+            let allStudents: Student[] = [];
+
+            if (manifestSnap.exists()) {
+                // CHUNKED STRATEGY
+                const manifest = manifestSnap.data() as any;
+                const totalChunks = manifest?.totalChunks || 0;
+                console.log(`[Firebase] 📦 Found student manifest with ${totalChunks} chunks.`);
+
+                // Fetch all chunks in parallel
+                const chunkPromises = [];
+                for (let i = 0; i < totalChunks; i++) {
+                    const chunkRef = doc(db, "schools", docId, "config", `student_bucket_${i}`);
+                    chunkPromises.push(loggedGetDoc(chunkRef, `fetchStudents/chunk_${i}/${docId}`));
+                }
+
+                trackFirebaseRead('fetchStudents', 'config', totalChunks, `Fetching ${totalChunks} student chunks`);
+                const chunkSnaps = await Promise.all(chunkPromises);
+
+                chunkSnaps.forEach(snap => {
+                    if (snap.exists()) {
+                        const data = snap.data();
+                        if (data?.students) {
+                            allStudents = allStudents.concat(data.students as Student[]);
+                        }
                     }
-                    return { students: allStudents, lastDoc: null };
+                });
+
+                console.log(`[Firebase] ✅ Reassembled ${allStudents.length} students from chunks.`);
+
+            } else {
+                // BACKWARD COMPATIBILITY: Check for old single bucket
+                const oldBucketRef = doc(db, "schools", docId, "config", "student_bucket");
+                const oldBucketSnap = await loggedGetDoc(oldBucketRef, `fetchStudents/oldBucket/${docId}`);
+                if (oldBucketSnap.exists()) {
+                    const data = oldBucketSnap.data() as any;
+                    if (data.studentsMap) {
+                        allStudents = Object.values(data.studentsMap) as Student[];
+                        console.log(`[Firebase] ⚠️ Found legacy single student bucket (${allStudents.length} students). Consider migrating.`);
+                    }
                 }
             }
+
+            if (allStudents.length > 0) {
+                // If pagination requested, apply it in-memory
+                if (pageSize && pageSize > 0) {
+                    const startIdx = lastVisible ? allStudents.findIndex(s => s.id === (lastVisible as any).id) + 1 : 0;
+                    const page = allStudents.slice(startIdx, startIdx + pageSize);
+                    const lastDoc = page.length > 0 ? page[page.length - 1] : null;
+                    return { students: page, lastDoc: lastDoc as any };
+                }
+                return { students: allStudents, lastDoc: null };
+            }
+
         } catch (e) {
             console.warn("Error fetching student bucket:", e);
         }
+
 
         // 2. Fallback: Fetch legacy individual student documents if bucket missing/empty
         try {
@@ -996,20 +1036,74 @@ export const updateMetadataBundle = async (schoolId: string, options?: { classes
  * Update student bucket with current students array
  * If students array is provided, use it; otherwise fetch from subcollection.
  */
-export const updateStudentBucket = async (schoolId: string, students?: Student[]) => {
+/**
+ * Update student bucket with current students array (CHUNKED with RECURSIVE BACKOFF)
+ * Splits students into multiple documents to avoid 1MB limit.
+ * If a chunk is too large, it automatically splits smaller until Firestore accepts it.
+ */
+export const updateStudentBucket = async (schoolId: string, students?: Student[], initialChunkSize: number = 50) => {
     try {
-        const bucketRef = doc(db, "schools", schoolId, "config", "student_bucket");
         const studentsToStore = students || (await fetchSubcollection<Student>(schoolId, 'students'));
 
-        // Build a map keyed by student ID for efficient storage
-        const studentsMap: Record<number, Student> = {};
-        studentsToStore.forEach(s => {
-            studentsMap[s.id] = s;
-        });
+        // Recursive helper function to write chunks with automatic backoff
+        const writeChunksWithBackoff = async (
+            studentsData: Student[],
+            chunkSize: number,
+            attempt: number = 1
+        ): Promise<void> => {
+            const totalChunks = Math.ceil(studentsData.length / chunkSize);
 
-        trackFirebaseWrite('updateStudentBucket', 'config', `Writing student_bucket for ${schoolId}`);
-        await loggedSetDoc(bucketRef, { studentsMap }, { merge: true }, `updateStudentBucket/${schoolId}`);
-        console.log(`[Firebase] 🎓 student_bucket updated for ${schoolId}`);
+            console.log(`[Firebase] 🎓 Attempt ${attempt}: Bucketing ${studentsData.length} students into ${totalChunks} chunks (size: ${chunkSize})...`);
+
+            const batch = writeBatch(db);
+
+            // 1. Write Manifest
+            const manifestRef = doc(db, "schools", schoolId, "config", "student_bucket_manifest");
+            batch.set(manifestRef, {
+                totalChunks,
+                totalStudents: studentsData.length,
+                lastUpdated: serverTimestamp(),
+                chunkSize // Track the actual chunk size used
+            });
+
+            // 2. Write Chunks
+            for (let i = 0; i < totalChunks; i++) {
+                const chunk = studentsData.slice(i * chunkSize, (i + 1) * chunkSize);
+                const chunkRef = doc(db, "schools", schoolId, "config", `student_bucket_${i}`);
+                batch.set(chunkRef, { students: chunk });
+            }
+
+            try {
+                trackFirebaseWrite('updateStudentBucket', 'config', `Writing ${totalChunks} student chunks for ${schoolId}`);
+                await batch.commit();
+                console.log(`[Firebase] ✅ Student bucket updated (${totalChunks} chunks, size: ${chunkSize})`);
+            } catch (error: any) {
+                // Check if error is due to document size
+                const isSizeError = error?.message?.includes('size') &&
+                    error?.message?.includes('exceeds the maximum allowed size');
+
+                if (isSizeError && chunkSize > 1) {
+                    // RECURSIVE BACKOFF: Split chunks in half and retry
+                    const newChunkSize = Math.max(1, Math.floor(chunkSize / 2));
+                    console.warn(`[Firebase] ⚠️ Chunk size ${chunkSize} too large. Retrying with size ${newChunkSize}...`);
+
+                    // Recursively retry with smaller chunks
+                    return writeChunksWithBackoff(studentsData, newChunkSize, attempt + 1);
+                } else if (chunkSize === 1) {
+                    // If we're down to 1 student per chunk and still failing, 
+                    // we have a fundamental issue with individual student data
+                    console.error(`[Firebase] ❌ CRITICAL: Even single-student chunks are too large. Individual student data exceeds 1MB.`);
+                    throw new Error('Individual student record exceeds 1MB. Please compress student images further.');
+                } else {
+                    // Different error, rethrow
+                    throw error;
+                }
+            }
+        };
+
+        // Start the recursive write process
+        await writeChunksWithBackoff(studentsToStore, initialChunkSize);
+
     } catch (error) {
         console.error('[Firebase] Failed to update student bucket:', error);
         throw error;
@@ -1022,11 +1116,61 @@ export const updateStudentBucket = async (schoolId: string, students?: Student[]
  */
 export const ensureStudentBucketExists = async (schoolId: string, preloadedStudents?: Student[]) => {
     try {
-        const bucketRef = doc(db, "schools", schoolId, "config", "student_bucket");
-        const bucketSnap = await loggedGetDoc(bucketRef, `ensureStudentBucketExists/${schoolId}`);
+        // BUCKET CLEANUP: Delete all existing buckets if flag is enabled
+        const { CLEAR_STUDENT_BUCKETS } = await import('../constants');
+        if (CLEAR_STUDENT_BUCKETS) {
+            console.log(`[Bucket Cleanup] 🧹 CLEAR_STUDENT_BUCKETS enabled. Deleting all existing buckets for ${schoolId}...`);
+            try {
+                const batch = writeBatch(db);
+                let deletedCount = 0;
 
-        if (!bucketSnap.exists()) {
-            console.warn(`[Firebase] ⚠️ Student bucket missing for ${schoolId}. Initiating auto-migration...`);
+                // Delete manifest
+                const manifestRef = doc(db, "schools", schoolId, "config", "student_bucket_manifest");
+                batch.delete(manifestRef);
+                deletedCount++;
+
+                // Delete all possible chunk documents (assume max 1000 chunks as safety limit)
+                // We delete even if they don't exist - Firestore handles this gracefully
+                for (let i = 0; i < 1000; i++) {
+                    const chunkRef = doc(db, "schools", schoolId, "config", `student_bucket_${i}`);
+                    batch.delete(chunkRef);
+                    deletedCount++;
+                }
+
+                // Also delete legacy single bucket if it exists
+                const legacyBucketRef = doc(db, "schools", schoolId, "config", "student_bucket");
+                batch.delete(legacyBucketRef);
+                deletedCount++;
+
+                trackFirebaseWrite('clearStudentBuckets', 'config', `Deleting up to ${deletedCount} bucket documents for ${schoolId}`);
+                await batch.commit();
+                console.log(`[Bucket Cleanup] ✅ Bucket cleanup complete. Deleted up to ${deletedCount} documents.`);
+            } catch (cleanupError) {
+                console.error(`[Bucket Cleanup] ⚠️ Cleanup failed:`, cleanupError);
+                // Continue anyway - we'll try to create fresh buckets
+            }
+        }
+
+        // Check MANIFEST first (new strategy)
+        const manifestRef = doc(db, "schools", schoolId, "config", "student_bucket_manifest");
+        const manifestSnap = await loggedGetDoc(manifestRef, `ensureStudentBucketExists/${schoolId}`);
+
+        if (!manifestSnap.exists()) {
+            // Backward compatibility: Check if old single bucket exists, if so, we can consider it "exists" 
+            // but strictly we should probably migrate it. For now, let's treat "missing manifest" as "needs migration".
+            console.warn(`[Firebase] ⚠️ Student bucket manifest missing for ${schoolId}. Initiating auto-migration to chunks...`);
+
+            // CRITICAL: Check if image repair is enabled and run it BEFORE bucket creation
+            const { ENABLE_DATABASE_IMAGE_REPAIR } = await import('../constants');
+            if (ENABLE_DATABASE_IMAGE_REPAIR) {
+                console.log(`[Image Repair] 🔧 Running pre-migration image repair for ${schoolId}...`);
+                try {
+                    await repairStudentImages(schoolId);
+                    console.log(`[Image Repair] ✅ Pre-migration repair completed successfully`);
+                } catch (repairError) {
+                    console.error(`[Image Repair] ⚠️ Repair failed, proceeding with migration anyway:`, repairError);
+                }
+            }
 
             let studentsToSave: Student[] = [];
 
@@ -1049,6 +1193,124 @@ export const ensureStudentBucketExists = async (schoolId: string, preloadedStude
     } catch (error) {
         console.error('[Firebase] Error ensuring student bucket exists:', error);
         // Don't throw - this is a non-critical optimization
+    }
+};
+
+/**
+ * ONE-TIME REPAIR: Compress all student images for a school
+ * This function fetches all students, compresses their images, and saves them back
+ * Used to fix existing oversized images that cause document size errors
+ */
+export const repairStudentImages = async (schoolId: string): Promise<void> => {
+    try {
+        console.log(`[Image Repair] 🔧 Starting image repair for ${schoolId}...`);
+
+        // Dynamically import the compression utility
+        const { compressImage, getBase64Size, formatBytes } = await import('../utils/imageUtils');
+
+        // Fetch all students from subcollection (source of truth)
+        const students = await fetchSubcollection<Student>(schoolId, 'students');
+
+        if (!students || students.length === 0) {
+            console.log(`[Image Repair] ℹ️ No students found for ${schoolId}`);
+            return;
+        }
+
+        console.log(`[Image Repair] 📊 Found ${students.length} students. Checking for oversized images...`);
+
+        let compressedCount = 0;
+        let totalSavings = 0;
+        const batch = writeBatch(db);
+
+        for (const student of students) {
+            let modified = false;
+            const studentCopy = { ...student };
+
+            // Check and compress 'photo' property
+            // @ts-ignore
+            if (student.photo && typeof student.photo === 'string' && student.photo.startsWith('data:image')) {
+                // @ts-ignore
+                const originalSize = getBase64Size(student.photo);
+
+                // ULTRA-AGGRESSIVE ONE-TIME REPAIR: Force everything below 5KB
+                // This will re-compress previously compressed images to tiny thumbnails
+                if (originalSize > 5 * 1024) {
+                    try {
+                        // @ts-ignore
+                        // ULTRA compression: 120x120px at 0.6 quality (~5-8KB target)
+                        const compressed = await compressImage(student.photo, 120, 120, 0.6);
+                        const newSize = getBase64Size(compressed);
+                        const savings = originalSize - newSize;
+
+                        // @ts-ignore
+                        studentCopy.photo = compressed;
+                        modified = true;
+                        compressedCount++;
+                        totalSavings += savings;
+
+                        console.log(`[Image Repair] ✅ Compressed photo for student ${student.id}: ${formatBytes(originalSize)} → ${formatBytes(newSize)} (saved ${formatBytes(savings)})`);
+                    } catch (err) {
+                        console.warn(`[Image Repair] ⚠️ Failed to compress photo for student ${student.id}:`, err);
+                    }
+                }
+            }
+
+            // Check and compress 'image' property (if it exists)
+            // @ts-ignore
+            if (student.image && typeof student.image === 'string' && student.image.startsWith('data:image')) {
+                // @ts-ignore
+                const originalSize = getBase64Size(student.image);
+
+                // ULTRA-AGGRESSIVE ONE-TIME REPAIR: Force everything below 5KB
+                if (originalSize > 5 * 1024) {
+                    try {
+                        // @ts-ignore
+                        // ULTRA compression: 120x120px at 0.6 quality
+                        const compressed = await compressImage(student.image, 120, 120, 0.6);
+                        const newSize = getBase64Size(compressed);
+                        const savings = originalSize - newSize;
+
+                        // @ts-ignore
+                        studentCopy.image = compressed;
+                        modified = true;
+                        compressedCount++;
+                        totalSavings += savings;
+
+                        console.log(`[Image Repair] ✅ Compressed image for student ${student.id}: ${formatBytes(originalSize)} → ${formatBytes(newSize)} (saved ${formatBytes(savings)})`);
+                    } catch (err) {
+                        console.warn(`[Image Repair] ⚠️ Failed to compress image for student ${student.id}:`, err);
+                    }
+                }
+            }
+
+            // If modified, add to batch
+            if (modified) {
+                const studentRef = doc(db, "schools", schoolId, "students", String(student.id));
+                batch.set(studentRef, sanitizeForFirestore(studentCopy), { merge: true });
+            }
+        }
+
+        // Commit batch if we have changes
+        if (compressedCount > 0) {
+            console.log(`[Image Repair] 💾 Saving ${compressedCount} compressed images...`);
+            trackFirebaseWrite('repairStudentImages', 'students', `Updated ${compressedCount} students`);
+            await batch.commit();
+            console.log(`[Image Repair] ✅ Image repair complete! Compressed ${compressedCount} images, saved ${formatBytes(totalSavings)} total.`);
+
+            // Rebuild student buckets with compressed data
+            console.log(`[Image Repair] 🔄 Rebuilding student buckets with compressed data...`);
+            await updateStudentBucket(schoolId, students.map(s => {
+                const foundCompressed = compressedCount > 0 ? students.find(x => x.id === s.id) : null;
+                return foundCompressed || s;
+            }));
+            console.log(`[Image Repair] ✅ Student buckets rebuilt successfully.`);
+        } else {
+            console.log(`[Image Repair] ℹ️ No oversized images found. No changes needed.`);
+        }
+
+    } catch (error) {
+        console.error('[Image Repair] ❌ Failed to repair student images:', error);
+        throw error;
     }
 };
 
@@ -1104,21 +1366,9 @@ export const saveDataTransaction = async (
             }
         }
 
-        // --- HANDLE STUDENTS (Composite Bucket) ---
-        if (updates.students && Array.isArray(updates.students)) {
-            console.log(`[Optimization] 🎓 Bucketing ${updates.students.length} students...`);
-
-            const studentsMap: Record<number, Student> = {};
-            updates.students.forEach(s => {
-                studentsMap[s.id] = s;
-            });
-
-            const bucketRef = doc(db, "schools", docId, "config", "student_bucket");
-            operations.push((batch) => batch.set(bucketRef, { studentsMap }, { merge: true }));
-        }
-
         // --- HANDLE SUBCOLLECTIONS (Fan-Out with Batch) ---
         const SUBCOLLECTION_KEYS = ['students', 'classes', 'subjects', 'assessments'];
+        const hasStudentUpdates = updates.students && Array.isArray(updates.students) && updates.students.length > 0;
 
         for (const key of Object.keys(updates)) {
             if (SUBCOLLECTION_KEYS.includes(key)) {
@@ -1144,6 +1394,7 @@ export const saveDataTransaction = async (
         const hasMetadataUpdates = Object.keys(updates).some(key => METADATA_KEYS.includes(key));
 
         if (hasMetadataUpdates) {
+            // ... (Metadata bundle logic remains)
             console.log(`[Optimization] 📦 Updating metadata bundle for composite storage...`);
 
             // Collect current/updated metadata
@@ -1180,8 +1431,6 @@ export const saveDataTransaction = async (
 
         if (Object.keys(mainUpdates).length > 0) {
             const docRef = doc(db, "schools", docId);
-
-            // --- METADATA TRACKING: Update lastUpdated for each modified key ---
             const metadata: Record<string, any> = {};
             Object.keys(updates).forEach(key => {
                 metadata[`metadata.lastUpdated.${key}`] = serverTimestamp();
@@ -1192,7 +1441,6 @@ export const saveDataTransaction = async (
                 ...metadata
             }, { merge: true }));
         } else if (Object.keys(updates).length > 0) {
-            // Even if no main fields updated, update metadata for subcollections
             const docRef = doc(db, "schools", docId);
             const metadata: Record<string, any> = {};
             Object.keys(updates).forEach(key => {
@@ -1204,6 +1452,19 @@ export const saveDataTransaction = async (
         if (operations.length > 0) {
             trackFirebaseWrite('saveDataTransaction', 'multi', `Saving batch of ${operations.length} operations`);
             await executeBatch(operations);
+        }
+
+        // ---------------------------------------------------------------------
+        // POST-TRANSACTION: REBUILD STUDENT BUCKET (CHUNKS)
+        // ---------------------------------------------------------------------
+        // Since we cannot easily "merge" into chunks atomically, we trigger
+        // a bucket rebuild if students were modified. This reads the full list
+        // and re-chunks it.
+        if (hasStudentUpdates) {
+            console.log(`[Optimization] 🔄 Student changes detected. Rebuilding bucket chunks...`);
+            // We await this to ensure consistency before returning
+            // Note: using no-args to force fetch from subcollection (Source of Truth)
+            await updateStudentBucket(docId);
         }
 
     } catch (error) {
@@ -1494,6 +1755,8 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
                 if (data.classes) delete data.classes;
                 if (data.subjects) delete data.subjects;
                 if (data.assessments) delete data.assessments;
+
+                console.log(`[FIREBASE_DEBUG] Login successful. Returning data.`);
 
                 return { status: 'success', data: data, docId: targetDocId, subscription };
             } else {

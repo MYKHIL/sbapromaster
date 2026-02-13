@@ -2,10 +2,10 @@
 (anonymous) @ (index):64
 (anonymous) @ (index):64
 react-dom-client.development.js:28004 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
-firebaseService.ts:60 [Firebase] Initializing with Database Index: 2 (sba-pro-master-40f08) 
+firebaseService.ts:60 [Firebase] Initializing with Database Index: 1 (sba-pro-master-759f6) 
 geminiService.ts:8  Gemini API key not found. AI features will be disabled.
 (anonymous) @ geminiService.ts:8
-syncLogger.ts:31 [SyncLogger] Log initialized: SyncLog_2026-02-13T06-48-23.txt
+syncLogger.ts:31 [SyncLogger] Log initialized: SyncLog_2026-02-13T11-03-44.txt
 syncLogger.ts:32 [SyncLogger] Logs will be saved to browser when you call downloadLog()
 syncLogger.ts:59 [SYNC_LOG] AuthOverlay component mounted
 AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
@@ -15,7 +15,7 @@ FirebaseAnalyticsContext.tsx:68 [Firebase Analytics] Tracking registered globall
 DataContext.tsx:959 [DataContext] 📥 Fetching initial data from cloud (Auto-Sync Disabled)...
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Loading main school data (1 doc)
 syncLogger.ts:59 [SYNC_LOG] AuthOverlay component unmounting
-syncLogger.ts:31 [SyncLogger] Log initialized: SyncLog_2026-02-13T06-48-23.txt
+syncLogger.ts:31 [SyncLogger] Log initialized: SyncLog_2026-02-13T11-03-49.txt
 syncLogger.ts:32 [SyncLogger] Logs will be saved to browser when you call downloadLog()
 syncLogger.ts:59 [SYNC_LOG] AuthOverlay component mounted
 AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
@@ -23,68 +23,177 @@ DataContext.tsx:1613 [DataContext] Sync PAUSED
 AuthOverlay.tsx:112 [AuthOverlay] Found saved school session, fetching data...
 FirebaseAnalyticsContext.tsx:68 [Firebase Analytics] Tracking registered globally
 DataContext.tsx:959 [DataContext] 📥 Fetching initial data from cloud (Auto-Sync Disabled)...
-firebaseService.ts:366 [Firebase] Returning inflight promise for school data: ayirebida_2025-2026_Second-Term
-firebaseService.ts:1311 [Firebase] 🛡️ Returning inflight promise for school login: ayirebida_2025-2026_Second-Term
-firebaseService.ts:1396 [FIREBASE_DEBUG] loginOrRegisterSchool called for docId: ayirebida_2025-2026_Second-Term, createIfMissing: false
-firebaseService.ts:1401 [FIREBASE_DEBUG] Fetching document: schools/ayirebida_2025-2026_Second-Term
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Checking school existence: ayirebida_2025-2026_Second-Term (1 doc)
-firebaseService.ts:1302 [Firebase] 🛡️ Returning inflight promise for login/register: ayirebida_2025-2026_Second-Term
+firebaseService.ts:366 [Firebase] Returning inflight promise for school data: gyewanidabasicschool_20252026_Second-Term
+firebaseService.ts:1584 [Firebase] 🛡️ Returning inflight promise for school login: gyewanidabasicschool_20252026_Second-Term
+firebaseService.ts:1669 [FIREBASE_DEBUG] loginOrRegisterSchool called for docId: gyewanidabasicschool_20252026_Second-Term, createIfMissing: false
+firebaseService.ts:1674 [FIREBASE_DEBUG] Fetching document: schools/gyewanidabasicschool_20252026_Second-Term
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Checking school existence: gyewanidabasicschool_20252026_Second-Term (1 doc)
+firebaseService.ts:1575 [Firebase] 🛡️ Returning inflight promise for login/register: gyewanidabasicschool_20252026_Second-Term
 AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
 DataContext.tsx:1613 [DataContext] Sync PAUSED
  [DataContext] ✅ Initial data received via one-time fetch
- [SYNC_LOG] Initial data loaded. Users: 18, Scores: 0
+ [SYNC_LOG] Initial data loaded. Users: 17, Scores: 0
  [DataContext] 📦 loadImportedData called (isRemote=false) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 0, …}
  [DataContext] 🚫 Skipping scores update - data is empty/undefined
- [SYNC_LOG] loadImportedData: Loading users from document. Count: 18
- [DataContext] ✅ Updating users: 18
- [SYNC_LOG] setUsers called. Current count: 0, New count: 18
+ [SYNC_LOG] loadImportedData: Loading users from document. Count: 17
+ [DataContext] ✅ Updating users: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
  [SYNC_LOG] Stack trace: Error
-    at setUsers (DataContext.tsx?t=1770965197083:59:36)
-    at loadImportedData (DataContext.tsx?t=1770965197083:218:9)
-    at fetchInitialData (DataContext.tsx?t=1770965197083:643:11)
+    at setUsers (DataContext.tsx?t=1770980540310:59:36)
+    at loadImportedData (DataContext.tsx?t=1770980540310:218:9)
+    at fetchInitialData (DataContext.tsx?t=1770980540310:643:11)
  [DataContext] 💾 Local file import: Marking fields as dirty for verification
  [DataContext] 🚀 Eagerly loading Metadata for app initialization...
  [DataContext] 🔍 loadMetadata Check: {hasData: true, previouslyLoaded: false, isUpToDate: true, inflight: false}
  [DataContext] 🧠 Metadata up-to-date (Metadata Match). Skipping read.
  [DataContext] ✅ Initial data received via one-time fetch
- [SYNC_LOG] Initial data loaded. Users: 18, Scores: 0
+ [SYNC_LOG] Initial data loaded. Users: 17, Scores: 0
  [DataContext] 📦 loadImportedData called (isRemote=false) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 0, …}
  [DataContext] 🚫 Skipping scores update - data is empty/undefined
- [SYNC_LOG] loadImportedData: Loading users from document. Count: 18
-DataContext.tsx:375 [DataContext] ✅ Updating users: 18
-syncLogger.ts:59 [SYNC_LOG] setUsers called. Current count: 0, New count: 18
-syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
-    at setUsers (DataContext.tsx:191:40)
-    at loadImportedData (DataContext.tsx:376:17)
-    at fetchInitialData (DataContext.tsx:966:21)
-DataContext.tsx:446 [DataContext] 💾 Local file import: Marking fields as dirty for verification
-DataContext.tsx:976 [DataContext] 🚀 Eagerly loading Metadata for app initialization...
-DataContext.tsx:2016 [DataContext] 🔍 loadMetadata Check: {hasData: true, previouslyLoaded: false, isUpToDate: true, inflight: false}
-DataContext.tsx:2031 [DataContext] 🧠 Metadata up-to-date (Metadata Match). Skipping read.
-firebaseService.ts:1404 [FIREBASE_DEBUG] Document exists? true
-firebaseService.ts:1427 [FIREBASE_DEBUG] Processing existing document...
+ [SYNC_LOG] loadImportedData: Loading users from document. Count: 17
+ [DataContext] ✅ Updating users: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1770980540310:59:36)
+    at loadImportedData (DataContext.tsx?t=1770980540310:218:9)
+    at fetchInitialData (DataContext.tsx?t=1770980540310:643:11)
+ [DataContext] 💾 Local file import: Marking fields as dirty for verification
+ [DataContext] 🚀 Eagerly loading Metadata for app initialization...
+ [DataContext] 🔍 loadMetadata Check: {hasData: true, previouslyLoaded: false, isUpToDate: true, inflight: false}
+ [DataContext] 🧠 Metadata up-to-date (Metadata Match). Skipping read.
+firebaseService.ts:1677 [FIREBASE_DEBUG] Document exists? true
+firebaseService.ts:1700 [FIREBASE_DEBUG] Processing existing document...
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Checking license status (1 doc)
+firebaseService.ts:1161  [Firebase] ⚠️ Student bucket manifest missing for gyewanidabasicschool_20252026_Second-Term. Initiating auto-migration to chunks...
+ensureStudentBucketExists @ firebaseService.ts:1161
+await in ensureStudentBucketExists
+(anonymous) @ DataContext.tsx:1540
+react_stack_bottom_frame @ react-dom-client.development.js:25989
+runWithFiberInDEV @ react-dom-client.development.js:871
+commitHookEffectListMount @ react-dom-client.development.js:13249
+commitHookPassiveMountEffects @ react-dom-client.development.js:13336
+commitPassiveMountOnFiber @ react-dom-client.development.js:15484
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15519
+flushPassiveEffects @ react-dom-client.development.js:18432
+(anonymous) @ react-dom-client.development.js:17923
+performWorkUntilDeadline @ scheduler.development.js:45
+<DataProvider>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+App @ App.tsx:211
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooksAgain @ react-dom-client.development.js:7762
+renderWithHooks @ react-dom-client.development.js:7674
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:18957
+performWorkUntilDeadline @ scheduler.development.js:45
+<App>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+(anonymous) @ index.tsx:36
+firebaseService.ts:1161  [Firebase] ⚠️ Student bucket manifest missing for gyewanidabasicschool_20252026_Second-Term. Initiating auto-migration to chunks...
+ensureStudentBucketExists @ firebaseService.ts:1161
+await in ensureStudentBucketExists
+(anonymous) @ DataContext.tsx:1540
+react_stack_bottom_frame @ react-dom-client.development.js:25989
+runWithFiberInDEV @ react-dom-client.development.js:871
+commitHookEffectListMount @ react-dom-client.development.js:13249
+commitHookPassiveMountEffects @ react-dom-client.development.js:13336
+reconnectPassiveEffects @ react-dom-client.development.js:15832
+recursivelyTraverseReconnectPassiveEffects @ react-dom-client.development.js:15784
+reconnectPassiveEffects @ react-dom-client.development.js:15885
+recursivelyTraverseReconnectPassiveEffects @ react-dom-client.development.js:15784
+reconnectPassiveEffects @ react-dom-client.development.js:15824
+recursivelyTraverseReconnectPassiveEffects @ react-dom-client.development.js:15784
+reconnectPassiveEffects @ react-dom-client.development.js:15824
+recursivelyTraverseReconnectPassiveEffects @ react-dom-client.development.js:15784
+reconnectPassiveEffects @ react-dom-client.development.js:15885
+doubleInvokeEffectsOnFiber @ react-dom-client.development.js:18703
+runWithFiberInDEV @ react-dom-client.development.js:871
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:18667
+commitDoubleInvokeEffectsInDEV @ react-dom-client.development.js:18712
+flushPassiveEffects @ react-dom-client.development.js:18439
+(anonymous) @ react-dom-client.development.js:17923
+performWorkUntilDeadline @ scheduler.development.js:45
+<DataProvider>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+App @ App.tsx:211
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooksAgain @ react-dom-client.development.js:7762
+renderWithHooks @ react-dom-client.development.js:7674
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:18957
+performWorkUntilDeadline @ scheduler.development.js:45
+<App>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+(anonymous) @ index.tsx:36
+firebaseService.ts:1166 [Image Repair] 🔧 Running pre-migration image repair for gyewanidabasicschool_20252026_Second-Term...
+firebaseService.ts:1206 [Image Repair] 🔧 Starting image repair for gyewanidabasicschool_20252026_Second-Term...
+firebaseService.ts:1166 [Image Repair] 🔧 Running pre-migration image repair for gyewanidabasicschool_20252026_Second-Term...
+firebaseService.ts:1206 [Image Repair] 🔧 Starting image repair for gyewanidabasicschool_20252026_Second-Term...
 AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
 DataContext.tsx:1613 [DataContext] Sync PAUSED
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching all students (0 docs)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching all students (0 docs)
 AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
 DataContext.tsx:1613 [DataContext] Sync PAUSED
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched all students (280 docs)
+ [Image Repair] 📊 Found 280 students. Checking for oversized images...
+ [Image Repair] ℹ️ No oversized images found. No changes needed.
+ [Image Repair] ✅ Pre-migration repair completed successfully
+ [Firebase] 🐢 Fetching students from subcollection for migration...
+ [Firebase Analytics] 📖 READ: Fetching all students (0 docs)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched all students (280 docs)
+firebaseService.ts:1219 [Image Repair] 📊 Found 280 students. Checking for oversized images...
+firebaseService.ts:1308 [Image Repair] ℹ️ No oversized images found. No changes needed.
+firebaseService.ts:1169 [Image Repair] ✅ Pre-migration repair completed successfully
+firebaseService.ts:1182 [Firebase] 🐢 Fetching students from subcollection for migration...
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching all students (0 docs)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched all students (280 docs)
+firebaseService.ts:1188 [Firebase] 💾 Writing 280 students to new bucket...
+firebaseService.ts:1056 [Firebase] 🎓 Attempt 1: Bucketing 280 students into 6 chunks (size: 50)...
+FirebaseAnalyticsContext.tsx:62 [Firebase Analytics] ✍️ WRITE: Writing 6 student chunks for gyewanidabasicschool_20252026_Second-Term
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched all students (280 docs)
+firebaseService.ts:1188 [Firebase] 💾 Writing 280 students to new bucket...
+firebaseService.ts:1056 [Firebase] 🎓 Attempt 1: Bucketing 280 students into 6 chunks (size: 50)...
+FirebaseAnalyticsContext.tsx:62 [Firebase Analytics] ✍️ WRITE: Writing 6 student chunks for gyewanidabasicschool_20252026_Second-Term
+firebaseService.ts:1744 [FIREBASE_DEBUG] Login successful. Returning data.
  [FIREBASE_DEBUG] Login successful. Returning data.
  [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 0, …}
  [DataContext] 🚫 Skipping scores update - data is empty/undefined
- [SYNC_LOG] loadImportedData: Loading users from document. Count: 18
- [DataContext] ✅ Updating users: 18
- [SYNC_LOG] setUsers called. Current count: 0, New count: 18
- [SYNC_LOG] Stack trace: Error
-    at setUsers (DataContext.tsx?t=1770965197083:59:36)
-    at loadImportedData (DataContext.tsx?t=1770965197083:218:9)
-    at restoreSession (AuthOverlay.tsx?t=1770965197083:101:9)
+syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users from document. Count: 17
+DataContext.tsx:375 [DataContext] ✅ Updating users: 17
+syncLogger.ts:59 [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx:191:40)
+    at loadImportedData (DataContext.tsx:376:17)
+    at restoreSession (AuthOverlay.tsx:141:17)
 DataContext.tsx:423 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
 AuthOverlay.tsx:156 [AuthOverlay] Full session data loaded, showing restore dialog
 DataContext.tsx:281 [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 0, …}
 DataContext.tsx:357 [DataContext] 🚫 Skipping scores update - data is empty/undefined
-syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users from document. Count: 18
-DataContext.tsx:375 [DataContext] ✅ Updating users: 18
-syncLogger.ts:59 [SYNC_LOG] setUsers called. Current count: 0, New count: 18
+syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users from document. Count: 17
+DataContext.tsx:375 [DataContext] ✅ Updating users: 17
+syncLogger.ts:59 [SYNC_LOG] setUsers called. Current count: 0, New count: 17
 syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
     at setUsers (DataContext.tsx:191:40)
     at loadImportedData (DataContext.tsx:376:17)
@@ -95,17 +204,46 @@ AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
 DataContext.tsx:1613 [DataContext] Sync PAUSED
 AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
 DataContext.tsx:1613 [DataContext] Sync PAUSED
-UserContext.tsx:98 Logging user login activity for: Michael Darko
+UserContext.tsx:98 Logging user login activity for: MYKIL
 AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
 DataContext.tsx:1613 [DataContext] Sync PAUSED
 UserContext.tsx:100 Login activity logged successfully
 DataContext.tsx:1619 [DataContext] Sync RESUMED
 AuthOverlay.tsx:192 [AuthOverlay] ✅ Session restored successfully
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Loading main school data (1 doc)
-firebaseService.ts:366 [Firebase] Returning inflight promise for school data: ayirebida_2025-2026_Second-Term
-DataContext.tsx:1872 [DataContext] 🔍 loadStudents Check: {studentsCount: 173, serverTS: undefined, loadedTS: undefined, isUpToDate: true, hasInflight: false}
-DataContext.tsx:1888 [DataContext] 🧠 Students up-to-date. Skipping read.
-firebaseService.ts:366 [Firebase] Returning inflight promise for school data: ayirebida_2025-2026_Second-Term
-firebaseService.ts:366 [Firebase] Returning inflight promise for school data: ayirebida_2025-2026_Second-Term
-DataContext.tsx:1872 [DataContext] 🔍 loadStudents Check: {studentsCount: 173, serverTS: undefined, loadedTS: undefined, isUpToDate: true, hasInflight: false}
-DataContext.tsx:1888 [DataContext] 🧠 Students up-to-date. Skipping read.
+firebaseService.ts:366 [Firebase] Returning inflight promise for school data: gyewanidabasicschool_20252026_Second-Term
+DataContext.tsx:1872 [DataContext] 🔍 loadStudents Check: {studentsCount: 280, serverTS: _Timestamp, loadedTS: undefined, isUpToDate: false, hasInflight: false}
+DataContext.tsx:1902 [DataContext] 📥 Loading Students (Optimized via Bucket)...
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Checking student bucket manifest (1 doc)
+firebaseService.ts:366 [Firebase] Returning inflight promise for school data: gyewanidabasicschool_20252026_Second-Term
+firebaseService.ts:366 [Firebase] Returning inflight promise for school data: gyewanidabasicschool_20252026_Second-Term
+DataContext.tsx:1872 [DataContext] 🔍 loadStudents Check: {studentsCount: 280, serverTS: _Timestamp, loadedTS: undefined, isUpToDate: false, hasInflight: true}
+DataContext.tsx:1895 [DataContext] ⏳ Students fetch already in progress. Deduping...
+firebaseService.ts:441 [Firebase] 📦 Found student manifest with 6 chunks.
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching 6 student chunks (6 docs)
+firebaseService.ts:462 [Firebase] ✅ Reassembled 280 students from chunks.
+DataContext.tsx:1909 [DataContext] ✅ Loaded 280 students.
+firebaseService.ts:1088  [Firebase] ⚠️ Chunk size 50 too large. Retrying with size 25...
+writeChunksWithBackoff @ firebaseService.ts:1088
+firebaseService.ts:1056 [Firebase] 🎓 Attempt 2: Bucketing 280 students into 12 chunks (size: 25)...
+FirebaseAnalyticsContext.tsx:62 [Firebase Analytics] ✍️ WRITE: Writing 12 student chunks for gyewanidabasicschool_20252026_Second-Term
+firebaseService.ts:1088  [Firebase] ⚠️ Chunk size 50 too large. Retrying with size 25...
+writeChunksWithBackoff @ firebaseService.ts:1088
+firebaseService.ts:1056 [Firebase] 🎓 Attempt 2: Bucketing 280 students into 12 chunks (size: 25)...
+FirebaseAnalyticsContext.tsx:62 [Firebase Analytics] ✍️ WRITE: Writing 12 student chunks for gyewanidabasicschool_20252026_Second-Term
+firebaseService.ts:1088  [Firebase] ⚠️ Chunk size 25 too large. Retrying with size 12...
+writeChunksWithBackoff @ firebaseService.ts:1088
+await in writeChunksWithBackoff
+writeChunksWithBackoff @ firebaseService.ts:1091
+firebaseService.ts:1056 [Firebase] 🎓 Attempt 3: Bucketing 280 students into 24 chunks (size: 12)...
+FirebaseAnalyticsContext.tsx:62 [Firebase Analytics] ✍️ WRITE: Writing 24 student chunks for gyewanidabasicschool_20252026_Second-Term
+firebaseService.ts:1088  [Firebase] ⚠️ Chunk size 25 too large. Retrying with size 12...
+writeChunksWithBackoff @ firebaseService.ts:1088
+await in writeChunksWithBackoff
+writeChunksWithBackoff @ firebaseService.ts:1091
+firebaseService.ts:1056 [Firebase] 🎓 Attempt 3: Bucketing 280 students into 24 chunks (size: 12)...
+FirebaseAnalyticsContext.tsx:62 [Firebase Analytics] ✍️ WRITE: Writing 24 student chunks for gyewanidabasicschool_20252026_Second-Term
+firebaseService.ts:1088  [Firebase] ⚠️ Chunk size 12 too large. Retrying with size 6...
+writeChunksWithBackoff @ firebaseService.ts:1088
+firebaseService.ts:1056 [Firebase] 🎓 Attempt 4: Bucketing 280 students into 47 chunks (size: 6)...
+FirebaseAnalyticsContext.tsx:62 [Firebase Analytics] ✍️ WRITE: Writing 47 student chunks for gyewanidabasicschool_20252026_Second-Term
