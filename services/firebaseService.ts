@@ -1,7 +1,33 @@
 import { initializeApp, deleteApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import { getAuth, signInAnonymously, connectAuthEmulator } from "firebase/auth";
-import { getFirestore, connectFirestoreEmulator, doc, getDoc, setDoc, collection, getDocs, onSnapshot, runTransaction, query, where, documentId, writeBatch, updateDoc, deleteField, Unsubscribe, limit, startAfter, orderBy, DocumentSnapshot, WriteBatch, serverTimestamp } from "firebase/firestore";
+import {
+    getFirestore,
+    connectFirestoreEmulator,
+    doc,
+    getDoc,
+    setDoc,
+    collection,
+    getDocs,
+    onSnapshot,
+    runTransaction,
+    query,
+    where,
+    documentId,
+    writeBatch,
+    updateDoc,
+    deleteField,
+    Unsubscribe,
+    limit,
+    startAfter,
+    orderBy,
+    DocumentSnapshot,
+    WriteBatch,
+    serverTimestamp,
+    initializeFirestore,
+    persistentLocalCache,
+    persistentMultipleTabManager
+} from "firebase/firestore";
 import type { SchoolSettings, Student, Subject, Class, Grade, Assessment, Score, ReportSpecificData, ClassSpecificData, User, DeviceCredential, UserLog, OnlineUser, AppDataType } from '../types';
 
 // CACHE STORAGE
@@ -34,7 +60,15 @@ console.log(`[Firebase] Initializing with Database Index: ${targetIndex} (${sele
 const app = initializeApp(selectedConfig);
 export const auth = getAuth(app);
 const analytics = getAnalytics(app);
-export const db = getFirestore(app);
+
+// ENABLE OFFLINE PERSISTENCE (The #1 Fix)
+// We use initializeFirestore instead of getFirestore to pass settings
+export const db = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager()
+    })
+});
+
 export { analytics };
 
 // Check if we are in Debug/Emulator Mode
@@ -427,7 +461,7 @@ export const fetchScoresForClass = async (docId: string, classId: number, subjec
         const bucketSnap = await loggedGetDoc(bucketRef, `fetchScoresForClass/bucket_subject_${subjectId}`);
 
         if (bucketSnap.exists()) {
-                const data = bucketSnap.data() as any;
+            const data = bucketSnap.data() as any;
             if (data.scoresMap) {
                 return Object.values(data.scoresMap);
             }
@@ -664,7 +698,7 @@ export const getSchoolYearsAndTerms = async (schoolName: string, databaseIndex?:
             const periods: SchoolPeriod[] = [];
 
             snapshot.forEach(doc => {
-                    const data = doc.data() as any;
+                const data = doc.data() as any;
                 const docSchoolName = data.settings?.schoolName;
 
                 // Match by actual school name
@@ -837,7 +871,7 @@ export const fetchMetadataBundle = async (schoolId: string) => {
             const bundleData = bundleSnap.data() as any;
             trackFirebaseRead('fetchMetadataBundle', 'config', 1, 'Loaded metadata via Composite Bundle (1 Read)');
             console.log("[Firebase] 📦 Loaded metadata via Composite Bundle (1 Read)");
-            
+
             return {
                 classes: (bundleData.classes || []) as Class[],
                 subjects: (bundleData.subjects || []) as Subject[],
@@ -912,7 +946,7 @@ export const updateStudentBucket = async (schoolId: string, students?: Student[]
     try {
         const bucketRef = doc(db, "schools", schoolId, "config", "student_bucket");
         const studentsToStore = students || (await fetchSubcollection<Student>(schoolId, 'students'));
-        
+
         // Build a map keyed by student ID for efficient storage
         const studentsMap: Record<number, Student> = {};
         studentsToStore.forEach(s => {
@@ -1044,7 +1078,7 @@ export const saveDataTransaction = async (
 
         if (hasMetadataUpdates) {
             console.log(`[Optimization] 📦 Updating metadata bundle for composite storage...`);
-            
+
             // Collect current/updated metadata
             const bundleData: any = {
                 lastUpdated: serverTimestamp()
@@ -1196,7 +1230,7 @@ export const initializeNewTermDatabase = async (docId: string, data: AppDataType
     // We use saveDataTransaction to ensure the new term starts with the optimized
     // subcollection structure (Fan-Out) immediately.
     await saveDataTransaction(docId, data);
-    
+
     // OPTIMIZATION: Also create the student bucket if students are provided
     if (data.students && data.students.length > 0) {
         console.log(`[Firebase] Creating student bucket during term initialization...`);

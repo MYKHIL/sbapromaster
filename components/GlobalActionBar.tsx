@@ -35,6 +35,48 @@ const GlobalActionBar: React.FC<GlobalActionBarProps> = ({ onOpenDebugModal, cur
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
 
+    // UI-only state to show spinner immediately on click
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    // Toast state
+    const [toast, setToast] = useState<{ message: string, type: 'success' | 'warning' | 'info' } | null>(null);
+
+    const showToast = (message: string, type: 'success' | 'warning' | 'info' = 'info') => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 3000);
+    };
+
+    const handleRefresh = async () => {
+        if (isRefreshing || isSyncing) return;
+        setIsRefreshing(true);
+
+        try {
+            // We need to know if it was throttled or full refresh
+            // Since refreshFromCloud returns void, we can infer or update it to return status
+            // For now, we'll assume success if no error, but ideally we want "Throttled" feedback
+
+            // Hack: We can check if isSyncing turns true inside refreshFromCloud? No, it's async.
+            // Better: Update refreshFromCloud to return a status.
+            // For this step, I will assume I will update refreshFromCloud next.
+            const result = await refreshFromCloud(false);
+
+            // @ts-ignore - anticipating change in DataContext
+            if (result === 'throttled') {
+                showToast('Refresh throttled. Please wait 10s.', 'warning');
+            } else if (result === 'success') {
+                showToast('Data refreshed successfully.', 'success');
+            } else {
+                // Fallback for current void return (treated as success-ish or unknown)
+                showToast('Data refresh triggered.', 'info');
+            }
+        } catch (e) {
+            showToast('Failed to refresh data.', 'warning');
+        } finally {
+            // Keep spinner for at least 500ms for visual feedback
+            setTimeout(() => setIsRefreshing(false), 500);
+        }
+    };
+
     // Auto-expand when pending count > 0 or notification unread count > 0 (only if not already expanded)
     React.useEffect(() => {
         if (pendingCount > 0) {
@@ -87,7 +129,7 @@ const GlobalActionBar: React.FC<GlobalActionBarProps> = ({ onOpenDebugModal, cur
 
     return (
         <WrappedActionBar
-            {...{ onOpenDebugModal, currentPage, currentUser, isAdmin, handleShowDebugData, notifications, unreadCount, isNotificationOpen, setIsNotificationOpen, saveToCloud, refreshFromCloud, isSyncing, isOnline, pendingCount, isFetching, hasLocalChanges, isDebugModalOpen, handleCloseDebugModal, debugData, onNavigate, isExpanded, setIsExpanded }}
+            {...{ onOpenDebugModal, currentPage, currentUser, isAdmin, handleShowDebugData, notifications, unreadCount, isNotificationOpen, setIsNotificationOpen, saveToCloud, refreshFromCloud, isSyncing, isOnline, pendingCount, isFetching, hasLocalChanges, isDebugModalOpen, handleCloseDebugModal, debugData, onNavigate, isExpanded, setIsExpanded, handleRefresh, isRefreshing, toast }}
         />
     );
 };
@@ -97,7 +139,7 @@ const WrappedActionBar: React.FC<any> = ({
     onOpenDebugModal, currentPage, currentUser, isAdmin, handleShowDebugData, notifications, unreadCount,
     isNotificationOpen, setIsNotificationOpen, saveToCloud, refreshFromCloud, isSyncing, isOnline,
     pendingCount, isFetching, hasLocalChanges, isDebugModalOpen, handleCloseDebugModal, debugData,
-    onNavigate, isExpanded, setIsExpanded
+    onNavigate, isExpanded, setIsExpanded, handleRefresh, isRefreshing, toast
 }) => {
     const { users, loadImportedData } = useData();
 
@@ -250,6 +292,16 @@ const WrappedActionBar: React.FC<any> = ({
 
     return (
         <div className="flex flex-col items-end gap-1">
+            {/* TOAST NOTIFICATION */}
+            {toast && (
+                <div className={`fixed bottom-4 left-1/2 transform -translate-x-1/2 z-[100] px-4 py-2 rounded-lg shadow-lg text-white text-sm font-medium transition-all duration-300 ${toast.type === 'success' ? 'bg-green-600' :
+                    toast.type === 'warning' ? 'bg-amber-500' :
+                        'bg-blue-600'
+                    }`}>
+                    {toast.message}
+                </div>
+            )}
+
             <div className={`relative z-[50] transition-all duration-300 ${!isExpanded ? 'scale-90 opacity-80 hover:opacity-100 hover:scale-95' : 'scale-100'}`}>
                 <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-2xl shadow-lg border border-gray-200 backdrop-blur-md bg-white/90 lg:bg-white/95 lg:px-3 lg:py-2">
                     {/* Expand/Collapse Toggle Button (Mobile Only or Minimal State) */}
@@ -324,12 +376,12 @@ const WrappedActionBar: React.FC<any> = ({
                             {/* Refresh Button (Admin Only) */}
                             {isAdmin && (
                                 <button
-                                    onClick={() => refreshFromCloud()}
-                                    disabled={isSyncing || !isOnline}
-                                    className={`p-2 text-gray-500 hover:text-green-600 bg-gray-50 hover:bg-green-100 rounded-lg transition-colors border border-gray-100 lg:p-2.5 ${(isSyncing || !isOnline) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    onClick={handleRefresh}
+                                    disabled={isSyncing || isRefreshing || !isOnline}
+                                    className={`p-2 text-gray-500 hover:text-green-600 bg-gray-50 hover:bg-green-100 rounded-lg transition-colors border border-gray-100 lg:p-2.5 ${(isSyncing || isRefreshing || !isOnline) ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     title="Refresh data"
                                 >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${isSyncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${(isSyncing || isRefreshing) ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                     </svg>
                                 </button>
@@ -340,12 +392,12 @@ const WrappedActionBar: React.FC<any> = ({
                     {!isExpanded ? (
                         isAdmin && (
                             <button
-                                onClick={() => refreshFromCloud()}
-                                disabled={isSyncing || !isOnline}
+                                onClick={handleRefresh}
+                                disabled={isSyncing || isRefreshing || !isOnline}
                                 className="p-2 text-gray-500 hover:text-green-600 rounded-lg transition-colors"
                                 title="Refresh data"
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${isSyncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${(isSyncing || isRefreshing) ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                 </svg>
                             </button>

@@ -21,6 +21,10 @@ import {
 } from '../constants';
 
 export interface DataContextType {
+    loadMetadata: (force?: boolean) => Promise<any>; // Exposed Metadata Loader
+    refreshFromCloud: (ignoreSyncLock?: boolean, keysToRefresh?: (keyof AppDataType)[]) => Promise<'throttled' | 'success' | 'error'>;
+    schoolId: string | null;
+
     // State
     settings: SchoolSettings;
     students: Student[];
@@ -84,9 +88,8 @@ export interface DataContextType {
     saveScores: () => Promise<void>;
     subscription: any | null;
 
-    refreshFromCloud: () => Promise<void>;
-    schoolId: string | null;
     setSchoolId: (id: string | null) => void;
+
     // Network status
     isOnline: boolean;
     isSyncing: boolean;
@@ -105,7 +108,6 @@ export interface DataContextType {
     // Lazy Loading
     loadStudents: (limit?: number, force?: boolean) => Promise<void>;
     loadScores: (classId: number, subjectId: number) => Promise<void>;
-    loadMetadata: () => Promise<void>;
 
     // UI Feedback
     hasLocalChanges: boolean;
@@ -814,12 +816,25 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
-    const refreshFromCloud = async (ignoreSyncLock: boolean = false, keysToRefresh?: (keyof AppDataType)[]) => {
-        if (!schoolId) return;
+    // Throttling Ref
+    const lastGlobalRefresh = React.useRef<number>(0);
+
+    const refreshFromCloud = async (ignoreSyncLock: boolean = false, keysToRefresh?: (keyof AppDataType)[]): Promise<'throttled' | 'success' | 'error'> => {
+        if (!schoolId) return 'error';
+
+        // THROTTLING: Prevent spamming refresh (10s cooldown) unless specific keys are requested (programmatic refresh)
+        const now = Date.now();
+        if (!keysToRefresh && (now - lastGlobalRefresh.current < 10000)) {
+            console.log(`[DataContext] 🛑 Refresh throttled. Please wait ${Math.ceil((10000 - (now - lastGlobalRefresh.current)) / 1000)}s.`);
+            return 'throttled';
+        }
+
         if (isSyncingRef.current && !ignoreSyncLock) {
             console.log("Sync already in progress, skipping manual refresh");
-            return;
+            return 'throttled';
         }
+
+        if (!keysToRefresh) lastGlobalRefresh.current = now;
 
         try {
             isSyncingRef.current = true;
@@ -903,12 +918,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
                 setHasLocalChanges(dirtyFields.current.size > 0);
                 setDraftVersion(v => v + 1);
+                return 'success';
             } else {
                 console.log('[DataContext] ⚠️ No data found for this school ID');
+                return 'error';
             }
         } catch (error) {
             console.error('[DataContext] ❌ Failed to refresh data from cloud:', error);
             showDatabaseError(error);
+            return 'error';
         } finally {
             setIsSyncing(false);
             isSyncingRef.current = false;
@@ -1856,14 +1874,27 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const fetchPromise = (async () => {
             setIsFetching(true);
             try {
-                console.log(`[DataContext] 📥 Loading Students...`);
-                const newStudents = await fetchSubcollection<Student>(schoolId, 'students');
+                console.log(`[DataContext] 📥 Loading Students (Optimized via Bucket)...`);
+                // OPTIMIZATION: Use fetchStudents which prefers the BUCKET (1 read) over subcollection (N reads)
+                // Signature: (docId: string, pageSize: number, lastVisible: DocumentSnapshot | null)
+                const result = await fetchStudents(schoolId, limit > 0 ? limit : 1000, null);
+                const newStudents = result.students;
 
                 if (newStudents) {
                     console.log(`[DataContext] ✅ Loaded ${newStudents.length} students.`);
                     // Mark as loaded even if serverTimestamp is undefined
                     lastLoadedTimestamps.current['_loaded_students'] = serverTimestamp || 'loaded_once';
-                    setStudents(newStudents);
+
+                    // Merge with existing students if paginating or forcing update
+                    setStudents(prev => {
+                        // Simple replacement for now as we load "all" or "limit"
+                        // In a real pagination scenario, we'd append and dedup.
+                        // Since we are doing a bucket load (all at once usually), replacing is fine.
+                        // But if we use limit, we should be careful.
+                        // For this pass, we assume "Bucket" contains ALL students, so replacing is correct
+                        // to ensure deleted students are removed.
+                        return newStudents;
+                    });
 
                     // OPTIMIZATION: Ensure student bucket exists (create if missing)
                     if (newStudents.length > 0) {
