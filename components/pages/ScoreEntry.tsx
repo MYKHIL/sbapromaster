@@ -196,14 +196,15 @@ const ScoreEntry: React.FC = () => {
 
     const filteredStudents = useMemo(() => {
         if (!students) return [];
+
+        // If no class selected:
         if (!selectedClass) {
-            // If "All Classes" is selected, filter by user permissions
+            // Admins see all students (All Classes mode)
             if (currentUser?.role === 'Admin') return students;
-            if (currentUser?.allowedClasses) {
-                return students.filter(student => currentUser.allowedClasses.includes(student.class));
-            }
-            return []; // Should not happen if permissions are correct
+            // Others see nothing until they select a class
+            return [];
         }
+
         return students.filter(student => student.class === selectedClass);
     }, [students, selectedClass, currentUser]);
 
@@ -472,7 +473,9 @@ const ScoreEntry: React.FC = () => {
                                 }}
                                 className={selectStyles}
                             >
-                                <option value="">-- All Classes --</option>
+                                <option value="">
+                                    {currentUser?.role === 'Admin' ? '-- All Classes --' : '-- Select Class --'}
+                                </option>
                                 {classes.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                             </select>
                         </div>
