@@ -492,9 +492,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // Clear original data on logout
             originalData.current = {};
         } else if (previousSchoolId.current === null && schoolId !== null) {
-            // Fresh login: SchoolId just became set. Auto-refresh all data from cloud.
-            console.log(`Fresh login detected: SchoolId set to ${schoolId}. Auto-refreshing data from cloud...`);
-            refreshFromCloud().catch(err => console.error('Auto-refresh on fresh login failed:', err));
+            // Fresh login: SchoolId just became set.
+            // OPTIMIZATION: We removed the duplicate refreshFromCloud() call here.
+            // The separate useEffect below (fetchInitialData) handles the initial load.
         }
         previousSchoolId.current = schoolId;
     }, [schoolId]);
@@ -938,6 +938,21 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // We fetch data once when the school loads, but do NOT listen for real-time updates.
     useEffect(() => {
         if (!schoolId) return;
+
+        // OPTIMIZATION: Prevention of Double-Fetch on Login
+        // If AuthOverlay has already injected data (via loginOrRegisterSchool -> loadImportedData),
+        // we should NOT fetch again.
+        // We check 'settings.schoolName' as a proxy for valid loaded data.
+        if (settings.schoolName && users.length > 0) {
+            console.log(`[DataContext] 🛑 Initial data already present (School: ${settings.schoolName}). Skipping auto-fetch to prevent leaks.`);
+
+            // Even if we skip fetch, we might want to ensure metadata timestamps are set if they are missing
+            // But usually loadImportedData sets them.
+
+            // Ensure metadata is loaded if missing (lazy load check)
+            loadMetadata();
+            return;
+        }
 
         const fetchInitialData = async () => {
             try {
@@ -1516,6 +1531,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setOnlineUsers(online);
     }, [activeSessions, users]);
 
+    // OPTIMIZATION: Ensure Student Bucket Exists on Startup
+    // This catches schools that haven't migrated yet, even if they don't visit the Student page immediately.
+    useEffect(() => {
+        if (schoolId) {
+            // No preloaded students passed here; function will check bucket existence (1 read)
+            // and fetch subcollection ONLY if bucket is missing.
+            ensureStudentBucketExists(schoolId).catch(console.error);
+        }
+    }, [schoolId]);
+
     // Heartbeat effect
     useEffect(() => {
         if (!schoolId || !users || users.length === 0) return;
@@ -1897,8 +1922,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     });
 
                     // OPTIMIZATION: Ensure student bucket exists (create if missing)
+                    // We only pass preloaded students if we likely fetched ALL of them (length < limit)
+                    // Default limit is 1000. If we have 1000, we might have more, so we don't pass them to ensure safety.
+                    const usedLimit = limit > 0 ? limit : 1000;
                     if (newStudents.length > 0) {
-                        ensureStudentBucketExists(schoolId).catch(e => {
+                        const isLikelyComplete = newStudents.length < usedLimit;
+
+                        // If it's complete, pass it to avoid re-fetching. 
+                        // If not complete, pass undefined, and ensureStudentBucketExists will fetch ALL from subcollection.
+                        ensureStudentBucketExists(schoolId, isLikelyComplete ? newStudents : undefined).catch(e => {
                             console.error('[DataContext] Non-critical: Failed to ensure student bucket after loading', e);
                         });
                     }

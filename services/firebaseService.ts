@@ -37,6 +37,8 @@ const historyCache = new Map<string, { timestamp: number, data: AppDataType[] }>
 const searchCache = new Map<string, { timestamp: number, results: any }>();
 const inflightSchoolListPromises = new Map<string, Promise<SchoolListItem[]>>(); // CLEANUP: Prevent duplicate requests
 const inflightSchoolPromises = new Map<string, Promise<AppDataType | null>>();
+const inflightLoginPromises = new Map<string, Promise<any>>(); // NEW: Dedupe login calls
+const inflightStudentPromises = new Map<string, Promise<{ students: Student[], lastDoc: DocumentSnapshot | null }>>(); // NEW: Dedupe student fetches
 const inflightPeriodPromises = new Map<string, Promise<SchoolPeriod[]>>();
 const CACHE_TTL = 60 * 1000; // 1 Minute Cache for frequent lookups
 // Re-export AppDataType so it's available
@@ -373,7 +375,19 @@ export const getSchoolData = async (docId: string, keysToFetch?: (keyof AppDataT
 
             if (docSnap.exists()) {
                 const data = docSnap.data() as AppDataType;
-                // Note: Fan-in logic removed for performance. Subcollections fetched on-demand.
+
+                // ---------------------------------------------------------
+                // OPTIMIZATION: STRIP LEGACY DATA TO ENFORCE BUCKET USAGE
+                // ---------------------------------------------------------
+                // We explicitly remove these heavy arrays so DataContext sees them as empty.
+                // This forces the 'lazy load' logic to trigger, which will then use
+                // the optimized 'fetchStudents' (bucket) and 'fetchMetadata' (bundle) paths.
+                if (data.students) delete data.students;
+                if (data.scores) delete data.scores;
+                if (data.classes) delete data.classes;
+                if (data.subjects) delete data.subjects;
+                if (data.assessments) delete data.assessments;
+
                 return data;
             } else {
                 return null;
@@ -401,49 +415,82 @@ export const fetchStudents = async (
     pageSize: number = 50,
     lastVisible: DocumentSnapshot | null = null
 ): Promise<{ students: Student[], lastDoc: DocumentSnapshot | null }> => {
-    // 1. Try fetching from the "Bucket" first (schools/{schoolId}/config/student_bucket)
-    try {
-        const bucketRef = doc(db, "schools", docId, "config", "student_bucket");
-        trackFirebaseRead('fetchStudents', 'config', 1, 'Attempting student bucket read');
-        const bucketSnap = await loggedGetDoc(bucketRef, `fetchStudents/bucket/${docId}`);
+    // 1. OPTIMIZATION: Dedupe simultaneous requests
+    // Only dedupe initial loads (no cursor) to simplify key generation.
+    // Paginated requests are usually triggered by user action and less likely to race.
+    const cacheKey = `${docId}_${pageSize}_${lastVisible ? 'cursor' : 'initial'}`;
 
-        if (bucketSnap.exists()) {
-            const data = bucketSnap.data() as any;
-            if (data.studentsMap) {
-                const allStudents = Object.values(data.studentsMap) as Student[];
-                // If pagination requested, apply it in-memory
-                if (pageSize && pageSize > 0) {
-                    const startIdx = lastVisible ? allStudents.findIndex(s => s.id === (lastVisible as any).id) + 1 : 0;
-                    const page = allStudents.slice(startIdx, startIdx + pageSize);
-                    const lastDoc = page.length > 0 ? page[page.length - 1] : null;
-                    return { students: page, lastDoc: lastDoc as any };
-                }
-                return { students: allStudents, lastDoc: null };
-            }
-        }
-    } catch (e) {
-        console.warn("Error fetching student bucket:", e);
+    if (inflightStudentPromises.has(cacheKey)) {
+        console.log(`[Firebase] 🛡️ Returning inflight promise for fetchStudents: ${cacheKey}`);
+        return inflightStudentPromises.get(cacheKey)!;
     }
 
-    // 2. Fallback: Fetch legacy individual student documents if bucket missing/empty
-    try {
-        const studentsRef = collection(db, "schools", docId, "students");
-        let q = query(studentsRef, orderBy("name"), limit(pageSize));
+    const fetchPromise = (async () => {
+        // 1. Try fetching from the "Bucket" first (schools/{schoolId}/config/student_bucket)
+        try {
+            const bucketRef = doc(db, "schools", docId, "config", "student_bucket");
+            trackFirebaseRead('fetchStudents', 'config', 1, 'Attempting student bucket read');
+            const bucketSnap = await loggedGetDoc(bucketRef, `fetchStudents/bucket/${docId}`);
 
-        if (lastVisible) {
-            q = query(studentsRef, orderBy("name"), startAfter(lastVisible), limit(pageSize));
+            if (bucketSnap.exists()) {
+                const data = bucketSnap.data() as any;
+                if (data.studentsMap) {
+                    const allStudents = Object.values(data.studentsMap) as Student[];
+                    // If pagination requested, apply it in-memory
+                    if (pageSize && pageSize > 0) {
+                        const startIdx = lastVisible ? allStudents.findIndex(s => s.id === (lastVisible as any).id) + 1 : 0;
+                        const page = allStudents.slice(startIdx, startIdx + pageSize);
+                        const lastDoc = page.length > 0 ? page[page.length - 1] : null;
+                        return { students: page, lastDoc: lastDoc as any };
+                    }
+                    return { students: allStudents, lastDoc: null };
+                }
+            }
+        } catch (e) {
+            console.warn("Error fetching student bucket:", e);
         }
 
-        trackFirebaseRead('fetchStudents (fallback)', 'students', 0, 'Student bucket missing, reading subcollection');
-        const snapshot = await loggedGetDocs(q, `fetchStudents/fallback/${docId}`);
-        trackFirebaseRead('fetchStudents (fallback)', 'students', snapshot.size, `Fallback fetched ${snapshot.size} students`);
-        const students = snapshot.docs.map(d => d.data() as Student);
-        const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+        // 2. Fallback: Fetch legacy individual student documents if bucket missing/empty
+        try {
+            const studentsRef = collection(db, "schools", docId, "students");
+            let q = query(studentsRef, orderBy("name"), limit(pageSize));
 
-        return { students, lastDoc };
-    } catch (error) {
-        console.error("Error fetching students:", error);
-        return { students: [], lastDoc: null };
+            if (lastVisible) {
+                q = query(studentsRef, orderBy("name"), startAfter(lastVisible), limit(pageSize));
+            }
+
+            trackFirebaseRead('fetchStudents (fallback)', 'students', 0, 'Student bucket missing, reading subcollection');
+            const snapshot = await loggedGetDocs(q, `fetchStudents/fallback/${docId}`);
+            trackFirebaseRead('fetchStudents (fallback)', 'students', snapshot.size, `Fallback fetched ${snapshot.size} students`);
+            const students = snapshot.docs.map(d => d.data() as Student);
+            const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+
+            // -----------------------------------------------------------------
+            // CRITICAL OPTIMIZATION: Auto-Migrate to Bucket
+            // -----------------------------------------------------------------
+            // If we had to read X documents, we MUST save them to the bucket 
+            // so next time we only read 1 document.
+            if (students.length > 0 && !lastVisible) { // Only migrate on initial load (full page 1)
+                console.log(`[Firebase] ⚠️ Fallback triggered. Auto-creating 'student_bucket' with ${students.length} students to fix leak.`);
+
+                // We fire and forget this promise so we don't block the UI
+                updateStudentBucket(docId, students).catch(e => {
+                    console.error('[Firebase] Failed to auto-migrate student bucket:', e);
+                });
+            }
+
+            return { students, lastDoc };
+        } catch (error) {
+            console.error("Error fetching students:", error);
+            return { students: [], lastDoc: null };
+        }
+    })();
+
+    inflightStudentPromises.set(cacheKey, fetchPromise);
+    try {
+        return await fetchPromise;
+    } finally {
+        inflightStudentPromises.delete(cacheKey);
     }
 };
 
@@ -477,6 +524,13 @@ export const fetchScoresForClass = async (docId: string, classId: number, subjec
         trackFirebaseRead('fetchScoresForClass (fallback)', 'scores', 0, 'Querying legacy scores');
         const snap = await loggedGetDocs(q, `fetchScoresForClass/fallback/${subjectId}`);
         trackFirebaseRead('fetchScoresForClass (fallback)', 'scores', snap.size, 'Fetched legacy scores');
+
+        if (snap.size > 0) {
+            console.warn(`[Firebase] ⚠️ PERF LEAK: Fetched ${snap.size} legacy scores for Subject ${subjectId}. These should be in a bucket!`);
+        } else {
+            console.log(`[Firebase] No legacy scores found for Subject ${subjectId} (Clean)`);
+        }
+
         snap.forEach(d => scores.push(d.data() as Score));
         return scores;
     } catch (e) {
@@ -966,17 +1020,30 @@ export const updateStudentBucket = async (schoolId: string, students?: Student[]
  * Check if student bucket exists; if not but students do, create it
  * Called during login to catch schools that have students but no bucket yet
  */
-export const ensureStudentBucketExists = async (schoolId: string) => {
+export const ensureStudentBucketExists = async (schoolId: string, preloadedStudents?: Student[]) => {
     try {
         const bucketRef = doc(db, "schools", schoolId, "config", "student_bucket");
         const bucketSnap = await loggedGetDoc(bucketRef, `ensureStudentBucketExists/${schoolId}`);
 
         if (!bucketSnap.exists()) {
-            // Bucket is missing - check if students exist
-            const students = await fetchSubcollection<Student>(schoolId, 'students');
-            if (students && students.length > 0) {
-                console.log(`[Firebase] 🎓 Student bucket missing but students exist. Creating bucket for ${schoolId}...`);
-                await updateStudentBucket(schoolId, students);
+            console.warn(`[Firebase] ⚠️ Student bucket missing for ${schoolId}. Initiating auto-migration...`);
+
+            let studentsToSave: Student[] = [];
+
+            if (preloadedStudents && preloadedStudents.length > 0) {
+                console.log(`[Firebase] 🚀 Using preloaded students for migration (${preloadedStudents.length} records).`);
+                studentsToSave = preloadedStudents;
+            } else {
+                // Fallback: Fetch from subcollection (Costly but necessary for repair)
+                console.log(`[Firebase] 🐢 Fetching students from subcollection for migration...`);
+                const fetched = await fetchSubcollection<Student>(schoolId, 'students');
+                if (fetched) studentsToSave = fetched;
+            }
+
+            if (studentsToSave.length > 0) {
+                console.log(`[Firebase] 💾 Writing ${studentsToSave.length} students to new bucket...`);
+                await updateStudentBucket(schoolId, studentsToSave);
+                console.log(`[Firebase] ✅ Auto-migration complete. Student bucket created.`);
             }
         }
     } catch (error) {
@@ -1240,172 +1307,228 @@ export const initializeNewTermDatabase = async (docId: string, data: AppDataType
     }
 };
 
-export const loginOrRegisterSchool = async (docId: string, password: string, initialData: AppDataType, createIfMissing: boolean = false, targetDatabaseIndex?: number) => {
+export const loginOrRegisterSchool = async (docId: string, password: string, initialData: AppDataType, createIfMissing: boolean = false, targetDatabaseIndex?: number): Promise<{ status: string; data?: AppDataType; message?: string; docId?: string; subscription?: any }> => {
+    // 1. OPTIMIZATION: Check Inflight Promises FIRST to prevent double-reads (Race Condition Fix)
+    const cacheKey = `${docId}_${createIfMissing}`;
+    if (inflightLoginPromises.has(cacheKey)) {
+        console.log(`[Firebase] 🛡️ Returning inflight promise for login/register: ${docId}`);
+        return inflightLoginPromises.get(cacheKey);
+    }
 
-    // -------------------------------------------------------------------------
-    // CROSS-DATABASE HELPER (For registration primarily)
-    // -------------------------------------------------------------------------
-    if (typeof targetDatabaseIndex === 'number' && !isEmulator) {
-        const { ACTIVE_DATABASE_INDEX } = await import('../constants');
-        if (targetDatabaseIndex !== ACTIVE_DATABASE_INDEX) {
-            console.log(`[Firebase] Cross-database operation detected. Target: ${targetDatabaseIndex}, Active: ${ACTIVE_DATABASE_INDEX}`);
+    const loginPromise = (async () => {
+        // ... Original Function Body ...
 
-            const config = FIREBASE_CONFIGS[targetDatabaseIndex];
-            if (!config) return { status: 'error', message: 'Invalid database configuration' };
+        // 1. OPTIMIZATION: Check Inflight Promises FIRST to prevent double-reads (Race Condition Fix)
+        if (inflightSchoolPromises.has(docId)) {
+            console.log(`[Firebase] 🛡️ Returning inflight promise for school login: ${docId}`);
+            // We cast the result to match the expected return type of loginOrRegisterSchool
+            // Note: inflightSchoolPromises stores Promise<AppDataType | null>, but we need a complex object here.
+            // This is a bit tricky. The inflight promise is for *fetching data*, not the whole login flow.
+            // However, if we are just *fetching* (createIfMissing=false), we can piggyback.
+            // If we are creating, we probably shouldn't dedup against a fetch.
 
-            const appName = `temp_reg_${targetDatabaseIndex}_${Date.now()}`;
-            // @ts-ignore - InitializeApp is valid
-            const tempApp = initializeApp(config, appName);
-            const tempDb = getFirestore(tempApp);
+            // Let's rely on a separate map for login operations if needed, or just guard the fetch part.
+            // actually, let's look at how the fetch is done inside. 
+        }
 
-            try {
-                const docRef = doc(tempDb, "schools", docId);
-                const docSnap = await loggedGetDoc(docRef, `loginOrRegisterSchool_tempDb/${targetDatabaseIndex}/${docId}`);
+        // Better strategy: We can't easily reuse `inflightSchoolPromises` here because return types differ.
+        // But we CAN wrap the execution in a new map or variable if we want to dedup login specifically.
+        // For now, let's just proceed to the fetch part and ensure *that* uses the dedup logic.
 
-                if (docSnap.exists()) {
-                    const data = docSnap.data() as AppDataType;
-                    if (data.password !== password) return { status: 'wrong_password' };
-                    // Fetch subscription for existing school in other DB
-                    const subRef = doc(tempDb, 'subscriptions', docId.split('_')[0]);
-                    const subSnap = await loggedGetDoc(subRef, `loginOrRegisterSchool_tempDb_sub/${targetDatabaseIndex}/${docId}`);
-                    const subscription = subSnap.exists() ? subSnap.data() : null;
-                    // Return success with data, but caller (AuthOverlay) will initiate the DB switch
-                    return { status: 'success', data: data, docId, subscription };
-                } else {
-                    if (!createIfMissing) return { status: 'not_found' };
+        // WAIT: The user said "loginOrRegisterSchool called ... Fetching document...".
+        // The "Fetching document" part SHOULD be using `loggedGetDoc` which doesn't dedup by default? 
+        // No, `loggedGetDoc` is just a wrapper for `getDoc` with analytics.
 
-                    console.log(`[Firebase] Creating new school on Database ${targetDatabaseIndex}...`);
-                    const newData = { ...initialData, password, Access: initialData.Access ?? false };
-                    await setDoc(docRef, newData);
+        // We should implement specific dedup for this function or the underlying fetch.
 
-                    if (newData.Access === true) {
+        // Let's implement a specific dedupe for loginOrRegisterSchool based on docId.
+        const CACHE_KEY = `login_${docId}`;
+        // We need a module-level variable for this. I'll add it to the top of the file in a separate step or assume I can add it here.
+        // For now, let's just check the existing `inflightSchoolPromises` map which is exposed in this file.
+
+        // Actually, looking at the logs:
+        // [FIREBASE_DEBUG] loginOrRegisterSchool called...
+        // [FIREBASE_DEBUG] Fetching document...
+
+        // If I add a check here, I need to store the promise.
+        // -------------------------------------------------------------------------
+        // CROSS-DATABASE HELPER (For registration primarily)
+        // -------------------------------------------------------------------------
+        if (typeof targetDatabaseIndex === 'number' && !isEmulator) {
+            const { ACTIVE_DATABASE_INDEX } = await import('../constants');
+            if (targetDatabaseIndex !== ACTIVE_DATABASE_INDEX) {
+                console.log(`[Firebase] Cross-database operation detected. Target: ${targetDatabaseIndex}, Active: ${ACTIVE_DATABASE_INDEX}`);
+
+                const config = FIREBASE_CONFIGS[targetDatabaseIndex];
+                if (!config) return { status: 'error', message: 'Invalid database configuration' };
+
+                const appName = `temp_reg_${targetDatabaseIndex}_${Date.now()}`;
+                // @ts-ignore - InitializeApp is valid
+                const tempApp = initializeApp(config, appName);
+                const tempDb = getFirestore(tempApp);
+
+                try {
+                    const docRef = doc(tempDb, "schools", docId);
+                    const docSnap = await loggedGetDoc(docRef, `loginOrRegisterSchool_tempDb/${targetDatabaseIndex}/${docId}`);
+
+                    if (docSnap.exists()) {
+                        const data = docSnap.data() as AppDataType;
+                        if (data.password !== password) return { status: 'wrong_password' };
+                        // Fetch subscription for existing school in other DB
                         const subRef = doc(tempDb, 'subscriptions', docId.split('_')[0]);
                         const subSnap = await loggedGetDoc(subRef, `loginOrRegisterSchool_tempDb_sub/${targetDatabaseIndex}/${docId}`);
                         const subscription = subSnap.exists() ? subSnap.data() : null;
-                        return { status: 'success', data: newData, docId, subscription };
+                        // Return success with data, but caller (AuthOverlay) will initiate the DB switch
+                        return { status: 'success', data: data, docId, subscription };
                     } else {
-                        return { status: 'created_pending_access' };
+                        if (!createIfMissing) return { status: 'not_found' };
+
+                        console.log(`[Firebase] Creating new school on Database ${targetDatabaseIndex}...`);
+                        const newData = { ...initialData, password, Access: initialData.Access ?? false };
+                        await setDoc(docRef, newData);
+
+                        if (newData.Access === true) {
+                            const subRef = doc(tempDb, 'subscriptions', docId.split('_')[0]);
+                            const subSnap = await loggedGetDoc(subRef, `loginOrRegisterSchool_tempDb_sub/${targetDatabaseIndex}/${docId}`);
+                            const subscription = subSnap.exists() ? subSnap.data() : null;
+                            return { status: 'success', data: newData, docId: docId, subscription };
+                        } else {
+                            return { status: 'created_pending_access' };
+                        }
+                    }
+                } catch (e: any) {
+                    console.error('[Firebase] Cross-db error:', e);
+                    return { status: 'error', message: e.message };
+                } finally {
+                    await deleteApp(tempApp).catch((_: any) => { });
+                }
+            }
+        }
+
+        console.log(`[FIREBASE_DEBUG] loginOrRegisterSchool called for docId: ${docId}, createIfMissing: ${createIfMissing}`);
+        try {
+            let targetDocId = docId;
+            let docRef = doc(db, "schools", targetDocId);
+
+            console.log(`[FIREBASE_DEBUG] Fetching document: schools/${targetDocId}`);
+            trackFirebaseRead('loginOrRegisterSchool', 'schools', 1, `Checking school existence: ${targetDocId}`);
+            let docSnap = await loggedGetDoc(docRef, `loginOrRegisterSchool/${targetDocId}`);
+            console.log(`[FIREBASE_DEBUG] Document exists? ${docSnap.exists()}`);
+
+            if (!docSnap.exists()) {
+                console.log(`[FIREBASE_DEBUG] Document not found. Attempting case-insensitive fallback search...`);
+                // Case-insensitive fallback
+                const schoolsRef = collection(db, "schools");
+                const q = query(schoolsRef, where(documentId(), '>=', targetDocId.toLowerCase()), limit(5)); // Optimize fallback
+                trackFirebaseRead('loginOrRegisterSchool (fallback)', 'schools', 5, 'Fallback case-insensitive search');
+                const snap = await loggedGetDocs(q, `loginOrRegisterSchool/fallback/${targetDocId}`);
+                console.log(`[FIREBASE_DEBUG] Fallback search found ${snap.size} documents.`);
+
+                const match = snap.docs.find(d => d.id.toLowerCase() === docId.toLowerCase());
+                if (match) {
+                    console.log(`[FIREBASE_DEBUG] Fallback match found: ${match.id}`);
+                    targetDocId = match.id;
+                    docRef = doc(db, "schools", targetDocId);
+                    docSnap = match;
+                } else {
+                    console.log(`[FIREBASE_DEBUG] No matching document found in fallback.`);
+                }
+            }
+
+            if (docSnap.exists()) {
+                console.log(`[FIREBASE_DEBUG] Processing existing document...`);
+                const data = docSnap.data() as AppDataType;
+
+                // Debug logs for password comparison (be careful with real passwords in logs, but for debug it's ok)
+                // console.log(`[FIREBASE_DEBUG] Stored password: ${data.password}, Provided: ${password}`);
+
+                if (data.password !== password) {
+                    console.warn(`[FIREBASE_DEBUG] Password mismatch.`);
+                    return { status: 'wrong_password' };
+                }
+                if (data.Access === false) {
+                    console.warn(`[FIREBASE_DEBUG] Access denied (Access flag is false).`);
+                    return { status: 'access_denied' };
+                }
+
+                // LICENSE CHECK: Only check license for existing schools
+                // EMULATOR & BOT BYPASS
+                const sanitizedBotId = 'sbaacademylive';
+                const baseName = targetDocId.split('_')[0].toLowerCase();
+
+                if (isEmulator || baseName === sanitizedBotId) {
+                    console.log(`[FIREBASE_DEBUG] Bypass detected (${isEmulator ? 'Emulator' : 'Bot School'}) - Bypassing license check.`);
+                } else {
+                    const subRef = doc(db, 'subscriptions', baseName);
+                    trackFirebaseRead('loginOrRegisterSchool (license)', 'subscriptions', 1, 'Checking license status');
+                    const subSnap = await loggedGetDoc(subRef, `loginOrRegisterSchool_license/${baseName}`);
+
+                    if (!subSnap.exists()) {
+                        console.warn(`[FIREBASE_DEBUG] License record for ${baseName} missing.`);
+                        return { status: 'expired', message: 'No active license found for this school.' };
+                    }
+
+                    const subData = subSnap.data() as any;
+                    const expiryDate = subData.expiryDate?.toDate();
+                    if (!expiryDate || new Date() > expiryDate) {
+                        console.warn(`[FIREBASE_DEBUG] School license has expired.`);
+                        return { status: 'expired', message: 'Your school license has expired. Please use the License Management Portal to renew.' };
                     }
                 }
-            } catch (e: any) {
-                console.error('[Firebase] Cross-db error:', e);
-                return { status: 'error', message: e.message };
-            } finally {
-                await deleteApp(tempApp).catch((_: any) => { });
-            }
-        }
-    }
 
-    console.log(`[FIREBASE_DEBUG] loginOrRegisterSchool called for docId: ${docId}, createIfMissing: ${createIfMissing}`);
-    try {
-        let targetDocId = docId;
-        let docRef = doc(db, "schools", targetDocId);
-
-        console.log(`[FIREBASE_DEBUG] Fetching document: schools/${targetDocId}`);
-        trackFirebaseRead('loginOrRegisterSchool', 'schools', 1, `Checking school existence: ${targetDocId}`);
-        let docSnap = await loggedGetDoc(docRef, `loginOrRegisterSchool/${targetDocId}`);
-        console.log(`[FIREBASE_DEBUG] Document exists? ${docSnap.exists()}`);
-
-        if (!docSnap.exists()) {
-            console.log(`[FIREBASE_DEBUG] Document not found. Attempting case-insensitive fallback search...`);
-            // Case-insensitive fallback
-            const schoolsRef = collection(db, "schools");
-            const q = query(schoolsRef, where(documentId(), '>=', targetDocId.toLowerCase()), limit(5)); // Optimize fallback
-            trackFirebaseRead('loginOrRegisterSchool (fallback)', 'schools', 5, 'Fallback case-insensitive search');
-            const snap = await loggedGetDocs(q, `loginOrRegisterSchool/fallback/${targetDocId}`);
-            console.log(`[FIREBASE_DEBUG] Fallback search found ${snap.size} documents.`);
-
-            const match = snap.docs.find(d => d.id.toLowerCase() === docId.toLowerCase());
-            if (match) {
-                console.log(`[FIREBASE_DEBUG] Fallback match found: ${match.id}`);
-                targetDocId = match.id;
-                docRef = doc(db, "schools", targetDocId);
-                docSnap = match;
-            } else {
-                console.log(`[FIREBASE_DEBUG] No matching document found in fallback.`);
-            }
-        }
-
-        if (docSnap.exists()) {
-            console.log(`[FIREBASE_DEBUG] Processing existing document...`);
-            const data = docSnap.data() as AppDataType;
-
-            // Debug logs for password comparison (be careful with real passwords in logs, but for debug it's ok)
-            // console.log(`[FIREBASE_DEBUG] Stored password: ${data.password}, Provided: ${password}`);
-
-            if (data.password !== password) {
-                console.warn(`[FIREBASE_DEBUG] Password mismatch.`);
-                return { status: 'wrong_password' };
-            }
-            if (data.Access === false) {
-                console.warn(`[FIREBASE_DEBUG] Access denied (Access flag is false).`);
-                return { status: 'access_denied' };
-            }
-
-            // LICENSE CHECK: Only check license for existing schools
-            // EMULATOR & BOT BYPASS
-            const sanitizedBotId = 'sbaacademylive';
-            const baseName = targetDocId.split('_')[0].toLowerCase();
-
-            if (isEmulator || baseName === sanitizedBotId) {
-                console.log(`[FIREBASE_DEBUG] Bypass detected (${isEmulator ? 'Emulator' : 'Bot School'}) - Bypassing license check.`);
-            } else {
                 const subRef = doc(db, 'subscriptions', baseName);
-                trackFirebaseRead('loginOrRegisterSchool (license)', 'subscriptions', 1, 'Checking license status');
-                const subSnap = await loggedGetDoc(subRef, `loginOrRegisterSchool_license/${baseName}`);
+                const subSnap = await loggedGetDoc(subRef, `loginOrRegisterSchool_sub/${baseName}`);
+                const subscription = subSnap.exists() ? (subSnap.data() as any) : null;
 
-                if (!subSnap.exists()) {
-                    console.warn(`[FIREBASE_DEBUG] License record for ${baseName} missing.`);
-                    return { status: 'expired', message: 'No active license found for this school.' };
-                }
+                console.log(`[FIREBASE_DEBUG] Login successful. Returning data.`);
 
-                const subData = subSnap.data() as any;
-                const expiryDate = subData.expiryDate?.toDate();
-                if (!expiryDate || new Date() > expiryDate) {
-                    console.warn(`[FIREBASE_DEBUG] School license has expired.`);
-                    return { status: 'expired', message: 'Your school license has expired. Please use the License Management Portal to renew.' };
-                }
-            }
+                // OPTIMIZATION: Ensure student bucket exists (create if missing but students exist)
+                ensureStudentBucketExists(targetDocId).catch(e => {
+                    console.error('[Firebase] Non-critical: Failed to ensure student bucket on login', e);
+                });
 
-            const subRef = doc(db, 'subscriptions', baseName);
-            const subSnap = await loggedGetDoc(subRef, `loginOrRegisterSchool_sub/${baseName}`);
-            const subscription = subSnap.exists() ? (subSnap.data() as any) : null;
+                // OPTIMIZATION: Return ONLY main data. Do not fan-in.
+                // STRIP LEGACY DATA: Same as getSchoolData
+                if (data.students) delete data.students;
+                if (data.scores) delete data.scores;
+                if (data.classes) delete data.classes;
+                if (data.subjects) delete data.subjects;
+                if (data.assessments) delete data.assessments;
 
-            console.log(`[FIREBASE_DEBUG] Login successful. Returning data.`);
-
-            // OPTIMIZATION: Ensure student bucket exists (create if missing but students exist)
-            ensureStudentBucketExists(targetDocId).catch(e => {
-                console.error('[Firebase] Non-critical: Failed to ensure student bucket on login', e);
-            });
-
-            // OPTIMIZATION: Return ONLY main data. Do not fan-in.
-            return { status: 'success', data: data, docId: targetDocId, subscription };
-        } else {
-            if (!createIfMissing) {
-                console.log(`[FIREBASE_DEBUG] Document not found and createIfMissing is false.`);
-                return { status: 'not_found' };
-            }
-            console.log(`[FIREBASE_DEBUG] Creating new school document: ${docId}`);
-            // Respect Access from initialData (allows debug mode to set Access: true)
-            const newData = { ...initialData, password, Access: initialData.Access ?? false };
-            await loggedSetDoc(doc(db, "schools", docId), newData, undefined, `loginOrRegisterSchool/create/${docId}`);
-
-            // If Access is true, return success (debug mode). Otherwise, pending.
-            if (newData.Access === true) {
-                console.log(`[FIREBASE_DEBUG] New document created with Access=true. Returning 'success'.`);
-                const subRef = doc(db, 'subscriptions', docId.split('_')[0]);
-                const subSnap = await loggedGetDoc(subRef, `loginOrRegisterSchool_create_sub/${docId}`);
-                const subscription = subSnap.exists() ? subSnap.data() : null;
-                return { status: 'success', data: newData, docId: docId, subscription };
+                return { status: 'success', data: data, docId: targetDocId, subscription };
             } else {
-                console.log(`[FIREBASE_DEBUG] New document created with Access=false. Returning 'created_pending_access'.`);
-                return { status: 'created_pending_access' };
+                if (!createIfMissing) {
+                    console.log(`[FIREBASE_DEBUG] Document not found and createIfMissing is false.`);
+                    return { status: 'not_found' };
+                }
+                console.log(`[FIREBASE_DEBUG] Creating new school document: ${docId}`);
+                // Respect Access from initialData (allows debug mode to set Access: true)
+                const newData = { ...initialData, password, Access: initialData.Access ?? false };
+                await loggedSetDoc(doc(db, "schools", docId), newData, undefined, `loginOrRegisterSchool/create/${docId}`);
+
+                // If Access is true, return success (debug mode). Otherwise, pending.
+                if (newData.Access === true) {
+                    console.log(`[FIREBASE_DEBUG] New document created with Access=true. Returning 'success'.`);
+                    const subRef = doc(db, 'subscriptions', docId.split('_')[0]);
+                    const subSnap = await loggedGetDoc(subRef, `loginOrRegisterSchool_create_sub/${docId}`);
+                    const subscription = subSnap.exists() ? subSnap.data() : null;
+                    return { status: 'success', data: newData, docId: docId, subscription };
+                } else {
+                    console.log(`[FIREBASE_DEBUG] New document created with Access=false. Returning 'created_pending_access'.`);
+                    return { status: 'created_pending_access' };
+                }
             }
+        } catch (e: any) {
+            console.error(`[FIREBASE_DEBUG] Error in loginOrRegisterSchool:`, e);
+            return { status: 'error', message: e.message };
+        } finally {
+            // Ensure we remove the promise from the cache when done (success or error)
+            inflightLoginPromises.delete(cacheKey);
         }
-    } catch (e: any) {
-        console.error(`[FIREBASE_DEBUG] Error in loginOrRegisterSchool:`, e);
-        return { status: 'error', message: e.message };
-    }
+    })();
+
+    inflightLoginPromises.set(cacheKey, loginPromise);
+    return loginPromise;
 };
 
 // ... User Management (updateUsers, updateDeviceCredentials, getUserById) same as before but minimal ...
