@@ -1960,7 +1960,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
         });
         return count;
-    }, [draftVersion, settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions]);
+    }, [dirtyVersion, draftVersion, settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions]);
 
     // Get the score to display: prefer draft, fallback to saved
     const getComputedScore = (studentId: number, assessmentId: number, subjectId: number): string => {
