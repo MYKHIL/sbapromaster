@@ -1041,7 +1041,7 @@ export const updateMetadataBundle = async (schoolId: string, options?: { classes
  * Splits students into multiple documents to avoid 1MB limit.
  * If a chunk is too large, it automatically splits smaller until Firestore accepts it.
  */
-export const updateStudentBucket = async (schoolId: string, students?: Student[], initialChunkSize: number = 50) => {
+export const updateStudentBucket = async (schoolId: string, students?: Student[], initialChunkSize: number = 300) => {
     try {
         const studentsToStore = students || (await fetchSubcollection<Student>(schoolId, 'students'));
 
@@ -1116,40 +1116,8 @@ export const updateStudentBucket = async (schoolId: string, students?: Student[]
  */
 export const ensureStudentBucketExists = async (schoolId: string, preloadedStudents?: Student[]) => {
     try {
-        // BUCKET CLEANUP: Delete all existing buckets if flag is enabled
-        const { CLEAR_STUDENT_BUCKETS } = await import('../constants');
-        if (CLEAR_STUDENT_BUCKETS) {
-            console.log(`[Bucket Cleanup] 🧹 CLEAR_STUDENT_BUCKETS enabled. Deleting all existing buckets for ${schoolId}...`);
-            try {
-                const batch = writeBatch(db);
-                let deletedCount = 0;
-
-                // Delete manifest
-                const manifestRef = doc(db, "schools", schoolId, "config", "student_bucket_manifest");
-                batch.delete(manifestRef);
-                deletedCount++;
-
-                // Delete all possible chunk documents (assume max 1000 chunks as safety limit)
-                // We delete even if they don't exist - Firestore handles this gracefully
-                for (let i = 0; i < 1000; i++) {
-                    const chunkRef = doc(db, "schools", schoolId, "config", `student_bucket_${i}`);
-                    batch.delete(chunkRef);
-                    deletedCount++;
-                }
-
-                // Also delete legacy single bucket if it exists
-                const legacyBucketRef = doc(db, "schools", schoolId, "config", "student_bucket");
-                batch.delete(legacyBucketRef);
-                deletedCount++;
-
-                trackFirebaseWrite('clearStudentBuckets', 'config', `Deleting up to ${deletedCount} bucket documents for ${schoolId}`);
-                await batch.commit();
-                console.log(`[Bucket Cleanup] ✅ Bucket cleanup complete. Deleted up to ${deletedCount} documents.`);
-            } catch (cleanupError) {
-                console.error(`[Bucket Cleanup] ⚠️ Cleanup failed:`, cleanupError);
-                // Continue anyway - we'll try to create fresh buckets
-            }
-        }
+        // Note: Bucket cleanup and image repair are now manual operations
+        // accessible via the Firebase Analytics page
 
         // Check MANIFEST first (new strategy)
         const manifestRef = doc(db, "schools", schoolId, "config", "student_bucket_manifest");
@@ -1160,17 +1128,7 @@ export const ensureStudentBucketExists = async (schoolId: string, preloadedStude
             // but strictly we should probably migrate it. For now, let's treat "missing manifest" as "needs migration".
             console.warn(`[Firebase] ⚠️ Student bucket manifest missing for ${schoolId}. Initiating auto-migration to chunks...`);
 
-            // CRITICAL: Check if image repair is enabled and run it BEFORE bucket creation
-            const { ENABLE_DATABASE_IMAGE_REPAIR } = await import('../constants');
-            if (ENABLE_DATABASE_IMAGE_REPAIR) {
-                console.log(`[Image Repair] 🔧 Running pre-migration image repair for ${schoolId}...`);
-                try {
-                    await repairStudentImages(schoolId);
-                    console.log(`[Image Repair] ✅ Pre-migration repair completed successfully`);
-                } catch (repairError) {
-                    console.error(`[Image Repair] ⚠️ Repair failed, proceeding with migration anyway:`, repairError);
-                }
-            }
+
 
             let studentsToSave: Student[] = [];
 
@@ -1201,122 +1159,167 @@ export const ensureStudentBucketExists = async (schoolId: string, preloadedStude
  * This function fetches all students, compresses their images, and saves them back
  * Used to fix existing oversized images that cause document size errors
  */
-export const repairStudentImages = async (schoolId: string): Promise<void> => {
+export const repairDatabaseImages = async (schoolId: string): Promise<void> => {
     try {
-        console.log(`[Image Repair] 🔧 Starting image repair for ${schoolId}...`);
+        console.log(`[Image Repair] 🔧 Starting comprehensive image repair (ImgBB Migration) for ${schoolId}...`);
 
-        // Dynamically import the compression utility
-        const { compressImage, getBase64Size, formatBytes } = await import('../utils/imageUtils');
+        // Dynamically import the upload utility
+        const { uploadToImgBB, getBase64Size, formatBytes } = await import('../utils/imageUtils');
 
-        // Fetch all students from subcollection (source of truth)
-        const students = await fetchSubcollection<Student>(schoolId, 'students');
+        const batch = writeBatch(db);
+        let uploadedCount = 0;
 
-        if (!students || students.length === 0) {
-            console.log(`[Image Repair] ℹ️ No students found for ${schoolId}`);
-            return;
+        // 1. Repair Settings (Logo, Signatures)
+        const settingsRef = doc(db, "schools", schoolId);
+        const settingsSnap = await getDoc(settingsRef);
+        if (settingsSnap.exists()) {
+            const data = settingsSnap.data() as AppDataType;
+            const settings = data.settings || {} as SchoolSettings;
+            let settingsModified = false;
+
+            // Check Logo
+            if (settings.logo && settings.logo.startsWith('data:image')) {
+                console.log(`[Image Repair] 📤 Uploading School Logo...`);
+                const url = await uploadToImgBB(settings.logo);
+                if (url) { settings.logo = url; settingsModified = true; uploadedCount++; }
+            }
+            // Check Headmaster Signature
+            if (settings.headmasterSignature && settings.headmasterSignature.startsWith('data:image')) {
+                console.log(`[Image Repair] 📤 Uploading Headmaster Signature...`);
+                const url = await uploadToImgBB(settings.headmasterSignature);
+                if (url) { settings.headmasterSignature = url; settingsModified = true; uploadedCount++; }
+            }
+
+            if (settingsModified) {
+                batch.update(settingsRef, { settings: settings });
+                console.log(`[Image Repair] ✅ Settings images queued for update.`);
+            }
         }
 
-        console.log(`[Image Repair] 📊 Found ${students.length} students. Checking for oversized images...`);
+        // 2. Repair Subjects (Signatures)
+        const subjects = await fetchSubcollection<Subject>(schoolId, 'subjects');
+        for (const subject of subjects) {
+            if (subject.signature && subject.signature.startsWith('data:image')) {
+                console.log(`[Image Repair] 📤 Uploading signature for Subject ${subject.subject}...`);
+                const url = await uploadToImgBB(subject.signature);
+                if (url) {
+                    const ref = doc(db, "schools", schoolId, "subjects", String(subject.id));
+                    batch.update(ref, { signature: url });
+                    uploadedCount++;
+                }
+            }
+        }
 
-        let compressedCount = 0;
-        let totalSavings = 0;
-        const batch = writeBatch(db);
+        // 3. Repair Classes (Teacher Signatures)
+        const classes = await fetchSubcollection<Class>(schoolId, 'classes');
+        for (const cls of classes) {
+            if (cls.teacherSignature && cls.teacherSignature.startsWith('data:image')) {
+                console.log(`[Image Repair] 📤 Uploading signature for Class ${cls.name}...`);
+                const url = await uploadToImgBB(cls.teacherSignature);
+                if (url) {
+                    const ref = doc(db, "schools", schoolId, "classes", String(cls.id));
+                    batch.update(ref, { teacherSignature: url });
+                    uploadedCount++;
+                }
+            }
+        }
+
+        // 4. Repair Students (Photos, Images, Pictures)
+        const students = await fetchSubcollection<Student>(schoolId, 'students');
+        let studentsModified = false;
 
         for (const student of students) {
             let modified = false;
             const studentCopy = { ...student };
 
-            // Check and compress 'photo' property
-            // @ts-ignore
-            if (student.photo && typeof student.photo === 'string' && student.photo.startsWith('data:image')) {
+            // Check aliases
+            const fields = ['photo', 'image', 'picture'];
+            for (const field of fields) {
                 // @ts-ignore
-                const originalSize = getBase64Size(student.photo);
-
-                // ULTRA-AGGRESSIVE ONE-TIME REPAIR: Force everything below 5000 bytes
-                // This will re-compress previously compressed images to tiny thumbnails
-                if (originalSize > 5000) {
-                    try {
+                const val = student[field];
+                if (val && typeof val === 'string' && val.startsWith('data:image')) {
+                    console.log(`[Image Repair] 📤 Uploading student ${field} for ${student.name}...`);
+                    const url = await uploadToImgBB(val);
+                    if (url) {
                         // @ts-ignore
-                        // ULTRA compression: 120x120px at 0.6 quality (~3-5KB target)
-                        const compressed = await compressImage(student.photo, 120, 120, 0.6);
-                        const newSize = getBase64Size(compressed);
-                        const savings = originalSize - newSize;
-
-                        // Check if we actually saved space (sometimes compression adds overhead for tiny files)
-                        if (newSize < originalSize) {
-                            // @ts-ignore
-                            studentCopy.photo = compressed;
-                            modified = true;
-                            compressedCount++;
-                            totalSavings += savings;
-                            console.log(`[Image Repair] ✅ Compressed photo for student ${student.id}: ${formatBytes(originalSize)} → ${formatBytes(newSize)} (saved ${formatBytes(savings)})`);
-                        } else {
-                            console.log(`[Image Repair] ⏭️ Compression didn't reduce size for student ${student.id} (kept original)`);
-                        }
-                    } catch (err) {
-                        console.warn(`[Image Repair] ⚠️ Failed to compress photo for student ${student.id}:`, err);
+                        studentCopy[field] = url;
+                        modified = true;
+                        uploadedCount++;
                     }
                 }
             }
 
-            // Check and compress 'image' property (if it exists)
-            // @ts-ignore
-            if (student.image && typeof student.image === 'string' && student.image.startsWith('data:image')) {
-                // @ts-ignore
-                const originalSize = getBase64Size(student.image);
-
-                // ULTRA-AGGRESSIVE ONE-TIME REPAIR: Force everything below 5000 bytes
-                if (originalSize > 5000) {
-                    try {
-                        // @ts-ignore
-                        // ULTRA compression: 120x120px at 0.6 quality
-                        const compressed = await compressImage(student.image, 120, 120, 0.6);
-                        const newSize = getBase64Size(compressed);
-                        const savings = originalSize - newSize;
-
-                        if (newSize < originalSize) {
-                            // @ts-ignore
-                            studentCopy.image = compressed;
-                            modified = true;
-                            compressedCount++;
-                            totalSavings += savings;
-
-                            console.log(`[Image Repair] ✅ Compressed image for student ${student.id}: ${formatBytes(originalSize)} → ${formatBytes(newSize)} (saved ${formatBytes(savings)})`);
-                        }
-                    } catch (err) {
-                        console.warn(`[Image Repair] ⚠️ Failed to compress image for student ${student.id}:`, err);
-                    }
-                }
-            }
-
-            // If modified, add to batch
             if (modified) {
-                const studentRef = doc(db, "schools", schoolId, "students", String(student.id));
-                batch.set(studentRef, sanitizeForFirestore(studentCopy), { merge: true });
+                const ref = doc(db, "schools", schoolId, "students", String(student.id));
+                batch.set(ref, sanitizeForFirestore(studentCopy), { merge: true });
+
+                // Update local array for bucketing
+                const idx = students.findIndex(s => s.id === student.id);
+                if (idx !== -1) students[idx] = studentCopy;
+                studentsModified = true;
             }
         }
 
-        // Commit batch if we have changes
-        if (compressedCount > 0) {
-            console.log(`[Image Repair] 💾 Saving ${compressedCount} compressed images...`);
-            trackFirebaseWrite('repairStudentImages', 'students', `Updated ${compressedCount} students`);
+        if (uploadedCount > 0) {
+            console.log(`[Image Repair] 💾 Committing ${uploadedCount} image migrations...`);
+            trackFirebaseWrite('repairDatabaseImages', 'multi', `Migrated ${uploadedCount} images to ImgBB`);
             await batch.commit();
-            console.log(`[Image Repair] ✅ Image repair complete! Compressed ${compressedCount} images, saved ${formatBytes(totalSavings)} total.`);
-
-            // Rebuild student buckets with compressed data
-            // Force chunk size 50 as requested
-            await updateStudentBucket(schoolId, students, 50);
-
+            console.log(`[Image Repair] ✅ Migration complete.`);
         } else {
-            console.log('[Image Repair] ✅ No oversized images found. All good!');
-            // Even if no images compressed, we might want to force a bucket rebuild if users requested
-            // But usually this function is called specifically for repair. 
-            // Let's ensure bucket integration is consistent.
-            // If we are here, likely the calling function will handle bucket creation (ensureStudentBucketExists)
+            console.log(`[Image Repair] ✅ No base64 images found.`);
         }
+
+        // Always ensure bucket is healthy with chunk size 300
+        console.log(`[Image Repair] 🔄 Rebuilding student buckets with chunk size 300...`);
+        await updateStudentBucket(schoolId, students, 300);
+
+        // 5. Repair Metadata Bundle (Classes, Subjects, Assessments cached copy)
+        console.log(`[Image Repair] 📦 Repairing metadata_bundle...`);
+        const bundleRef = doc(db, "schools", schoolId, "config", "metadata_bundle");
+        const bundleSnap = await getDoc(bundleRef);
+
+        if (bundleSnap.exists()) {
+            const bundleData = bundleSnap.data() as any;
+            let bundleModified = false;
+
+            // Process subjects in bundle
+            if (bundleData.subjects && Array.isArray(bundleData.subjects)) {
+                for (const subject of bundleData.subjects) {
+                    if (subject.signature && subject.signature.startsWith('data:image')) {
+                        console.log(`[Image Repair] 📤 Uploading bundle subject signature for ${subject.subject}...`);
+                        const url = await uploadToImgBB(subject.signature);
+                        if (url) {
+                            subject.signature = url;
+                            bundleModified = true;
+                        }
+                    }
+                }
+            }
+
+            // Process classes in bundle
+            if (bundleData.classes && Array.isArray(bundleData.classes)) {
+                for (const cls of bundleData.classes) {
+                    if (cls.teacherSignature && cls.teacherSignature.startsWith('data:image')) {
+                        console.log(`[Image Repair] 📤 Uploading bundle class signature for ${cls.name}...`);
+                        const url = await uploadToImgBB(cls.teacherSignature);
+                        if (url) {
+                            cls.teacherSignature = url;
+                            bundleModified = true;
+                        }
+                    }
+                }
+            }
+
+            if (bundleModified) {
+                await loggedUpdateDoc(bundleRef, bundleData, 'repairDatabaseImages/metadata_bundle');
+                console.log(`[Image Repair] ✅ Metadata bundle repaired.`);
+            } else {
+                console.log(`[Image Repair] ✅ Metadata bundle already clean.`);
+            }
+        }
+
     } catch (error) {
-        console.error('[Image Repair] ❌ Error during image repair:', error);
-        // Don't throw, allow app to continue
+        console.error('[Image Repair] ❌ Error:', error);
     }
 };
 
@@ -1333,6 +1336,57 @@ export const saveDataTransaction = async (
     updates: Partial<AppDataType>,
     deletions?: Record<string, string[]>
 ) => {
+    // -------------------------------------------------------------------------
+    // AUTO-UPLOAD INTERCEPTOR (ImgBB)
+    // -------------------------------------------------------------------------
+    // Check for base64 images in updates and upload them to ImgBB before saving
+    try {
+        const { uploadToImgBB } = await import('../utils/imageUtils');
+
+        const processFields = async (obj: any, fields: string[]) => {
+            if (!obj) return;
+            for (const field of fields) {
+                if (obj[field] && typeof obj[field] === 'string' && obj[field].startsWith('data:image')) {
+                    console.log(`[Auto-Upload] 📤 Intercepted base64 for ${field}. Uploading to ImgBB...`);
+                    const url = await uploadToImgBB(obj[field]);
+                    if (url) {
+                        obj[field] = url;
+                        console.log(`[Auto-Upload] ✅ Replaced ${field} with URL.`);
+                    }
+                }
+            }
+        };
+
+        // 1. Settings (Logo, Signature)
+        if (updates.settings) {
+            await processFields(updates.settings, ['logo', 'headmasterSignature']);
+        }
+
+        // 2. Subjects (Signature)
+        if (updates.subjects && Array.isArray(updates.subjects)) {
+            for (const subject of updates.subjects) {
+                await processFields(subject, ['signature']);
+            }
+        }
+
+        // 3. Classes (Teacher Signature)
+        if (updates.classes && Array.isArray(updates.classes)) {
+            for (const cls of updates.classes) {
+                await processFields(cls, ['teacherSignature']);
+            }
+        }
+
+        // 4. Students (Photos, Images)
+        if (updates.students && Array.isArray(updates.students)) {
+            for (const student of updates.students) {
+                await processFields(student, ['photo', 'image', 'picture']);
+            }
+        }
+
+    } catch (err) {
+        console.error('[Auto-Upload] ⚠️ Failed to auto-upload images in transaction (proceeding with base64):', err);
+    }
+
     // Helper to manage batches
     const executeBatch = async (operations: ((batch: WriteBatch) => void)[]) => {
         const BATCH_SIZE = 450; // Safety margin below 500

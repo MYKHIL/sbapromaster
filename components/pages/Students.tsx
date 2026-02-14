@@ -8,7 +8,7 @@ import { AI_FEATURES_ENABLED } from '../../constants';
 import { useUser } from '../../context/UserContext';
 import ReadOnlyWrapper from '../ReadOnlyWrapper';
 import { getAvailableClasses, canManageStudentsInClass } from '../../utils/permissions';
-import { compressImage } from '../../utils/imageUtils';
+import { processImageForUpload, validateImageSize } from '../../utils/imageUtils';
 import { generateIndexNumber } from '../../utils/indexNumberGenerator';
 import { getNextAvailableCounter } from '../../utils/indexNumberCounter';
 import { sortClassesByName } from '../../utils/classSort';
@@ -135,12 +135,16 @@ const Students: React.FC = () => {
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
+            if (!validateImageSize(e.target.files[0])) {
+                e.target.value = '';
+                return;
+            }
             const reader = new FileReader();
             reader.onload = async (event) => {
                 const raw = event.target?.result as string;
                 try {
-                    const compressed = await compressImage(raw);
-                    setCurrentStudent(prev => prev ? { ...prev, picture: compressed } : null);
+                    const processed = await processImageForUpload(raw);
+                    setCurrentStudent(prev => prev ? { ...prev, picture: processed } : null);
                 } catch {
                     setCurrentStudent(prev => prev ? { ...prev, picture: raw } : null);
                 }
@@ -151,8 +155,8 @@ const Students: React.FC = () => {
 
     const handleCameraCapture = async (imageData: string) => {
         try {
-            const compressed = await compressImage(imageData);
-            setCurrentStudent(prev => prev ? { ...prev, picture: compressed } : null);
+            const processed = await processImageForUpload(imageData);
+            setCurrentStudent(prev => prev ? { ...prev, picture: processed } : null);
         } catch {
             setCurrentStudent(prev => prev ? { ...prev, picture: imageData } : null);
         }

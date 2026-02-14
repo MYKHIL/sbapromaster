@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useFirebaseAnalytics } from '../../context/FirebaseAnalyticsContext';
+import { useData } from '../../context/DataContext';
 
 const FirebaseAnalytics: React.FC = () => {
     const {
@@ -143,6 +144,16 @@ const FirebaseAnalytics: React.FC = () => {
                 </div>
             </div>
 
+            {/* Database Maintenance Controls */}
+            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl shadow-lg p-6 mb-6 border-2 border-yellow-300">
+                <h2 className="text-xl font-bold text-gray-900 mb-4">🛠️ Database Maintenance</h2>
+                <p className="text-sm text-gray-700 mb-4">
+                    Developer-only tools for database optimization and cleanup. Use with caution.
+                </p>
+
+                <DatabaseMaintenancePanel />
+            </div>
+
             {/* Recent Operations */}
             <div className="bg-white rounded-xl shadow-lg p-6">
                 <div className="flex justify-between items-center mb-4">
@@ -227,6 +238,168 @@ const FirebaseAnalytics: React.FC = () => {
                     </li>
                 </ul>
             </div>
+        </div>
+    );
+};
+
+// Database Maintenance Panel Component
+const DatabaseMaintenancePanel: React.FC = () => {
+    const { schoolId } = useData();
+    const [clearBuckets, setClearBuckets] = useState(false);
+    const [repairImages, setRepairImages] = useState(false);
+    const [isExecuting, setIsExecuting] = useState(false);
+    const [logs, setLogs] = useState<string[]>([]);
+
+    const handleExecute = async () => {
+        if (!schoolId) {
+            alert('⚠️ No school loaded. Please log in first.');
+            return;
+        }
+
+        if (!clearBuckets && !repairImages) {
+            alert('⚠️ Please select at least one operation.');
+            return;
+        }
+
+        const confirmMessage = [
+            'Are you sure you want to run the following operations?',
+            clearBuckets ? '• Clear all student buckets' : '',
+            repairImages ? '• Repair and migrate all images to ImgBB' : '',
+            '',
+            'This may take several minutes for large databases.'
+        ].filter(Boolean).join('\n');
+
+        if (!confirm(confirmMessage)) return;
+
+        setIsExecuting(true);
+        setLogs([]);
+
+        try {
+            // Dynamic imports
+            const { repairDatabaseImages } = await import('../../services/firebaseService');
+            const { db } = await import('../../services/firebaseService');
+            const { doc, writeBatch } = await import('firebase/firestore');
+
+            // 1. Clear Buckets
+            if (clearBuckets) {
+                setLogs(prev => [...prev, '[Bucket Cleanup] 🧹 Starting bucket cleanup...']);
+
+                const batch = writeBatch(db);
+                let deletedCount = 0;
+
+                // Delete manifest
+                const manifestRef = doc(db, "schools", schoolId, "config", "student_bucket_manifest");
+                batch.delete(manifestRef);
+                deletedCount++;
+
+                // Delete all possible chunk documents
+                for (let i = 0; i < 1000; i++) {
+                    const chunkRef = doc(db, "schools", schoolId, "config", `student_bucket_${i}`);
+                    batch.delete(chunkRef);
+                    deletedCount++;
+                }
+
+                // Delete legacy single bucket
+                const legacyBucketRef = doc(db, "schools", schoolId, "config", "student_bucket");
+                batch.delete(legacyBucketRef);
+                deletedCount++;
+
+                await batch.commit();
+                setLogs(prev => [...prev, `[Bucket Cleanup] ✅ Deleted up to ${deletedCount} bucket documents.`]);
+
+                // Rebuild buckets immediately after clearing
+                setLogs(prev => [...prev, '[Bucket Cleanup] 🔄 Rebuilding student buckets...']);
+                const { fetchSubcollection, updateStudentBucket } = await import('../../services/firebaseService');
+                const students = await fetchSubcollection<any>(schoolId, 'students');
+                if (students && students.length > 0) {
+                    await updateStudentBucket(schoolId, students, 300);
+                    setLogs(prev => [...prev, `[Bucket Cleanup] ✅ Rebuilt ${students.length} students into buckets.`]);
+                } else {
+                    setLogs(prev => [...prev, '[Bucket Cleanup] ℹ️ No students found to rebuild.']);
+                }
+            }
+
+            // 2. Repair Images
+            if (repairImages) {
+                setLogs(prev => [...prev, '[Image Repair] 🔧 Starting comprehensive image repair...']);
+
+                // Hijack console.log temporarily to capture logs
+                const originalLog = console.log;
+                console.log = (...args: any[]) => {
+                    const message = args.join(' ');
+                    if (message.includes('[Image Repair]')) {
+                        setLogs(prev => [...prev, message]);
+                    }
+                    originalLog(...args);
+                };
+
+                await repairDatabaseImages(schoolId);
+
+                // Restore console.log
+                console.log = originalLog;
+
+                setLogs(prev => [...prev, '[Image Repair] ✅ Image repair complete!']);
+            }
+
+            setLogs(prev => [...prev, '✅ All operations completed successfully!']);
+            alert('✅ Database maintenance complete! Check the logs for details.');
+
+        } catch (error) {
+            console.error('[Maintenance] Error:', error);
+            setLogs(prev => [...prev, `❌ Error: ${error}`]);
+            alert(`❌ Maintenance failed: ${error}`);
+        } finally {
+            setIsExecuting(false);
+        }
+    };
+
+    return (
+        <div className="space-y-4">
+            <div className="space-y-2">
+                <label className="flex items-center gap-3 p-3 bg-white rounded-lg border-2 border-gray-200 hover:border-orange-300 transition-colors cursor-pointer">
+                    <input
+                        type="checkbox"
+                        checked={clearBuckets}
+                        onChange={(e) => setClearBuckets(e.target.checked)}
+                        disabled={isExecuting}
+                        className="w-5 h-5 text-orange-600"
+                    />
+                    <div>
+                        <div className="font-semibold text-gray-900">Clear Student Buckets</div>
+                        <div className="text-sm text-gray-600">Deletes all student bucket documents to rebuild from scratch</div>
+                    </div>
+                </label>
+
+                <label className="flex items-center gap-3 p-3 bg-white rounded-lg border-2 border-gray-200 hover:border-blue-300 transition-colors cursor-pointer">
+                    <input
+                        type="checkbox"
+                        checked={repairImages}
+                        onChange={(e) => setRepairImages(e.target.checked)}
+                        disabled={isExecuting}
+                        className="w-5 h-5 text-blue-600"
+                    />
+                    <div>
+                        <div className="font-semibold text-gray-900">Repair & Migrate Images</div>
+                        <div className="text-sm text-gray-600">Uploads all base64 images to ImgBB and replaces with URLs</div>
+                    </div>
+                </label>
+            </div>
+
+            <button
+                onClick={handleExecute}
+                disabled={isExecuting || (!clearBuckets && !repairImages)}
+                className="w-full px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold rounded-lg hover:from-orange-600 hover:to-red-600 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all shadow-lg"
+            >
+                {isExecuting ? '⏳ Executing...' : '🚀 Execute Selected Operations'}
+            </button>
+
+            {logs.length > 0 && (
+                <div className="bg-gray-900 text-green-400 font-mono text-xs p-4 rounded-lg max-h-64 overflow-y-auto">
+                    {logs.map((log, i) => (
+                        <div key={i} className="mb-1">{log}</div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 };

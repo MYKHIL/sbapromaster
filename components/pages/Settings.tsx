@@ -6,7 +6,7 @@ import { AI_FEATURES_ENABLED } from '../../constants';
 import ReadOnlyWrapper from '../ReadOnlyWrapper';
 import { useUser } from '../../context/UserContext';
 
-import { compressImage } from '../../utils/imageUtils';
+import { processImageForUpload, validateImageSize } from '../../utils/imageUtils';
 
 const LOGO_PLACEHOLDER = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgdmlld0JveD0iMCAwIDEyOCAxMjgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiByeD0iOCIgZmlsbD0iI0YzRjRGNyIvPgo8cGF0aCBkPSJNNjQgMzBMMzQgNTBWOTRIOTRWNTBMNjQgMzBaIiBzdHJva2U9IiNEMUQ1REIiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+CjxwYXRoIGQ9Ik03OCA5OFY2OEM3OCA2NC42ODYzIDc1LjMxMzcgNjIgNzIgNjJINTZDNTAuNjg2MyA2MiA1MCA2NC42ODYzIDUwIDY4Vjk4IiBzdHJva2U9IiNEMUQ1REIiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjx0ZXh0IHg9IjY0IiB5PSIxMTQiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEwIiBmaWxsPSIjOUNBM0FGIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5VcGxvYWQgU2Nob29sIExvZ288L3RleHQ+Cjwvc3ZnPg==';
 const SIGNATURE_PLACEHOLDER = 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTUwIDUwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0yIDI1LjVDMiAyNS41IDE1LjUgMTUuNSAyOS41IDI4QzQzLjUgNDAuNSA1MyAyNS41IDY2LjUgMjAuNUM4MCAxNS41IDg4LjUgMjkgMTAwIDI5QzExMS41IDI5IDEyMyAxNS41IDEzNyAyOS41IiBzdHJva2U9IiM5Y2EzYWYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+';
@@ -96,15 +96,21 @@ const Settings: React.FC = () => {
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, field: 'logo' | 'headmasterSignature') => {
     if (e.target.files && e.target.files[0]) {
+      // Validate file size (5MB max)
+      if (!validateImageSize(e.target.files[0])) {
+        e.target.value = ''; // Reset input
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = async (event) => {
         const rawBase64 = event.target?.result as string;
         try {
-          const compressed = await compressImage(rawBase64);
-          updateSettings({ [field]: compressed });
+          // Process image: upscale if too small, preserve quality
+          const processed = await processImageForUpload(rawBase64);
+          updateSettings({ [field]: processed });
         } catch (error) {
-          console.error("Image compression failed", error);
-          // Fallback to raw if compression fails (though risky)
+          console.error("Image processing failed", error);
           updateSettings({ [field]: rawBase64 });
         }
       };
@@ -114,8 +120,8 @@ const Settings: React.FC = () => {
 
   const handleCameraCapture = async (imageData: string, field: 'logo' | 'headmasterSignature') => {
     try {
-      const compressed = await compressImage(imageData);
-      updateSettings({ [field]: compressed });
+      const processed = await processImageForUpload(imageData);
+      updateSettings({ [field]: processed });
     } catch {
       updateSettings({ [field]: imageData });
     }

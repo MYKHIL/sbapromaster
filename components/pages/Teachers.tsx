@@ -8,7 +8,7 @@ import { enhanceImage } from '../../services/geminiService';
 import { AI_FEATURES_ENABLED, AUTO_SANITIZE_TEACHERS } from '../../constants';
 import ReadOnlyWrapper from '../ReadOnlyWrapper';
 import { useUser } from '../../context/UserContext';
-import { compressImage } from '../../utils/imageUtils';
+import { processImageForUpload, validateImageSize } from '../../utils/imageUtils';
 import { exportToExcel, exportToPDF } from '../../utils/exportUtils';
 
 const EMPTY_TEACHER_FORM: Omit<Class, 'id'> = {
@@ -130,12 +130,16 @@ const Teachers: React.FC = () => {
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
+            if (!validateImageSize(e.target.files[0])) {
+                e.target.value = '';
+                return;
+            }
             const reader = new FileReader();
             reader.onload = async (event) => {
                 const raw = event.target?.result as string;
                 try {
-                    const compressed = await compressImage(raw);
-                    setCurrentClassData(prev => prev ? { ...prev, teacherSignature: compressed } : null);
+                    const processed = await processImageForUpload(raw);
+                    setCurrentClassData(prev => prev ? { ...prev, teacherSignature: processed } : null);
                 } catch {
                     setCurrentClassData(prev => prev ? { ...prev, teacherSignature: raw } : null);
                 }
@@ -146,8 +150,8 @@ const Teachers: React.FC = () => {
 
     const handleCameraCapture = async (imageData: string) => {
         try {
-            const compressed = await compressImage(imageData);
-            setCurrentClassData(prev => prev ? { ...prev, teacherSignature: compressed } : null);
+            const processed = await processImageForUpload(imageData);
+            setCurrentClassData(prev => prev ? { ...prev, teacherSignature: processed } : null);
         } catch {
             setCurrentClassData(prev => prev ? { ...prev, teacherSignature: imageData } : null);
         }
