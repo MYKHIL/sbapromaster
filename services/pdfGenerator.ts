@@ -513,5 +513,23 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
         doc.text("Powered by MYKHIL Creations (+233) 0542410613", MARGIN_X + CARD_WIDTH - 6, MARGIN_Y + CARD_HEIGHT + 4, { align: 'right' });
     }
 
-    doc.save('SBA_Pro_Master_Reports.pdf');
+    // Generate dynamic filename based on students
+    let filename = 'SBA_Pro_Master_Reports.pdf';
+
+    if (students.length === 1) {
+        // Single student: use student name
+        const sanitizedName = students[0].name.replace(/[^a-zA-Z0-9_\s-]/g, '').replace(/\s+/g, '_');
+        filename = `${sanitizedName}_Report_Card.pdf`;
+    } else if (students.length > 1) {
+        // Multiple students: use unique class names
+        const uniqueClasses = Array.from(new Set(students.map(s => s.class)))
+            .sort()
+            .map(className => className.replace(/[^a-zA-Z0-9_\s-]/g, '').replace(/\s+/g, '_'));
+
+        if (uniqueClasses.length > 0) {
+            filename = `${uniqueClasses.join('_')}_Report_Cards.pdf`;
+        }
+    }
+
+    doc.save(filename);
 };
