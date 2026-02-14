@@ -439,8 +439,8 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
         currentY = footerStartY + gradingKeyTotalHeight + 5;
 
         addUnderlinedField("Attendance", reportSpecificData?.attendance || '', MARGIN_X + 6, currentY, 30, 20);
-        doc.text("out of", MARGIN_X + 40, currentY);
-        addUnderlinedField("", totalSchoolDays, MARGIN_X + 54, currentY, 20, 0);
+        //doc.text("out of", MARGIN_X + 40, currentY);
+        addUnderlinedField("out of", totalSchoolDays, MARGIN_X + 40, currentY, 20, 12);
 
         currentY += 6;
         currentY += 6;
