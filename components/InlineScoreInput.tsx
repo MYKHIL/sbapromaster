@@ -59,6 +59,7 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
         const initialValues: { [key: number]: string } = {};
         assessments.forEach(assessment => {
             // Get the computed score (draft > saved)
+            // PASS subjectId to ensure we get the correct draft for this subject
             const val = getComputedScore(student.id, assessment.id, subjectId);
 
             // Should we update? Only if meaningful change to avoid cursor jumps?
@@ -108,7 +109,7 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
         if (isActuallyChanged) {
             setModifiedFields(prev => new Set(prev).add(assessmentId)); // Mark as modified
             // Update global draft
-            updateDraftScore(student.id, assessmentId, filteredValue);
+            updateDraftScore(student.id, assessmentId, subjectId, filteredValue);
         } else {
             // Reverted to original
             setModifiedFields(prev => {
@@ -117,7 +118,7 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
                 return newSet;
             });
             // Remove from global draft (it matches saved)
-            removeDraftScore(student.id, assessmentId);
+            removeDraftScore(student.id, assessmentId, subjectId);
         }
 
         if (errors[assessmentId]) {
@@ -165,7 +166,7 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
             setModifiedFields(prev => new Set(prev).add(assessmentId));
 
             // Remove from draft since we've already updated the local state
-            removeDraftScore(student.id, assessmentId);
+            removeDraftScore(student.id, assessmentId, subjectId);
             return;
         }
 

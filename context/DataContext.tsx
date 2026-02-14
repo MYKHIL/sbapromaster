@@ -118,12 +118,14 @@ export interface DataContextType {
     getPendingUploadData: () => Partial<AppDataType>;
 
     // Draft score synchronization
-    updateDraftScore: (studentId: number, assessmentId: number, value: string) => void;
-    removeDraftScore: (studentId: number, assessmentId: number) => void;
+    updateDraftScore: (studentId: number, assessmentId: number, subjectId: number, value: string) => void;
+    removeDraftScore: (studentId: number, assessmentId: number, subjectId: number) => void;
     getComputedScore: (studentId: number, assessmentId: number, subjectId: number) => string;
     draftVersion: number; // Increment to trigger re-renders of inputs
     pendingCount: number;
     isPageDirty: (pageName: Page) => boolean;
+    revertPendingChanges: (field: keyof AppDataType, id?: number | string) => void;
+    revertAllPendingChanges: () => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -789,8 +791,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             console.error('[DataContext] ❌ Failed to save data to cloud:', error);
 
             // Show database error modal for critical errors
-            // Show database error modal for critical errors
-            showDatabaseError(error);
+            // Pass 'write' context so App.tsx knows to show Toast for quota errors
+            showDatabaseError(error, 'write');
 
             // FIX: Don't add to offline queue if it's a permanent error like Quota Exceeded or Permission Denied
             // These will never resolve by retrying immediately, and we don't want to clutter the queue
@@ -925,7 +927,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
         } catch (error) {
             console.error('[DataContext] ❌ Failed to refresh data from cloud:', error);
-            showDatabaseError(error);
+            showDatabaseError(error, 'read');
             return 'error';
         } finally {
             setIsSyncing(false);
@@ -983,6 +985,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 }
             } catch (error) {
                 console.error('[DataContext] ❌ Failed to fetch initial data:', error);
+                showDatabaseError(error, 'read');
             }
         };
 
@@ -1382,7 +1385,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             isSyncingRef.current = false;
         } catch (error) {
             console.error(`[savePageData] ❌ Failed to save ${field}:`, error);
-            showDatabaseError(error);
+            showDatabaseError(error, 'write');
             setIsSyncing(false);
             isSyncingRef.current = false;
         }
@@ -1489,7 +1492,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     console.error('Error syncing current state:', error);
 
                     // Show database error modal
-                    showDatabaseError(error);
+                    showDatabaseError(error, 'write');
 
                     // Keep queue as is, will retry on next online event
                     setIsSyncing(false);
@@ -1641,6 +1644,159 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return fields.some(field => dirtyFields.current.has(field));
     };
 
+    // REVERT LOGIC
+    const revertAllPendingChanges = () => {
+        console.log('[DataContext] 🔄 Reverting ALL pending changes...');
+
+        // 1. Revert each dirty field to originalData
+        dirtyFields.current.forEach(field => {
+            const original = originalData.current[field];
+            // @ts-ignore
+            const setter = {
+                settings: setSettings,
+                students: setStudents,
+                subjects: setSubjects,
+                classes: setClasses,
+                grades: setGrades,
+                assessments: setAssessments,
+                scores: setScores,
+                reportData: setReportData,
+                classData: setClassData,
+                users: setUsers,
+                userLogs: setUserLogs,
+                activeSessions: setActiveSessions
+            }[field];
+
+            if (setter && original !== undefined) {
+                // @ts-ignore
+                setter(original);
+            }
+        });
+
+        // 2. Clear dirty state
+        dirtyFields.current.clear();
+        setHasLocalChanges(false);
+        setDirtyVersion(v => v + 1);
+
+        // 3. Clear pending score changes specifically
+        pendingScoreChanges.current.clear();
+    };
+
+    const revertPendingChanges = (field: keyof AppDataType, id?: number | string) => {
+        console.log(`[DataContext] 🔄 Reverting pending change for ${field} (ID: ${id})`);
+
+        const originalVal = originalData.current[field];
+        // @ts-ignore
+        const currentVal = {
+            settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions
+        }[field];
+
+        // Case 1: Revert Entire Field (e.g. Settings, or no ID provided)
+        if (id === undefined) {
+            // @ts-ignore
+            const setter = {
+                settings: setSettings,
+                students: setStudents,
+                subjects: setSubjects,
+                classes: setClasses,
+                grades: setGrades,
+                assessments: setAssessments,
+                scores: setScores,
+                reportData: setReportData,
+                classData: setClassData,
+                users: setUsers,
+                userLogs: setUserLogs,
+                activeSessions: setActiveSessions
+            }[field];
+
+            if (setter && originalVal !== undefined) {
+                // @ts-ignore
+                setter(originalVal);
+                dirtyFields.current.delete(field);
+
+                // If no more dirty fields, clear global flag
+                if (dirtyFields.current.size === 0) setHasLocalChanges(false);
+                setDirtyVersion(v => v + 1);
+            }
+            return;
+        }
+
+        // Case 2: Revert Specific Item in Array (Students, Scores, etc.)
+        if (Array.isArray(currentVal) && Array.isArray(originalVal)) {
+            // @ts-ignore
+            const setter = {
+                settings: setSettings,
+                students: setStudents,
+                subjects: setSubjects,
+                classes: setClasses,
+                grades: setGrades,
+                assessments: setAssessments,
+                scores: setScores,
+                reportData: setReportData,
+                classData: setClassData,
+                users: setUsers,
+                userLogs: setUserLogs,
+                activeSessions: setActiveSessions
+            }[field];
+
+            if (!setter) return;
+
+            // Find original item
+            // @ts-ignore
+            const originalItem = originalVal.find(i => String(i.id) === String(id));
+
+            let newArray = [...currentVal];
+
+            if (originalItem) {
+                // RESTORE: Replace current item with original
+                // @ts-ignore
+                const idx = newArray.findIndex(i => String(i.id) === String(id));
+                if (idx !== -1) {
+                    newArray[idx] = originalItem;
+                } else {
+                    // It was deleted, so add it back
+                    newArray.push(originalItem);
+                }
+            } else {
+                // REMOVE: It was a NEW item, so just remove it
+                // @ts-ignore
+                newArray = newArray.filter(i => String(i.id) !== String(id));
+            }
+
+            // Update State
+            // @ts-ignore
+            setter(newArray);
+
+            // Special handling for Score pending set
+            if (field === 'scores') {
+                pendingScoreChanges.current.delete(String(id));
+                // ALSO CLEAR DRAFTS related to this score ID (studentId-subjectId)
+                // Score ID format: "studentId-subjectId"
+                // Draft Key format: "studentId-subjectId-assessmentId"
+                const scoreIdPrefix = String(id) + '-';
+                for (const key of draftScores.current.keys()) {
+                    if (key.startsWith(scoreIdPrefix)) {
+                        draftScores.current.delete(key);
+                    }
+                }
+            }
+
+            // NOTE: We don't verify if the *rest* of the array is clean here (expensive).
+            // We just assume the field is still dirty if we reverted one item, 
+            // UNLESS we want to do a full deep comparison check?
+            // User just wants to "Clear", implying "Don't Save This". 
+            // Ideally we check if this was the LAST change.
+            // Let's do a quick length check or deep compare if feasible? 
+            // For now, keep it marked dirty to be safe, or check equality.
+            if (deepEqual(newArray, originalVal)) {
+                dirtyFields.current.delete(field);
+                if (dirtyFields.current.size === 0) setHasLocalChanges(false);
+            }
+            // Propagate version change to UI (e.g. InlineScoreInput)
+            setDirtyVersion(v => v + 1);
+        }
+    };
+
     // Updated to support granular saves (preventing "Bleeding Save" bugs)
     const getPendingUploadData = (limitToFields?: (keyof AppDataType)[]): any => {
         if (dirtyFields.current.size === 0) {
@@ -1763,8 +1919,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const loadedSubjects = useRef<Set<number>>(new Set());
 
     // Update the draft value for a score (marks it as dirty)
-    const updateDraftScore = (studentId: number, assessmentId: number, value: string) => {
-        const key = `${studentId}-${assessmentId}`;
+    const updateDraftScore = (studentId: number, assessmentId: number, subjectId: number, value: string) => {
+        const key = `${studentId}-${subjectId}-${assessmentId}`;
         draftScores.current.set(key, value);
 
         // Update derived state
@@ -1774,8 +1930,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     // Remove a score from draft (marks it as clean/reverted or saved)
-    const removeDraftScore = (studentId: number, assessmentId: number) => {
-        const key = `${studentId}-${assessmentId}`;
+    const removeDraftScore = (studentId: number, assessmentId: number, subjectId: number) => {
+        const key = `${studentId}-${subjectId}-${assessmentId}`;
         if (draftScores.current.delete(key)) {
             // Only update if it actually existed
             if (draftScores.current.size === 0 && dirtyFields.current.size === 0) {
@@ -1804,11 +1960,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
         });
         return count;
-    }, [dirtyVersion, settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions]);
+    }, [draftVersion, settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions]);
 
     // Get the score to display: prefer draft, fallback to saved
     const getComputedScore = (studentId: number, assessmentId: number, subjectId: number): string => {
-        const draftKey = `${studentId}-${assessmentId}`;
+        const draftKey = `${studentId}-${subjectId}-${assessmentId}`;
         if (draftScores.current.has(draftKey)) {
             return draftScores.current.get(draftKey) || '';
         }
@@ -1937,6 +2093,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 }
             } catch (e) {
                 console.error("Failed to load students", e);
+                showDatabaseError(e, 'read');
             } finally {
                 setIsFetching(false);
                 inflightPromises.current.delete(cacheKey);
@@ -1983,6 +2140,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 }
             } catch (e) {
                 console.error("Failed to load scores", e);
+                showDatabaseError(e, 'read');
             } finally {
                 setIsFetching(false);
                 inflightPromises.current.delete(cacheKey);
@@ -2058,6 +2216,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 console.log(`[DataContext] ✅ Metadata Loaded: ${fetchedClasses.length} Classes, ${fetchedSubjects.length} Subjects, ${fetchedAssessments.length} Assessments`);
             } catch (e) {
                 console.error("Failed to load metadata", e);
+                showDatabaseError(e, 'read');
             } finally {
                 setIsFetching(false);
                 inflightPromises.current.delete(cacheKey);
@@ -2073,6 +2232,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const value: DataContextType = {
         settings, setSettings, updateSettings,
+        revertPendingChanges,
+        revertAllPendingChanges,
         students,
         subjects,
         classes,

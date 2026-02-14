@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { useUser } from '../context/UserContext';
+import { useDatabaseError } from '../context/DatabaseErrorContext';
+import { isQuotaExhaustedError } from '../utils/databaseErrorHandler';
 import PreviewDataModal from './PreviewDataModal';
 import { Page } from '../types';
 import NotificationCenter from './NotificationCenter';
@@ -29,6 +31,10 @@ const GlobalActionBar: React.FC<GlobalActionBarProps> = ({ onOpenDebugModal, cur
     } = useData();
     const { currentUser } = useUser();
     const { loadImportedData } = useData();
+    const { error, errorContext } = useDatabaseError();
+
+    // Check for Quota Exceeded (Write)
+    const isQuotaExceeded = isQuotaExhaustedError(error) && errorContext === 'write';
 
     const [isDebugModalOpen, setIsDebugModalOpen] = useState(false);
     const [debugData, setDebugData] = useState<any>(null);
@@ -129,7 +135,7 @@ const GlobalActionBar: React.FC<GlobalActionBarProps> = ({ onOpenDebugModal, cur
 
     return (
         <WrappedActionBar
-            {...{ onOpenDebugModal, currentPage, currentUser, isAdmin, handleShowDebugData, notifications, unreadCount, isNotificationOpen, setIsNotificationOpen, saveToCloud, refreshFromCloud, isSyncing, isOnline, pendingCount, isFetching, hasLocalChanges, isDebugModalOpen, handleCloseDebugModal, debugData, onNavigate, isExpanded, setIsExpanded, handleRefresh, isRefreshing, toast }}
+            {...{ onOpenDebugModal, currentPage, currentUser, isAdmin, handleShowDebugData, notifications, unreadCount, isNotificationOpen, setIsNotificationOpen, saveToCloud, refreshFromCloud, isSyncing, isOnline, pendingCount, isFetching, hasLocalChanges, isDebugModalOpen, handleCloseDebugModal, debugData, onNavigate, isExpanded, setIsExpanded, handleRefresh, isRefreshing, toast, isQuotaExceeded }}
         />
     );
 };
@@ -139,7 +145,7 @@ const WrappedActionBar: React.FC<any> = ({
     onOpenDebugModal, currentPage, currentUser, isAdmin, handleShowDebugData, notifications, unreadCount,
     isNotificationOpen, setIsNotificationOpen, saveToCloud, refreshFromCloud, isSyncing, isOnline,
     pendingCount, isFetching, hasLocalChanges, isDebugModalOpen, handleCloseDebugModal, debugData,
-    onNavigate, isExpanded, setIsExpanded, handleRefresh, isRefreshing, toast
+    onNavigate, isExpanded, setIsExpanded, handleRefresh, isRefreshing, toast, isQuotaExceeded
 }) => {
     const { users, loadImportedData } = useData();
 
@@ -417,8 +423,9 @@ const WrappedActionBar: React.FC<any> = ({
                                     localSyncing = false;
                                 }
                             }}
-                            disabled={pendingCount === 0 || isSyncing || !isOnline}
-                            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all shadow-sm lg:px-5 lg:py-2.5 lg:shadow-md ${(pendingCount === 0 || isSyncing || !isOnline)
+                            disabled={pendingCount === 0 || isSyncing || !isOnline || isQuotaExceeded}
+                            title={isQuotaExceeded ? "Daily upload quota reached. Changes saved offline." : "Save changes to cloud"}
+                            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all shadow-sm lg:px-5 lg:py-2.5 lg:shadow-md ${(pendingCount === 0 || isSyncing || !isOnline || isQuotaExceeded)
                                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                 : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg'
                                 }`}
@@ -436,7 +443,9 @@ const WrappedActionBar: React.FC<any> = ({
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                                     </svg>
-                                    <span className="text-xs font-bold lg:text-sm">Save {pendingCount > 0 ? `(${pendingCount})` : ''}</span>
+                                    <span className="text-xs font-bold lg:text-sm">
+                                        {isQuotaExceeded ? 'Offline' : `Save ${pendingCount > 0 ? `(${pendingCount})` : ''}`}
+                                    </span>
                                 </>
                             )}
                         </button>

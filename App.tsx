@@ -26,6 +26,8 @@ import { SyncOverlayConnected } from './components/SyncOverlayConnected';
 import { SITE_ACTIVE } from './constants';
 import GreetingToast from './components/GreetingToast';
 import DatabaseErrorModal from './components/DatabaseErrorModal';
+import QuotaExceededBar from './components/QuotaExceededBar';
+import { isQuotaExhaustedError } from './utils/databaseErrorHandler';
 
 
 // This helper is now only used for pages that need to persist state.
@@ -75,10 +77,35 @@ const FreshLoginModalWrapper: React.FC = () => {
   return <FreshLoginModal currentUser={currentUser} />;
 };
 
-// Wrapper to consume context for DatabaseErrorModal
+// Wrapper to consume context for DatabaseErrorModal & QuotaExceededBar
 const DatabaseErrorModalWrapper: React.FC = () => {
-  const { error, clearError } = useDatabaseError();
-  return <DatabaseErrorModal error={error} onClose={clearError} isOpen={!!error} />;
+  const { error, errorContext, showError, clearError } = useDatabaseError();
+
+  const isQuota = isQuotaExhaustedError(error);
+  // Show Toast for WRITE/DELETE quota errors
+  const showToast = isQuota && errorContext === 'write';
+  // Show Modal for READ quota errors OR non-quota errors
+  const showModal = !!error && !showToast;
+
+  // GLOBAL ERROR INTERCEPTOR LISTENER
+  // We listen for the custom event dispatched by our console.error patch
+  React.useEffect(() => {
+    const handleQuotaEvent = (event: CustomEvent) => {
+      console.log('Caught Global Quota Error via Event!', event.detail);
+      // We categorize this as 'write' to show the gentle Toast
+      showError(event.detail, 'write');
+    };
+
+    window.addEventListener('firebase-quota-exceeded' as any, handleQuotaEvent);
+    return () => window.removeEventListener('firebase-quota-exceeded' as any, handleQuotaEvent);
+  }, [showError]);
+
+  return (
+    <>
+      <DatabaseErrorModal error={error} onClose={clearError} isOpen={showModal} />
+      {showToast && <QuotaExceededBar onClose={clearError} />}
+    </>
+  );
 };
 
 import ConfirmationModal from './components/ConfirmationModal';
@@ -206,6 +233,35 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => {
+  // GLOBAL CONSOLE PATCH
+  // Detects Firestore SDK background errors that don't throw via Promises
+  React.useEffect(() => {
+    const originalConsoleError = console.error;
+    console.error = (...args: any[]) => {
+      // Check for Firestore Quota Error signature
+      const errorString = args.map(a => String(a)).join(' ');
+      if (errorString.includes('resource-exhausted') || errorString.includes('Quota exceeded')) {
+        // Dispatch custom event to be picked up by DatabaseErrorModalWrapper
+        const event = new CustomEvent('firebase-quota-exceeded', {
+          detail: {
+            code: 'resource-exhausted',
+            message: 'Daily quota exceeded (Background Sync)'
+          }
+        });
+        window.dispatchEvent(event);
+      }
+      // Always call original
+      originalConsoleError.apply(console, args);
+    };
+
+    return () => {
+      // Restore? Usually patching console.error is okay to leave, 
+      // but in React StrictMode it might double patch if we aren't careful.
+      // But since we capture correct 'originalConsoleError' in closure, it's fine.
+      console.error = originalConsoleError;
+    };
+  }, []);
+
   return (
     <DatabaseErrorProvider>
       <DataProvider>

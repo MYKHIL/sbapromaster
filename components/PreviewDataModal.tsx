@@ -26,7 +26,9 @@ const PreviewDataModal: React.FC<PreviewDataModalProps> = ({
         students,
         subjects,
         assessments,
-        classes
+        classes,
+        revertPendingChanges,
+        revertAllPendingChanges
     } = useData();
 
     if (!isOpen) return null;
@@ -37,6 +39,20 @@ const PreviewDataModal: React.FC<PreviewDataModalProps> = ({
     const getAssessmentName = (id: number) => {
         const a = assessments.find(x => x.id === id);
         return a ? (a.title || a.name) : `Assessment #${id}`;
+    };
+
+    const handleRevert = (field: string, id?: number | string) => {
+        if (confirm('Discard this change?')) {
+            // @ts-ignore
+            revertPendingChanges(field, id);
+        }
+    };
+
+    const handleRevertAll = () => {
+        if (confirm('Are you sure you want to discard ALL pending changes? This cannot be undone.')) {
+            revertAllPendingChanges();
+            onClose();
+        }
     };
 
     const renderPreviewContent = () => {
@@ -65,9 +81,20 @@ const PreviewDataModal: React.FC<PreviewDataModalProps> = ({
                                         </h5>
                                         <ul className="space-y-1 pl-1">
                                             {items.map((item: any) => (
-                                                <li key={item.id} className="text-sm text-red-700 flex items-center gap-2">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                                    <span className="line-through opacity-75">{item.name || item.subject || item.title || (item.class ? `Student: ${item.name}` : `ID: ${item.id}`)}</span>
+                                                <li key={item.id} className="text-sm text-red-700 flex items-center gap-2 justify-between group">
+                                                    <div className="flex items-center gap-2">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                        <span className="line-through opacity-75">{item.name || item.subject || item.title || (item.class ? `Student: ${item.name}` : `ID: ${item.id}`)}</span>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => handleRevert(delField, item.id)}
+                                                        className="text-gray-400 hover:text-green-600 opacity-0 group-hover:opacity-100 transition-all p-1"
+                                                        title="Restore (Cancel Deletion)"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                                                        </svg>
+                                                    </button>
                                                 </li>
                                             ))}
                                         </ul>
@@ -85,9 +112,22 @@ const PreviewDataModal: React.FC<PreviewDataModalProps> = ({
                         <div key={key} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
                             <h4 className="font-bold text-blue-600 text-lg mb-3 capitalize border-b pb-2 flex justify-between items-center">
                                 <span>{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                                    {Array.isArray(value) ? value.length : 1} items
-                                </span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                                        {Array.isArray(value) ? value.length : 1} items
+                                    </span>
+                                    {!Array.isArray(value) && (
+                                        <button
+                                            onClick={() => handleRevert(key)}
+                                            className="text-gray-400 hover:text-red-500 p-1 transition-colors"
+                                            title="Revert Changes"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    )}
+                                </div>
                             </h4>
 
                             <div className="space-y-2">
@@ -107,73 +147,46 @@ const PreviewDataModal: React.FC<PreviewDataModalProps> = ({
                                             }).filter(Boolean).join(', ');
 
                                             return (
-                                                <li key={score.id} className="text-sm bg-gray-50 p-2 rounded border border-gray-100">
-                                                    <div className="font-medium text-gray-800">{studentName}</div>
-                                                    <div className="text-gray-500 text-xs flex justify-between">
-                                                        <span>{subjectName}</span>
+                                                <li key={score.id} className="text-sm bg-gray-50 p-2 rounded border border-gray-100 flex justify-between group items-start">
+                                                    <div>
+                                                        <div className="font-medium text-gray-800">{studentName}</div>
+                                                        <div className="text-gray-500 text-xs flex justify-between">
+                                                            <span>{subjectName}</span>
+                                                        </div>
+                                                        {updates && <div className="text-blue-600 font-mono text-xs mt-1">{updates}</div>}
                                                     </div>
-                                                    {updates && <div className="text-blue-600 font-mono text-xs mt-1">{updates}</div>}
+                                                    <button
+                                                        onClick={() => handleRevert('scores', score.id)}
+                                                        className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1"
+                                                        title="Revert this score"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                        </svg>
+                                                    </button>
                                                 </li>
                                             );
                                         })}
                                     </ul>
                                 )}
 
-                                {/* STUDENTS PREVIEW */}
-                                {key === 'students' && Array.isArray(value) && (
+                                {/* GENERIC LIST PREVIEW */}
+                                {Array.isArray(value) && key !== 'scores' && (
                                     <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                        {value.map((s: any) => (
-                                            <li key={s.id} className="text-sm bg-gray-50 p-2 rounded border border-gray-100">
-                                                <span className="font-medium block">{s.name}</span>
-                                                <span className="text-xs text-gray-500">{s.class ? `Class: ${s.class}` : 'No Class'}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
-
-                                {/* CLASSES PREVIEW */}
-                                {key === 'classes' && Array.isArray(value) && (
-                                    <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                        {value.map((c: any) => (
-                                            <li key={c.id} className="text-sm bg-gray-50 p-2 rounded border border-gray-100">
-                                                <span className="font-medium">{c.name}</span>
-                                                <div className="text-xs text-gray-500">{c.teacherName || 'No Teacher Assigned'}</div>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
-
-                                {/* SUBJECTS PREVIEW */}
-                                {key === 'subjects' && Array.isArray(value) && (
-                                    <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                        {value.map((s: any) => (
-                                            <li key={s.id} className="text-sm bg-gray-50 p-2 rounded border border-gray-100">
-                                                <span className="font-medium">{s.subject}</span>
-                                                <span className="text-xs text-gray-500 ml-2">({s.type})</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
-
-                                {/* ASSESSMENTS PREVIEW */}
-                                {key === 'assessments' && Array.isArray(value) && (
-                                    <ul className="space-y-1">
-                                        {value.map((a: any) => (
-                                            <li key={a.id} className="text-sm bg-gray-50 p-2 rounded border border-gray-100 flex justify-between">
-                                                <span className="font-medium">{a.name}</span>
-                                                <span className="text-xs text-gray-600 font-mono">Weight: {a.weight}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
-
-                                {/* USERS PREVIEW */}
-                                {key === 'users' && Array.isArray(value) && (
-                                    <ul className="space-y-1">
-                                        {value.map((u: any) => (
-                                            <li key={u.id} className="text-sm bg-gray-50 p-2 rounded border border-gray-100">
-                                                <div className="font-medium">{u.name}</div>
-                                                <div className="text-xs text-gray-500">{u.role} - {u.email}</div>
+                                        {value.map((item: any) => (
+                                            <li key={item.id} className="text-sm bg-gray-50 p-2 rounded border border-gray-100 flex justify-between items-start group">
+                                                <div>
+                                                    <span className="font-medium block">{item.name || item.subject || item.title || `ID: ${item.id}`}</span>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleRevert(key, item.id)}
+                                                    className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1"
+                                                    title="Revert this change"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                </button>
                                             </li>
                                         ))}
                                     </ul>
@@ -189,35 +202,6 @@ const PreviewDataModal: React.FC<PreviewDataModalProps> = ({
                                             </li>
                                         ))}
                                     </ul>
-                                )}
-
-                                {/* GRADES PREVIEW */}
-                                {key === 'grades' && Array.isArray(value) && (
-                                    <ul className="space-y-1">
-                                        {value.map((g: any) => (
-                                            <li key={g.id} className="text-sm bg-gray-50 p-2 rounded border border-gray-100 flex justify-between bg-white">
-                                                <span className="font-medium text-gray-800">{g.name}</span>
-                                                <span className="text-xs text-gray-500 font-mono">{g.minScore}% - {g.maxScore}%</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
-
-                                {/* REPORT DATA PREVIEW */}
-                                {(key === 'reportData' || key === 'classData') && (
-                                    <div className="text-sm bg-yellow-50 p-3 rounded border border-yellow-200 text-yellow-800 flex items-center">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                        </svg>
-                                        <span>Updated {key === 'reportData' ? 'Student Reports' : 'Class Remarks'} for {Object.keys(value).length} items.</span>
-                                    </div>
-                                )}
-
-                                {/* Catch-all for unknown fields (Hidden or Simplified) */}
-                                {key !== 'scores' && key !== 'students' && key !== 'classes' && key !== 'subjects' && key !== 'assessments' && key !== 'users' && key !== 'settings' && key !== 'grades' && key !== 'reportData' && key !== 'classData' && key !== '_deletions' && (
-                                    <div className="text-xs text-gray-400 italic p-2 border border-dashed rounded">
-                                        Modified data in {key} (Preview not available)
-                                    </div>
                                 )}
                             </div>
                         </div>
@@ -239,14 +223,24 @@ const PreviewDataModal: React.FC<PreviewDataModalProps> = ({
                         </span>
                         Pending Changes Preview
                     </h3>
-                    <button
-                        onClick={onClose}
-                        className="text-gray-400 hover:text-gray-600 transition-colors p-1 hover:bg-gray-200 rounded-full"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {pendingCount > 0 && (
+                            <button
+                                onClick={handleRevertAll}
+                                className="text-sm text-red-600 hover:text-red-800 hover:bg-red-50 px-3 py-1.5 rounded transition-colors mr-2"
+                            >
+                                Clear All
+                            </button>
+                        )}
+                        <button
+                            onClick={onClose}
+                            className="text-gray-400 hover:text-gray-600 transition-colors p-1 hover:bg-gray-200 rounded-full"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
                 <div className="p-6 overflow-y-auto flex-1 bg-gray-50/50">
                     {renderPreviewContent()}

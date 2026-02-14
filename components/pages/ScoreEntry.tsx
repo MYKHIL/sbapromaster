@@ -269,11 +269,6 @@ const ScoreEntry: React.FC = () => {
         }
     }, [selectedStudentIndex, selectedSubjectId, selectedAssessmentId, filteredStudents, draftVersion, scores]); // Listen to scores and draftVersion for sync
 
-
-
-
-
-
     const commitScore = () => {
         const student = filteredStudents[selectedStudentIndex];
         if (!student) return;
@@ -371,7 +366,7 @@ const ScoreEntry: React.FC = () => {
         setScoreModified(false);
 
         // Unregister pending change / remove from draft
-        removeDraftScore(student.id, assessment.id);
+        removeDraftScore(student.id, assessment.id, selectedSubjectId);
 
         console.log('[ScoreEntry - Mobile] ✅ Score committed successfully');
     };
@@ -586,7 +581,7 @@ const ScoreEntry: React.FC = () => {
                                                             // Update global draft
                                                             const student = filteredStudents[selectedStudentIndex];
                                                             if (student) {
-                                                                updateDraftScore(student.id, selectedAssessmentId, filtered);
+                                                                updateDraftScore(student.id, selectedAssessmentId, selectedSubjectId, filtered);
                                                             }
                                                         }}
                                                         onBlur={commitScore}
@@ -616,7 +611,7 @@ const ScoreEntry: React.FC = () => {
                                                                     updateStudentScores(student.id, selectedSubjectId, selectedAssessmentId, ['']);
 
                                                                     // 3. Clean up draft state (since we just committed)
-                                                                    removeDraftScore(student.id, selectedAssessmentId);
+                                                                    removeDraftScore(student.id, selectedAssessmentId, selectedSubjectId);
                                                                 }
 
                                                                 scoreInputRef.current?.focus();
