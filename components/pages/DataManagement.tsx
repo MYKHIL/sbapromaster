@@ -347,7 +347,7 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
 
                             <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <div>
-                                    <label htmlFor="vacationDate" className="block text-sm font-medium text-gray-700 mb-1">Vacation Date (Optional)</label>
+                                    <label htmlFor="vacationDate" className="block text-sm font-medium text-gray-700 mb-1">Selected Term's Vacation Date (Optional)</label>
                                     <input
                                         id="vacationDate"
                                         type="date"
@@ -357,7 +357,7 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
                                     />
                                 </div>
                                 <div>
-                                    <label htmlFor="reopeningDate" className="block text-sm font-medium text-gray-700 mb-1">Reopening Date (Optional)</label>
+                                    <label htmlFor="reopeningDate" className="block text-sm font-medium text-gray-700 mb-1">Next Term's Reopening Date (Optional)</label>
                                     <input
                                         id="reopeningDate"
                                         type="date"
