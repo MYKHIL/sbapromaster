@@ -117,7 +117,7 @@ const ScoreSummary: React.FC = () => {
                     // Check if this subject has any scores for this student
                     assessments.forEach(assessment => {
                         const score = getStudentScores(student.id, sub.id, assessment.id);
-                        if (score && score.length > 0 && score[0] !== '') {
+                        if (score && score.length > 0 && score[0]?.toString().trim() !== '') {
                             subjectsWithScores.add(sub.id);
                         }
                     });
@@ -144,7 +144,7 @@ const ScoreSummary: React.FC = () => {
 
                     assessments.forEach(assessment => {
                         const score = getStudentScores(student.id, sub.id, assessment.id);
-                        if (score && score.length > 0 && score[0] !== '') {
+                        if (score && score.length > 0 && score[0]?.toString().trim() !== '') {
                             completedCount++;
                         } else {
                             studentMissingAssessments.push(assessment.name);
