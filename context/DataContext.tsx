@@ -964,8 +964,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     console.log('[DataContext] ✅ Initial data received via one-time fetch');
                     SyncLogger.log(`Initial data loaded. Users: ${data.users?.length || 0}, Scores: ${data.scores?.length || 0}`);
 
-                    // Mark as remote update to allow processing
-                    loadImportedData(data);
+                    // Mark as remote update to allow processing (IsRemote = true)
+                    loadImportedData(data, true);
 
                     // Store metadata timestamps for lazy loading
                     if (data.metadata?.lastUpdated) {

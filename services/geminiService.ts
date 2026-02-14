@@ -8,7 +8,9 @@ if (!API_KEY) {
   console.warn("Gemini API key not found. AI features will be disabled.");
 }
 
-const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
+const ai = (API_KEY && API_KEY.length > 0 && !API_KEY.includes('AIzaSy_YOUR_API_KEY'))
+  ? new GoogleGenAI({ apiKey: API_KEY })
+  : null;
 
 export const generateTeacherRemark = async (studentName: string, performanceSummary: string, customPrompt?: string): Promise<string> => {
   if (!ai) {

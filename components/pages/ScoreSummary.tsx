@@ -56,13 +56,13 @@ const ScoreSummary: React.FC = () => {
         }));
     };
 
-    // Lazy load all scores for summary
-    React.useEffect(() => {
-        if (subjects && subjects.length > 0) {
-            console.log('[ScoreSummary] 📥 Triggering batch score load for all subjects...');
-            subjects.forEach(sub => loadScores(0, sub.id));
-        }
-    }, [subjects, loadScores]);
+    // Lazy load logic removed - scores are now loaded on demand by ScoreEntry or when expanded
+    // React.useEffect(() => {
+    //     if (subjects && subjects.length > 0) {
+    //         console.log('[ScoreSummary] 📥 Triggering batch score load for all subjects...');
+    //         subjects.forEach(sub => loadScores(0, sub.id));
+    //     }
+    // }, [subjects]);
 
     const summaryData = useMemo(() => {
         if (!classes || !students || !assessments || !subjects) return [];

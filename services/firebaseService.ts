@@ -1341,6 +1341,41 @@ export const repairDatabaseImages = async (schoolId: string): Promise<void> => {
             }
         }
 
+        // 6. Repair Score Buckets (Migrate Legacy Scores)
+        console.log(`[Image Repair] 🍱 Checking for legacy scores to bucket...`);
+        let bucketsCreated = 0;
+
+        for (const subject of subjects) {
+            // Check if bucket already exists
+            const bucketRef = doc(db, "schools", schoolId, "score_buckets", `subject_${subject.id}`);
+            const bucketSnap = await loggedGetDoc(bucketRef, `repairScores/${subject.id}`);
+
+            if (!bucketSnap.exists()) {
+                // Query legacy scores
+                const scoresRef = collection(db, "schools", schoolId, "scores");
+                const q = query(scoresRef, where("subjectId", "==", subject.id));
+                const snap = await loggedGetDocs(q, `repairScores/legacy/${subject.id}`);
+
+                if (snap.size > 0) {
+                    console.log(`[Image Repair] ⚠️ Found ${snap.size} legacy scores for ${subject.subject}. Creating bucket...`);
+                    const scoresMap: Record<string, any> = {};
+                    snap.forEach(d => {
+                        scoresMap[d.id] = d.data();
+                    });
+
+                    await loggedSetDoc(bucketRef, { scoresMap }, { merge: true }, `repairScores/createBucket/${subject.id}`);
+                    bucketsCreated++;
+                    console.log(`[Image Repair] ✅ Created bucket for Subject ${subject.id}`);
+                }
+            }
+        }
+
+        if (bucketsCreated > 0) {
+            console.log(`[Image Repair] ✅ Created ${bucketsCreated} score buckets from legacy data.`);
+        } else {
+            console.log(`[Image Repair] ✅ Score buckets are up to date.`);
+        }
+
     } catch (error) {
         console.error('[Image Repair] ❌ Error:', error);
     }
