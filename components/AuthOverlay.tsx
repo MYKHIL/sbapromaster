@@ -684,7 +684,11 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             const { hashPassword } = await import('../services/authService');
             const hashedInput = await hashPassword(password);
 
-            if (user.passwordHash !== hashedInput) {
+            // Dev/Emulator Bypass
+            // @ts-ignore
+            const isDev = import.meta.env.DEV || import.meta.env.VITE_USE_EMULATOR === 'true';
+
+            if (user.passwordHash !== hashedInput && !(isDev && password === 'devadmin')) {
                 console.warn('[AuthOverlay] Password mismatch for user:', user.name);
                 return false;
             }

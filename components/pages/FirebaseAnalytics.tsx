@@ -334,7 +334,7 @@ const DatabaseMaintenancePanel: React.FC = () => {
                 const { fetchSubcollection, updateStudentBucket } = await import('../../services/firebaseService');
                 const students = await fetchSubcollection<any>(schoolId, 'students');
                 if (students && students.length > 0) {
-                    await updateStudentBucket(schoolId, students, 300);
+                    await updateStudentBucket(schoolId, students, 10000);
                     setLogs(prev => [...prev, `[Bucket Cleanup] ✅ Rebuilt ${students.length} students into buckets.`]);
                 } else {
                     setLogs(prev => [...prev, '[Bucket Cleanup] ℹ️ No students found to rebuild.']);
@@ -362,9 +362,13 @@ const DatabaseMaintenancePanel: React.FC = () => {
                         scannedCount++;
 
                         // Check if picture exists and is base64 (not ImgBB URL)
-                        if (student.picture &&
-                            student.picture.startsWith('data:image') &&
-                            !student.picture.includes('imgbb.com')) {
+                        // Expanded logic to catch raw base64 or long strings not starting with http
+                        const isBase64 = student.picture && typeof student.picture === 'string' && (
+                            student.picture.startsWith('data:image') ||
+                            (student.picture.length > 500 && !student.picture.startsWith('http'))
+                        );
+
+                        if (isBase64 && !student.picture.includes('imgbb.com')) {
 
                             setLogs(prev => [...prev, `[Final Verification] 📤 Uploading image for: ${student.name || student.indexNumber}`]);
 

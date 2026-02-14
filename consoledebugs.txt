@@ -5,32 +5,32 @@ react-dom-client.development.js:28004 Download the React DevTools for a better d
 firebaseService.ts:60 [Firebase] Initializing with Database Index: 1 (sba-pro-master-759f6) 
 geminiService.ts:8  Gemini API key not found. AI features will be disabled.
 (anonymous) @ geminiService.ts:8
-syncLogger.ts:31 [SyncLogger] Log initialized: SyncLog_2026-02-14T00-50-25.txt
+syncLogger.ts:31 [SyncLogger] Log initialized: SyncLog_2026-02-14T08-51-43.txt
 syncLogger.ts:32 [SyncLogger] Logs will be saved to browser when you call downloadLog()
 syncLogger.ts:59 [SYNC_LOG] AuthOverlay component mounted
 AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
-DataContext.tsx:1614 [DataContext] Sync PAUSED
+DataContext.tsx:1616 [DataContext] Sync PAUSED
 AuthOverlay.tsx:112 [AuthOverlay] Found saved school session, fetching data...
 FirebaseAnalyticsContext.tsx:68 [Firebase Analytics] Tracking registered globally
-DataContext.tsx:959 [DataContext] 📥 Fetching initial data from cloud (Auto-Sync Disabled)...
+DataContext.tsx:961 [DataContext] 📥 Fetching initial data from cloud (Auto-Sync Disabled)...
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Loading main school data (1 doc)
 syncLogger.ts:59 [SYNC_LOG] AuthOverlay component unmounting
-syncLogger.ts:31 [SyncLogger] Log initialized: SyncLog_2026-02-14T00-50-29.txt
+syncLogger.ts:31 [SyncLogger] Log initialized: SyncLog_2026-02-14T08-51-44.txt
 syncLogger.ts:32 [SyncLogger] Logs will be saved to browser when you call downloadLog()
 syncLogger.ts:59 [SYNC_LOG] AuthOverlay component mounted
 AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
-DataContext.tsx:1614 [DataContext] Sync PAUSED
+DataContext.tsx:1616 [DataContext] Sync PAUSED
 AuthOverlay.tsx:112 [AuthOverlay] Found saved school session, fetching data...
 FirebaseAnalyticsContext.tsx:68 [Firebase Analytics] Tracking registered globally
-DataContext.tsx:959 [DataContext] 📥 Fetching initial data from cloud (Auto-Sync Disabled)...
+DataContext.tsx:961 [DataContext] 📥 Fetching initial data from cloud (Auto-Sync Disabled)...
 firebaseService.ts:366 [Firebase] Returning inflight promise for school data: gyewanidabasicschool_20252026_Second-Term
-firebaseService.ts:1584 [Firebase] 🛡️ Returning inflight promise for school login: gyewanidabasicschool_20252026_Second-Term
-firebaseService.ts:1669 [FIREBASE_DEBUG] loginOrRegisterSchool called for docId: gyewanidabasicschool_20252026_Second-Term, createIfMissing: false
-firebaseService.ts:1674 [FIREBASE_DEBUG] Fetching document: schools/gyewanidabasicschool_20252026_Second-Term
+firebaseService.ts:1645 [Firebase] 🛡️ Returning inflight promise for school login: gyewanidabasicschool_20252026_Second-Term
+firebaseService.ts:1730 [FIREBASE_DEBUG] loginOrRegisterSchool called for docId: gyewanidabasicschool_20252026_Second-Term, createIfMissing: false
+firebaseService.ts:1735 [FIREBASE_DEBUG] Fetching document: schools/gyewanidabasicschool_20252026_Second-Term
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Checking school existence: gyewanidabasicschool_20252026_Second-Term (1 doc)
-firebaseService.ts:1575 [Firebase] 🛡️ Returning inflight promise for login/register: gyewanidabasicschool_20252026_Second-Term
+firebaseService.ts:1636 [Firebase] 🛡️ Returning inflight promise for login/register: gyewanidabasicschool_20252026_Second-Term
 AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
-DataContext.tsx:1614 [DataContext] Sync PAUSED
+DataContext.tsx:1616 [DataContext] Sync PAUSED
  [DataContext] ✅ Initial data received via one-time fetch
  [SYNC_LOG] Initial data loaded. Users: 17, Scores: 0
  [DataContext] 📦 loadImportedData called (isRemote=false) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 0, …}
@@ -39,9 +39,9 @@ DataContext.tsx:1614 [DataContext] Sync PAUSED
  [DataContext] ✅ Updating users: 17
  [SYNC_LOG] setUsers called. Current count: 0, New count: 17
  [SYNC_LOG] Stack trace: Error
-    at setUsers (DataContext.tsx?t=1771030207416:59:36)
-    at loadImportedData (DataContext.tsx?t=1771030207416:218:9)
-    at fetchInitialData (DataContext.tsx?t=1771030207416:643:11)
+    at setUsers (DataContext.tsx?t=1771040408827:59:36)
+    at loadImportedData (DataContext.tsx?t=1771040408827:218:9)
+    at fetchInitialData (DataContext.tsx?t=1771040408827:643:11)
  [DataContext] 💾 Local file import: Marking fields as dirty for verification
  [DataContext] 🚀 Eagerly loading Metadata for app initialization...
  [DataContext] 🔍 loadMetadata Check: {hasData: true, previouslyLoaded: false, isUpToDate: true, inflight: false}
@@ -51,92 +51,515 @@ DataContext.tsx:1614 [DataContext] Sync PAUSED
  [DataContext] 📦 loadImportedData called (isRemote=false) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 0, …}
  [DataContext] 🚫 Skipping scores update - data is empty/undefined
  [SYNC_LOG] loadImportedData: Loading users from document. Count: 17
-DataContext.tsx:375 [DataContext] ✅ Updating users: 17
-syncLogger.ts:59 [SYNC_LOG] setUsers called. Current count: 0, New count: 17
-syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
-    at setUsers (DataContext.tsx:191:40)
-    at loadImportedData (DataContext.tsx:376:17)
-    at fetchInitialData (DataContext.tsx:966:21)
-DataContext.tsx:446 [DataContext] 💾 Local file import: Marking fields as dirty for verification
-DataContext.tsx:976 [DataContext] 🚀 Eagerly loading Metadata for app initialization...
-DataContext.tsx:2019 [DataContext] 🔍 loadMetadata Check: {hasData: true, previouslyLoaded: false, isUpToDate: true, inflight: false}
-DataContext.tsx:2034 [DataContext] 🧠 Metadata up-to-date (Metadata Match). Skipping read.
-firebaseService.ts:1677 [FIREBASE_DEBUG] Document exists? true
-firebaseService.ts:1700 [FIREBASE_DEBUG] Processing existing document...
+ [DataContext] ✅ Updating users: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1771040408827:59:36)
+    at loadImportedData (DataContext.tsx?t=1771040408827:218:9)
+    at fetchInitialData (DataContext.tsx?t=1771040408827:643:11)
+ [DataContext] 💾 Local file import: Marking fields as dirty for verification
+ [DataContext] 🚀 Eagerly loading Metadata for app initialization...
+ [DataContext] 🔍 loadMetadata Check: {hasData: true, previouslyLoaded: false, isUpToDate: true, inflight: false}
+DataContext.tsx:2189 [DataContext] 🧠 Metadata up-to-date (Metadata Match). Skipping read.
+firebaseService.ts:1738 [FIREBASE_DEBUG] Document exists? true
+firebaseService.ts:1761 [FIREBASE_DEBUG] Processing existing document...
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Checking license status (1 doc)
+firebaseService.ts:1129  [Firebase] ⚠️ Student bucket manifest missing for gyewanidabasicschool_20252026_Second-Term. Initiating auto-migration to chunks...
+ensureStudentBucketExists @ firebaseService.ts:1129
+await in ensureStudentBucketExists
+(anonymous) @ DataContext.tsx:1543
+react_stack_bottom_frame @ react-dom-client.development.js:25989
+runWithFiberInDEV @ react-dom-client.development.js:871
+commitHookEffectListMount @ react-dom-client.development.js:13249
+commitHookPassiveMountEffects @ react-dom-client.development.js:13336
+commitPassiveMountOnFiber @ react-dom-client.development.js:15484
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15519
+flushPassiveEffects @ react-dom-client.development.js:18432
+(anonymous) @ react-dom-client.development.js:17923
+performWorkUntilDeadline @ scheduler.development.js:45
+<DataProvider>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+App @ App.tsx:267
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooksAgain @ react-dom-client.development.js:7762
+renderWithHooks @ react-dom-client.development.js:7674
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:18957
+performWorkUntilDeadline @ scheduler.development.js:45
+<App>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+(anonymous) @ index.tsx:36
+firebaseService.ts:1140 [Firebase] 🐢 Fetching students from subcollection for migration...
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching all students (0 docs)
+firebaseService.ts:1129  [Firebase] ⚠️ Student bucket manifest missing for gyewanidabasicschool_20252026_Second-Term. Initiating auto-migration to chunks...
+ensureStudentBucketExists @ firebaseService.ts:1129
+await in ensureStudentBucketExists
+(anonymous) @ DataContext.tsx:1543
+react_stack_bottom_frame @ react-dom-client.development.js:25989
+runWithFiberInDEV @ react-dom-client.development.js:871
+commitHookEffectListMount @ react-dom-client.development.js:13249
+commitHookPassiveMountEffects @ react-dom-client.development.js:13336
+reconnectPassiveEffects @ react-dom-client.development.js:15832
+recursivelyTraverseReconnectPassiveEffects @ react-dom-client.development.js:15784
+reconnectPassiveEffects @ react-dom-client.development.js:15885
+recursivelyTraverseReconnectPassiveEffects @ react-dom-client.development.js:15784
+reconnectPassiveEffects @ react-dom-client.development.js:15824
+recursivelyTraverseReconnectPassiveEffects @ react-dom-client.development.js:15784
+reconnectPassiveEffects @ react-dom-client.development.js:15824
+recursivelyTraverseReconnectPassiveEffects @ react-dom-client.development.js:15784
+reconnectPassiveEffects @ react-dom-client.development.js:15885
+doubleInvokeEffectsOnFiber @ react-dom-client.development.js:18703
+runWithFiberInDEV @ react-dom-client.development.js:871
+recursivelyTraverseAndDoubleInvokeEffectsInDEV @ react-dom-client.development.js:18667
+commitDoubleInvokeEffectsInDEV @ react-dom-client.development.js:18712
+flushPassiveEffects @ react-dom-client.development.js:18439
+(anonymous) @ react-dom-client.development.js:17923
+performWorkUntilDeadline @ scheduler.development.js:45
+<DataProvider>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+App @ App.tsx:267
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooksAgain @ react-dom-client.development.js:7762
+renderWithHooks @ react-dom-client.development.js:7674
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:18957
+performWorkUntilDeadline @ scheduler.development.js:45
+<App>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+(anonymous) @ index.tsx:36
+firebaseService.ts:1140 [Firebase] 🐢 Fetching students from subcollection for migration...
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching all students (0 docs)
 AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
-DataContext.tsx:1614 [DataContext] Sync PAUSED
+DataContext.tsx:1616 [DataContext] Sync PAUSED
 AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
-DataContext.tsx:1614 [DataContext] Sync PAUSED
-firebaseService.ts:1744 [FIREBASE_DEBUG] Login successful. Returning data.
+DataContext.tsx:1616 [DataContext] Sync PAUSED
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched all students (280 docs)
+firebaseService.ts:1146 [Firebase] 💾 Writing 280 students to new bucket...
+firebaseService.ts:1056 [Firebase] 🎓 Attempt 1: Bucketing 280 students into 1 chunks (size: 300)...
+FirebaseAnalyticsContext.tsx:62 [Firebase Analytics] ✍️ WRITE: Writing 1 student chunks for gyewanidabasicschool_20252026_Second-Term
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched all students (280 docs)
+firebaseService.ts:1146 [Firebase] 💾 Writing 280 students to new bucket...
+firebaseService.ts:1056 [Firebase] 🎓 Attempt 1: Bucketing 280 students into 1 chunks (size: 300)...
+FirebaseAnalyticsContext.tsx:62 [Firebase Analytics] ✍️ WRITE: Writing 1 student chunks for gyewanidabasicschool_20252026_Second-Term
+ [FIREBASE_DEBUG] Login successful. Returning data.
  [FIREBASE_DEBUG] Login successful. Returning data.
  [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 0, …}
  [DataContext] 🚫 Skipping scores update - data is empty/undefined
+ [SYNC_LOG] loadImportedData: Loading users from document. Count: 17
+ [DataContext] ✅ Updating users: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1771040408827:59:36)
+    at loadImportedData (DataContext.tsx?t=1771040408827:218:9)
+    at restoreSession (AuthOverlay.tsx?t=1771058369020:101:9)
+DataContext.tsx:425 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
+AuthOverlay.tsx:158 [AuthOverlay] Full session data loaded, showing restore dialog
+DataContext.tsx:283 [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 0, …}
+DataContext.tsx:359 [DataContext] 🚫 Skipping scores update - data is empty/undefined
 syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users from document. Count: 17
-DataContext.tsx:375 [DataContext] ✅ Updating users: 17
+DataContext.tsx:377 [DataContext] ✅ Updating users: 17
 syncLogger.ts:59 [SYNC_LOG] setUsers called. Current count: 0, New count: 17
 syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
-    at setUsers (DataContext.tsx:191:40)
-    at loadImportedData (DataContext.tsx:376:17)
+    at setUsers (DataContext.tsx:193:40)
+    at loadImportedData (DataContext.tsx:378:17)
     at restoreSession (AuthOverlay.tsx:141:17)
-DataContext.tsx:423 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
-AuthOverlay.tsx:156 [AuthOverlay] Full session data loaded, showing restore dialog
-DataContext.tsx:281 [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 0, …}
-DataContext.tsx:357 [DataContext] 🚫 Skipping scores update - data is empty/undefined
-syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users from document. Count: 17
-DataContext.tsx:375 [DataContext] ✅ Updating users: 17
-syncLogger.ts:59 [SYNC_LOG] setUsers called. Current count: 0, New count: 17
-syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
-    at setUsers (DataContext.tsx:191:40)
-    at loadImportedData (DataContext.tsx:376:17)
-    at restoreSession (AuthOverlay.tsx:141:17)
-DataContext.tsx:423 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
-AuthOverlay.tsx:156 [AuthOverlay] Full session data loaded, showing restore dialog
+DataContext.tsx:425 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
+AuthOverlay.tsx:158 [AuthOverlay] Full session data loaded, showing restore dialog
 AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
-DataContext.tsx:1614 [DataContext] Sync PAUSED
+DataContext.tsx:1616 [DataContext] Sync PAUSED
 AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
-DataContext.tsx:1614 [DataContext] Sync PAUSED
+DataContext.tsx:1616 [DataContext] Sync PAUSED
 UserContext.tsx:98 Logging user login activity for: MYKIL
 AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
-DataContext.tsx:1614 [DataContext] Sync PAUSED
+DataContext.tsx:1616 [DataContext] Sync PAUSED
 UserContext.tsx:100 Login activity logged successfully
-DataContext.tsx:1620 [DataContext] Sync RESUMED
-AuthOverlay.tsx:192 [AuthOverlay] ✅ Session restored successfully
+DataContext.tsx:1622 [DataContext] Sync RESUMED
+AuthOverlay.tsx:194 [AuthOverlay] ✅ Session restored successfully
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Loading main school data (1 doc)
 firebaseService.ts:366 [Firebase] Returning inflight promise for school data: gyewanidabasicschool_20252026_Second-Term
-DataContext.tsx:1972 [DataContext] 📥 Lazy Loading Scores for Subject 14...
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_14 (1 doc)
 firebaseService.ts:366 [Firebase] Returning inflight promise for school data: gyewanidabasicschool_20252026_Second-Term
 firebaseService.ts:366 [Firebase] Returning inflight promise for school data: gyewanidabasicschool_20252026_Second-Term
-ScoreEntry.tsx:284 [ScoreEntry - Mobile] commitScore called: {studentId: 113, studentName: 'AFARI FRANK', subjectId: 14, assessmentId: 1, assessmentName: 'Class Exercise', …}
-ScoreEntry.tsx:301 [ScoreEntry - Mobile] Empty score - clearing: {studentId: 113, studentName: 'AFARI FRANK'}
+FirebaseAnalytics.tsx:294 [Image Repair] 🔧 Starting comprehensive image repair (ImgBB Migration) for gyewanidabasicschool_20252026_Second-Term...
+FirebaseAnalytics.tsx:294 [Image Repair] 📤 Uploading School Logo...
+FirebaseAnalytics.tsx:294 [Image Repair] ✅ Settings images queued for update.
+FirebaseAnalytics.tsx:294 [Firebase Analytics] 📖 READ: Fetching all subjects (0 docs)
+FirebaseAnalytics.tsx:294 [Firebase Analytics] 📖 READ: Fetched all subjects (14 docs)
+FirebaseAnalytics.tsx:294 [Firebase Analytics] 📖 READ: Fetching all classes (0 docs)
+FirebaseAnalytics.tsx:294 [Firebase Analytics] 📖 READ: Fetched all classes (11 docs)
+FirebaseAnalytics.tsx:294 [Image Repair] 📤 Uploading signature for Class JHS 1...
+FirebaseAnalytics.tsx:294 [Image Repair] 📤 Uploading signature for Class JHS 2...
+FirebaseAnalytics.tsx:294 [Image Repair] 📤 Uploading signature for Class KG 1...
+FirebaseAnalytics.tsx:294 [Image Repair] 📤 Uploading signature for Class BASIC 3...
+FirebaseAnalytics.tsx:294 [Image Repair] 📤 Uploading signature for Class BASIC 4...
+FirebaseAnalytics.tsx:294 [Image Repair] 📤 Uploading signature for Class BASIC 5...
+FirebaseAnalytics.tsx:294 [Image Repair] 📤 Uploading signature for Class BASIC 2...
+FirebaseAnalytics.tsx:294 [Firebase Analytics] 📖 READ: Fetching all students (0 docs)
+FirebaseAnalytics.tsx:294 [Firebase Analytics] 📖 READ: Fetched all students (280 docs)
+FirebaseAnalytics.tsx:294 [Image Repair] 📤 Uploading student picture for QUAINOO HARRIET...
+FirebaseAnalytics.tsx:294 [Image Repair] 📤 Uploading student picture for AMPONSAH ISAAC...
+FirebaseAnalytics.tsx:294 [Image Repair] 📤 Uploading student picture for ALI  ALIMA...
+FirebaseAnalytics.tsx:294 [Image Repair] 📤 Uploading student picture for ASARE  ISSABELLA...
+FirebaseAnalytics.tsx:294 [Image Repair] 📤 Uploading student picture for AWUDZIE  ANGELINA...
+FirebaseAnalytics.tsx:294 [Image Repair] 📤 Uploading student picture for ASARE BERNICE...
+firebaseService.ts:1088  [Firebase] ⚠️ Chunk size 300 too large. Retrying with size 150...
+writeChunksWithBackoff @ firebaseService.ts:1088
+FirebaseAnalytics.tsx:294 [Firebase] 🎓 Attempt 2: Bucketing 280 students into 2 chunks (size: 150)...
+FirebaseAnalytics.tsx:294 [Firebase Analytics] ✍️ WRITE: Writing 2 student chunks for gyewanidabasicschool_20252026_Second-Term
+FirebaseAnalytics.tsx:294 [Image Repair] 📤 Uploading student picture for GLIVEY DORIS...
+FirebaseAnalytics.tsx:294 [Image Repair] 📤 Uploading student picture for AMOAH  RAMZY...
+FirebaseAnalytics.tsx:294 [Image Repair] 📤 Uploading student picture for BORTEY GREEN  BUTTERFLY...
+FirebaseAnalytics.tsx:294 [Image Repair] 📤 Uploading student picture for TAKYIWAA  MABEL...
+FirebaseAnalytics.tsx:294 [Image Repair] 📤 Uploading student picture for AYISIBEA DORIS...
+FirebaseAnalytics.tsx:294 [Image Repair] 📤 Uploading student picture for ARAPHAT  OSMAN...
+FirebaseAnalytics.tsx:294 [Image Repair] 💾 Committing 20 image migrations...
+FirebaseAnalytics.tsx:294 [Firebase Analytics] ✍️ WRITE: Migrated 20 images to ImgBB
+firebaseService.ts:1088  [Firebase] ⚠️ Chunk size 300 too large. Retrying with size 150...
+writeChunksWithBackoff @ firebaseService.ts:1088
+FirebaseAnalytics.tsx:294 [Firebase] 🎓 Attempt 2: Bucketing 280 students into 2 chunks (size: 150)...
+FirebaseAnalytics.tsx:294 [Firebase Analytics] ✍️ WRITE: Writing 2 student chunks for gyewanidabasicschool_20252026_Second-Term
+firebaseService.ts:1088  [Firebase] ⚠️ Chunk size 150 too large. Retrying with size 75...
+writeChunksWithBackoff @ firebaseService.ts:1088
+FirebaseAnalytics.tsx:294 [Firebase] 🎓 Attempt 3: Bucketing 280 students into 4 chunks (size: 75)...
+FirebaseAnalytics.tsx:294 [Firebase Analytics] ✍️ WRITE: Writing 4 student chunks for gyewanidabasicschool_20252026_Second-Term
+FirebaseAnalytics.tsx:294 [Image Repair] ✅ Migration complete.
+FirebaseAnalytics.tsx:294 [Image Repair] 🔄 Rebuilding student buckets with chunk size 300...
+FirebaseAnalytics.tsx:294 [Firebase] 🎓 Attempt 1: Bucketing 280 students into 1 chunks (size: 300)...
+FirebaseAnalytics.tsx:294 [Firebase Analytics] ✍️ WRITE: Writing 1 student chunks for gyewanidabasicschool_20252026_Second-Term
+firebaseService.ts:1088  [Firebase] ⚠️ Chunk size 150 too large. Retrying with size 75...
+writeChunksWithBackoff @ firebaseService.ts:1088
+FirebaseAnalytics.tsx:294 [Firebase] 🎓 Attempt 3: Bucketing 280 students into 4 chunks (size: 75)...
+FirebaseAnalytics.tsx:294 [Firebase Analytics] ✍️ WRITE: Writing 4 student chunks for gyewanidabasicschool_20252026_Second-Term
+firebaseService.ts:1088  [Firebase] ⚠️ Chunk size 75 too large. Retrying with size 37...
+writeChunksWithBackoff @ firebaseService.ts:1088
+FirebaseAnalytics.tsx:294 [Firebase] 🎓 Attempt 4: Bucketing 280 students into 8 chunks (size: 37)...
+FirebaseAnalytics.tsx:294 [Firebase Analytics] ✍️ WRITE: Writing 8 student chunks for gyewanidabasicschool_20252026_Second-Term
+FirebaseAnalytics.tsx:294 [Firebase] ✅ Student bucket updated (1 chunks, size: 300)
+FirebaseAnalytics.tsx:294 [Image Repair] 📦 Repairing metadata_bundle...
+firebaseService.ts:1088  [Firebase] ⚠️ Chunk size 75 too large. Retrying with size 37...
+writeChunksWithBackoff @ firebaseService.ts:1088
+FirebaseAnalytics.tsx:294 [Firebase] 🎓 Attempt 4: Bucketing 280 students into 8 chunks (size: 37)...
+FirebaseAnalytics.tsx:294 [Firebase Analytics] ✍️ WRITE: Writing 8 student chunks for gyewanidabasicschool_20252026_Second-Term
+FirebaseAnalytics.tsx:294 [Image Repair] 📤 Uploading bundle class signature for JHS 1...
+FirebaseAnalytics.tsx:294 [Image Repair] 📤 Uploading bundle class signature for JHS 2...
+FirebaseAnalytics.tsx:294 [Image Repair] 📤 Uploading bundle class signature for KG 1...
+FirebaseAnalytics.tsx:294 [Image Repair] 📤 Uploading bundle class signature for BASIC 3...
+FirebaseAnalytics.tsx:294 [Image Repair] 📤 Uploading bundle class signature for BASIC 4...
+FirebaseAnalytics.tsx:294 [Image Repair] 📤 Uploading bundle class signature for BASIC 5...
+FirebaseAnalytics.tsx:294 [Image Repair] 📤 Uploading bundle class signature for BASIC 2...
+firebaseService.ts:1088  [Firebase] ⚠️ Chunk size 37 too large. Retrying with size 18...
+writeChunksWithBackoff @ firebaseService.ts:1088
+FirebaseAnalytics.tsx:294 [Firebase] 🎓 Attempt 5: Bucketing 280 students into 16 chunks (size: 18)...
+FirebaseAnalytics.tsx:294 [Firebase Analytics] ✍️ WRITE: Writing 16 student chunks for gyewanidabasicschool_20252026_Second-Term
+firebaseService.ts:1088  [Firebase] ⚠️ Chunk size 37 too large. Retrying with size 18...
+writeChunksWithBackoff @ firebaseService.ts:1088
+FirebaseAnalytics.tsx:294 [Firebase] 🎓 Attempt 5: Bucketing 280 students into 16 chunks (size: 18)...
+FirebaseAnalytics.tsx:294 [Firebase Analytics] ✍️ WRITE: Writing 16 student chunks for gyewanidabasicschool_20252026_Second-Term
+FirebaseAnalytics.tsx:294 [Image Repair] ✅ Metadata bundle repaired.
+firebaseService.ts:1088  [Firebase] ⚠️ Chunk size 18 too large. Retrying with size 9...
+writeChunksWithBackoff @ firebaseService.ts:1088
+firebaseService.ts:1056 [Firebase] 🎓 Attempt 6: Bucketing 280 students into 32 chunks (size: 9)...
+FirebaseAnalyticsContext.tsx:62 [Firebase Analytics] ✍️ WRITE: Writing 32 student chunks for gyewanidabasicschool_20252026_Second-Term
+DataContext.tsx:2028 [DataContext] 🔍 loadStudents Check: {studentsCount: 0, serverTS: _Timestamp, loadedTS: undefined, isUpToDate: false, hasInflight: false}
+DataContext.tsx:2058 [DataContext] 📥 Loading Students (Optimized via Bucket)...
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Checking student bucket manifest (1 doc)
+DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 1...
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_1 (1 doc)
+DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 2...
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_2 (1 doc)
+DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 3...
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_3 (1 doc)
+DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 4...
+ [Firebase Analytics] 📖 READ: Fetching bucket: subject_4 (1 doc)
+ [DataContext] 📥 Lazy Loading Scores for Subject 5...
+ [Firebase Analytics] 📖 READ: Fetching bucket: subject_5 (1 doc)
+ [DataContext] 📥 Lazy Loading Scores for Subject 6...
+ [Firebase Analytics] 📖 READ: Fetching bucket: subject_6 (1 doc)
+ [DataContext] 📥 Lazy Loading Scores for Subject 7...
+ [Firebase Analytics] 📖 READ: Fetching bucket: subject_7 (1 doc)
+DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 8...
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_8 (1 doc)
+DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 9...
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_9 (1 doc)
+DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 10...
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_10 (1 doc)
+DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 11...
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_11 (1 doc)
+DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 12...
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_12 (1 doc)
+DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 13...
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_13 (1 doc)
+DataContext.tsx:2028 [DataContext] 🔍 loadStudents Check: {studentsCount: 0, serverTS: _Timestamp, loadedTS: undefined, isUpToDate: false, hasInflight: true}
+DataContext.tsx:2051 [DataContext] ⏳ Students fetch already in progress. Deduping...
+firebaseService.ts:441 [Firebase] 📦 Found student manifest with 32 chunks.
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching 32 student chunks (32 docs)
+DataContext.tsx:2133 [DataContext] ✅ Loaded 13 scores.
+DataContext.tsx:2133 [DataContext] ✅ Loaded 2 scores.
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Querying legacy scores (0 docs)
+DataContext.tsx:2133 [DataContext] ✅ Loaded 2 scores.
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Querying legacy scores (0 docs)
+DataContext.tsx:2133 [DataContext] ✅ Loaded 5 scores.
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Querying legacy scores (0 docs)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Querying legacy scores (0 docs)
+DataContext.tsx:2133 [DataContext] ✅ Loaded 12 scores.
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Querying legacy scores (0 docs)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Querying legacy scores (0 docs)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Querying legacy scores (0 docs)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Querying legacy scores (0 docs)
+ [Firebase] ✅ Reassembled 280 students from chunks.
+ [DataContext] ✅ Loaded 280 students.
+ [Firebase Analytics] 📖 READ: Fetched legacy scores (0 docs)
+ [Firebase] No legacy scores found for Subject 3 (Clean)
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched legacy scores (0 docs)
-firebaseService.ts:571 [Firebase] No legacy scores found for Subject 14 (Clean)
-logger.ts:115  [2026-02-14T00:50:44.048Z]  @firebase/firestore: Firestore (12.6.0): FirebaseError: [code=resource-exhausted]: Quota exceeded.
-defaultLogHandler @ logger.ts:115
-error @ logger.ts:210
-__PRIVATE_logError @ log.ts:59
-close @ persistent_stream.ts:387
-z_ @ persistent_stream.ts:580
-(anonymous) @ persistent_stream.ts:533
-(anonymous) @ persistent_stream.ts:595
-(anonymous) @ async_queue_impl.ts:136
-(anonymous) @ async_queue_impl.ts:187
+firebaseService.ts:571 [Firebase] No legacy scores found for Subject 5 (Clean)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched legacy scores (0 docs)
+firebaseService.ts:571 [Firebase] No legacy scores found for Subject 7 (Clean)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched legacy scores (0 docs)
+firebaseService.ts:571 [Firebase] No legacy scores found for Subject 8 (Clean)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched legacy scores (0 docs)
+firebaseService.ts:571 [Firebase] No legacy scores found for Subject 10 (Clean)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched legacy scores (0 docs)
+firebaseService.ts:571 [Firebase] No legacy scores found for Subject 11 (Clean)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched legacy scores (0 docs)
+firebaseService.ts:571 [Firebase] No legacy scores found for Subject 12 (Clean)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched legacy scores (0 docs)
+firebaseService.ts:571 [Firebase] No legacy scores found for Subject 13 (Clean)
+DataContext.tsx:845 [DataContext] 📥 Manual refresh initiated - fetching data from cloud [FULL]...
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Loading main school data (1 doc)
+ [DataContext] ✅ Main document fetched, applying updates...
+ [DataContext] 🧹 Cleared score subject cache to force fresh fetch on next load
+ [DataContext] 📦 loadImportedData called (isRemote=false) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 0, …}
+ [DataContext] ✅ Updating settings
+ [DataContext] 🚫 Skipping scores update - data is empty/undefined
+ [SYNC_LOG] loadImportedData: Loading users from document. Count: 17
+ [DataContext] 💾 Local file import: Marking fields as dirty for verification
+ [DataContext] 🔄 Force refreshing Metadata (Classes, Subjects, Assessments)...
+ [DataContext] 🔍 loadMetadata Check: {hasData: true, previouslyLoaded: false, isUpToDate: false, inflight: false}
+ [DataContext] 📥 Loading Metadata (Classes, Subjects, Assessments)...
+ [Firebase Analytics] 📖 READ: Attempting bundle read (0 docs)
+ [DataContext] 🔄 Force refreshing Students subcollection...
+ [DataContext] 🔍 loadStudents Check: {studentsCount: 0, serverTS: _Timestamp, loadedTS: _Timestamp, isUpToDate: false, hasInflight: false}
+ [DataContext] 📥 Loading Students (Optimized via Bucket)...
+ [Firebase Analytics] 📖 READ: Checking student bucket manifest (1 doc)
+ [DataContext] 🔄 Force refreshing Score Buckets for loaded subjects...
+  [Firebase] ⚠️ Chunk size 18 too large. Retrying with size 9...
+writeChunksWithBackoff @ firebaseService.ts?t=1771040408827:671
+ [Firebase] 🎓 Attempt 6: Bucketing 280 students into 32 chunks (size: 9)...
+ [Firebase Analytics] ✍️ WRITE: Writing 32 student chunks for gyewanidabasicschool_20252026_Second-Term
+ [Firebase Analytics] 📖 READ: Loaded metadata via Composite Bundle (1 Read) (1 doc)
+ [Firebase] 📦 Loaded metadata via Composite Bundle (1 Read)
+ [DataContext] ✅ Metadata Loaded: 11 Classes, 14 Subjects, 5 Assessments
+ [Firebase] 📦 Found student manifest with 32 chunks.
+ [Firebase Analytics] 📖 READ: Fetching 32 student chunks (32 docs)
+ [DataContext] 📥 Lazy Loading Scores for Subject 1...
+ [Firebase Analytics] 📖 READ: Fetching bucket: subject_1 (1 doc)
+ [DataContext] 📥 Lazy Loading Scores for Subject 10...
+ [Firebase Analytics] 📖 READ: Fetching bucket: subject_10 (1 doc)
+ [DataContext] 📥 Lazy Loading Scores for Subject 11...
+ [Firebase Analytics] 📖 READ: Fetching bucket: subject_11 (1 doc)
+ [DataContext] 📥 Lazy Loading Scores for Subject 12...
+ [Firebase Analytics] 📖 READ: Fetching bucket: subject_12 (1 doc)
+ [DataContext] 📥 Lazy Loading Scores for Subject 13...
+ [Firebase Analytics] 📖 READ: Fetching bucket: subject_13 (1 doc)
+ [DataContext] 📥 Lazy Loading Scores for Subject 14...
+ [Firebase Analytics] 📖 READ: Fetching bucket: subject_14 (1 doc)
+ [DataContext] 📥 Lazy Loading Scores for Subject 2...
+ [Firebase Analytics] 📖 READ: Fetching bucket: subject_2 (1 doc)
+DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 3...
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_3 (1 doc)
+DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 4...
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_4 (1 doc)
+DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 5...
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_5 (1 doc)
+DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 6...
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_6 (1 doc)
+DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 7...
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_7 (1 doc)
+DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 8...
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_8 (1 doc)
+DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 9...
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_9 (1 doc)
+firebaseService.ts:462 [Firebase] ✅ Reassembled 280 students from chunks.
+DataContext.tsx:2065 [DataContext] ✅ Loaded 280 students.
+DataContext.tsx:911 [DataContext] 🎉 Manual refresh complete
+DataContext.tsx:2133 [DataContext] ✅ Loaded 13 scores.
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Querying legacy scores (0 docs)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Querying legacy scores (0 docs)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Querying legacy scores (0 docs)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Querying legacy scores (0 docs)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Querying legacy scores (0 docs)
+DataContext.tsx:2133 [DataContext] ✅ Loaded 2 scores.
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Querying legacy scores (0 docs)
+DataContext.tsx:2133 [DataContext] ✅ Loaded 2 scores.
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Querying legacy scores (0 docs)
+DataContext.tsx:2133 [DataContext] ✅ Loaded 5 scores.
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Querying legacy scores (0 docs)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Querying legacy scores (0 docs)
+DataContext.tsx:2133 [DataContext] ✅ Loaded 12 scores.
+ [Firebase Analytics] 📖 READ: Fetched legacy scores (0 docs)
+ [Firebase] No legacy scores found for Subject 10 (Clean)
+ [Firebase Analytics] 📖 READ: Fetched legacy scores (0 docs)
+ [Firebase] No legacy scores found for Subject 11 (Clean)
+ [Firebase Analytics] 📖 READ: Fetched legacy scores (0 docs)
+ [Firebase] No legacy scores found for Subject 12 (Clean)
+ [Firebase Analytics] 📖 READ: Fetched legacy scores (0 docs)
+ [Firebase] No legacy scores found for Subject 13 (Clean)
+ [Firebase Analytics] 📖 READ: Fetched legacy scores (0 docs)
+ [Firebase] No legacy scores found for Subject 14 (Clean)
+ [Firebase Analytics] 📖 READ: Fetched legacy scores (0 docs)
+ [Firebase] No legacy scores found for Subject 3 (Clean)
+ [Firebase Analytics] 📖 READ: Fetched legacy scores (0 docs)
+ [Firebase] No legacy scores found for Subject 5 (Clean)
+ [Firebase Analytics] 📖 READ: Fetched legacy scores (0 docs)
+ [Firebase] No legacy scores found for Subject 7 (Clean)
+ [Firebase Analytics] 📖 READ: Fetched legacy scores (0 docs)
+ [Firebase] No legacy scores found for Subject 8 (Clean)
+DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 1
+DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 10
+DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 11
+DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 12
+DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 13
+DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 14
+DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 2
+DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 3
+DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 4
+DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 5
+DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 6
+DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 7
+DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 8
+DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 9
+DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 1
+DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 10
+DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 11
+DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 12
+DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 13
+DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 14
+DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 2
+DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 3
+DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 4
+DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 5
+DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 6
+DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 7
+DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 8
+DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 9
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching all students (0 docs)
+firebaseService.ts:1088  [Firebase] ⚠️ Chunk size 9 too large. Retrying with size 4...
+writeChunksWithBackoff @ firebaseService.ts:1088
+firebaseService.ts:1056 [Firebase] 🎓 Attempt 7: Bucketing 280 students into 70 chunks (size: 4)...
+FirebaseAnalyticsContext.tsx:62 [Firebase Analytics] ✍️ WRITE: Writing 70 student chunks for gyewanidabasicschool_20252026_Second-Term
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched all students (280 docs)
+firebaseService.ts:1056 [Firebase] 🎓 Attempt 1: Bucketing 280 students into 1 chunks (size: 300)...
+FirebaseAnalyticsContext.tsx:62 [Firebase Analytics] ✍️ WRITE: Writing 1 student chunks for gyewanidabasicschool_20252026_Second-Term
+firebaseService.ts:1088  [Firebase] ⚠️ Chunk size 9 too large. Retrying with size 4...
+writeChunksWithBackoff @ firebaseService.ts:1088
+firebaseService.ts:1056 [Firebase] 🎓 Attempt 7: Bucketing 280 students into 70 chunks (size: 4)...
+FirebaseAnalyticsContext.tsx:62 [Firebase Analytics] ✍️ WRITE: Writing 70 student chunks for gyewanidabasicschool_20252026_Second-Term
+firebaseService.ts:1079 [Firebase] ✅ Student bucket updated (70 chunks, size: 4)
+firebaseService.ts:1148 [Firebase] ✅ Auto-migration complete. Student bucket created.
+firebaseService.ts:1079 [Firebase] ✅ Student bucket updated (1 chunks, size: 300)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching all students (0 docs)
+firebaseService.ts:1079 [Firebase] ✅ Student bucket updated (70 chunks, size: 4)
+firebaseService.ts:1148 [Firebase] ✅ Auto-migration complete. Student bucket created.
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched all students (280 docs)
+webchannel_blob_es2018.js:49   GET https://firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?gsessionid=N1Y37dhJb3u5xrIb135JgZP_mf0ljAG3ukIZ_loMDsxYAOBRGByV5A&VER=8&database=projects%2Fsba-pro-master-759f6%2Fdatabases%2F(default)&RID=rpc&SID=kwgIWA8UupQr0n2IhrEjKQ&AID=5&CI=0&TYPE=xmlhttp&zx=rgs2qvc0ks5p&t=1 400 (Bad Request)
+h.send @ webchannel_blob_es2018.js:49
+h.ea @ webchannel_blob_es2018.js:57
+Eb @ webchannel_blob_es2018.js:29
+$c @ webchannel_blob_es2018.js:74
+h.Da @ webchannel_blob_es2018.js:72
+sa @ webchannel_blob_es2018.js:13
 Promise.then
-cc @ async_queue_impl.ts:185
-enqueue @ async_queue_impl.ts:130
-enqueueAndForget @ async_queue_impl.ts:94
-(anonymous) @ persistent_stream.ts:593
-(anonymous) @ persistent_stream.ts:532
-a_ @ stream_bridge.ts:94
-(anonymous) @ webchannel_connection.ts:398
+u @ webchannel_blob_es2018.js:13
+ac @ webchannel_blob_es2018.js:72
+Qb @ webchannel_blob_es2018.js:75
+N2.Y @ webchannel_blob_es2018.js:32
+N2.ba @ webchannel_blob_es2018.js:29
+Va @ webchannel_blob_es2018.js:24
+D @ webchannel_blob_es2018.js:22
+Qc @ webchannel_blob_es2018.js:59
+h.Xa @ webchannel_blob_es2018.js:58
+h.Ca @ webchannel_blob_es2018.js:58
+Gc @ webchannel_blob_es2018.js:54
+Hc @ webchannel_blob_es2018.js:53
+h.Ma @ webchannel_blob_es2018.js:52
+Promise.then
+Ic @ webchannel_blob_es2018.js:52
+h.Ma @ webchannel_blob_es2018.js:52
+Promise.then
+Ic @ webchannel_blob_es2018.js:52
+h.Ma @ webchannel_blob_es2018.js:52
+Promise.then
+Ic @ webchannel_blob_es2018.js:52
+h.Ma @ webchannel_blob_es2018.js:52
+Promise.then
+Ic @ webchannel_blob_es2018.js:52
+h.Ma @ webchannel_blob_es2018.js:52
+webchannel_blob_es2018.js:49   GET https://firestore.googleapis.com/google.firestore.v1.Firestore/Listen/channel?gsessionid=fpnvYELM5W-ph62AqWyVuhLLLx3_oIcShbNYKqHv-nqPAGknXkA3JQ&VER=8&database=projects%2Fsba-pro-master-759f6%2Fdatabases%2F(default)&RID=rpc&SID=i3RSmk1SCf-GNWQwjxncvQ&AID=442&CI=0&TYPE=xmlhttp&zx=8lrw5bchqzv9&t=1 400 (Bad Request)
+h.send @ webchannel_blob_es2018.js:49
+h.ea @ webchannel_blob_es2018.js:57
+Eb @ webchannel_blob_es2018.js:29
+$c @ webchannel_blob_es2018.js:74
+h.Da @ webchannel_blob_es2018.js:72
+sa @ webchannel_blob_es2018.js:13
+Promise.then
+u @ webchannel_blob_es2018.js:13
+ac @ webchannel_blob_es2018.js:72
+Qb @ webchannel_blob_es2018.js:75
+N2.Y @ webchannel_blob_es2018.js:32
+N2.ba @ webchannel_blob_es2018.js:29
+Va @ webchannel_blob_es2018.js:24
+D @ webchannel_blob_es2018.js:22
+Qc @ webchannel_blob_es2018.js:59
+h.Xa @ webchannel_blob_es2018.js:58
+h.Ca @ webchannel_blob_es2018.js:58
+Gc @ webchannel_blob_es2018.js:54
+Hc @ webchannel_blob_es2018.js:53
+h.Ma @ webchannel_blob_es2018.js:52
+Promise.then
+Ic @ webchannel_blob_es2018.js:52
+h.Ma @ webchannel_blob_es2018.js:52
+Promise.then
+Ic @ webchannel_blob_es2018.js:52
+h.Ma @ webchannel_blob_es2018.js:52
+Promise.then
+Ic @ webchannel_blob_es2018.js:52
+h.Ma @ webchannel_blob_es2018.js:52
+Promise.then
+Ic @ webchannel_blob_es2018.js:52
+h.Ma @ webchannel_blob_es2018.js:52
+logger.ts:115  [2026-02-14T08:59:57.383Z]  @firebase/firestore: Firestore (12.6.0): WebChannelConnection RPC 'Write' stream 0x3e5de0c3 transport errored. Name: undefined Message: undefined
+defaultLogHandler @ logger.ts:115
+warn @ logger.ts:206
+__PRIVATE_logWarn @ log.ts:69
+(anonymous) @ webchannel_connection.ts:335
 (anonymous) @ webchannel_connection.ts:301
 Va @ webchannel_blob_es2018.js:24
 D @ webchannel_blob_es2018.js:22
-Z2.qa @ webchannel_blob_es2018.js:82
-Lb @ webchannel_blob_es2018.js:38
-N2.Y @ webchannel_blob_es2018.js:31
+Z2.pa @ webchannel_blob_es2018.js:83
+R @ webchannel_blob_es2018.js:76
+Qb @ webchannel_blob_es2018.js:75
+Mb @ webchannel_blob_es2018.js:35
+N2.Y @ webchannel_blob_es2018.js:32
 N2.ba @ webchannel_blob_es2018.js:29
 Va @ webchannel_blob_es2018.js:24
 D @ webchannel_blob_es2018.js:22
@@ -145,30 +568,22 @@ h.Xa @ webchannel_blob_es2018.js:58
 h.Ca @ webchannel_blob_es2018.js:58
 Gc @ webchannel_blob_es2018.js:54
 h.Ma @ webchannel_blob_es2018.js:52
-logger.ts:115  [2026-02-14T00:50:44.048Z]  @firebase/firestore: Firestore (12.6.0): Using maximum backoff delay to prevent overloading the backend.
-defaultLogHandler @ logger.ts:115
-error @ logger.ts:210
-__PRIVATE_logError @ log.ts:59
-close @ persistent_stream.ts:388
-z_ @ persistent_stream.ts:580
-(anonymous) @ persistent_stream.ts:533
-(anonymous) @ persistent_stream.ts:595
-(anonymous) @ async_queue_impl.ts:136
-(anonymous) @ async_queue_impl.ts:187
 Promise.then
-cc @ async_queue_impl.ts:185
-enqueue @ async_queue_impl.ts:130
-enqueueAndForget @ async_queue_impl.ts:94
-(anonymous) @ persistent_stream.ts:593
-(anonymous) @ persistent_stream.ts:532
-a_ @ stream_bridge.ts:94
-(anonymous) @ webchannel_connection.ts:398
+Ic @ webchannel_blob_es2018.js:52
+h.Pa @ webchannel_blob_es2018.js:52
+logger.ts:115  [2026-02-14T08:59:57.385Z]  @firebase/firestore: Firestore (12.6.0): WebChannelConnection RPC 'Listen' stream 0x3e5de0c0 transport errored. Name: undefined Message: undefined
+defaultLogHandler @ logger.ts:115
+warn @ logger.ts:206
+__PRIVATE_logWarn @ log.ts:69
+(anonymous) @ webchannel_connection.ts:335
 (anonymous) @ webchannel_connection.ts:301
 Va @ webchannel_blob_es2018.js:24
 D @ webchannel_blob_es2018.js:22
-Z2.qa @ webchannel_blob_es2018.js:82
-Lb @ webchannel_blob_es2018.js:38
-N2.Y @ webchannel_blob_es2018.js:31
+Z2.pa @ webchannel_blob_es2018.js:83
+R @ webchannel_blob_es2018.js:76
+Qb @ webchannel_blob_es2018.js:75
+Mb @ webchannel_blob_es2018.js:35
+N2.Y @ webchannel_blob_es2018.js:32
 N2.ba @ webchannel_blob_es2018.js:29
 Va @ webchannel_blob_es2018.js:24
 D @ webchannel_blob_es2018.js:22
@@ -177,3 +592,6 @@ h.Xa @ webchannel_blob_es2018.js:58
 h.Ca @ webchannel_blob_es2018.js:58
 Gc @ webchannel_blob_es2018.js:54
 h.Ma @ webchannel_blob_es2018.js:52
+Promise.then
+Ic @ webchannel_blob_es2018.js:52
+h.Pa @ webchannel_blob_es2018.js:52

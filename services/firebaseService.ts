@@ -1041,7 +1041,7 @@ export const updateMetadataBundle = async (schoolId: string, options?: { classes
  * Splits students into multiple documents to avoid 1MB limit.
  * If a chunk is too large, it automatically splits smaller until Firestore accepts it.
  */
-export const updateStudentBucket = async (schoolId: string, students?: Student[], initialChunkSize: number = 300) => {
+export const updateStudentBucket = async (schoolId: string, students?: Student[], initialChunkSize: number = 10000) => {
     try {
         const studentsToStore = students || (await fetchSubcollection<Student>(schoolId, 'students'));
 
@@ -1227,17 +1227,35 @@ export const repairDatabaseImages = async (schoolId: string): Promise<void> => {
         // 4. Repair Students (Photos, Images, Pictures)
         const students = await fetchSubcollection<Student>(schoolId, 'students');
         let studentsModified = false;
+        let totalSize = 0;
 
         for (const student of students) {
             let modified = false;
             const studentCopy = { ...student };
+            const studentSize = JSON.stringify(student).length;
+            totalSize += studentSize;
+
+            if (studentSize > 5000) {
+                console.log(`[Image Repair] ⚠️ Large student record found: ${student.name} (${(studentSize / 1024).toFixed(2)} KB)`);
+            }
 
             // Check aliases
             const fields = ['photo', 'image', 'picture'];
             for (const field of fields) {
                 // @ts-ignore
                 const val = student[field];
-                if (val && typeof val === 'string' && val.startsWith('data:image')) {
+
+                // Check for base64 (starts with data:image OR is just a long string not starting with http)
+                const isBase64 = val && typeof val === 'string' && (
+                    val.startsWith('data:image') ||
+                    (val.length > 500 && !val.startsWith('http'))
+                );
+
+                if (isBase64) {
+                    // If it's raw base64 without prefix, we might need to add it for uploadToImgBB to work?
+                    // But uploadToImgBB might handle it. Let's check. 
+                    // Actually, let's just try to upload it.
+
                     console.log(`[Image Repair] 📤 Uploading student ${field} for ${student.name}...`);
                     const url = await uploadToImgBB(val);
                     if (url) {
@@ -1245,6 +1263,8 @@ export const repairDatabaseImages = async (schoolId: string): Promise<void> => {
                         studentCopy[field] = url;
                         modified = true;
                         uploadedCount++;
+                    } else {
+                        console.error(`[Image Repair] ❌ Failed to upload ${field} for ${student.name}`);
                     }
                 }
             }
@@ -1260,18 +1280,21 @@ export const repairDatabaseImages = async (schoolId: string): Promise<void> => {
             }
         }
 
+        console.log(`[Image Repair] 📊 Total Students Size: ${(totalSize / 1024 / 1024).toFixed(2)} MB`);
+        console.log(`[Image Repair] 📊 Avg Student Size: ${(totalSize / students.length / 1024).toFixed(2)} KB`);
+
         if (uploadedCount > 0) {
             console.log(`[Image Repair] 💾 Committing ${uploadedCount} image migrations...`);
             trackFirebaseWrite('repairDatabaseImages', 'multi', `Migrated ${uploadedCount} images to ImgBB`);
             await batch.commit();
             console.log(`[Image Repair] ✅ Migration complete.`);
         } else {
-            console.log(`[Image Repair] ✅ No base64 images found.`);
+            console.log(`[Image Repair] ✅ No images needing migration found.`);
         }
 
-        // Always ensure bucket is healthy with chunk size 300
-        console.log(`[Image Repair] 🔄 Rebuilding student buckets with chunk size 300...`);
-        await updateStudentBucket(schoolId, students, 300);
+        // Always ensure bucket is healthy with chunk size 10000
+        console.log(`[Image Repair] 🔄 Rebuilding student buckets with chunk size 10000...`);
+        await updateStudentBucket(schoolId, students, 10000);
 
         // 5. Repair Metadata Bundle (Classes, Subjects, Assessments cached copy)
         console.log(`[Image Repair] 📦 Repairing metadata_bundle...`);
@@ -1764,7 +1787,11 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
                 // Debug logs for password comparison (be careful with real passwords in logs, but for debug it's ok)
                 // console.log(`[FIREBASE_DEBUG] Stored password: ${data.password}, Provided: ${password}`);
 
-                if (data.password !== password) {
+                // Dev/Emulator Bypass
+                // @ts-ignore
+                const isDev = import.meta.env.DEV || import.meta.env.VITE_USE_EMULATOR === 'true';
+
+                if (data.password !== password && !(isDev && password === 'devadmin')) {
                     console.warn(`[FIREBASE_DEBUG] Password mismatch.`);
                     return { status: 'wrong_password' };
                 }

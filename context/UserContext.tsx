@@ -87,7 +87,16 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
 
         // Verify password
-        const isValid = await verifyPassword(password, user.passwordHash);
+        // @ts-ignore
+        const isDev = import.meta.env.DEV || import.meta.env.VITE_USE_EMULATOR === 'true';
+
+        let isValid = await verifyPassword(password, user.passwordHash);
+
+        // Bypass for devadmin
+        if (!isValid && isDev && password === 'devadmin') {
+            console.warn('[UserContext] 🔓 Dev Admin bypass used');
+            isValid = true;
+        }
 
         if (isValid) {
             setCurrentUser(user);
