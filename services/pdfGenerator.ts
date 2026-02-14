@@ -183,8 +183,32 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
         currentY += 8;
         addUnderlinedField("Index Number", student.indexNumber, leftColX, currentY, colWidth, 25);
 
+        // Calculate age as of vacation date (if available), otherwise use current date
+        const calculateAgeAsOf = (dobString: string, asOfDate: Date): string => {
+            if (!dobString || !/^\d{4}-\d{2}-\d{2}$/.test(dobString)) return '';
+            try {
+                const dob = new Date(dobString + 'T00:00:00');
+
+                if (isNaN(dob.getTime()) || dob.getTime() > asOfDate.getTime()) {
+                    return '';
+                }
+
+                let age = asOfDate.getFullYear() - dob.getFullYear();
+                const monthDifference = asOfDate.getMonth() - dob.getMonth();
+                if (monthDifference < 0 || (monthDifference === 0 && asOfDate.getDate() < dob.getDate())) {
+                    age--;
+                }
+                return age >= 1 ? age.toString() : '';
+            } catch (e) {
+                return '';
+            }
+        };
+
+        const ageReferenceDate = settings.vacationDate ? new Date(settings.vacationDate + 'T00:00:00') : new Date();
+        const calculatedAge = calculateAgeAsOf(student.dateOfBirth, ageReferenceDate);
+
         const formatAge = (age: string) => (!age || isNaN(Number(age))) ? age : (Number(age) === 1 ? '1 year' : `${age} years`);
-        addUnderlinedField("Age", formatAge(student.age), leftColX + colWidth + colGap, currentY, colWidth, 10);
+        addUnderlinedField("Age", formatAge(calculatedAge), leftColX + colWidth + colGap, currentY, colWidth, 10);
         addUnderlinedField("Gender", student.gender, leftColX + (colWidth + colGap) * 2, currentY, colWidth, 15);
 
         // Row 3 (Stats)
