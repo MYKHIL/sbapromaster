@@ -2,7 +2,7 @@ react-dom-client.development.js:28004 Download the React DevTools for a better d
 firebaseService.ts:60 [Firebase] Initializing with Database Index: 2 (sba-pro-master-40f08) 
 geminiService.ts:8  Gemini API key not found. AI features will be disabled.
 (anonymous) @ geminiService.ts:8
-syncLogger.ts:31 [SyncLogger] Log initialized: SyncLog_2026-02-14T11-02-14.txt
+syncLogger.ts:31 [SyncLogger] Log initialized: SyncLog_2026-02-14T11-28-08.txt
 syncLogger.ts:32 [SyncLogger] Logs will be saved to browser when you call downloadLog()
 syncLogger.ts:59 [SYNC_LOG] AuthOverlay component mounted
 AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
@@ -12,7 +12,7 @@ FirebaseAnalyticsContext.tsx:68 [Firebase Analytics] Tracking registered globall
 DataContext.tsx:961 [DataContext] 📥 Fetching initial data from cloud (Auto-Sync Disabled)...
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Loading main school data (1 doc)
 syncLogger.ts:59 [SYNC_LOG] AuthOverlay component unmounting
-syncLogger.ts:31 [SyncLogger] Log initialized: SyncLog_2026-02-14T11-02-15.txt
+syncLogger.ts:31 [SyncLogger] Log initialized: SyncLog_2026-02-14T11-28-08.txt
 syncLogger.ts:32 [SyncLogger] Logs will be saved to browser when you call downloadLog()
 syncLogger.ts:59 [SYNC_LOG] AuthOverlay component mounted
 AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
@@ -41,8 +41,8 @@ syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
     at fetchInitialData (DataContext.tsx:968:21)
 DataContext.tsx:425 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
 DataContext.tsx:978 [DataContext] 🚀 Eagerly loading Metadata for app initialization...
-DataContext.tsx:2174 [DataContext] 🔍 loadMetadata Check: Object
-DataContext.tsx:2189 [DataContext] 🧠 Metadata up-to-date (Metadata Match). Skipping read.
+DataContext.tsx:2189 [DataContext] 🔍 loadMetadata Check: Object
+DataContext.tsx:2204 [DataContext] 🧠 Metadata up-to-date (Metadata Match). Skipping read.
 DataContext.tsx:964 [DataContext] ✅ Initial data received via one-time fetch
 syncLogger.ts:59 [SYNC_LOG] Initial data loaded. Users: 17, Scores: 0
 DataContext.tsx:283 [DataContext] 📦 loadImportedData called (isRemote=true) with: Object
@@ -56,8 +56,8 @@ syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
     at fetchInitialData (DataContext.tsx:968:21)
 DataContext.tsx:425 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
 DataContext.tsx:978 [DataContext] 🚀 Eagerly loading Metadata for app initialization...
-DataContext.tsx:2174 [DataContext] 🔍 loadMetadata Check: Object
-DataContext.tsx:2189 [DataContext] 🧠 Metadata up-to-date (Metadata Match). Skipping read.
+DataContext.tsx:2189 [DataContext] 🔍 loadMetadata Check: Object
+DataContext.tsx:2204 [DataContext] 🧠 Metadata up-to-date (Metadata Match). Skipping read.
 firebaseService.ts:1796 [FIREBASE_DEBUG] Document exists? true
 firebaseService.ts:1819 [FIREBASE_DEBUG] Processing existing document...
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Checking license status (1 doc)
@@ -104,260 +104,163 @@ firebaseService.ts:366 [Firebase] Returning inflight promise for school data: ay
 DataContext.tsx:2028 [DataContext] 🔍 loadStudents Check: Object
 DataContext.tsx:2058 [DataContext] 📥 Loading Students (Optimized via Bucket)...
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Checking student bucket manifest (1 doc)
-DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 1...
+DataContext.tsx:2129 [DataContext] 📥 Lazy Loading Scores for Subject 1...
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_1 (1 doc)
-DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 10...
+DataContext.tsx:2129 [DataContext] 📥 Lazy Loading Scores for Subject 10...
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_10 (1 doc)
-DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 11...
+DataContext.tsx:2129 [DataContext] 📥 Lazy Loading Scores for Subject 11...
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_11 (1 doc)
-DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 12...
+DataContext.tsx:2129 [DataContext] 📥 Lazy Loading Scores for Subject 12...
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_12 (1 doc)
-DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 13...
+DataContext.tsx:2129 [DataContext] 📥 Lazy Loading Scores for Subject 13...
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_13 (1 doc)
-DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 14...
+DataContext.tsx:2129 [DataContext] 📥 Lazy Loading Scores for Subject 14...
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_14 (1 doc)
-DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 2...
+DataContext.tsx:2129 [DataContext] 📥 Lazy Loading Scores for Subject 2...
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_2 (1 doc)
-DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 3...
+DataContext.tsx:2129 [DataContext] 📥 Lazy Loading Scores for Subject 3...
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_3 (1 doc)
-DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 4...
+DataContext.tsx:2129 [DataContext] 📥 Lazy Loading Scores for Subject 4...
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_4 (1 doc)
-DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 5...
+DataContext.tsx:2129 [DataContext] 📥 Lazy Loading Scores for Subject 5...
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_5 (1 doc)
-DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 6...
+DataContext.tsx:2129 [DataContext] 📥 Lazy Loading Scores for Subject 6...
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_6 (1 doc)
-DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 7...
+DataContext.tsx:2129 [DataContext] 📥 Lazy Loading Scores for Subject 7...
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_7 (1 doc)
-DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 8...
+DataContext.tsx:2129 [DataContext] 📥 Lazy Loading Scores for Subject 8...
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_8 (1 doc)
-DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 9...
+DataContext.tsx:2129 [DataContext] 📥 Lazy Loading Scores for Subject 9...
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_9 (1 doc)
 firebaseService.ts:366 [Firebase] Returning inflight promise for school data: ayirebida_2025-2026_First-Term
 firebaseService.ts:366 [Firebase] Returning inflight promise for school data: ayirebida_2025-2026_First-Term
 DataContext.tsx:2028 [DataContext] 🔍 loadStudents Check: Object
 DataContext.tsx:2051 [DataContext] ⏳ Students fetch already in progress. Deduping...
-DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 1...
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_1 (1 doc)
-DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 10...
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_10 (1 doc)
-DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 11...
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_11 (1 doc)
-DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 12...
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_12 (1 doc)
-DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 13...
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_13 (1 doc)
-DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 14...
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_14 (1 doc)
-DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 2...
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_2 (1 doc)
-DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 3...
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_3 (1 doc)
-DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 4...
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_4 (1 doc)
-DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 5...
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_5 (1 doc)
-DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 6...
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_6 (1 doc)
-DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 7...
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_7 (1 doc)
-DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 8...
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_8 (1 doc)
-DataContext.tsx:2127 [DataContext] 📥 Lazy Loading Scores for Subject 9...
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_9 (1 doc)
+DataContext.tsx:2122 [DataContext] ⏳ Scores fetch for Subject 1 already in progress. Deduping...
+DataContext.tsx:2122 [DataContext] ⏳ Scores fetch for Subject 10 already in progress. Deduping...
+DataContext.tsx:2122 [DataContext] ⏳ Scores fetch for Subject 11 already in progress. Deduping...
+DataContext.tsx:2122 [DataContext] ⏳ Scores fetch for Subject 12 already in progress. Deduping...
+DataContext.tsx:2122 [DataContext] ⏳ Scores fetch for Subject 13 already in progress. Deduping...
+DataContext.tsx:2122 [DataContext] ⏳ Scores fetch for Subject 14 already in progress. Deduping...
+DataContext.tsx:2122 [DataContext] ⏳ Scores fetch for Subject 2 already in progress. Deduping...
+DataContext.tsx:2122 [DataContext] ⏳ Scores fetch for Subject 3 already in progress. Deduping...
+DataContext.tsx:2122 [DataContext] ⏳ Scores fetch for Subject 4 already in progress. Deduping...
+DataContext.tsx:2122 [DataContext] ⏳ Scores fetch for Subject 5 already in progress. Deduping...
+DataContext.tsx:2122 [DataContext] ⏳ Scores fetch for Subject 6 already in progress. Deduping...
+DataContext.tsx:2122 [DataContext] ⏳ Scores fetch for Subject 7 already in progress. Deduping...
+DataContext.tsx:2122 [DataContext] ⏳ Scores fetch for Subject 8 already in progress. Deduping...
+DataContext.tsx:2122 [DataContext] ⏳ Scores fetch for Subject 9 already in progress. Deduping...
+DataContext.tsx:2122 [DataContext] ⏳ Scores fetch for Subject 1 already in progress. Deduping...
+DataContext.tsx:2122 [DataContext] ⏳ Scores fetch for Subject 10 already in progress. Deduping...
+DataContext.tsx:2122 [DataContext] ⏳ Scores fetch for Subject 11 already in progress. Deduping...
+DataContext.tsx:2122 [DataContext] ⏳ Scores fetch for Subject 12 already in progress. Deduping...
+DataContext.tsx:2122 [DataContext] ⏳ Scores fetch for Subject 13 already in progress. Deduping...
+DataContext.tsx:2122 [DataContext] ⏳ Scores fetch for Subject 14 already in progress. Deduping...
+DataContext.tsx:2122 [DataContext] ⏳ Scores fetch for Subject 2 already in progress. Deduping...
+DataContext.tsx:2122 [DataContext] ⏳ Scores fetch for Subject 3 already in progress. Deduping...
+DataContext.tsx:2122 [DataContext] ⏳ Scores fetch for Subject 4 already in progress. Deduping...
+DataContext.tsx:2122 [DataContext] ⏳ Scores fetch for Subject 5 already in progress. Deduping...
+DataContext.tsx:2122 [DataContext] ⏳ Scores fetch for Subject 6 already in progress. Deduping...
+DataContext.tsx:2122 [DataContext] ⏳ Scores fetch for Subject 7 already in progress. Deduping...
+DataContext.tsx:2122 [DataContext] ⏳ Scores fetch for Subject 8 already in progress. Deduping...
+DataContext.tsx:2122 [DataContext] ⏳ Scores fetch for Subject 9 already in progress. Deduping...
 firebaseService.ts:441 [Firebase] 📦 Found student manifest with 1 chunks.
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching 1 student chunks (1 doc)
-DataContext.tsx:2133 [DataContext] ✅ Loaded 165 scores.
-DataContext.tsx:2133 [DataContext] ✅ Loaded 165 scores.
-DataContext.tsx:2133 [DataContext] ✅ Loaded 76 scores.
-DataContext.tsx:2133 [DataContext] ✅ Loaded 76 scores.
+DataContext.tsx:2139 [DataContext] ✅ Loaded 165 scores for Subject 1.
+DataContext.tsx:2139 [DataContext] ✅ Loaded 76 scores for Subject 10.
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Querying legacy scores (0 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Querying legacy scores (0 docs)
-DataContext.tsx:2133 [DataContext] ✅ Loaded 10 scores.
-DataContext.tsx:2133 [DataContext] ✅ Loaded 10 scores.
-DataContext.tsx:2133 [DataContext] ✅ Loaded 10 scores.
-DataContext.tsx:2133 [DataContext] ✅ Loaded 10 scores.
-DataContext.tsx:2133 [DataContext] ✅ Loaded 76 scores.
-DataContext.tsx:2133 [DataContext] ✅ Loaded 76 scores.
-DataContext.tsx:2133 [DataContext] ✅ Loaded 165 scores.
-DataContext.tsx:2133 [DataContext] ✅ Loaded 165 scores.
-DataContext.tsx:2133 [DataContext] ✅ Loaded 165 scores.
-DataContext.tsx:2133 [DataContext] ✅ Loaded 165 scores.
-DataContext.tsx:2133 [DataContext] ✅ Loaded 99 scores.
-DataContext.tsx:2133 [DataContext] ✅ Loaded 99 scores.
-DataContext.tsx:2133 [DataContext] ✅ Loaded 165 scores.
-DataContext.tsx:2133 [DataContext] ✅ Loaded 165 scores.
-DataContext.tsx:2133 [DataContext] ✅ Loaded 99 scores.
-DataContext.tsx:2133 [DataContext] ✅ Loaded 99 scores.
-DataContext.tsx:2133 [DataContext] ✅ Loaded 99 scores.
-DataContext.tsx:2133 [DataContext] ✅ Loaded 99 scores.
-DataContext.tsx:2133 [DataContext] ✅ Loaded 166 scores.
-DataContext.tsx:2133 [DataContext] ✅ Loaded 166 scores.
-DataContext.tsx:2133 [DataContext] ✅ Loaded 165 scores.
-DataContext.tsx:2133 [DataContext] ✅ Loaded 165 scores.
+DataContext.tsx:2139 [DataContext] ✅ Loaded 10 scores for Subject 12.
+DataContext.tsx:2139 [DataContext] ✅ Loaded 10 scores for Subject 13.
+DataContext.tsx:2139 [DataContext] ✅ Loaded 76 scores for Subject 14.
+DataContext.tsx:2139 [DataContext] ✅ Loaded 165 scores for Subject 2.
+DataContext.tsx:2139 [DataContext] ✅ Loaded 165 scores for Subject 3.
+DataContext.tsx:2139 [DataContext] ✅ Loaded 99 scores for Subject 4.
+DataContext.tsx:2139 [DataContext] ✅ Loaded 165 scores for Subject 5.
+DataContext.tsx:2139 [DataContext] ✅ Loaded 99 scores for Subject 6.
+DataContext.tsx:2139 [DataContext] ✅ Loaded 99 scores for Subject 7.
+DataContext.tsx:2139 [DataContext] ✅ Loaded 166 scores for Subject 8.
+DataContext.tsx:2139 [DataContext] ✅ Loaded 165 scores for Subject 9.
 firebaseService.ts:462 [Firebase] ✅ Reassembled 173 students from chunks.
 DataContext.tsx:2065 [DataContext] ✅ Loaded 173 students.
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched legacy scores (0 docs)
 firebaseService.ts:571 [Firebase] No legacy scores found for Subject 11 (Clean)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched legacy scores (0 docs)
-firebaseService.ts:571 [Firebase] No legacy scores found for Subject 11 (Clean)
+DataContext.tsx:2153 [DataContext] ⚠️ No scores found for Subject 11.
+DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 1
+DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 1
 DataContext.tsx:2028 [DataContext] 🔍 loadStudents Check: {studentsCount: 173, serverTS: _Timestamp, loadedTS: _Timestamp, isUpToDate: true, hasInflight: false}
 DataContext.tsx:2044 [DataContext] 🧠 Students up-to-date. Skipping read.
 DataContext.tsx:2028 [DataContext] 🔍 loadStudents Check: {studentsCount: 173, serverTS: _Timestamp, loadedTS: _Timestamp, isUpToDate: true, hasInflight: false}
 DataContext.tsx:2044 [DataContext] 🧠 Students up-to-date. Skipping read.
-DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 1
-DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 1
-DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 1
-DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 1
-DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 1
-DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 1
-DataContext.tsx:2114 [DataContext] 🧠 Using Cached Scores for Subject 1
 DataContext.tsx:2028 [DataContext] 🔍 loadStudents Check: {studentsCount: 173, serverTS: _Timestamp, loadedTS: _Timestamp, isUpToDate: false, hasInflight: false}
 DataContext.tsx:2058 [DataContext] 📥 Loading Students (Optimized via Bucket)...
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Checking student bucket manifest (1 doc)
-DataContext.tsx:2174 [DataContext] 🔍 loadMetadata Check: {hasData: true, previouslyLoaded: false, isUpToDate: true, inflight: false}
-DataContext.tsx:2189 [DataContext] 🧠 Metadata up-to-date (Metadata Match). Skipping read.
-StudentProgress.tsx:133 [StudentProgress] Fetching history for school prefix: ayirebida
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching school history (0 docs)
-StudentProgress.tsx:153 [StudentProgress] Computing history - students: 0 history terms: 0
+DataContext.tsx:2189 [DataContext] 🔍 loadMetadata Check: {hasData: true, previouslyLoaded: false, isUpToDate: true, inflight: false}
+DataContext.tsx:2204 [DataContext] 🧠 Metadata up-to-date (Metadata Match). Skipping read.
+StudentProgress.tsx:137 [StudentProgress] Fetching history list for school prefix: ayirebida
+StudentProgress.tsx:206 [StudentProgress] Computing history - students: 0 history terms: 0
 DataContext.tsx:2028 [DataContext] 🔍 loadStudents Check: {studentsCount: 173, serverTS: _Timestamp, loadedTS: _Timestamp, isUpToDate: false, hasInflight: true}
 DataContext.tsx:2051 [DataContext] ⏳ Students fetch already in progress. Deduping...
-DataContext.tsx:2174 [DataContext] 🔍 loadMetadata Check: {hasData: true, previouslyLoaded: false, isUpToDate: true, inflight: false}
-DataContext.tsx:2189 [DataContext] 🧠 Metadata up-to-date (Metadata Match). Skipping read.
-StudentProgress.tsx:133 [StudentProgress] Fetching history for school prefix: ayirebida
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching school history (0 docs)
-StudentProgress.tsx:153 [StudentProgress] Computing history - students: 0 history terms: 0
+DataContext.tsx:2189 [DataContext] 🔍 loadMetadata Check: {hasData: true, previouslyLoaded: false, isUpToDate: true, inflight: false}
+DataContext.tsx:2204 [DataContext] 🧠 Metadata up-to-date (Metadata Match). Skipping read.
+StudentProgress.tsx:137 [StudentProgress] Fetching history list for school prefix: ayirebida
+StudentProgress.tsx:206 [StudentProgress] Computing history - students: 0 history terms: 0
+StudentProgress.tsx:206 [StudentProgress] Computing history - students: 2 history terms: 0
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching school history list (0 docs)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching school history list (0 docs)
 firebaseService.ts:441 [Firebase] 📦 Found student manifest with 1 chunks.
 FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching 1 student chunks (1 doc)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched school history (2 docs)
-firebaseService.ts:1963 [getSchoolHistory] Found 2 historical terms for ayirebida
-firebaseService.ts:1970 [getSchoolHistory] Processing term: ayirebida_2025-2026_First-Term
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching students for ayirebida_2025-2026_First-Term (0 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched school history (2 docs)
-firebaseService.ts:1963 [getSchoolHistory] Found 2 historical terms for ayirebida
-firebaseService.ts:1970 [getSchoolHistory] Processing term: ayirebida_2025-2026_First-Term
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching students for ayirebida_2025-2026_First-Term (0 docs)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched school history list (2 docs)
+firebaseService.ts:1978 [getSchoolTermIds] Found 2 historical terms for ayirebida
+StudentProgress.tsx:141 [StudentProgress] History terms found: 2
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched school history list (2 docs)
+firebaseService.ts:1978 [getSchoolTermIds] Found 2 historical terms for ayirebida
+StudentProgress.tsx:141 [StudentProgress] History terms found: 2
+StudentProgress.tsx:169 [StudentProgress] ⏳ Loading history detail for term 1/2: ayirebida_2025-2026_First-Term
+StudentProgress.tsx:206 [StudentProgress] Computing history - students: 2 history terms: 0
 firebaseService.ts:462 [Firebase] ✅ Reassembled 173 students from chunks.
 DataContext.tsx:2065 [DataContext] ✅ Loaded 173 students.
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched students for ayirebida_2025-2026_First-Term (173 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching subjects for ayirebida_2025-2026_First-Term (0 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched students for ayirebida_2025-2026_First-Term (173 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching subjects for ayirebida_2025-2026_First-Term (0 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched subjects for ayirebida_2025-2026_First-Term (14 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching classes for ayirebida_2025-2026_First-Term (0 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched subjects for ayirebida_2025-2026_First-Term (14 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching classes for ayirebida_2025-2026_First-Term (0 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched classes for ayirebida_2025-2026_First-Term (11 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching assessments for ayirebida_2025-2026_First-Term (0 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched classes for ayirebida_2025-2026_First-Term (11 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching assessments for ayirebida_2025-2026_First-Term (0 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched assessments for ayirebida_2025-2026_First-Term (5 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching scores for ayirebida_2025-2026_First-Term (0 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched assessments for ayirebida_2025-2026_First-Term (5 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching scores for ayirebida_2025-2026_First-Term (0 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched score buckets for ayirebida_2025-2026_First-Term (13 docs)
-firebaseService.ts:2029 [getSchoolHistory] Loaded for ayirebida_2025-2026_First-Term: 173 students, 14 subjects, 11 classes, 5 assessments, 1460 scores
-firebaseService.ts:1970 [getSchoolHistory] Processing term: ayirebida_2025-2026_Second-Term
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching students for ayirebida_2025-2026_Second-Term (0 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched score buckets for ayirebida_2025-2026_First-Term (13 docs)
-firebaseService.ts:2029 [getSchoolHistory] Loaded for ayirebida_2025-2026_First-Term: 173 students, 14 subjects, 11 classes, 5 assessments, 1460 scores
-firebaseService.ts:1970 [getSchoolHistory] Processing term: ayirebida_2025-2026_Second-Term
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching students for ayirebida_2025-2026_Second-Term (0 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched students for ayirebida_2025-2026_Second-Term (173 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching subjects for ayirebida_2025-2026_Second-Term (0 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched students for ayirebida_2025-2026_Second-Term (173 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching subjects for ayirebida_2025-2026_Second-Term (0 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched subjects for ayirebida_2025-2026_Second-Term (14 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching classes for ayirebida_2025-2026_Second-Term (0 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched subjects for ayirebida_2025-2026_Second-Term (14 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching classes for ayirebida_2025-2026_Second-Term (0 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched classes for ayirebida_2025-2026_Second-Term (11 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching assessments for ayirebida_2025-2026_Second-Term (0 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched classes for ayirebida_2025-2026_Second-Term (11 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching assessments for ayirebida_2025-2026_Second-Term (0 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched assessments for ayirebida_2025-2026_Second-Term (5 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching scores for ayirebida_2025-2026_Second-Term (0 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched assessments for ayirebida_2025-2026_Second-Term (5 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching scores for ayirebida_2025-2026_Second-Term (0 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched score buckets for ayirebida_2025-2026_Second-Term (0 docs)
-firebaseService.ts:2019 [getSchoolHistory] No scores in buckets for ayirebida_2025-2026_Second-Term. Trying legacy 'scores' collection...
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching legacy scores for ayirebida_2025-2026_Second-Term (0 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched score buckets for ayirebida_2025-2026_Second-Term (0 docs)
-firebaseService.ts:2019 [getSchoolHistory] No scores in buckets for ayirebida_2025-2026_Second-Term. Trying legacy 'scores' collection...
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching legacy scores for ayirebida_2025-2026_Second-Term (0 docs)
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched legacy scores for ayirebida_2025-2026_Second-Term (0 docs)
-firebaseService.ts:2029 [getSchoolHistory] Loaded for ayirebida_2025-2026_Second-Term: 173 students, 14 subjects, 11 classes, 5 assessments, 0 scores
-firebaseService.ts:2042 [getSchoolHistory] Total historical terms loaded: 2
-StudentProgress.tsx:136 [StudentProgress] History data fetched: 2 terms
-FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched legacy scores for ayirebida_2025-2026_Second-Term (0 docs)
-firebaseService.ts:2029 [getSchoolHistory] Loaded for ayirebida_2025-2026_Second-Term: 173 students, 14 subjects, 11 classes, 5 assessments, 0 scores
-firebaseService.ts:2042 [getSchoolHistory] Total historical terms loaded: 2
-StudentProgress.tsx:136 [StudentProgress] History data fetched: 2 terms
-StudentProgress.tsx:153 [StudentProgress] Computing history - students: 0 history terms: 2
-StudentProgress.tsx:153 [StudentProgress] Computing history - students: 1 history terms: 2
-StudentProgress.tsx:241 [StudentProgress] Processing student: Ampofowaa Beatrice ID: 15
-App.tsx:254  Invalid DOM property `paint-order`. Did you mean `paintOrder`?
-console.error @ App.tsx:254
-validateProperty @ react-dom-client.development.js:2992
-warnUnknownProperties @ react-dom-client.development.js:3146
-validatePropertiesInDevelopment @ react-dom-client.development.js:19868
-setInitialProperties @ react-dom-client.development.js:20491
-completeWork @ react-dom-client.development.js:12662
-runWithFiberInDEV @ react-dom-client.development.js:871
-completeUnitOfWork @ react-dom-client.development.js:17777
-performUnitOfWork @ react-dom-client.development.js:17658
-workLoopSync @ react-dom-client.development.js:17469
-renderRootSync @ react-dom-client.development.js:17450
-performWorkOnRoot @ react-dom-client.development.js:16504
-performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:18957
-performWorkUntilDeadline @ scheduler.development.js:45
-<text>
-exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
-(anonymous) @ SimpleCharts.tsx:120
-LineChart @ SimpleCharts.tsx:114
-react_stack_bottom_frame @ react-dom-client.development.js:25904
-renderWithHooksAgain @ react-dom-client.development.js:7762
-renderWithHooks @ react-dom-client.development.js:7674
-updateFunctionComponent @ react-dom-client.development.js:10166
-beginWork @ react-dom-client.development.js:11778
-runWithFiberInDEV @ react-dom-client.development.js:871
-performUnitOfWork @ react-dom-client.development.js:17641
-workLoopSync @ react-dom-client.development.js:17469
-renderRootSync @ react-dom-client.development.js:17450
-performWorkOnRoot @ react-dom-client.development.js:16504
-performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:18957
-performWorkUntilDeadline @ scheduler.development.js:45
-<LineChart>
-exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
-StudentProgress @ StudentProgress.tsx:1096
-react_stack_bottom_frame @ react-dom-client.development.js:25904
-renderWithHooksAgain @ react-dom-client.development.js:7762
-renderWithHooks @ react-dom-client.development.js:7674
-updateFunctionComponent @ react-dom-client.development.js:10166
-beginWork @ react-dom-client.development.js:11778
-runWithFiberInDEV @ react-dom-client.development.js:871
-performUnitOfWork @ react-dom-client.development.js:17641
-workLoopSync @ react-dom-client.development.js:17469
-renderRootSync @ react-dom-client.development.js:17450
-performWorkOnRoot @ react-dom-client.development.js:16504
-performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:18957
-performWorkUntilDeadline @ scheduler.development.js:45
-<StudentProgress>
-exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
-ActivePage @ App.tsx:57
-react_stack_bottom_frame @ react-dom-client.development.js:25904
-renderWithHooksAgain @ react-dom-client.development.js:7762
-renderWithHooks @ react-dom-client.development.js:7674
-updateFunctionComponent @ react-dom-client.development.js:10166
-beginWork @ react-dom-client.development.js:11778
-runWithFiberInDEV @ react-dom-client.development.js:871
-performUnitOfWork @ react-dom-client.development.js:17641
-workLoopSync @ react-dom-client.development.js:17469
-renderRootSync @ react-dom-client.development.js:17450
-performWorkOnRoot @ react-dom-client.development.js:16504
-performSyncWorkOnRoot @ react-dom-client.development.js:18972
-flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:18814
-processRootScheduleInMicrotask @ react-dom-client.development.js:18853
-(anonymous) @ react-dom-client.development.js:18991
-StudentProgress.tsx:153 [StudentProgress] Computing history - students: 2 history terms: 2
-StudentProgress.tsx:241 [StudentProgress] Processing student: Ampofowaa Beatrice ID: 15
-StudentProgress.tsx:241 [StudentProgress] Processing student: Fosu Joycelyn ID: 31
+firebaseService.ts:1999 [getSchoolTermData] Processing term: ayirebida_2025-2026_First-Term
+StudentProgress.tsx:169 [StudentProgress] ⏳ Loading history detail for term 2/2: ayirebida_2025-2026_Second-Term
+StudentProgress.tsx:206 [StudentProgress] Computing history - students: 2 history terms: 1
+StudentProgress.tsx:294 [StudentProgress] Processing student: Ampofowaa Beatrice ID: 15
+StudentProgress.tsx:294 [StudentProgress] Processing student: Fosu Joycelyn ID: 31
+firebaseService.ts:1999 [getSchoolTermData] Processing term: ayirebida_2025-2026_Second-Term
+StudentProgress.tsx:206 [StudentProgress] Computing history - students: 2 history terms: 2
+StudentProgress.tsx:294 [StudentProgress] Processing student: Ampofowaa Beatrice ID: 15
+StudentProgress.tsx:294 [StudentProgress] Processing student: Fosu Joycelyn ID: 31
+DataContext.tsx:845 [DataContext] 📥 Manual refresh initiated - fetching data from cloud [FULL]...
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Loading main school data (1 doc)
+DataContext.tsx:851 [DataContext] ✅ Main document fetched, applying updates...
+DataContext.tsx:858 [DataContext] 🧹 Cleared score subject cache to force fresh fetch on next load
+DataContext.tsx:283 [DataContext] 📦 loadImportedData called (isRemote=false) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 9, …}
+DataContext.tsx:359 [DataContext] 🚫 Skipping scores update - data is empty/undefined
+syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users from document. Count: 17
+DataContext.tsx:448 [DataContext] 💾 Local file import: Marking fields as dirty for verification
+DataContext.tsx:871 [DataContext] 🔄 Force refreshing Metadata (Classes, Subjects, Assessments)...
+DataContext.tsx:2189 [DataContext] 🔍 loadMetadata Check: {hasData: true, previouslyLoaded: false, isUpToDate: false, inflight: false}
+DataContext.tsx:2218 [DataContext] 📥 Loading Metadata (Classes, Subjects, Assessments)...
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Attempting bundle read (0 docs)
+DataContext.tsx:877 [DataContext] 🔄 Force refreshing Students subcollection...
+DataContext.tsx:2028 [DataContext] 🔍 loadStudents Check: {studentsCount: 173, serverTS: _Timestamp, loadedTS: _Timestamp, isUpToDate: false, hasInflight: false}
+DataContext.tsx:2058 [DataContext] 📥 Loading Students (Optimized via Bucket)...
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Checking student bucket manifest (1 doc)
+DataContext.tsx:883 [DataContext] 🔄 Force refreshing Score Buckets for loaded subjects...
+firebaseService.ts:977 [Firebase] ⚠️ Bundle missing, falling back to individual reads
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Bundle missing - fetching classes (0 docs)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Bundle missing - fetching subjects (0 docs)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Bundle missing - fetching assessments (0 docs)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching all classes (0 docs)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching all subjects (0 docs)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching all assessments (0 docs)
+firebaseService.ts:441 [Firebase] 📦 Found student manifest with 1 chunks.
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching 1 student chunks (1 doc)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched all classes (11 docs)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched all subjects (14 docs)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetched all assessments (5 docs)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fallback fetched 11 classes (11 docs)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fallback fetched 14 subjects (14 docs)
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fallback fetched 5 assessments (5 docs)
+DataContext.tsx:2231 [DataContext] ✅ Metadata Loaded: 11 Classes, 14 Subjects, 5 Assessments
+firebaseService.ts:462 [Firebase] ✅ Reassembled 173 students from chunks.
+DataContext.tsx:2065 [DataContext] ✅ Loaded 173 students.
+DataContext.tsx:911 [DataContext] 🎉 Manual refresh complete

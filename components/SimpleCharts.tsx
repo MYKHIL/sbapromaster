@@ -126,7 +126,7 @@ export const LineChart: React.FC<ChartProps> = ({ data, height = 200, title }) =
                                     fill="#4b5563"
                                     stroke="#fff"
                                     strokeWidth="0.5"
-                                    paint-order="stroke"
+                                    paintOrder="stroke"
                                 >
                                     {d.value.toFixed(1)}
                                 </text>

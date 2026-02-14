@@ -2109,15 +2109,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const loadScores = React.useCallback(async (classId: number, subjectId: number, force: boolean = false) => {
         if (!schoolId) return;
 
-        // Cache Check
+        // Cache Check - We track loaded subjects, not class-subjects
         if (!force && loadedSubjects.current.has(subjectId)) {
             console.log(`[DataContext] 🧠 Using Cached Scores for Subject ${subjectId}`);
             return;
         }
 
-        // DEDUPLICATION
-        const cacheKey = `scores-${classId}-${subjectId}`;
+        // DEDUPLICATION - Key by Subject ID only, as buckets contain ALL class scores for that subject
+        const cacheKey = `scores-${subjectId}`;
+
         if (inflightPromises.current.has(cacheKey)) {
+            console.log(`[DataContext] ⏳ Scores fetch for Subject ${subjectId} already in progress. Deduping...`);
             return inflightPromises.current.get(cacheKey);
         }
 
@@ -2125,17 +2127,30 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setIsFetching(true);
             try {
                 console.log(`[DataContext] 📥 Lazy Loading Scores for Subject ${subjectId}...`);
+                // Note: The classId param here is technically redundant for the bucket fetch itself,
+                // but we might need it for legacy fallback or logging. 
+                // Since our new fetchScoresForClass (which really fetches by Subject Bucket) handles it,
+                // we just pass it through. 
                 const newScores = await fetchScoresForClass(schoolId, classId, subjectId);
 
-                if (newScores && newScores.length >= 0) {
+                if (newScores) {
                     loadedSubjects.current.add(subjectId);
                     if (newScores.length > 0) {
-                        console.log(`[DataContext] ✅ Loaded ${newScores.length} scores.`);
+                        console.log(`[DataContext] ✅ Loaded ${newScores.length} scores for Subject ${subjectId}.`);
                         setScores(prev => {
+                            // OPTIMIZED MERGE:
+                            // 1. Create Map of existing scores
                             const prevMap = new Map(prev.map(s => [s.id, s]));
+
+                            // 2. Set/Overwrite with new scores
+                            // Since bucket contains ALL scores for the subject, this effectively updates 
+                            // all students in all classes for this subject.
                             newScores.forEach(s => prevMap.set(s.id, s));
+
                             return Array.from(prevMap.values());
                         });
+                    } else {
+                        console.log(`[DataContext] ⚠️ No scores found for Subject ${subjectId}.`);
                     }
                 }
             } catch (e) {

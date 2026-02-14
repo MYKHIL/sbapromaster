@@ -122,31 +122,84 @@ const StudentProgress: React.FC = () => {
         loadMetadata();
     }, [loadStudents, loadMetadata]);
 
+    const [termIdsToLoad, setTermIdsToLoad] = useState<string[]>([]);
+    const [loadedTermCount, setLoadedTermCount] = useState(0);
+
+    // 1. Fetch List of Terms (IDs) first
     useEffect(() => {
-        const fetchHistory = async () => {
+        const fetchHistoryList = async () => {
             if (!schoolId) return;
             setIsLoadingHistory(true);
             try {
                 // Determine school name prefix from current ID
                 // ID format: schoolname_year_term
                 const prefix = schoolId.split('_')[0];
-                console.log('[StudentProgress] Fetching history for school prefix:', prefix);
+                console.log('[StudentProgress] Fetching history list for school prefix:', prefix);
                 if (prefix) {
-                    const data = await getSchoolHistory(prefix);
-                    console.log('[StudentProgress] History data fetched:', data.length, 'terms');
-                    setHistoryData(data);
+                    // Use new key-only fetcher
+                    const ids = await import('../../services/firebaseService').then(m => m.getSchoolTermIds(prefix));
+                    console.log('[StudentProgress] History terms found:', ids.length);
+                    // Filter out current term if desired, or keep all. 
+                    // Usually we want all to show progress including current? 
+                    // Actually getSchoolHistory logic returned all matching prefix.
+                    setTermIdsToLoad(ids);
+                    setHistoryData([]); // Reset
+                    setLoadedTermCount(0);
                 }
             } catch (error) {
-                console.error("[StudentProgress] Failed to fetch history:", error);
-            } finally {
+                console.error("[StudentProgress] Failed to fetch history list:", error);
                 setIsLoadingHistory(false);
             }
         };
 
         if (hasAccess) {
-            fetchHistory();
+            fetchHistoryList();
         }
     }, [schoolId, hasAccess]);
+
+    // 2. Sequentially Load Term Data
+    useEffect(() => {
+        const loadNextTerm = async () => {
+            if (loadedTermCount >= termIdsToLoad.length) {
+                if (termIdsToLoad.length > 0) setIsLoadingHistory(false);
+                return;
+            }
+
+            const termId = termIdsToLoad[loadedTermCount];
+            console.log(`[StudentProgress] ⏳ Loading history detail for term ${loadedTermCount + 1}/${termIdsToLoad.length}: ${termId}`);
+
+            try {
+                const termData = await import('../../services/firebaseService').then(m => m.getSchoolTermData(termId));
+                if (termData) {
+                    setHistoryData(prev => {
+                        // Dedup formatting check just in case
+                        if (prev.find(p =>
+                            p.settings.academicYear === termData.settings.academicYear &&
+                            p.settings.academicTerm === termData.settings.academicTerm
+                        )) return prev;
+
+                        const newData = [...prev, termData];
+                        // Sort by date/ID to ensure consistent order as they load
+                        // Assumes term ID contains sortable info or we sort by explicit fields
+                        // Simple string sort of ID (School_Year_Term) usually works if Year is YYYY
+                        return newData.sort((a, b) => {
+                            const idA = createDocumentId(a.settings.schoolName, a.settings.academicYear, a.settings.academicTerm);
+                            const idB = createDocumentId(b.settings.schoolName, b.settings.academicYear, b.settings.academicTerm);
+                            return idA.localeCompare(idB);
+                        });
+                    });
+                }
+            } catch (e) {
+                console.error(`[StudentProgress] Failed to load term ${termId}`, e);
+            } finally {
+                setLoadedTermCount(prev => prev + 1);
+            }
+        };
+
+        if (termIdsToLoad.length > 0 && loadedTermCount < termIdsToLoad.length) {
+            loadNextTerm();
+        }
+    }, [termIdsToLoad, loadedTermCount]);
 
     // Compute history when students are selected
     useEffect(() => {

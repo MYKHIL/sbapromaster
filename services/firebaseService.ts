@@ -1942,110 +1942,102 @@ export const updateDeviceCredentials = async (docId: string, deviceCredentials: 
 /**
  * Fetch School History (All Terms)
  */
+/**
+ * Fetch School History (All Terms) - Legacy / Bulk
+ */
 export const getSchoolHistory = async (schoolNamePrefix: string): Promise<AppDataType[]> => {
+    // Re-use the new granular functions to maintain DRY
     try {
-        // Check Cache
-        const cached = historyCache.get(schoolNamePrefix);
-        if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
-            console.log(`[Optimization] 🚀 Returning cached history for ${schoolNamePrefix}`);
-            return cached.data;
+        const termIds = await getSchoolTermIds(schoolNamePrefix);
+        const data: AppDataType[] = [];
+        for (const termId of termIds) {
+            const termData = await getSchoolTermData(termId);
+            if (termData) data.push(termData);
         }
+        return data;
+    } catch (e) {
+        console.error("Error in getSchoolHistory:", e);
+        return [];
+    }
+};
 
+/**
+ * 1. Fetch List of Historical Term IDs (Lightweight)
+ */
+export const getSchoolTermIds = async (schoolNamePrefix: string): Promise<string[]> => {
+    try {
         const schoolsRef = collection(db, "schools");
         const q = query(schoolsRef,
             where(documentId(), '>=', schoolNamePrefix),
             where(documentId(), '<=', schoolNamePrefix + '\uf8ff')
         );
-        trackFirebaseRead('getSchoolHistory', 'schools', 0, 'Fetching school history');
-        const snapshot = await loggedGetDocs(q, `getSchoolHistory/${schoolNamePrefix}`);
-        trackFirebaseRead('getSchoolHistory', 'schools', snapshot.size, 'Fetched school history');
+        trackFirebaseRead('getSchoolTermIds', 'schools', 0, 'Fetching school history list');
+        const snapshot = await loggedGetDocs(q, `getSchoolHistory/list/${schoolNamePrefix}`);
+        trackFirebaseRead('getSchoolTermIds', 'schools', snapshot.size, 'Fetched school history list');
 
-        console.log(`[getSchoolHistory] Found ${snapshot.size} historical terms for ${schoolNamePrefix}`);
+        console.log(`[getSchoolTermIds] Found ${snapshot.size} historical terms for ${schoolNamePrefix}`);
+        return snapshot.docs.map(d => d.id);
+    } catch (error) {
+        console.error("Error fetching school term IDs:", error);
+        return [];
+    }
+};
 
-        // Fetch main documents and all subcollections
-        const data: AppDataType[] = [];
+/**
+ * 2. Fetch Single Term Data (Detail)
+ */
+export const getSchoolTermData = async (docId: string): Promise<AppDataType | null> => {
+    try {
+        // Check Cache (Optional: implement granular cache or keep global?)
+        // For now, simple fetch
+        const docRef = doc(db, "schools", docId);
+        const docSnap = await loggedGetDoc(docRef, `getSchoolTermData/${docId}`);
 
-        for (const docSnap of snapshot.docs) {
-            const mainData = docSnap.data() as AppDataType;
-            console.log(`[getSchoolHistory] Processing term: ${docSnap.id}`);
+        if (!docSnap.exists()) return null;
 
-            // Fetch students subcollection
-            const studentsRef = collection(db, "schools", docSnap.id, "students");
-            trackFirebaseRead('getSchoolHistory', 'students', 0, `Fetching students for ${docSnap.id}`);
-            const studentsSnapshot = await loggedGetDocs(studentsRef, `getSchoolHistory/students/${docSnap.id}`);
-            trackFirebaseRead('getSchoolHistory', 'students', studentsSnapshot.size, `Fetched students for ${docSnap.id}`);
-            const students = studentsSnapshot.docs.map(s => s.data() as Student);
+        const mainData = docSnap.data() as AppDataType;
+        console.log(`[getSchoolTermData] Processing term: ${docId}`);
 
-            // Fetch subjects subcollection
-            const subjectsRef = collection(db, "schools", docSnap.id, "subjects");
-            trackFirebaseRead('getSchoolHistory', 'subjects', 0, `Fetching subjects for ${docSnap.id}`);
-            const subjectsSnapshot = await loggedGetDocs(subjectsRef, `getSchoolHistory/subjects/${docSnap.id}`);
-            trackFirebaseRead('getSchoolHistory', 'subjects', subjectsSnapshot.size, `Fetched subjects for ${docSnap.id}`);
-            const subjects = subjectsSnapshot.docs.map(s => s.data() as Subject);
+        // Parallelize subcollection fetches for this specific term
+        const [studentsSnap, subjectsSnap, classesSnap, assessmentsSnap, scoreBucketsSnap, scoresLegacySnap] = await Promise.all([
+            loggedGetDocs(collection(db, "schools", docId, "students"), `getSchoolHistory/students/${docId}`),
+            loggedGetDocs(collection(db, "schools", docId, "subjects"), `getSchoolHistory/subjects/${docId}`),
+            loggedGetDocs(collection(db, "schools", docId, "classes"), `getSchoolHistory/classes/${docId}`),
+            loggedGetDocs(collection(db, "schools", docId, "assessments"), `getSchoolHistory/assessments/${docId}`),
+            loggedGetDocs(collection(db, "schools", docId, "score_buckets"), `getSchoolHistory/score_buckets/${docId}`),
+            loggedGetDocs(collection(db, "schools", docId, "scores"), `getSchoolHistory/scores/${docId}`)
+        ]);
 
-            // Fetch classes subcollection
-            const classesRef = collection(db, "schools", docSnap.id, "classes");
-            trackFirebaseRead('getSchoolHistory', 'classes', 0, `Fetching classes for ${docSnap.id}`);
-            const classesSnapshot = await loggedGetDocs(classesRef, `getSchoolHistory/classes/${docSnap.id}`);
-            trackFirebaseRead('getSchoolHistory', 'classes', classesSnapshot.size, `Fetched classes for ${docSnap.id}`);
-            const classes = classesSnapshot.docs.map(c => c.data() as Class);
+        const students = studentsSnap.docs.map(s => s.data() as Student);
+        const subjects = subjectsSnap.docs.map(s => s.data() as Subject);
+        const classes = classesSnap.docs.map(c => c.data() as Class);
+        const assessments = assessmentsSnap.docs.map(a => a.data() as Assessment);
 
-            // Fetch assessments subcollection
-            const assessmentsRef = collection(db, "schools", docSnap.id, "assessments");
-            trackFirebaseRead('getSchoolHistory', 'assessments', 0, `Fetching assessments for ${docSnap.id}`);
-            const assessmentsSnapshot = await loggedGetDocs(assessmentsRef, `getSchoolHistory/assessments/${docSnap.id}`);
-            trackFirebaseRead('getSchoolHistory', 'assessments', assessmentsSnapshot.size, `Fetched assessments for ${docSnap.id}`);
-            const assessments = assessmentsSnapshot.docs.map(a => a.data() as Assessment);
-
-            // Fetch scores from score_buckets
-            const scoreBucketsRef = collection(db, "schools", docSnap.id, "score_buckets");
-            trackFirebaseRead('getSchoolHistory', 'score_buckets', 0, `Fetching scores for ${docSnap.id}`);
-            const scoreBucketsSnapshot = await loggedGetDocs(scoreBucketsRef, `getSchoolHistory/score_buckets/${docSnap.id}`);
-            trackFirebaseRead('getSchoolHistory', 'score_buckets', scoreBucketsSnapshot.size, `Fetched score buckets for ${docSnap.id}`);
-
-            // Extract scores from all buckets
-            const scores: Score[] = [];
-            scoreBucketsSnapshot.docs.forEach(bucketDoc => {
-                const bucketData = bucketDoc.data() as any;
-                if (bucketData.scoresMap) {
-                    Object.values(bucketData.scoresMap).forEach((score: any) => {
-                        scores.push(score as Score);
-                    });
-                }
-            });
-
-            // FALLBACK: If no scores found in buckets, try legacy 'scores' subcollection
-            if (scores.length === 0) {
-                console.log(`[getSchoolHistory] No scores in buckets for ${docSnap.id}. Trying legacy 'scores' collection...`);
-                const scoresRef = collection(db, "schools", docSnap.id, "scores");
-                trackFirebaseRead('getSchoolHistory', 'scores', 0, `Fetching legacy scores for ${docSnap.id}`);
-                const scoresSnapshot = await loggedGetDocs(scoresRef, `getSchoolHistory/scores/${docSnap.id}`);
-                trackFirebaseRead('getSchoolHistory', 'scores', scoresSnapshot.size, `Fetched legacy scores for ${docSnap.id}`);
-                scoresSnapshot.docs.forEach(doc => {
-                    scores.push(doc.data() as Score);
-                });
+        // Extract scores from buckets
+        const scores: Score[] = [];
+        scoreBucketsSnap.docs.forEach(bucketDoc => {
+            const bucketData = bucketDoc.data() as any;
+            if (bucketData.scoresMap) {
+                Object.values(bucketData.scoresMap).forEach((score: any) => scores.push(score as Score));
             }
+        });
 
-            console.log(`[getSchoolHistory] Loaded for ${docSnap.id}: ${students.length} students, ${subjects.length} subjects, ${classes.length} classes, ${assessments.length} assessments, ${scores.length} scores`);
-
-            // Merge all data
-            data.push({
-                ...mainData,
-                students,
-                subjects,
-                classes,
-                assessments,
-                scores
-            });
+        // Fallback to legacy
+        if (scores.length === 0 && scoresLegacySnap.size > 0) {
+            scoresLegacySnap.docs.forEach(d => scores.push(d.data() as Score));
         }
 
-        console.log(`[getSchoolHistory] Total historical terms loaded: ${data.length}`);
+        return {
+            ...mainData,
+            students,
+            subjects,
+            classes,
+            assessments,
+            scores
+        };
 
-        // Update Cache
-        historyCache.set(schoolNamePrefix, { timestamp: Date.now(), data });
-        return data;
     } catch (error) {
-        console.error("Error fetching school history:", error);
-        return [];
+        console.error(`Error fetching data for term ${docId}:`, error);
+        return null;
     }
 };
