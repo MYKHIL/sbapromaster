@@ -37,7 +37,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
     const [schoolData, setSchoolData] = useState<AppDataType | null>(null);
     const [currentSchoolId, setCurrentSchoolId] = useState<string | null>(null);
     const [showSessionRestore, setShowSessionRestore] = useState<boolean>(false);
-    const [sessionInfo, setSessionInfo] = useState<{ schoolName: string; userName: string } | null>(null);
+    const [sessionInfo, setSessionInfo] = useState<{ schoolName: string; userName: string; academicYear?: string; academicTerm?: string } | null>(null);
     const [showRegistrationPending, setShowRegistrationPending] = useState<boolean>(false);
     const [pendingSchoolName, setPendingSchoolName] = useState<string>('');
     const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
@@ -150,7 +150,9 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                     if (user) {
                         setSessionInfo({
                             schoolName: result.data.settings?.schoolName || 'Unknown School',
-                            userName: user.name
+                            userName: user.name,
+                            academicYear: result.data.settings?.academicYear,
+                            academicTerm: result.data.settings?.academicTerm
                         });
                         setShowSessionRestore(true);
                         console.log('[AuthOverlay] Full session data loaded, showing restore dialog');
@@ -770,6 +772,8 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             <SessionRestoreDialog
                 schoolName={sessionInfo.schoolName}
                 userName={sessionInfo.userName}
+                academicYear={sessionInfo.academicYear}
+                academicTerm={sessionInfo.academicTerm}
                 onContinue={handleContinueSession}
                 onLogout={handleLogoutSession}
             />

@@ -3,6 +3,8 @@ import React from 'react';
 interface SessionRestoreDialogProps {
     schoolName: string;
     userName: string;
+    academicYear?: string;
+    academicTerm?: string;
     onContinue: () => void;
     onLogout: () => void;
 }
@@ -10,6 +12,8 @@ interface SessionRestoreDialogProps {
 const SessionRestoreDialog: React.FC<SessionRestoreDialogProps> = ({
     schoolName,
     userName,
+    academicYear,
+    academicTerm,
     onContinue,
     onLogout
 }) => {
@@ -45,6 +49,14 @@ const SessionRestoreDialog: React.FC<SessionRestoreDialogProps> = ({
                     <p className="text-sm text-gray-600 mb-2">Previous Session:</p>
                     <p className="font-semibold text-gray-800">{schoolName}</p>
                     <p className="text-sm text-gray-600">{userName}</p>
+                    {(academicYear || academicTerm) && (
+                        <div className="mt-2 pt-2 border-t border-blue-200">
+                            <p className="text-xs text-gray-500">Academic Period:</p>
+                            <p className="text-sm font-medium text-gray-700">
+                                {[academicYear, academicTerm].filter(Boolean).join(' - ')}
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Message */}
