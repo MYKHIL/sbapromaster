@@ -545,7 +545,21 @@ const ScoreEntry: React.FC = () => {
             displayTotal = fixed.endsWith('.0') ? fixed.slice(0, -2) : fixed;
         }
 
-        const rank = studentTotals.findIndex(s => s.id === currentStudent.id) + 1;
+        // Proper tie-handling: Students with same score get same rank
+        let rank = 0;
+        if (myEntry) {
+            let currentRank = 1;
+            for (let i = 0; i < studentTotals.length; i++) {
+                if (i > 0 && studentTotals[i].total < studentTotals[i - 1].total) {
+                    currentRank = i + 1;
+                }
+                if (studentTotals[i].id === currentStudent.id) {
+                    rank = currentRank;
+                    break;
+                }
+            }
+        }
+
         const suffix = (["st", "nd", "rd"][((rank + 90) % 100 - 10) % 10 - 1] || "th");
 
         return {
