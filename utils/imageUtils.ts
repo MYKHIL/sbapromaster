@@ -7,7 +7,7 @@
  * @param quality JPEG quality (0.1 to 1.0, default 0.7 for aggressive compression)
  * @returns Promise resolving to the compressed Base64 string
  */
-export const compressImage = (base64Str: string, maxWidth = 150, maxHeight = 150, quality = 0.7): Promise<string> => {
+export const compressImage = (base64Str: string, maxWidth = 120, maxHeight = 120, quality = 0.6): Promise<string> => {
     return new Promise((resolve, reject) => {
         // If not a valid base64 image, return as-is
         if (!base64Str || !base64Str.startsWith('data:image')) {

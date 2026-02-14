@@ -20,12 +20,12 @@ export const AUTO_SANITIZE_TEACHERS = true;
 // ONE-TIME IMAGE REPAIR: Set to true to compress oversized student images on startup
 // This reduces image resolution to prevent Firestore document size errors
 // Set to false after repair is complete
-export const ENABLE_DATABASE_IMAGE_REPAIR = false;
+export const ENABLE_DATABASE_IMAGE_REPAIR = true;
 
 // BUCKET CLEANUP: Set to true to delete and recreate all student buckets
 // Use this to clean up buckets from previous implementations that created too many chunks
 // Set to false after buckets are recreated
-export const CLEAR_STUDENT_BUCKETS = false;
+export const CLEAR_STUDENT_BUCKETS = true;
 
 // DATABASE SWITCHING CONTROL
 // 1 = Primary Database (sba-pro-master-759f6)

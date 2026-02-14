@@ -1232,23 +1232,27 @@ export const repairStudentImages = async (schoolId: string): Promise<void> => {
                 // @ts-ignore
                 const originalSize = getBase64Size(student.photo);
 
-                // ULTRA-AGGRESSIVE ONE-TIME REPAIR: Force everything below 5KB
+                // ULTRA-AGGRESSIVE ONE-TIME REPAIR: Force everything below 5000 bytes
                 // This will re-compress previously compressed images to tiny thumbnails
-                if (originalSize > 5 * 1024) {
+                if (originalSize > 5000) {
                     try {
                         // @ts-ignore
-                        // ULTRA compression: 120x120px at 0.6 quality (~5-8KB target)
+                        // ULTRA compression: 120x120px at 0.6 quality (~3-5KB target)
                         const compressed = await compressImage(student.photo, 120, 120, 0.6);
                         const newSize = getBase64Size(compressed);
                         const savings = originalSize - newSize;
 
-                        // @ts-ignore
-                        studentCopy.photo = compressed;
-                        modified = true;
-                        compressedCount++;
-                        totalSavings += savings;
-
-                        console.log(`[Image Repair] ✅ Compressed photo for student ${student.id}: ${formatBytes(originalSize)} → ${formatBytes(newSize)} (saved ${formatBytes(savings)})`);
+                        // Check if we actually saved space (sometimes compression adds overhead for tiny files)
+                        if (newSize < originalSize) {
+                            // @ts-ignore
+                            studentCopy.photo = compressed;
+                            modified = true;
+                            compressedCount++;
+                            totalSavings += savings;
+                            console.log(`[Image Repair] ✅ Compressed photo for student ${student.id}: ${formatBytes(originalSize)} → ${formatBytes(newSize)} (saved ${formatBytes(savings)})`);
+                        } else {
+                            console.log(`[Image Repair] ⏭️ Compression didn't reduce size for student ${student.id} (kept original)`);
+                        }
                     } catch (err) {
                         console.warn(`[Image Repair] ⚠️ Failed to compress photo for student ${student.id}:`, err);
                     }
@@ -1261,8 +1265,8 @@ export const repairStudentImages = async (schoolId: string): Promise<void> => {
                 // @ts-ignore
                 const originalSize = getBase64Size(student.image);
 
-                // ULTRA-AGGRESSIVE ONE-TIME REPAIR: Force everything below 5KB
-                if (originalSize > 5 * 1024) {
+                // ULTRA-AGGRESSIVE ONE-TIME REPAIR: Force everything below 5000 bytes
+                if (originalSize > 5000) {
                     try {
                         // @ts-ignore
                         // ULTRA compression: 120x120px at 0.6 quality
@@ -1270,13 +1274,15 @@ export const repairStudentImages = async (schoolId: string): Promise<void> => {
                         const newSize = getBase64Size(compressed);
                         const savings = originalSize - newSize;
 
-                        // @ts-ignore
-                        studentCopy.image = compressed;
-                        modified = true;
-                        compressedCount++;
-                        totalSavings += savings;
+                        if (newSize < originalSize) {
+                            // @ts-ignore
+                            studentCopy.image = compressed;
+                            modified = true;
+                            compressedCount++;
+                            totalSavings += savings;
 
-                        console.log(`[Image Repair] ✅ Compressed image for student ${student.id}: ${formatBytes(originalSize)} → ${formatBytes(newSize)} (saved ${formatBytes(savings)})`);
+                            console.log(`[Image Repair] ✅ Compressed image for student ${student.id}: ${formatBytes(originalSize)} → ${formatBytes(newSize)} (saved ${formatBytes(savings)})`);
+                        }
                     } catch (err) {
                         console.warn(`[Image Repair] ⚠️ Failed to compress image for student ${student.id}:`, err);
                     }
@@ -1298,21 +1304,22 @@ export const repairStudentImages = async (schoolId: string): Promise<void> => {
             console.log(`[Image Repair] ✅ Image repair complete! Compressed ${compressedCount} images, saved ${formatBytes(totalSavings)} total.`);
 
             // Rebuild student buckets with compressed data
-            console.log(`[Image Repair] 🔄 Rebuilding student buckets with compressed data...`);
-            await updateStudentBucket(schoolId, students.map(s => {
-                const foundCompressed = compressedCount > 0 ? students.find(x => x.id === s.id) : null;
-                return foundCompressed || s;
-            }));
-            console.log(`[Image Repair] ✅ Student buckets rebuilt successfully.`);
-        } else {
-            console.log(`[Image Repair] ℹ️ No oversized images found. No changes needed.`);
-        }
+            // Force chunk size 50 as requested
+            await updateStudentBucket(schoolId, students, 50);
 
+        } else {
+            console.log('[Image Repair] ✅ No oversized images found. All good!');
+            // Even if no images compressed, we might want to force a bucket rebuild if users requested
+            // But usually this function is called specifically for repair. 
+            // Let's ensure bucket integration is consistent.
+            // If we are here, likely the calling function will handle bucket creation (ensureStudentBucketExists)
+        }
     } catch (error) {
-        console.error('[Image Repair] ❌ Failed to repair student images:', error);
-        throw error;
+        console.error('[Image Repair] ❌ Error during image repair:', error);
+        // Don't throw, allow app to continue
     }
 };
+
 
 // -----------------------------------------------------------------------------
 // WRITING (BATCHING & OPTIMIZATION)
