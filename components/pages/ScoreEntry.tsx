@@ -257,16 +257,44 @@ const ScoreEntry: React.FC = () => {
         if (student) {
             // Get computed score (draft > saved)
             const score = getComputedScore(student.id, selectedAssessmentId, selectedSubjectId);
-            setLocalScore(score);
 
-            // Check if modified from SAVED
-            const saved = getStudentScores(student.id, selectedSubjectId, selectedAssessmentId)[0] || '';
-            const isDraftDifferent = score !== saved;
-            setScoreModified(isDraftDifferent);
+            // Fix Input Fighting: Only update localScore if:
+            // 1. It's different from current localScore
+            // 2. AND we haven't just modified it (scoreModified check is tricky because draft update cycles back)
+            // Better strategy: The checking if `localScore` matches `score` covers most cases.
+            // But if `score` is "45" and user types "45.", getComputedScore might return "45" and wipe the dot.
+
+            // If the incoming score is "empty" and local is empty, sync is fine.
+            // If incoming is same as local, ignore.
+
+            if (score !== localScore) {
+                // Danger zone: If user types "5" -> draft updates -> "5" comes back. All good.
+                // User types "5." -> draft updates "5." -> "5." comes back. All good.
+                // The issue is if draft update is async and "old" value comes back temporarily?
+                // Or if `getComputedScore` returns saved value before draft prevails?
+
+                // If `scoreModified` is true, it means WE just typed something. 
+                // We should arguably TRUST local state until we save or switch students.
+                // BUT if a real background sync happens, we might want to know.
+                // Let's assume for Mobile Entry, local state is king while typing.
+
+                if (!scoreModified) {
+                    setLocalScore(score);
+                } else {
+                    // If modified, strictly checks if the draft has caught up?
+                    // If `score` (from context) effectively matches our `localScore`, we can reset modified?
+                    if (score === localScore) {
+                        setScoreModified(false);
+                    }
+                }
+            }
         } else {
             setLocalScore('');
             setScoreModified(false);
         }
+        // Removing `scores` from dependency array might help prevent jitter from background validation
+        // But we need it if cloud sync updates data.
+        // Let's rely on `scoreModified` protection.
     }, [selectedStudentIndex, selectedSubjectId, selectedAssessmentId, filteredStudents, draftVersion, scores]); // Listen to scores and draftVersion for sync
 
     const commitScore = () => {
@@ -428,6 +456,108 @@ const ScoreEntry: React.FC = () => {
 
 
 
+    // --- Real-time Stats Calculation (Mobile) ---
+    const projectedStats = useMemo(() => {
+        if (!selectedClass || !selectedSubjectId || !selectedAssessmentId || !filteredStudents || filteredStudents.length === 0) return null;
+
+        const currentStudent = filteredStudents[selectedStudentIndex];
+        if (!currentStudent) return null;
+
+        // Helper to match desktop logic (InlineScoreInput.tsx)
+        const calculateDisplayScore = (scores: string[], assessment: Assessment): number => {
+            if (!scores || scores.length === 0) return 0;
+            const isExam = assessment.name.toLowerCase().includes('exam');
+
+            const sumOfNumerators = scores.reduce((sum, scoreStr) => {
+                const [score] = scoreStr.split('/').map(Number);
+                return sum + (score || 0);
+            }, 0);
+
+            if (isExam) {
+                // For exams, average the scores
+                return sumOfNumerators / scores.length;
+            } else {
+                // For classwork, weighted score based on max totals
+                const totalMaxPossibleScore = scores.reduce((sum, scoreStr) => {
+                    const [, max] = scoreStr.split('/').map(Number);
+                    return sum + (max || assessment.weight);
+                }, 0);
+
+                if (totalMaxPossibleScore === 0) return 0;
+                return (sumOfNumerators / totalMaxPossibleScore) * assessment.weight;
+            }
+        };
+
+        // 1. Calculate stats for ALL students
+        const studentTotals = filteredStudents.map(student => {
+            let total = 0;
+            assessments.forEach(ass => {
+                // Get existing scores
+                let scores = [...(getStudentScores(student.id, selectedSubjectId, ass.id) || [])];
+
+                // If this is the active student & assessment, OVERRIDE the score with local input
+                // Assumption: Mobile view edits the FIRST score (index 0)
+                if (student.id === currentStudent.id && ass.id === selectedAssessmentId) {
+                    const isExam = ass.name.toLowerCase().includes('exam');
+                    const basis = isExam ? 100 : ass.weight;
+
+                    let rawVal = 0;
+                    const rawInput = localScore.trim();
+                    if (rawInput) {
+                        if (rawInput.includes('/')) {
+                            const p = rawInput.split('/');
+                            if (p.length === 2) rawVal = (Number(p[0]) / Number(p[1])) * basis;
+                        } else {
+                            rawVal = Number(rawInput);
+                        }
+                    }
+                    if (isNaN(rawVal)) rawVal = 0;
+
+                    // Construct the score string to mimic storage
+                    // Note: We blindly replace index 0. If empty, we start a new one.
+                    if (scores.length === 0) scores.push('');
+                    scores[0] = `${rawVal}/${basis}`;
+                }
+
+                const displayScore = calculateDisplayScore(scores, ass);
+                const isExam = ass.name.toLowerCase().includes('exam');
+
+                if (isExam) {
+                    // Match InlineScoreInput logic: Convert average (out of 100) to weighted value
+                    total += (displayScore / 100 * ass.weight);
+                } else {
+                    total += displayScore;
+                }
+            });
+            return { id: student.id, total };
+        });
+
+        // 2. Sort to find rank
+        studentTotals.sort((a, b) => b.total - a.total);
+
+        const myEntry = studentTotals.find(s => s.id === currentStudent.id);
+
+        // Fix Rounding: Match desktop "Total (100%)" column
+        // Use toFixed(1) then strip .0 if present
+        let displayTotal = "0";
+        if (myEntry) {
+            const fixed = myEntry.total.toFixed(1);
+            displayTotal = fixed.endsWith('.0') ? fixed.slice(0, -2) : fixed;
+        }
+
+        const rank = studentTotals.findIndex(s => s.id === currentStudent.id) + 1;
+        const suffix = (["st", "nd", "rd"][((rank + 90) % 100 - 10) % 10 - 1] || "th");
+
+        return {
+            total: displayTotal,
+            rank: rank > 0 ? `${rank}${suffix}` : '-',
+            rawRank: rank,
+            totalStudents: studentTotals.length
+        };
+
+    }, [selectedClass, selectedSubjectId, selectedAssessmentId, filteredStudents, assessments, selectedStudentIndex, localScore, getStudentScores]);
+
+
     return (
         <div className="space-y-6 pt-14">
             <div className="flex items-center justify-between">
@@ -555,78 +685,93 @@ const ScoreEntry: React.FC = () => {
                                             <label className="block text-sm font-medium text-gray-700">Score</label>
                                             <MobileControls />
                                         </div>
-                                        <div className="flex flex-col">
-                                            <ReadOnlyWrapper allowedRoles={['Admin', 'Teacher']}>
-                                                <div className="relative">
-                                                    <input
-                                                        ref={scoreInputRef}
-                                                        type="text"
-                                                        inputMode="decimal"
-                                                        value={localScore}
-                                                        onChange={(e) => {
-                                                            // Only allow numbers, forward slash (/), and dot (.)
-                                                            const filtered = e.target.value.replace(/[^0-9/.]/g, '');
-                                                            console.log('[ScoreEntry - Mobile] User input:', {
-                                                                studentId: filteredStudents[selectedStudentIndex]?.id,
-                                                                studentName: filteredStudents[selectedStudentIndex]?.name,
-                                                                subjectId: selectedSubjectId,
-                                                                assessmentId: selectedAssessmentId,
-                                                                rawInput: e.target.value,
-                                                                filteredInput: filtered,
-                                                                previousValue: localScore
-                                                            });
-                                                            setLocalScore(filtered);
-                                                            setScoreModified(true);
-
-                                                            // Update global draft
-                                                            const student = filteredStudents[selectedStudentIndex];
-                                                            if (student) {
-                                                                updateDraftScore(student.id, selectedAssessmentId, selectedSubjectId, filtered);
-                                                            }
-                                                        }}
-                                                        onBlur={commitScore}
-                                                        onKeyDown={(e) => {
-                                                            if (e.key === 'Enter') {
-                                                                commitScore();
-                                                                e.currentTarget.blur();
-                                                            }
-                                                        }}
-                                                        placeholder={getPlaceholder()}
-                                                        className={`w-full p-3 text-center text-2xl font-mono bg-gray-50 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isReadOnly ? 'cursor-not-allowed text-gray-500' : ''}`}
-                                                        readOnly={isReadOnly}
-                                                    />
-                                                    {localScore && !isReadOnly && (
-                                                        <button
-                                                            onClick={() => {
-                                                                // 1. Update UI immediately
-                                                                setLocalScore('');
+                                        <div className="flex items-stretch gap-2">
+                                            <div className="flex-1">
+                                                <ReadOnlyWrapper allowedRoles={['Admin', 'Teacher']}>
+                                                    <div className="relative">
+                                                        <input
+                                                            ref={scoreInputRef}
+                                                            type="text"
+                                                            inputMode="decimal"
+                                                            value={localScore}
+                                                            onChange={(e) => {
+                                                                // Only allow numbers, forward slash (/), and dot (.)
+                                                                const filtered = e.target.value.replace(/[^0-9/.]/g, '');
+                                                                // Logging removed for cleaner production code
+                                                                setLocalScore(filtered);
                                                                 setScoreModified(true);
 
-                                                                // 2. FORCE COMMIT the empty value to global state
-                                                                // commitScore() skips empty strings, so we must manually trigger the update here.
+                                                                // Update global draft
                                                                 const student = filteredStudents[selectedStudentIndex];
                                                                 if (student) {
-                                                                    console.log('[ScoreEntry] 🧹 Clearing score for:', student.name);
-                                                                    // Send [''] to signify cleared/empty. DataContext treats this as a change against []
-                                                                    updateStudentScores(student.id, selectedSubjectId, selectedAssessmentId, ['']);
-
-                                                                    // 3. Clean up draft state (since we just committed)
-                                                                    removeDraftScore(student.id, selectedAssessmentId, selectedSubjectId);
+                                                                    updateDraftScore(student.id, selectedAssessmentId, filtered);
                                                                 }
-
-                                                                scoreInputRef.current?.focus();
                                                             }}
-                                                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-red-500 transition-colors"
-                                                            title="Clear score"
-                                                        >
-                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                            </svg>
-                                                        </button>
-                                                    )}
+                                                            onBlur={commitScore}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter') {
+                                                                    commitScore();
+                                                                    e.currentTarget.blur();
+                                                                }
+                                                            }}
+                                                            placeholder={getPlaceholder()}
+                                                            className={`w-full p-3 pl-20 text-center text-2xl font-mono bg-gray-50 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isReadOnly ? 'cursor-not-allowed text-gray-500' : ''}`}
+                                                            readOnly={isReadOnly}
+                                                        />
+
+                                                        {/* Rank Badge inside Input (Moved after input for stacking) */}
+                                                        {!isReadOnly && projectedStats && projectedStats.rawRank > 0 && (
+                                                            <div className={`absolute left-2 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded-md border text-xs font-bold leading-none shadow-sm z-20 pointer-events-none
+                                                                ${projectedStats.rawRank === 1 ? 'bg-yellow-100 text-yellow-800 border-yellow-300 ring-1 ring-yellow-300' :
+                                                                    projectedStats.rawRank === 2 ? 'bg-slate-100 text-slate-700 border-slate-300 ring-1 ring-slate-300' :
+                                                                        projectedStats.rawRank === 3 ? 'bg-orange-100 text-orange-800 border-orange-300 ring-1 ring-orange-300' :
+                                                                            'bg-blue-50 text-blue-700 border-blue-200'}`}
+                                                            >
+                                                                {projectedStats.rank}
+                                                            </div>
+                                                        )}
+
+                                                        {localScore && !isReadOnly && (
+                                                            <button
+                                                                onClick={() => {
+                                                                    // 1. Update UI immediately
+                                                                    setLocalScore('');
+                                                                    setScoreModified(true);
+
+                                                                    // 2. FORCE COMMIT the empty value to global state
+                                                                    // commitScore() skips empty strings, so we must manually trigger the update here.
+                                                                    const student = filteredStudents[selectedStudentIndex];
+                                                                    if (student) {
+                                                                        console.log('[ScoreEntry] 🧹 Clearing score for:', student.name);
+                                                                        // Send [''] to signify cleared/empty. DataContext treats this as a change against []
+                                                                        updateStudentScores(student.id, selectedSubjectId, selectedAssessmentId, ['']);
+
+                                                                        // 3. Clean up draft state (since we just committed)
+                                                                        removeDraftScore(student.id, selectedAssessmentId, selectedSubjectId);
+                                                                    }
+
+                                                                    scoreInputRef.current?.focus();
+                                                                }}
+                                                                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-red-500 transition-colors"
+                                                                title="Clear score"
+                                                            >
+                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                                </svg>
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                    {mobileScoreError && <p className="text-red-500 text-sm mt-1">{mobileScoreError}</p>}
+                                                </ReadOnlyWrapper>
+                                            </div>
+
+                                            {/* External Stats Box - Total Only */}
+                                            {!isReadOnly && projectedStats && (
+                                                <div className="w-20 bg-blue-50 rounded-md border border-blue-100 flex flex-col items-center justify-center shrink-0">
+                                                    <span className="text-[10px] uppercase text-blue-400 font-bold tracking-wider">Total</span>
+                                                    <span className="text-xl font-bold text-blue-700">{projectedStats.total}%</span>
                                                 </div>
-                                                {mobileScoreError && <p className="text-red-500 text-sm mt-1">{mobileScoreError}</p>}
-                                            </ReadOnlyWrapper>
+                                            )}
                                         </div>
                                     </div>
 
@@ -661,7 +806,7 @@ const ScoreEntry: React.FC = () => {
                         </div>
                     )}
                 </div>
-            </div >
+            </div>
 
             {
                 totalWeight !== 100 && (
@@ -743,7 +888,7 @@ const ScoreEntry: React.FC = () => {
                 isOnline={isOnline}
                 hasLocalChanges={hasLocalChanges}
             />
-        </div>
+        </div >
 
     );
 };
