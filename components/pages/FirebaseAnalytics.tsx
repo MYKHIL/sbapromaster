@@ -280,7 +280,29 @@ const DatabaseMaintenancePanel: React.FC = () => {
             const { db } = await import('../../services/firebaseService');
             const { doc, writeBatch } = await import('firebase/firestore');
 
-            // 1. Clear Buckets
+            // 1. Repair Images (MUST run first to ensure images are migrated before bucket rebuild)
+            if (repairImages) {
+                setLogs(prev => [...prev, '[Image Repair] 🔧 Starting comprehensive image repair...']);
+
+                // Hijack console.log temporarily to capture logs
+                const originalLog = console.log;
+                console.log = (...args: any[]) => {
+                    const message = args.join(' ');
+                    if (message.includes('[Image Repair]')) {
+                        setLogs(prev => [...prev, message]);
+                    }
+                    originalLog(...args);
+                };
+
+                await repairDatabaseImages(schoolId);
+
+                // Restore console.log
+                console.log = originalLog;
+
+                setLogs(prev => [...prev, '[Image Repair] ✅ Image repair complete!']);
+            }
+
+            // 2. Clear Buckets (Runs AFTER image repair if both are selected)
             if (clearBuckets) {
                 setLogs(prev => [...prev, '[Bucket Cleanup] 🧹 Starting bucket cleanup...']);
 
@@ -319,26 +341,69 @@ const DatabaseMaintenancePanel: React.FC = () => {
                 }
             }
 
-            // 2. Repair Images
-            if (repairImages) {
-                setLogs(prev => [...prev, '[Image Repair] 🔧 Starting comprehensive image repair...']);
+            // 3. Final Image Verification (Check for any missed base64 images and upload to ImgBB)
+            setLogs(prev => [...prev, '[Final Verification] 🔍 Scanning for any remaining base64 images...']);
 
-                // Hijack console.log temporarily to capture logs
-                const originalLog = console.log;
-                console.log = (...args: any[]) => {
-                    const message = args.join(' ');
-                    if (message.includes('[Image Repair]')) {
-                        setLogs(prev => [...prev, message]);
+            try {
+                const { fetchSubcollection, updateStudent } = await import('../../services/firebaseService');
+                const { uploadToImgBB } = await import('../../utils/imageUtils');
+
+                // Fetch all students from subcollection
+                const students = await fetchSubcollection<any>(schoolId, 'students');
+
+                if (!students || students.length === 0) {
+                    setLogs(prev => [...prev, '[Final Verification] ℹ️ No students found.']);
+                } else {
+                    let scannedCount = 0;
+                    let uploadedCount = 0;
+                    let failedCount = 0;
+
+                    for (const student of students) {
+                        scannedCount++;
+
+                        // Check if picture exists and is base64 (not ImgBB URL)
+                        if (student.picture &&
+                            student.picture.startsWith('data:image') &&
+                            !student.picture.includes('imgbb.com')) {
+
+                            setLogs(prev => [...prev, `[Final Verification] 📤 Uploading image for: ${student.name || student.indexNumber}`]);
+
+                            try {
+                                const imgbbUrl = await uploadToImgBB(student.picture);
+
+                                if (imgbbUrl) {
+                                    // Update student with new URL
+                                    const updatedStudent = { ...student, picture: imgbbUrl };
+                                    await updateStudent(schoolId, updatedStudent);
+                                    uploadedCount++;
+                                    setLogs(prev => [...prev, `[Final Verification] ✅ Uploaded: ${student.name || student.indexNumber}`]);
+                                } else {
+                                    failedCount++;
+                                    setLogs(prev => [...prev, `[Final Verification] ⚠️ Failed to upload: ${student.name || student.indexNumber}`]);
+                                }
+                            } catch (uploadError) {
+                                failedCount++;
+                                setLogs(prev => [...prev, `[Final Verification] ❌ Error uploading ${student.name || student.indexNumber}: ${uploadError}`]);
+                            }
+                        }
                     }
-                    originalLog(...args);
-                };
 
-                await repairDatabaseImages(schoolId);
+                    setLogs(prev => [...prev, `[Final Verification] 📊 Scanned: ${scannedCount} | Uploaded: ${uploadedCount} | Failed: ${failedCount}`]);
 
-                // Restore console.log
-                console.log = originalLog;
-
-                setLogs(prev => [...prev, '[Image Repair] ✅ Image repair complete!']);
+                    if (uploadedCount > 0) {
+                        setLogs(prev => [...prev, '[Final Verification] 🔄 Rebuilding buckets with updated images...']);
+                        const { updateStudentBucket } = await import('../../services/firebaseService');
+                        const refreshedStudents = await fetchSubcollection<any>(schoolId, 'students');
+                        if (refreshedStudents && refreshedStudents.length > 0) {
+                            await updateStudentBucket(schoolId, refreshedStudents, 300);
+                            setLogs(prev => [...prev, '[Final Verification] ✅ Buckets updated with new ImgBB URLs.']);
+                        }
+                    } else {
+                        setLogs(prev => [...prev, '[Final Verification] ✅ All images are already on ImgBB.']);
+                    }
+                }
+            } catch (verifyError) {
+                setLogs(prev => [...prev, `[Final Verification] ⚠️ Verification error: ${verifyError}`]);
             }
 
             setLogs(prev => [...prev, '✅ All operations completed successfully!']);
