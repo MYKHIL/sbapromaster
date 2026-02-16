@@ -1,14 +1,23 @@
-main-CNOmbkM4.js:54 [Bootstrap] Environment: Object
+Navigated to https://mykhil.github.io/sbapromaster/
+main-CNOmbkM4.js:54 [Bootstrap] Environment: {isGitHubPages: true, hostname: 'mykhil.github.io', API_BASE_URL: 'https://sbapromaster.vercel.app/api'}
 main-CNOmbkM4.js:54 [Bootstrap] Fetching configuration...
 sbapromaster/:1  Access to fetch at 'https://sbapromaster.vercel.app/api/firebase-config' from origin 'https://mykhil.github.io' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
-sbapromaster.vercel.app/api/firebase-config:1   Failed to load resource: net::ERR_FAILED
+main-CNOmbkM4.js:54   GET https://sbapromaster.vercel.app/api/firebase-config net::ERR_FAILED 404 (Not Found)
+Gv @ main-CNOmbkM4.js:54
+jv @ main-CNOmbkM4.js:54
+(anonymous) @ main-CNOmbkM4.js:60
 main-CNOmbkM4.js:54  [App] Failed to load Firebase config: TypeError: Failed to fetch
     at Gv (main-CNOmbkM4.js:54:138)
     at jv (main-CNOmbkM4.js:54:628)
     at main-CNOmbkM4.js:60:14
 Gv @ main-CNOmbkM4.js:54
+await in Gv
+jv @ main-CNOmbkM4.js:54
+(anonymous) @ main-CNOmbkM4.js:60
 main-CNOmbkM4.js:54  Failed to mount application: TypeError: Failed to fetch
     at Gv (main-CNOmbkM4.js:54:138)
     at jv (main-CNOmbkM4.js:54:628)
     at main-CNOmbkM4.js:60:14
 jv @ main-CNOmbkM4.js:54
+await in jv
+(anonymous) @ main-CNOmbkM4.js:60
