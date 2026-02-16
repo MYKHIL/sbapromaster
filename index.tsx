@@ -33,7 +33,7 @@ if (!rootElement) {
   throw new Error("Could not find root element to mount to");
 }
 
-import { setFirebaseConfigs, API_BASE_URL, FIREBASE_CONFIGS } from './constants';
+import { setFirebaseConfigs, setSchoolDatabaseMapping, API_BASE_URL, FIREBASE_CONFIGS } from './constants';
 
 const loadFirebaseConfig = async () => {
   try {
@@ -43,6 +43,13 @@ const loadFirebaseConfig = async () => {
     // Handle different response structures (e.g. { configs: ... } or just configs)
     const configs = data.configs || data;
     setFirebaseConfigs(configs);
+
+    // Load school-to-database mapping from API
+    if (data.schoolDatabaseMapping) {
+      setSchoolDatabaseMapping(data.schoolDatabaseMapping);
+      console.log('[App] School database mapping loaded from API');
+    }
+
     console.log('[App] Firebase configuration loaded from API');
   } catch (error) {
     console.error('[App] Failed to load Firebase config:', error);

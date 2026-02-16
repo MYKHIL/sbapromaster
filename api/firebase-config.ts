@@ -27,48 +27,40 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-        const configs = {
-            1: {
-                apiKey: process.env.FIREBASE_1_API_KEY,
-                authDomain: process.env.FIREBASE_1_AUTH_DOMAIN,
-                projectId: process.env.FIREBASE_1_PROJECT_ID,
-                storageBucket: process.env.FIREBASE_1_STORAGE_BUCKET,
-                messagingSenderId: process.env.FIREBASE_1_MESSAGING_SENDER_ID,
-                appId: process.env.FIREBASE_1_APP_ID,
-                measurementId: process.env.FIREBASE_1_MEASUREMENT_ID,
-                isReserved: false,
-                label: 'Primary'
-            },
-            2: {
-                apiKey: process.env.FIREBASE_2_API_KEY,
-                authDomain: process.env.FIREBASE_2_AUTH_DOMAIN,
-                projectId: process.env.FIREBASE_2_PROJECT_ID,
-                storageBucket: process.env.FIREBASE_2_STORAGE_BUCKET,
-                messagingSenderId: process.env.FIREBASE_2_MESSAGING_SENDER_ID,
-                appId: process.env.FIREBASE_2_APP_ID,
-                measurementId: process.env.FIREBASE_2_MEASUREMENT_ID,
-                isReserved: true,
-                label: 'Reserved/Darko'
-            },
-            3: {
-                apiKey: process.env.FIREBASE_3_API_KEY,
-                authDomain: process.env.FIREBASE_3_AUTH_DOMAIN,
-                projectId: process.env.FIREBASE_3_PROJECT_ID,
-                storageBucket: process.env.FIREBASE_3_STORAGE_BUCKET,
-                messagingSenderId: process.env.FIREBASE_3_MESSAGING_SENDER_ID,
-                appId: process.env.FIREBASE_3_APP_ID,
-                measurementId: process.env.FIREBASE_3_MEASUREMENT_ID,
-                isReserved: false,
-                label: 'Public 2'
-            }
-        };
+        // Dynamically detect all Firebase configurations from environment variables
+        const configs: { [key: number]: any } = {};
+        let index = 1;
+
+        // Loop through environment variables to find all FIREBASE_N_* configs
+        while (process.env[`FIREBASE_${index}_API_KEY`]) {
+            configs[index] = {
+                apiKey: process.env[`FIREBASE_${index}_API_KEY`],
+                authDomain: process.env[`FIREBASE_${index}_AUTH_DOMAIN`],
+                projectId: process.env[`FIREBASE_${index}_PROJECT_ID`],
+                storageBucket: process.env[`FIREBASE_${index}_STORAGE_BUCKET`],
+                messagingSenderId: process.env[`FIREBASE_${index}_MESSAGING_SENDER_ID`],
+                appId: process.env[`FIREBASE_${index}_APP_ID`],
+                measurementId: process.env[`FIREBASE_${index}_MEASUREMENT_ID`],
+                isReserved: process.env[`FIREBASE_${index}_IS_RESERVED`] === 'true',
+                label: process.env[`FIREBASE_${index}_LABEL`] || `Database ${index}`
+            };
+            index++;
+        }
+
+        // Dynamically load school-to-database mapping from environment variable
+        let schoolDatabaseMapping: { [key: string]: number } = {};
+        try {
+            schoolDatabaseMapping = JSON.parse(
+                process.env.SCHOOL_DATABASE_MAPPING || '{}'
+            );
+        } catch (error) {
+            console.warn('Failed to parse SCHOOL_DATABASE_MAPPING, using empty mapping:', error);
+        }
 
         return res.status(200).json({
             success: true,
             configs,
-            schoolDatabaseMapping: {
-                'ayirebida': 2
-            }
+            schoolDatabaseMapping
         });
 
     } catch (error: any) {

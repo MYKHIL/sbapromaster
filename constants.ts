@@ -67,8 +67,11 @@ export const setFirebaseConfigs = (configs: { [key: number]: FirebaseConfig }) =
 
 // Mapping of partial school names to specific database indices
 // Keys should be lowercase and sanitized (no spaces, no special chars)
-export const SCHOOL_DATABASE_MAPPING: { [key: string]: number } = {
-  'ayirebida': 2
+// This will be loaded from the API at runtime
+export let SCHOOL_DATABASE_MAPPING: { [key: string]: number } = {};
+
+export const setSchoolDatabaseMapping = (mapping: { [key: string]: number }) => {
+  SCHOOL_DATABASE_MAPPING = mapping;
 };
 
 export const INITIAL_SETTINGS: SchoolSettings = {
