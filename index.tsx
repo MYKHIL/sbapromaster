@@ -4,6 +4,9 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
 
+import { setFirebaseConfigs } from './constants';
+import axios from 'axios';
+
 const rootElement = document.getElementById('root');
 
 // Global error handler to catch and display errors on the page
@@ -30,13 +33,51 @@ if (!rootElement) {
   throw new Error("Could not find root element to mount to");
 }
 
-try {
-  const root = ReactDOM.createRoot(rootElement);
-  root.render(
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>
-  );
-} catch (error) {
-  console.error("Failed to mount application:", error);
-}
+const bootstrap = async () => {
+  try {
+    // 1. Fetch Configuration
+    console.log('[Bootstrap] Fetching configuration...');
+    // In development (vite), we might not have the API running on localhost:5173 
+    // depending on how it's proxying. Vercel dev typically runs on 3000.
+    // If running with `python run_server.py`, the API endpoints might fail unless we mock them or proxy.
+    // However, for Vercel deployment, this relative path is correct.
+    // Fallback? If fetch fails (dev mode without API), we might break.
+    // For now, assuming Vercel environment or correctly proxied dev.
+
+    // In local dev without `vercel dev`, this will 404. 
+    // We should handle that gracefully if possible, but the user asked for this architecture.
+    // We will attempt fetch.
+
+    const response = await axios.get('/api/firebase-config');
+    if (response.data && response.data.configs) {
+      setFirebaseConfigs(response.data.configs);
+      console.log('[Bootstrap] Configuration loaded.');
+    } else {
+      throw new Error('Invalid configuration received');
+    }
+
+    // 2. Dynamic Import App
+    // This ensures imports within App (like firebaseService) run AFTER config is set.
+    const { default: App } = await import('./App');
+
+    const root = ReactDOM.createRoot(rootElement);
+    root.render(
+      <React.StrictMode>
+        <App />
+      </React.StrictMode>
+    );
+  } catch (error) {
+    console.error("Failed to mount application:", error);
+    if (rootElement) {
+      rootElement.innerHTML = `
+            <div style="padding: 20px; font-family: sans-serif; text-align: center;">
+                <h1>Failed to load application</h1>
+                <p>Could not initialize configuration. Please check your connection.</p>
+                <div style="color: #666; font-size: 12px; margin-top: 20px;">${error}</div>
+            </div>
+        `;
+    }
+  }
+};
+
+bootstrap();

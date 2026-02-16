@@ -46,43 +46,12 @@ export interface FirebaseConfig {
   label?: string;
 }
 
-export const FIREBASE_CONFIGS: { [key: number]: FirebaseConfig } = {
-  // INDEX 1: Primary Database (Public Pool)
-  1: {
-    apiKey: "AIzaSyCe0O-mBCODiEA-KNVLXLMp00lJ6_Jt5SU",
-    authDomain: "sba-pro-master-759f6.firebaseapp.com",
-    projectId: "sba-pro-master-759f6",
-    storageBucket: "sba-pro-master-759f6.firebasestorage.app",
-    messagingSenderId: "239073604626",
-    appId: "1:239073604626:web:452bc2719fc980704d14cb",
-    measurementId: "G-47MMKKX888",
-    isReserved: false,
-    label: 'Primary'
-  },
-  // INDEX 2: Backup/Darko Database (Reserved)
-  2: {
-    apiKey: "AIzaSyBP6gLbFLhfbAvjB2ddXSq6zqE_gWK2MEI",
-    authDomain: "sba-pro-master-40f08.firebaseapp.com",
-    projectId: "sba-pro-master-40f08",
-    storageBucket: "sba-pro-master-40f08.firebasestorage.app",
-    messagingSenderId: "91692962474",
-    appId: "1:91692962474:web:eefa6a3a04ba557c38b6d3",
-    measurementId: "G-EHHNKZ5FBG",
-    isReserved: true,
-    label: 'Reserved/Darko'
-  },
-  // INDEX 3: Secondary Public Database (Public Pool)
-  3: {
-    apiKey: "AIzaSyBnbpBSwA-AtorGzVefj5h3fWkAVfyDWuU",
-    authDomain: "sba-pro-master-e43d0.firebaseapp.com",
-    projectId: "sba-pro-master-e43d0",
-    storageBucket: "sba-pro-master-e43d0.firebasestorage.app",
-    messagingSenderId: "126627036834",
-    appId: "1:126627036834:web:4e32313e40e5c3f752a1fb",
-    measurementId: "G-N09YP3PZ9J",
-    isReserved: false,
-    label: 'Public 2'
-  }
+export let FIREBASE_CONFIGS: { [key: number]: FirebaseConfig } = {
+  // Configs will be loaded from Vercel API at runtime
+};
+
+export const setFirebaseConfigs = (configs: { [key: number]: FirebaseConfig }) => {
+  FIREBASE_CONFIGS = configs;
 };
 
 // Mapping of partial school names to specific database indices

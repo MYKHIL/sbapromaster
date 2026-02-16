@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SUBSCRIPTION_TIERS, ADMIN_EMAIL } from '../constants';
 import { getSchoolList, SchoolListItem } from '../services/firebaseService';
+import { initializePayment, loadPaystackScript, activateSubscription } from '../services/paystackService';
 
 interface SubscriptionRequestModalProps {
     isOpen: boolean;
@@ -14,10 +15,15 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
     const [searchTerm, setSearchTerm] = useState(initialSchoolName || '');
     const [allSchools, setAllSchools] = useState<SchoolListItem[]>([]);
     const [filteredSchools, setFilteredSchools] = useState<SchoolListItem[]>([]);
-    const [transactionId, setTransactionId] = useState('');
+    // Transaction ID removed as it's handled automatically
     const [isLoadingSchools, setIsLoadingSchools] = useState(false);
     const [showSchoolDropdown, setShowSchoolDropdown] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Payment State
+    const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+    const [paymentError, setPaymentError] = useState<string | null>(null);
+    const [paymentEmail, setPaymentEmail] = useState('');
 
     // 1. Fetch All Schools for Combobox
     useEffect(() => {
@@ -52,6 +58,7 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
             }
         };
         loadSchools();
+        loadPaystackScript(); // Preload script
     }, [isOpen, initialSchoolName]);
 
     // 2. Filter Schools for Combobox
@@ -81,29 +88,108 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
 
     if (!isOpen) return null;
 
-    const handleSend = () => {
+    const handlePayment = async () => {
+        setPaymentError(null);
+        if (!selectedSchool) {
+            setPaymentError("Please select a valid school first.");
+            return;
+        }
+
+        if (!paymentEmail) {
+            setPaymentError("Please provide an email address for the receipt.");
+            return;
+        }
+
         const tier = SUBSCRIPTION_TIERS.find(t => t.name === selectedTier) || SUBSCRIPTION_TIERS[1];
-        const schoolName = selectedSchool ? selectedSchool.displayName : searchTerm;
-        const schoolId = selectedSchool ? selectedSchool.docId : 'Not Selected';
 
-        const subject = encodeURIComponent(`Subscription Request: ${schoolName}`);
-        const body = encodeURIComponent(
-            `Hello Admin,\n\n` +
-            `I would like to request a subscription activation for my school.\n\n` +
-            `--- Details ---\n` +
-            `School Name: ${schoolName}\n` +
-            `School ID: ${schoolId}\n` +
-            `Requested Tier: ${selectedTier}\n` +
-            `Benefits: ${tier.maxStudents} Students, ${tier.maxClass} Classes\n` +
-            `Duration: ${tier.duration}\n` +
-            `Price: ${tier.price}\n` +
-            `Transaction ID: ${transactionId}\n\n` +
-            `Please activate my account as soon as possible.\n\n` +
-            `Thank you.`
-        );
+        // Parse amount from price string (e.g., "GHS 100")
+        const priceString = tier.price.replace(/[^0-9.]/g, '');
+        const amount = parseFloat(priceString);
 
-        window.location.href = `mailto:${ADMIN_EMAIL}?subject=${subject}&body=${body}`;
-        onClose();
+        if (isNaN(amount) || amount <= 0) {
+            // Free tier or Request Quote
+            if (tier.price.toLowerCase().includes('free')) {
+                // Handle free tier activation directly
+                activateFreeTier(tier);
+                return;
+            }
+            if (tier.price.toLowerCase().includes('quote')) {
+                window.location.href = `mailto:${ADMIN_EMAIL}?subject=Enterprise Quote Request&body=Requesting quote for ${selectedSchool.displayName}`;
+                return;
+            }
+        }
+
+        setIsProcessingPayment(true);
+
+        try {
+            // 1. Initialize Transaction
+            const initResponse = await initializePayment(paymentEmail, amount, {
+                schoolId: selectedSchool.docId,
+                schoolName: selectedSchool.displayName,
+                tierName: tier.name
+            });
+
+            // 2. Open Paystack Popup
+            const paystack = new (window as any).PaystackPop();
+            paystack.newTransaction({
+                key: 'pk_live_1018c988f6aa654f737092f2a09ec6cc6ca1065f', // Paystack Public Key
+
+                email: paymentEmail,
+                amount: amount * 100, // in kobo/pesewas
+                ref: initResponse.reference,
+                onSuccess: async (transaction: any) => {
+                    // 3. Verify & Activate
+                    try {
+                        await activateSubscription(
+                            transaction.reference,
+                            {
+                                id: selectedSchool.docId,
+                                name: selectedSchool.displayName,
+                                dbIndex: selectedSchool._databaseIndex || 1
+                            },
+                            tier
+                        );
+                        alert(`Success! Activation complete for ${selectedSchool.displayName}.`);
+                        onClose();
+                    } catch (err) {
+                        console.error(err);
+                        setPaymentError("Payment successful but activation failed. Please contact support.");
+                    }
+                },
+                onCancel: () => {
+                    setIsProcessingPayment(false);
+                }
+            });
+
+        } catch (error: any) {
+            console.error(error);
+            setPaymentError(error.message || "Payment initialization failed.");
+            setIsProcessingPayment(false);
+        }
+    };
+
+    const activateFreeTier = async (tier: any) => {
+        if (!selectedSchool) return;
+        setIsProcessingPayment(true);
+        try {
+            // Use a specific reference for free tier
+            const ref = `FREE_${Date.now()}`;
+            await activateSubscription(
+                ref,
+                {
+                    id: selectedSchool.docId,
+                    name: selectedSchool.displayName,
+                    dbIndex: selectedSchool._databaseIndex || 1
+                },
+                tier
+            );
+            alert(`Trial Activated for ${selectedSchool.displayName}!`);
+            onClose();
+        } catch (e) {
+            setPaymentError("Failed to activate trial.");
+        } finally {
+            setIsProcessingPayment(false);
+        }
     };
 
     return (
@@ -119,8 +205,8 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
-                    <h2 className="text-2xl font-bold">Subscription & Payment</h2>
-                    <p className="text-indigo-100 mt-1">Request account activation</p>
+                    <h2 className="text-2xl font-bold">Secure Payment & Activation</h2>
+                    <p className="text-indigo-100 mt-1">Select your plan and activate instantly</p>
                 </div>
 
                 <div className="p-6 space-y-6 overflow-y-auto">
@@ -139,7 +225,7 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                                     }
                                 }}
                                 onFocus={() => setShowSchoolDropdown(true)}
-                                placeholder="Search or type school name..."
+                                placeholder="Search school to activate..."
                                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
                             />
                             <div className="absolute right-3 top-3 flex items-center gap-2">
@@ -170,7 +256,7 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                                         ))
                                     ) : (
                                         <div className="px-4 py-3 text-gray-500 text-sm italic">
-                                            No schools found. You can type a new name.
+                                            No schools found.
                                         </div>
                                     )}
                                 </div>
@@ -181,7 +267,7 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                                 </svg>
-                                <span>Verified school selected</span>
+                                <span>Ready for activation</span>
                             </div>
                         )}
                     </div>
@@ -189,7 +275,7 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                     {/* 2. Tier Selection */}
                     <div className="space-y-2">
                         <label className="block text-sm font-semibold text-gray-700">Select Subscription Tier</label>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
                             {SUBSCRIPTION_TIERS.map((tier) => (
                                 <button
                                     key={tier.name}
@@ -201,33 +287,33 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                                 >
                                     <div className="flex justify-between items-start">
                                         <p className="font-bold text-gray-900">{tier.name}</p>
-                                        <p className="text-indigo-600 font-bold text-sm">{tier.price}</p>
+                                        <p className="text-indigo-600 font-bold text-sm text-right">{tier.price}</p>
                                     </div>
                                     <p className="text-xs text-gray-600 mt-1">
                                         {tier.maxStudents} Students • {tier.maxClass} Classes
-                                    </p>
-                                    <p className="text-[10px] text-gray-400 uppercase tracking-widest mt-1">
-                                        Duration: {tier.duration}
                                     </p>
                                 </button>
                             ))}
                         </div>
                     </div>
 
-                    {/* 3. Transaction ID */}
+                    {/* 3. Payment Email */}
                     <div className="space-y-2">
-                        <label className="block text-sm font-semibold text-gray-700">Transaction ID</label>
+                        <label className="block text-sm font-semibold text-gray-700">Billing Email</label>
                         <input
-                            type="text"
-                            value={transactionId}
-                            onChange={(e) => setTransactionId(e.target.value)}
-                            placeholder="Enter the payment transaction ID..."
+                            type="email"
+                            value={paymentEmail}
+                            onChange={(e) => setPaymentEmail(e.target.value)}
+                            placeholder="Enter email for receipt..."
                             className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
                         />
-                        <p className="text-xs text-gray-500 italic">
-                            Proof of payment is required for manual activation.
-                        </p>
                     </div>
+
+                    {paymentError && (
+                        <div className="p-3 bg-red-50 text-red-700 rounded-xl text-sm border border-red-200">
+                            {paymentError}
+                        </div>
+                    )}
                 </div>
 
                 {/* Footer Actions */}
@@ -235,21 +321,31 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                     <button
                         onClick={onClose}
                         className="flex-1 py-3 px-4 bg-white border border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-100 transition-colors"
+                        disabled={isProcessingPayment}
                     >
                         Cancel
                     </button>
                     <button
-                        onClick={handleSend}
-                        disabled={!searchTerm || !transactionId}
-                        className={`flex-1 py-3 px-4 font-semibold rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 ${!searchTerm || !transactionId
+                        onClick={handlePayment}
+                        disabled={!selectedSchool || !paymentEmail || isProcessingPayment}
+                        className={`flex-1 py-3 px-4 font-semibold rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 ${!selectedSchool || !paymentEmail || isProcessingPayment
                             ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
-                            : 'bg-indigo-600 text-white hover:bg-indigo-700 transform hover:scale-[1.02]'
+                            : 'bg-green-600 text-white hover:bg-green-700 transform hover:scale-[1.02]'
                             }`}
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
-                        <span>Send Request via Email</span>
+                        {isProcessingPayment ? (
+                            <>
+                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                                <span>Processing...</span>
+                            </>
+                        ) : (
+                            <>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                </svg>
+                                <span>Pay & Activate</span>
+                            </>
+                        )}
                     </button>
                 </div>
             </div>

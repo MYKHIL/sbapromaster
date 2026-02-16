@@ -4,13 +4,13 @@ import { getAuth } from "firebase/auth";
 
 // Using the Primary database config from constants.ts
 export const firebaseConfig = {
-    apiKey: "AIzaSyCe0O-mBCODiEA-KNVLXLMp00lJ6_Jt5SU",
-    authDomain: "sba-pro-master-759f6.firebaseapp.com",
-    projectId: "sba-pro-master-759f6",
-    storageBucket: "sba-pro-master-759f6.firebasestorage.app",
-    messagingSenderId: "239073604626",
-    appId: "1:239073604626:web:452bc2719fc980704d14cb",
-    measurementId: "G-47MMKKX888"
+    apiKey: process.env.LOAD_TEST_API_KEY || "",
+    authDomain: process.env.LOAD_TEST_AUTH_DOMAIN || "",
+    projectId: process.env.LOAD_TEST_PROJECT_ID || "",
+    storageBucket: process.env.LOAD_TEST_STORAGE_BUCKET || "",
+    messagingSenderId: process.env.LOAD_TEST_MESSAGING_SENDER_ID || "",
+    appId: process.env.LOAD_TEST_APP_ID || "",
+    measurementId: process.env.LOAD_TEST_MEASUREMENT_ID || ""
 };
 
 const app = initializeApp(firebaseConfig);

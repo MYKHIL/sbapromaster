@@ -1,27 +1,27 @@
-import path from 'path';
-import { defineConfig, loadEnv } from 'vite';
-import react from '@vitejs/plugin-react';
-import dotenv from 'dotenv';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-dotenv.config();
+/**
+ * Firebase Configuration Endpoint
+ * 
+ * Returns Firebase configuration for client-side initialization
+ * Note: API keys in Firebase config are public-safe (they're meant to be exposed)
+ * Security is handled by Firestore security rules
+ * 
+ * GET /api/firebase-config
+ */
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+    // CORS preflight
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
 
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, '.', '');
-  return {
-    base: './',
-    server: {
-      port: 3000,
-      host: '0.0.0.0',
-    },
-    plugins: [
-      react(),
-      {
-        name: 'api-mock',
-        configureServer(server) {
-          server.middlewares.use('/api/firebase-config', (req, res) => {
-            // Mock the Vercel API response using local .env vars
-            const configs = {
-              1: {
+    if (req.method !== 'GET') {
+        return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    try {
+        const configs = {
+            1: {
                 apiKey: process.env.FIREBASE_1_API_KEY,
                 authDomain: process.env.FIREBASE_1_AUTH_DOMAIN,
                 projectId: process.env.FIREBASE_1_PROJECT_ID,
@@ -29,8 +29,10 @@ export default defineConfig(({ mode }) => {
                 messagingSenderId: process.env.FIREBASE_1_MESSAGING_SENDER_ID,
                 appId: process.env.FIREBASE_1_APP_ID,
                 measurementId: process.env.FIREBASE_1_MEASUREMENT_ID,
-              },
-              2: {
+                isReserved: false,
+                label: 'Primary'
+            },
+            2: {
                 apiKey: process.env.FIREBASE_2_API_KEY,
                 authDomain: process.env.FIREBASE_2_AUTH_DOMAIN,
                 projectId: process.env.FIREBASE_2_PROJECT_ID,
@@ -39,8 +41,9 @@ export default defineConfig(({ mode }) => {
                 appId: process.env.FIREBASE_2_APP_ID,
                 measurementId: process.env.FIREBASE_2_MEASUREMENT_ID,
                 isReserved: true,
-              },
-              3: {
+                label: 'Reserved/Darko'
+            },
+            3: {
                 apiKey: process.env.FIREBASE_3_API_KEY,
                 authDomain: process.env.FIREBASE_3_AUTH_DOMAIN,
                 projectId: process.env.FIREBASE_3_PROJECT_ID,
@@ -48,30 +51,24 @@ export default defineConfig(({ mode }) => {
                 messagingSenderId: process.env.FIREBASE_3_MESSAGING_SENDER_ID,
                 appId: process.env.FIREBASE_3_APP_ID,
                 measurementId: process.env.FIREBASE_3_MEASUREMENT_ID,
-              }
-            };
-            res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ success: true, configs, schoolDatabaseMapping: { 'ayirebida': 2 } }));
-          });
-        }
-      }
-    ],
-    resolve: {
-      alias: {
-        '@': path.resolve(__dirname, '.'),
-      }
-    },
-    build: {
-      rollupOptions: {
-        input: {
-          main: path.resolve(__dirname, 'index.html'),
-        },
-        output: {
-          manualChunks: {
-            // 'vendor-pdf': ['jspdf', 'html2canvas'], // Keep this off for now, let auto-splitting work
-          }
-        }
-      }
-    },
-  };
-});
+                isReserved: false,
+                label: 'Public 2'
+            }
+        };
+
+        return res.status(200).json({
+            success: true,
+            configs,
+            schoolDatabaseMapping: {
+                'ayirebida': 2
+            }
+        });
+
+    } catch (error: any) {
+        console.error('Firebase config error:', error);
+        return res.status(500).json({
+            error: 'Internal server error',
+            message: error.message,
+        });
+    }
+}

@@ -29,3 +29,15 @@ dist-ssr
 
 # Exclude deployment script
 deploy.py
+
+# Backup files (safety copies before major changes)
+*.backup.ts
+*.backup.tsx
+*.backup.js
+
+# Environment variables (contains sensitive API keys)
+.env
+.env.example
+.env.local
+.env.production
+.vercel

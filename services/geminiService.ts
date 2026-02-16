@@ -1,58 +1,35 @@
-import { GoogleGenAI, Modality } from "@google/genai";
+import axios from 'axios';
 
-// Ensure the API key is handled according to the guidelines.
-// Using Vite's import.meta.env for browser compatibility
-const API_KEY = import.meta.env.VITE_API_KEY;
-
-if (!API_KEY) {
-  console.warn("Gemini API key not found. AI features will be disabled.");
-}
-
-const ai = (API_KEY && API_KEY.length > 0 && !API_KEY.includes('AIzaSy_YOUR_API_KEY'))
-  ? new GoogleGenAI({ apiKey: API_KEY })
-  : null;
+// Remove direct GoogleGenAI logic. 
+// We now proxy everything through our Vercel API to hide the API KEY.
 
 export const generateTeacherRemark = async (studentName: string, performanceSummary: string, customPrompt?: string): Promise<string> => {
-  if (!ai) {
-    return "AI service is not available.";
-  }
-
   const prompt = customPrompt || `Generate a brief, encouraging, and constructive teacher's remark for a student named ${studentName}. The student's performance is as follows: ${performanceSummary}. The remark should be about 15-25 words.`;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
+    const response = await axios.post('/api/gemini-proxy', {
+      type: 'remark',
+      prompt
     });
 
-    return response.text.trim();
+    return response.data.text || "Could not generate remark.";
   } catch (error) {
-    console.error("Error generating remark with Gemini API:", error);
+    console.error("Error generating remark via proxy:", error);
     return "Could not generate remark at this time.";
   }
 };
 
 export const enhanceImage = async (base64ImageData: string): Promise<string> => {
-  if (!ai) {
-    throw new Error("AI service is not available.");
-  }
-
   const mimeTypeMatch = base64ImageData.match(/^data:(image\/\w+);base64,/);
   if (!mimeTypeMatch) {
     throw new Error("Invalid base64 image data format. Please upload a valid image.");
   }
-  const mimeType = mimeTypeMatch[1];
-  const pureBase64 = base64ImageData.substring(mimeTypeMatch[0].length);
 
-  const imagePart = {
-    inlineData: {
-      mimeType,
-      data: pureBase64,
-    },
-  };
+  // We send the full base64 string (including header) or strip it? 
+  // The proxy strips it. Let's send the full string or just the data.
+  // The proxy expects 'image' property.
 
-  const textPart = {
-    text: `Your task is to professionally enhance the provided image for use on a school report card. Analyze the content and apply the appropriate edits based on whether it is a student's portrait, a signature, or a school logo.
+  const enhancementPrompt = `Your task is to professionally enhance the provided image for use on a school report card. Analyze the content and apply the appropriate edits based on whether it is a student's portrait, a signature, or a school logo.
 
 **1. If the image is a student's portrait:**
    - **Goal:** Edit the photo to look as if it were taken in a professional photography studio with high-end equipment. The final result should be studio-quality, suitable for a passport or official ID.
@@ -71,28 +48,31 @@ export const enhanceImage = async (base64ImageData: string): Promise<string> => 
 
 **3. Final Output Rules (Apply to all):**
    - **Preserve Proportions:** Do not stretch or distort the main subject. Maintain the original aspect ratio.
-   - **Image Only:** Your response MUST contain only the final, edited image. Do not include any text, explanations, or chat.`,
-  };
+   - **Image Only:** Your response MUST contain only the final, edited image. Do not include any text, explanations, or chat.`;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
-      contents: { parts: [imagePart, textPart] },
-      config: {
-        responseModalities: [Modality.IMAGE, Modality.TEXT],
-      },
+    const response = await axios.post('/api/gemini-proxy', {
+      type: 'image',
+      image: base64ImageData,
+      prompt: enhancementPrompt
     });
 
-    for (const part of response.candidates[0].content.parts) {
-      if (part.inlineData) {
-        return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+    // Parse the candidates to find the image
+    // The proxy returns { text, candidates }
+    const candidates = response.data.candidates;
+
+    if (candidates && candidates[0] && candidates[0].content && candidates[0].content.parts) {
+      for (const part of candidates[0].content.parts) {
+        if (part.inlineData) {
+          return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+        }
       }
     }
 
     throw new Error("No image was returned from the AI enhancement service.");
 
   } catch (error) {
-    console.error("Error enhancing image with Gemini API:", error);
+    console.error("Error enhancing image via proxy:", error);
     throw new Error("Could not enhance image at this time.");
   }
 };
