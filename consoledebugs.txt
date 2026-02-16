@@ -1,13 +1,14 @@
-main-BLTkYcA3.js:54 [Bootstrap] Fetching configuration...
+main-CNOmbkM4.js:54 [Bootstrap] Environment: Object
+main-CNOmbkM4.js:54 [Bootstrap] Fetching configuration...
 sbapromaster/:1  Access to fetch at 'https://sbapromaster.vercel.app/api/firebase-config' from origin 'https://mykhil.github.io' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
 sbapromaster.vercel.app/api/firebase-config:1   Failed to load resource: net::ERR_FAILED
-main-BLTkYcA3.js:54  [App] Failed to load Firebase config: TypeError: Failed to fetch
-    at Gv (main-BLTkYcA3.js:54:138)
-    at jv (main-BLTkYcA3.js:54:475)
-    at main-BLTkYcA3.js:60:14
-Gv @ main-BLTkYcA3.js:54
-main-BLTkYcA3.js:54  Failed to mount application: TypeError: Failed to fetch
-    at Gv (main-BLTkYcA3.js:54:138)
-    at jv (main-BLTkYcA3.js:54:475)
-    at main-BLTkYcA3.js:60:14
-jv @ main-BLTkYcA3.js:54
+main-CNOmbkM4.js:54  [App] Failed to load Firebase config: TypeError: Failed to fetch
+    at Gv (main-CNOmbkM4.js:54:138)
+    at jv (main-CNOmbkM4.js:54:628)
+    at main-CNOmbkM4.js:60:14
+Gv @ main-CNOmbkM4.js:54
+main-CNOmbkM4.js:54  Failed to mount application: TypeError: Failed to fetch
+    at Gv (main-CNOmbkM4.js:54:138)
+    at jv (main-CNOmbkM4.js:54:628)
+    at main-CNOmbkM4.js:60:14
+jv @ main-CNOmbkM4.js:54
