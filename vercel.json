@@ -1,22 +1,5 @@
 {
     "version": 2,
-    "functions": {
-        "api/firebase-config.ts": {
-            "runtime": "@vercel/node@20"
-        },
-        "api/activate-subscription.ts": {
-            "runtime": "@vercel/node@20"
-        },
-        "api/gemini-proxy.ts": {
-            "runtime": "@vercel/node@20"
-        },
-        "api/initialize-payment.ts": {
-            "runtime": "@vercel/node@20"
-        },
-        "api/verify-payment.ts": {
-            "runtime": "@vercel/node@20"
-        }
-    },
     "headers": [
         {
             "source": "/api/(.*)",
