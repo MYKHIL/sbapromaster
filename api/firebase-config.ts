@@ -10,6 +10,11 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
  * GET /api/firebase-config
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+    // CORS Config
+    res.setHeader('Access-Control-Allow-Origin', '*'); // Since no creds are actually used/needed, * is fine.
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+    res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+
     // CORS preflight
     if (req.method === 'OPTIONS') {
         return res.status(200).end();

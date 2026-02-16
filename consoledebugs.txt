@@ -1,54 +1,13 @@
-ScoreEntry.tsx:307 [ScoreEntry - Mobile] commitScore called: {studentId: 10, studentName: 'Acquah Evans', subjectId: 5, assessmentId: 1, assessmentName: 'Class Exercise', …}
-ScoreEntry.tsx:363 [ScoreEntry - Mobile] Direct score: {rawInput: 3, convertedScore: 3}
-ScoreEntry.tsx:378 [ScoreEntry - Mobile] ✅ Score validated and formatted: {studentId: 10, studentName: 'Acquah Evans', subjectId: 5, assessmentId: 1, assessmentName: 'Class Exercise', …}
-ScoreEntry.tsx:389 [ScoreEntry - Mobile] 💾 Calling updateStudentScores (saving to local cache)...
-DataContext.tsx:1184 [DataContext] 🕵️ Smart Dirty Check DEBUG: {id: '10-5', new: Array(1), orig: Array(1), changed: false, originalFound: true}
-DataContext.tsx:1231 [DataContext] 📥 updateStudentScores called: {studentId: 10, subjectId: 5, assessmentId: 1, scoreId: '10-5', newScores: Array(1), …}
-DataContext.tsx:1246 [DataContext] 🔄 Updating existing score entry
-DataContext.tsx:1273 [DataContext] ✅ Score saved to local cache (React state)
-DataContext.tsx:1274 [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
-ScoreEntry.tsx:399 [ScoreEntry - Mobile] ✅ Score committed successfully
-DataContext.tsx:1246 [DataContext] 🔄 Updating existing score entry
-DataContext.tsx:1273 [DataContext] ✅ Score saved to local cache (React state)
-DataContext.tsx:1274 [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
-ScoreEntry.tsx:307 [ScoreEntry - Mobile] commitScore called: {studentId: 11, studentName: 'Acquah Solomon', subjectId: 5, assessmentId: 1, assessmentName: 'Class Exercise', …}
-ScoreEntry.tsx:324 [ScoreEntry - Mobile] Empty score - clearing: {studentId: 11, studentName: 'Acquah Solomon'}
-ScoreEntry.tsx:307 [ScoreEntry - Mobile] commitScore called: {studentId: 10, studentName: 'Acquah Evans', subjectId: 5, assessmentId: 1, assessmentName: 'Class Exercise', …}
-ScoreEntry.tsx:354 [ScoreEntry - Mobile] Fraction conversion: {x: 3, y: 10, maxScore: 10, convertedScore: 3}
-ScoreEntry.tsx:378 [ScoreEntry - Mobile] ✅ Score validated and formatted: {studentId: 10, studentName: 'Acquah Evans', subjectId: 5, assessmentId: 1, assessmentName: 'Class Exercise', …}
-ScoreEntry.tsx:389 [ScoreEntry - Mobile] 💾 Calling updateStudentScores (saving to local cache)...
-ScoreEntry.tsx:399 [ScoreEntry - Mobile] ✅ Score committed successfully
-ScoreEntry.tsx:759 [ScoreEntry] 🧹 Clearing score for: Acquah Evans
-DataContext.tsx:1184 [DataContext] 🕵️ Smart Dirty Check DEBUG: {id: '10-5', new: Array(1), orig: Array(1), changed: true, originalFound: true}
-DataContext.tsx:1231 [DataContext] 📥 updateStudentScores called: {studentId: 10, subjectId: 5, assessmentId: 1, scoreId: '10-5', newScores: Array(1), …}
-DataContext.tsx:1246 [DataContext] 🔄 Updating existing score entry
-DataContext.tsx:1273 [DataContext] ✅ Score saved to local cache (React state)
-DataContext.tsx:1274 [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
-DataContext.tsx:1246 [DataContext] 🔄 Updating existing score entry
-DataContext.tsx:1273 [DataContext] ✅ Score saved to local cache (React state)
-DataContext.tsx:1274 [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
-ScoreEntry.tsx:307 [ScoreEntry - Mobile] commitScore called: {studentId: 10, studentName: 'Acquah Evans', subjectId: 5, assessmentId: 1, assessmentName: 'Class Exercise', …}
-ScoreEntry.tsx:363 [ScoreEntry - Mobile] Direct score: {rawInput: 1, convertedScore: 1}
-ScoreEntry.tsx:378 [ScoreEntry - Mobile] ✅ Score validated and formatted: {studentId: 10, studentName: 'Acquah Evans', subjectId: 5, assessmentId: 1, assessmentName: 'Class Exercise', …}
-ScoreEntry.tsx:389 [ScoreEntry - Mobile] 💾 Calling updateStudentScores (saving to local cache)...
-DataContext.tsx:1184 [DataContext] 🕵️ Smart Dirty Check DEBUG: {id: '10-5', new: Array(1), orig: Array(1), changed: true, originalFound: true}
-DataContext.tsx:1231 [DataContext] 📥 updateStudentScores called: {studentId: 10, subjectId: 5, assessmentId: 1, scoreId: '10-5', newScores: Array(1), …}
-DataContext.tsx:1246 [DataContext] 🔄 Updating existing score entry
-DataContext.tsx:1273 [DataContext] ✅ Score saved to local cache (React state)
-DataContext.tsx:1274 [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
-ScoreEntry.tsx:399 [ScoreEntry - Mobile] ✅ Score committed successfully
-DataContext.tsx:1246 [DataContext] 🔄 Updating existing score entry
-DataContext.tsx:1273 [DataContext] ✅ Score saved to local cache (React state)
-DataContext.tsx:1274 [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
-ScoreEntry.tsx:307 [ScoreEntry - Mobile] commitScore called: {studentId: 11, studentName: 'Acquah Solomon', subjectId: 5, assessmentId: 1, assessmentName: 'Class Exercise', …}
-ScoreEntry.tsx:324 [ScoreEntry - Mobile] Empty score - clearing: {studentId: 11, studentName: 'Acquah Solomon'}
-DataContext.tsx:670 [DataContext] ☁️ Syncing dirty fields: scores (Manual Save)
-syncLogger.ts:59 [SYNC_LOG] saveToCloud: Preparing to save. Users count: 17
-DataContext.tsx:712 [DataContext] ☁️ Performing Universal Transactional Save...
-firebaseService.ts:1472 [Optimization] 🍱 Bucketing 5 scores...
-FirebaseAnalyticsContext.tsx:62 [Firebase Analytics] ✍️ WRITE: Saving batch of 2 operations
-firebaseService.ts:1454 [Firebase] Batch Save Starting. Auth UID: NONE (Unauthenticated)
-firebaseService.ts:1461 [Optimization] ✅ Committed batch chunk 1 (2 ops)
-DataContext.tsx:719 [DataContext] ✅ Data saved to cloud successfully!
-DataContext.tsx:729 [DataContext] ⏭️ Skipping redundant re-fetch - Local state is synced (Optimized)
-DataContext.tsx:732 [DataContext] 🎉 Sync & Refresh complete - cleared dirty fields
+main-BLTkYcA3.js:54 [Bootstrap] Fetching configuration...
+sbapromaster/:1  Access to fetch at 'https://sbapromaster.vercel.app/api/firebase-config' from origin 'https://mykhil.github.io' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+sbapromaster.vercel.app/api/firebase-config:1   Failed to load resource: net::ERR_FAILED
+main-BLTkYcA3.js:54  [App] Failed to load Firebase config: TypeError: Failed to fetch
+    at Gv (main-BLTkYcA3.js:54:138)
+    at jv (main-BLTkYcA3.js:54:475)
+    at main-BLTkYcA3.js:60:14
+Gv @ main-BLTkYcA3.js:54
+main-BLTkYcA3.js:54  Failed to mount application: TypeError: Failed to fetch
+    at Gv (main-BLTkYcA3.js:54:138)
+    at jv (main-BLTkYcA3.js:54:475)
+    at main-BLTkYcA3.js:60:14
+jv @ main-BLTkYcA3.js:54

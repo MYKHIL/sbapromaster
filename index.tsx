@@ -57,6 +57,11 @@ const bootstrap = async () => {
 
   try {
     // 1. Fetch Configuration
+    console.log('[Bootstrap] Environment:', {
+      isGitHubPages: window.location.hostname.includes('github.io'),
+      hostname: window.location.hostname,
+      API_BASE_URL
+    });
     console.log('[Bootstrap] Fetching configuration...');
     // In development (vite), we might not have the API running on localhost:5173 
     // depending on how it's proxying. Vercel dev typically runs on 3000.
