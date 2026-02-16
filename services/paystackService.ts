@@ -91,6 +91,10 @@ export const activateSubscription = async (
  */
 export const loadPaystackScript = (): Promise<boolean> => {
     return new Promise((resolve) => {
+        if ((window as any).PaystackPop) {
+            resolve(true);
+            return;
+        }
         const script = document.createElement('script');
         script.src = 'https://js.paystack.co/v1/inline.js';
         script.onload = () => resolve(true);

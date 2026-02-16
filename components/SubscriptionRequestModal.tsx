@@ -24,6 +24,7 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
     const [isProcessingPayment, setIsProcessingPayment] = useState(false);
     const [paymentError, setPaymentError] = useState<string | null>(null);
     const [paymentEmail, setPaymentEmail] = useState('');
+    const [phoneNumber, setPhoneNumber] = useState('');
 
     // 1. Fetch All Schools for Combobox
     useEffect(() => {
@@ -68,12 +69,29 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
             return;
         }
 
+        const lowerTerm = searchTerm.toLowerCase();
+
+        // 1. Filter dropdown options
         const filtered = allSchools.filter(s =>
-            s.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            s.docId.toLowerCase().includes(searchTerm.toLowerCase())
+            s.displayName.toLowerCase().includes(lowerTerm) ||
+            s.docId.toLowerCase().includes(lowerTerm)
         );
         setFilteredSchools(filtered);
-    }, [searchTerm, allSchools]);
+
+        // 2. Auto-select if exact match found (UX improvement)
+        const exactMatch = allSchools.find(
+            s => s.displayName.toLowerCase() === lowerTerm
+        );
+
+        if (exactMatch) {
+            // Found exact match, select it if not already selected
+            if (!selectedSchool || selectedSchool.docId !== exactMatch.docId) {
+                setSelectedSchool(exactMatch);
+            }
+        }
+        // Note: We don't deselect here because onChange handles deselection on mismatch
+
+    }, [searchTerm, allSchools, selectedSchool]);
 
     // Handle clicks outside dropdown
     useEffect(() => {
@@ -97,6 +115,11 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
 
         if (!paymentEmail) {
             setPaymentError("Please provide an email address for the receipt.");
+            return;
+        }
+
+        if (!phoneNumber) {
+            setPaymentError("Please provide a phone number for Mobile Money.");
             return;
         }
 
@@ -126,40 +149,72 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
             const initResponse = await initializePayment(paymentEmail, amount, {
                 schoolId: selectedSchool.docId,
                 schoolName: selectedSchool.displayName,
-                tierName: tier.name
+                tierName: tier.name,
+                phoneNumber // Pass phone number in metadata
             });
 
             // 2. Open Paystack Popup
-            const paystack = new (window as any).PaystackPop();
-            paystack.newTransaction({
-                key: 'pk_live_1018c988f6aa654f737092f2a09ec6cc6ca1065f', // Paystack Public Key
+            // 2. Open Paystack Popup
+            const PaystackPop = (window as any).PaystackPop;
 
+            if (!PaystackPop) {
+                setPaymentError("Paystack SDK not loaded. Please refresh.");
+                setIsProcessingPayment(false);
+                return;
+            }
+
+            // Use .setup() legacy method which is standard for v1/inline.js
+            const handler = PaystackPop.setup({
+                key: 'pk_live_1018c988f6aa654f737092f2a09ec6cc6ca1065f', // Paystack Public Key
                 email: paymentEmail,
                 amount: amount * 100, // in kobo/pesewas
-                ref: initResponse.reference,
-                onSuccess: async (transaction: any) => {
-                    // 3. Verify & Activate
-                    try {
-                        await activateSubscription(
-                            transaction.reference,
-                            {
-                                id: selectedSchool.docId,
-                                name: selectedSchool.displayName,
-                                dbIndex: selectedSchool._databaseIndex || 1
-                            },
-                            tier
-                        );
-                        alert(`Success! Activation complete for ${selectedSchool.displayName}.`);
-                        onClose();
-                    } catch (err) {
-                        console.error(err);
-                        setPaymentError("Payment successful but activation failed. Please contact support.");
-                    }
+                ref: initResponse.reference, // Use backend/mock reference
+                currency: 'GHS',
+                metadata: {
+                    custom_fields: [
+                        {
+                            display_name: "Phone Number",
+                            variable_name: "phone_number",
+                            value: phoneNumber
+                        },
+                        {
+                            display_name: "School",
+                            variable_name: "school",
+                            value: selectedSchool.displayName
+                        }
+                    ]
                 },
-                onCancel: () => {
+                callback: (response: any) => {
+                    // Wrap async logic in a sync function to satisfy Paystack library check
+                    const handleSuccess = async () => {
+                        // 3. Verify & Activate
+                        try {
+                            // Paystack Popup returns 'reference' in response object
+                            await activateSubscription(
+                                response.reference,
+                                {
+                                    id: selectedSchool.docId,
+                                    name: selectedSchool.displayName,
+                                    dbIndex: selectedSchool._databaseIndex || 1
+                                },
+                                tier
+                            );
+                            alert(`Success! Activation complete for ${selectedSchool.displayName}.`);
+                            onClose();
+                        } catch (err) {
+                            console.error(err);
+                            setPaymentError("Payment successful but activation failed. Please contact support.");
+                        }
+                    };
+                    handleSuccess();
+                },
+                onClose: () => {
                     setIsProcessingPayment(false);
+                    // alert('Transaction cancelled.');
                 }
             });
+
+            handler.openIframe();
 
         } catch (error: any) {
             console.error(error);
@@ -297,16 +352,28 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                         </div>
                     </div>
 
-                    {/* 3. Payment Email */}
-                    <div className="space-y-2">
-                        <label className="block text-sm font-semibold text-gray-700">Billing Email</label>
-                        <input
-                            type="email"
-                            value={paymentEmail}
-                            onChange={(e) => setPaymentEmail(e.target.value)}
-                            placeholder="Enter email for receipt..."
-                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
-                        />
+                    {/* 3. Payment Details */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="block text-sm font-semibold text-gray-700">Billing Email</label>
+                            <input
+                                type="email"
+                                value={paymentEmail}
+                                onChange={(e) => setPaymentEmail(e.target.value)}
+                                placeholder="email@example.com"
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="block text-sm font-semibold text-gray-700">Phone Number (MoMo)</label>
+                            <input
+                                type="tel"
+                                value={phoneNumber}
+                                onChange={(e) => setPhoneNumber(e.target.value)}
+                                placeholder="024XXXXXXX"
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
+                            />
+                        </div>
                     </div>
 
                     {paymentError && (
@@ -317,36 +384,43 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                 </div>
 
                 {/* Footer Actions */}
-                <div className="p-6 bg-gray-50 flex gap-3 flex-shrink-0">
-                    <button
-                        onClick={onClose}
-                        className="flex-1 py-3 px-4 bg-white border border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-100 transition-colors"
-                        disabled={isProcessingPayment}
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        onClick={handlePayment}
-                        disabled={!selectedSchool || !paymentEmail || isProcessingPayment}
-                        className={`flex-1 py-3 px-4 font-semibold rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 ${!selectedSchool || !paymentEmail || isProcessingPayment
-                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
-                            : 'bg-green-600 text-white hover:bg-green-700 transform hover:scale-[1.02]'
-                            }`}
-                    >
-                        {isProcessingPayment ? (
-                            <>
-                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                                <span>Processing...</span>
-                            </>
-                        ) : (
-                            <>
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                </svg>
-                                <span>Pay & Activate</span>
-                            </>
-                        )}
-                    </button>
+                <div className="p-6 bg-gray-50 flex flex-col gap-3 flex-shrink-0">
+                    {(!selectedSchool && searchTerm) && (
+                        <p className="text-sm text-red-500 text-center">
+                            Please select a school from the dropdown list above.
+                        </p>
+                    )}
+                    <div className="flex gap-3 w-full">
+                        <button
+                            onClick={onClose}
+                            className="flex-1 py-3 px-4 bg-white border border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-100 transition-colors"
+                            disabled={isProcessingPayment}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handlePayment}
+                            disabled={!selectedSchool || !paymentEmail || !phoneNumber || isProcessingPayment}
+                            className={`flex-1 py-3 px-4 font-semibold rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 ${!selectedSchool || !paymentEmail || !phoneNumber || isProcessingPayment
+                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
+                                : 'bg-green-600 text-white hover:bg-green-700 transform hover:scale-[1.02]'
+                                }`}
+                        >
+                            {isProcessingPayment ? (
+                                <>
+                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                                    <span>Processing...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                    </svg>
+                                    <span>Pay & Activate</span>
+                                </>
+                            )}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

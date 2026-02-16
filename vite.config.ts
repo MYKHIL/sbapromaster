@@ -53,6 +53,36 @@ export default defineConfig(({ mode }) => {
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({ success: true, configs, schoolDatabaseMapping: { 'ayirebida': 2 } }));
           });
+
+          // Mock Payment Initialization
+          server.middlewares.use('/api/initialize-payment', (req, res) => {
+            console.log('[Mock API] Initializing payment...');
+            res.setHeader('Content-Type', 'application/json');
+            // Return a mock reference. NOTE: Using this in Paystack popup will likely fail validation.
+            res.end(JSON.stringify({
+              authorization_url: 'https://checkout.paystack.com/mock',
+              access_code: 'mock_code',
+              reference: 'MOCK_' + Date.now()
+            }));
+          });
+
+          // Mock Payment Verification
+          server.middlewares.use('/api/verify-payment', (req, res) => {
+            console.log('[Mock API] Verifying payment...');
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({
+              status: 'success',
+              message: 'Verification successful',
+              data: { status: 'success' }
+            }));
+          });
+
+          // Mock Subscription Activation
+          server.middlewares.use('/api/activate-subscription', (req, res) => {
+            console.log('[Mock API] Activating subscription...');
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ success: true, message: 'Mock activation successful' }));
+          });
         }
       }
     ],
