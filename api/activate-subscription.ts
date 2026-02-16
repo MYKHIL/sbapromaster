@@ -19,15 +19,13 @@ if (!admin.apps.length) {
 /**
  * Subscription Activation Endpoint
  * 
- * Activates a subscription after successful payment
- * POST /api/activate-subscription
- * Body: { 
- *   reference: string, 
- *   schoolId: string, 
- *   schoolName: string,
- *   dbIndex: number,
- *   tier: { name, maxStudents, maxClass, duration } 
- * }
+ * Activates a subscription matching the logic of the manual "Web Approval" tool.
+ * 
+ * Logic:
+ * 1. Verify Payment
+ * 2. Calculate Expiry
+ * 3. Write to 'subscriptions/{baseName}'
+ * 4. Find all school variants (Name_Year_Term) and set Access: true
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     // CORS preflight
@@ -42,105 +40,111 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
         const { reference, schoolId, schoolName, dbIndex, tier } = req.body;
 
-        if (!reference || !schoolId || !dbIndex || !tier) {
+        if (!reference || !schoolId || !tier) {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
-        // 1. Verify payment with Paystack to ensure it's valid and successful
-        const paystackResponse = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-                'Content-Type': 'application/json',
-            },
-        });
+        // 1. Verify payment (Skip for FREE tier if reference starts with FREE_)
+        if (!reference.startsWith('FREE_')) {
+            const paystackResponse = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+                    'Content-Type': 'application/json',
+                },
+            });
 
-        const paystackData = await paystackResponse.json();
+            const paystackData = await paystackResponse.json();
 
-        if (!paystackResponse.ok || paystackData.data.status !== 'success') {
-            return res.status(400).json({ error: 'Payment verification failed or payment was not successful' });
+            if (!paystackResponse.ok || paystackData.data.status !== 'success') {
+                return res.status(400).json({ error: 'Payment verification failed' });
+            }
         }
 
-        // 2. Select the correct database based on dbIndex
-        // We need to use the admin SDK which has access to all projects if configured, 
-        // BUT typically admin SDK is initialized for ONE project.
-        // If the user has multiple Firebase projects, we might need multiple service accounts or 
-        // just one logic if they are all accessible via the same creds (unlikely if different projects).
-        // Reviewing constants.ts: The projects are different (sba-pro-master-759f6, sba-pro-master-40f08...).
-        // LIMITATION: Firebase Admin SDK initialized with one credential can only access that project's Firestore.
-        // We need to initialize the specific app for the target dbIndex.
-
-        // For this implementation, we'll assume the service account provided covers the target project 
-        // OR we might need to rely on client-side activation if server-side is too complex with multiple projects.
-        // However, for security, server-side is best.
-        // Let's assume we initialize the app based on dbIndex if possible, or use a workaround.
-        // Actually, initializing multiple apps with different creds is possible.
-        // BUT we only have one FIREBASE_ADMIN_SERVICE_ACCOUNT in env.
-        // PROPOSAL: We will try to use the default app. If the projects are entirely separate, 
-        // we would need credentials for EACH. 
-        // For now, let's implement for the PRIMARY project/defaults. 
-        // If dbIndex points to a different project, we might need to handle that.
-        // Given the constraints, I will implement activation on the default initialized app.
-        // If `dbIndex` implies a different project, we'd theoretically need that project's config.
-
-        // Let's look at the implementation in `index.html` (client side): 
-        // It initializes multiple apps: `const app = initializeApp(config, "db${idx}");`
-        // Server-side, we can do similar if we have the creds. 
-        // CAUTION: The user only provided one set of API keys in the prompt, but the constants.ts has 3 sets.
-        // For the "secure" plan, we likely need service accounts for ALL 3 if we want to write to all 3 securely.
-        // To avoid over-engineering now without all creds, I will use a logic that 
-        // "Activate" might mean writing to a central DB or the specific one. 
-        // The `index.html` writes to `dbs[selectedSchool.dbIndex]`.
-
-        // Logic: Calculate Expiry
-        const now = new Date();
-        const expiryDate = new Date();
-        if (tier.duration.toLowerCase().includes('week')) {
-            expiryDate.setDate(now.getDate() + 7);
-        } else if (tier.duration.toLowerCase().includes('month')) {
-            // assume 12 months for standard
-            expiryDate.setFullYear(now.getFullYear() + 1);
-        } else {
-            expiryDate.setFullYear(now.getFullYear() + 1);
-        }
-
-        const subscriptionData = {
-            maxStudents: tier.maxStudents,
-            maxClass: tier.maxClass,
-            expiryDate: admin.firestore.Timestamp.fromDate(expiryDate),
-            lastActivated: admin.firestore.Timestamp.now(),
-            planName: tier.name,
-            paymentReference: reference,
-            amountPaid: paystackData.data.amount / 100
-        };
-
-        // We will attempt to write to the Firestore. 
-        // Note: This requires the service account to have permission on the target project.
         const db = admin.firestore();
 
-        // Determine collection path - usually 'subscriptions/{schoolBaseName}'
-        // and update 'schools/{schoolId}' Access: true.
+        // 2. Logic to derive Base Name (e.g., "ayirebida" from "ayirebida_2025-2026_First-Term")
+        // The Web Approval tool uses school.id.split('_')[0]
+        const baseName = schoolId.split('_')[0];
 
-        // Since we might be limited by the single service account, 
-        // we will log the intended action and try to execute on the default DB.
-        // If the school is in another DB, this might fail or write to the wrong DB.
-        // For this MVP step, we'll assume the service account matches the DB.
+        if (!baseName) {
+            return res.status(400).json({ error: 'Invalid school ID format' });
+        }
 
-        const baseName = schoolName.split(' ')[0]; // Simplified base name logic or pass from client
-        // Better: pass baseName from client
-        const docId = req.body.baseName || schoolId.split('_')[0];
+        // 3. Calculate Expiry
+        const now = new Date();
+        const expiryDate = new Date();
+        const durationStr = (tier.duration || '1 Year').toLowerCase();
 
-        await db.collection('subscriptions').doc(docId).set(subscriptionData, { merge: true });
+        if (durationStr.includes('week')) {
+            const weeks = parseInt(durationStr) || 1;
+            expiryDate.setDate(now.getDate() + (weeks * 7));
+        } else if (durationStr.includes('month')) {
+            const months = parseInt(durationStr) || 12;
+            expiryDate.setMonth(now.getMonth() + months);
+        } else if (durationStr.includes('year')) {
+            const years = parseInt(durationStr) || 1;
+            expiryDate.setFullYear(now.getFullYear() + years);
+        } else {
+            // Default to 1 year
+            expiryDate.setFullYear(now.getFullYear() + 1);
+        }
 
-        // Enable Access
-        // We might need to find all variants (like in index.html)
-        // For now, simpler approach: Update the specific school document provided
-        await db.collection('schools').doc(schoolId).set({ Access: true }, { merge: true });
+        // 4. Prepare Subscription Document (Matches Web Approval structure)
+        const subscriptionData = {
+            maxStudents: parseInt(tier.maxStudents),
+            maxClass: parseInt(tier.maxClass),
+            expiryDate: admin.firestore.Timestamp.fromDate(expiryDate),
+            lastActivated: admin.firestore.Timestamp.now(),
+            activationHash: 'ONLINE_PAYMENT', // Placeholder to indicate online activation
+            planName: tier.name,
+            paymentReference: reference
+        };
+
+        // 5. Write to 'subscriptions' collection
+        console.log(`[Activation] Writing subscription for ${baseName}`);
+        await db.collection('subscriptions').doc(baseName).set(subscriptionData, { merge: true });
+
+        // 6. Batch Update Access for All Variants
+        // We need to find all documents in 'schools' that start with baseName + '_'
+        // Use a range query on document ID (__name__)
+        console.log(`[Activation] Searching for variants of ${baseName}...`);
+
+        // Query for exact match or prefix match
+        // Note: In Firestore admin, FieldPath.documentId() refers to the key
+        const variantsSnapshot = await db.collection('schools')
+            .where(admin.firestore.FieldPath.documentId(), '>=', baseName)
+            .where(admin.firestore.FieldPath.documentId(), '<', baseName + '_\uf8ff')
+            .get();
+
+        // Also check for the exact baseName itself if it exists as a school doc (unlikely but possible)
+        // actually the range query includes baseName itself if it matches.
+
+        console.log(`[Activation] Found ${variantsSnapshot.size} variants.`);
+
+        const batch = db.batch();
+        let variantsCount = 0;
+
+        variantsSnapshot.forEach(doc => {
+            // Double check prefix to be safe (range query is reliable but good to be sure)
+            if (doc.id === baseName || doc.id.startsWith(baseName + '_')) {
+                batch.set(doc.ref, { Access: true }, { merge: true });
+                variantsCount++;
+            }
+        });
+
+        if (variantsCount > 0) {
+            await batch.commit();
+        } else {
+            // If no variants found via query, at least update the requested schoolId
+            await db.collection('schools').doc(schoolId).set({ Access: true }, { merge: true });
+        }
 
         return res.status(200).json({
             success: true,
-            message: 'Subscription activated successfully',
-            expiryDate
+            message: `Subscription activated for ${baseName} and ${variantsCount} variants.`,
+            expiryDate,
+            variantsActivated: variantsCount
         });
 
     } catch (error: any) {

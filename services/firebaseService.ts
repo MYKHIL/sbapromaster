@@ -592,6 +592,7 @@ export interface SchoolListItem {
     displayName: string;
     settings?: SchoolSettings;
     _databaseIndex?: number;
+    access?: boolean; // Added to track lock status
 }
 
 export interface SchoolPeriod {
@@ -602,14 +603,18 @@ export interface SchoolPeriod {
 
 /**
  * Fetches the list of all registered schools across ALL configured databases.
+ * @param prefix Optional search prefix
+ * @param includeLocked If true, includes schools with Access: false (default: false)
  */
-export const getSchoolList = async (prefix?: string): Promise<SchoolListItem[]> => {
-    const CACHE_KEY = prefix ? `cached_school_list_${prefix.toLowerCase()}` : 'cached_school_list';
+export const getSchoolList = async (prefix?: string, includeLocked: boolean = false): Promise<SchoolListItem[]> => {
+    const CACHE_KEY = prefix
+        ? `cached_school_list_${prefix.toLowerCase()}_${includeLocked}`
+        : `cached_school_list_${includeLocked}`;
 
     // 1. Try Memory Cache
     const cached = getCachedData<SchoolListItem[]>(CACHE_KEY);
     if (cached) {
-        console.log(`[Firebase] Returning cached school list${prefix ? ` for "${prefix}"` : ''}`);
+        console.log(`[Firebase] Returning cached school list${prefix ? ` for "${prefix}"` : ''} (Locked: ${includeLocked})`);
         return cached;
     }
 
@@ -621,7 +626,7 @@ export const getSchoolList = async (prefix?: string): Promise<SchoolListItem[]> 
 
     const fetchPromise = (async () => {
         try {
-            console.log(`[Firebase] Fetching global school list from all databases${prefix ? ` (prefix: ${prefix})` : ''}...`);
+            console.log(`[Firebase] Fetching global school list from all databases${prefix ? ` (prefix: ${prefix})` : ''} (Locked: ${includeLocked})...`);
             trackFirebaseRead('global_discovery', 'schools', 0, prefix ? `Searching schools by prefix: ${prefix}` : 'General discovery');
 
             const allSchools: SchoolListItem[] = [];
@@ -634,14 +639,16 @@ export const getSchoolList = async (prefix?: string): Promise<SchoolListItem[]> 
                 const list = snapshot.docs
                     .map(doc => {
                         const data = doc.data() as any;
-                        if (data.Access === false) return null;
+                        if (!includeLocked && data.Access === false) return null;
                         return {
                             docId: doc.id,
                             displayName: data.settings?.schoolName || data.schoolName || doc.id,
                             settings: data.settings,
-                            _databaseIndex: 2
+                            _databaseIndex: 2,
+                            access: data.Access // Capture access status
                         } as SchoolListItem;
                     })
+                    // Filter nulls if any
                     .filter((s): s is SchoolListItem => s !== null)
                     .sort((a, b) => a.displayName.localeCompare(b.displayName));
 
@@ -672,12 +679,14 @@ export const getSchoolList = async (prefix?: string): Promise<SchoolListItem[]> 
                     const localList: SchoolListItem[] = [];
                     snapshot.forEach(doc => {
                         const data = doc.data() as any;
-                        if (data.Access === false) return; // Skip locked schools if explicitly marked
+                        if (!includeLocked && data.Access === false) return; // Skip locked schools unless requested
+
                         localList.push({
                             docId: doc.id,
                             displayName: data.settings?.schoolName || data.schoolName || doc.id,
                             settings: data.settings,
-                            _databaseIndex: index
+                            _databaseIndex: index,
+                            access: data.Access // Capture access status
                         });
                     });
                     return localList;

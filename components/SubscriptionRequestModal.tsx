@@ -24,7 +24,7 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
     const [isProcessingPayment, setIsProcessingPayment] = useState(false);
     const [paymentError, setPaymentError] = useState<string | null>(null);
     const [paymentEmail, setPaymentEmail] = useState('');
-    const [phoneNumber, setPhoneNumber] = useState('');
+    // Phone number removed as requested
 
     // 1. Fetch All Schools for Combobox
     useEffect(() => {
@@ -33,7 +33,7 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
         const loadSchools = async () => {
             setIsLoadingSchools(true);
             try {
-                const list = await getSchoolList();
+                const list = await getSchoolList(undefined, true); // Include locked schools for activation
 
                 // Ensure uniqueness by displayName as requested
                 const uniqueSchools: SchoolListItem[] = [];
@@ -108,18 +108,8 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
 
     const handlePayment = async () => {
         setPaymentError(null);
-        if (!selectedSchool) {
-            setPaymentError("Please select a valid school first.");
-            return;
-        }
-
-        if (!paymentEmail) {
-            setPaymentError("Please provide an email address for the receipt.");
-            return;
-        }
-
-        if (!phoneNumber) {
-            setPaymentError("Please provide a phone number for Mobile Money.");
+        if (!selectedSchool || !paymentEmail) {
+            setPaymentError("Please fill in all fields");
             return;
         }
 
@@ -150,10 +140,8 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                 schoolId: selectedSchool.docId,
                 schoolName: selectedSchool.displayName,
                 tierName: tier.name,
-                phoneNumber // Pass phone number in metadata
             });
 
-            // 2. Open Paystack Popup
             // 2. Open Paystack Popup
             const PaystackPop = (window as any).PaystackPop;
 
@@ -172,11 +160,6 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                 currency: 'GHS',
                 metadata: {
                     custom_fields: [
-                        {
-                            display_name: "Phone Number",
-                            variable_name: "phone_number",
-                            value: phoneNumber
-                        },
                         {
                             display_name: "School",
                             variable_name: "school",
@@ -320,7 +303,7 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                         {selectedSchool && (
                             <div className="flex items-center gap-2 text-green-600 text-sm mt-1 animate-fadeIn">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                    <path fillRule="evenodd" d="M10 18a8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                                 </svg>
                                 <span>Ready for activation</span>
                             </div>
@@ -353,27 +336,16 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                     </div>
 
                     {/* 3. Payment Details */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <label className="block text-sm font-semibold text-gray-700">Billing Email</label>
-                            <input
-                                type="email"
-                                value={paymentEmail}
-                                onChange={(e) => setPaymentEmail(e.target.value)}
-                                placeholder="email@example.com"
-                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="block text-sm font-semibold text-gray-700">Phone Number (MoMo)</label>
-                            <input
-                                type="tel"
-                                value={phoneNumber}
-                                onChange={(e) => setPhoneNumber(e.target.value)}
-                                placeholder="024XXXXXXX"
-                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
-                            />
-                        </div>
+                    <div className="space-y-2">
+                        <label className="block text-sm font-semibold text-gray-700">Billing Email</label>
+                        <input
+                            type="email"
+                            placeholder="Enter email for receipt..."
+                            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none transition-all"
+                            value={paymentEmail}
+                            onChange={(e) => setPaymentEmail(e.target.value)}
+                        />
+                        <p className="text-xs text-gray-500">We'll send the receipt to this email.</p>
                     </div>
 
                     {paymentError && (
@@ -400,8 +372,8 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                         </button>
                         <button
                             onClick={handlePayment}
-                            disabled={!selectedSchool || !paymentEmail || !phoneNumber || isProcessingPayment}
-                            className={`flex-1 py-3 px-4 font-semibold rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 ${!selectedSchool || !paymentEmail || !phoneNumber || isProcessingPayment
+                            disabled={!selectedSchool || !paymentEmail || isProcessingPayment}
+                            className={`flex-1 py-3 px-4 font-semibold rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 ${!selectedSchool || !paymentEmail || isProcessingPayment
                                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
                                 : 'bg-green-600 text-white hover:bg-green-700 transform hover:scale-[1.02]'
                                 }`}
