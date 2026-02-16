@@ -4,7 +4,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
 
-import { setFirebaseConfigs } from './constants';
+// import { setFirebaseConfigs } from './constants'; // Removed duplicate
 import axios from 'axios';
 
 const rootElement = document.getElementById('root');
@@ -33,7 +33,28 @@ if (!rootElement) {
   throw new Error("Could not find root element to mount to");
 }
 
+import { setFirebaseConfigs, API_BASE_URL, FIREBASE_CONFIGS } from './constants';
+
+const loadFirebaseConfig = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/firebase-config`);
+    if (!response.ok) throw new Error('Failed to load config');
+    const data = await response.json();
+    // Handle different response structures (e.g. { configs: ... } or just configs)
+    const configs = data.configs || data;
+    setFirebaseConfigs(configs);
+    console.log('[App] Firebase configuration loaded from API');
+  } catch (error) {
+    console.error('[App] Failed to load Firebase config:', error);
+    // Fallback: If fetch fails (e.g. offline/error), try local storage or default?
+    // For now, let it fail so user knows connection is bad.
+    // Ideally, we should have a retry or blocking error screen.
+    throw error; // Re-throw to trigger bootstrap error handling
+  }
+};
+
 const bootstrap = async () => {
+
   try {
     // 1. Fetch Configuration
     console.log('[Bootstrap] Fetching configuration...');
@@ -48,13 +69,8 @@ const bootstrap = async () => {
     // We should handle that gracefully if possible, but the user asked for this architecture.
     // We will attempt fetch.
 
-    const response = await axios.get('/api/firebase-config');
-    if (response.data && response.data.configs) {
-      setFirebaseConfigs(response.data.configs);
-      console.log('[Bootstrap] Configuration loaded.');
-    } else {
-      throw new Error('Invalid configuration received');
-    }
+    await loadFirebaseConfig();
+    console.log('[Bootstrap] Configuration loaded.');
 
     // 2. Dynamic Import App
     // This ensures imports within App (like firebaseService) run AFTER config is set.

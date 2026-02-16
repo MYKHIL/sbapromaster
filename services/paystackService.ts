@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { API_BASE_URL } from '../constants'; // Import API_BASE_URL
 
 // Interfaces for Paystack response types
 interface InitializePaymentResponse {
@@ -33,7 +34,7 @@ export const initializePayment = async (
     metadata: MetaData = {}
 ): Promise<InitializePaymentResponse> => {
     try {
-        const response = await axios.post('/api/initialize-payment', {
+        const response = await axios.post(`${API_BASE_URL}/initialize-payment`, {
             email,
             amount,
             metadata
@@ -52,7 +53,7 @@ export const initializePayment = async (
  */
 export const verifyPayment = async (reference: string): Promise<VerifyPaymentResponse> => {
     try {
-        const response = await axios.get(`/api/verify-payment?reference=${reference}`);
+        const response = await axios.get(`${API_BASE_URL}/verify-payment?reference=${reference}`);
         return response.data;
     } catch (error) {
         console.error('Paystack verification failed:', error);
@@ -72,7 +73,7 @@ export const activateSubscription = async (
     tier: any
 ): Promise<any> => {
     try {
-        const response = await axios.post('/api/activate-subscription', {
+        const response = await axios.post(`${API_BASE_URL}/activate-subscription`, {
             reference,
             schoolId: schoolDetails.id,
             schoolName: schoolDetails.name,

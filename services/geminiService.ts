@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { API_BASE_URL } from '../constants'; // Import API_BASE_URL
 
 // Remove direct GoogleGenAI logic. 
 // We now proxy everything through our Vercel API to hide the API KEY.
@@ -7,7 +8,7 @@ export const generateTeacherRemark = async (studentName: string, performanceSumm
   const prompt = customPrompt || `Generate a brief, encouraging, and constructive teacher's remark for a student named ${studentName}. The student's performance is as follows: ${performanceSummary}. The remark should be about 15-25 words.`;
 
   try {
-    const response = await axios.post('/api/gemini-proxy', {
+    const response = await axios.post(`${API_BASE_URL}/gemini-proxy`, {
       type: 'remark',
       prompt
     });
@@ -51,7 +52,7 @@ export const enhanceImage = async (base64ImageData: string): Promise<string> => 
    - **Image Only:** Your response MUST contain only the final, edited image. Do not include any text, explanations, or chat.`;
 
   try {
-    const response = await axios.post('/api/gemini-proxy', {
+    const response = await axios.post(`${API_BASE_URL}/gemini-proxy`, {
       type: 'image',
       image: base64ImageData,
       prompt: enhancementPrompt
