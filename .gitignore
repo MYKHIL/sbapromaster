@@ -48,4 +48,6 @@ consoledebugs.txt
 deploy.py
 run_server.py
 file_list.txt
+*.rules
+*.md
 

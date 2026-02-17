@@ -749,6 +749,8 @@ export const activateSchoolSubscriptionLocally = async (
     // Determine target DB
     let targetDb = db;
     let tempApp: any = null;
+    let targetProjectId = (db as any).app?.options?.projectId || 'primary';
+    let targetIndexToLog = -1; // -1 represents the currently active db from context
 
     try {
         const { ACTIVE_DATABASE_INDEX } = await import('../constants');
@@ -762,12 +764,21 @@ export const activateSchoolSubscriptionLocally = async (
             targetDb = initializeFirestore(tempApp, {
                 experimentalForceLongPolling: true
             });
-            console.log(`[Activation] Switched to target Database ${dbIndex} (Portal Match mode).`);
+            targetProjectId = config.projectId;
+            targetIndexToLog = dbIndex;
+            console.log(`[Activation] Initializing activation on Database ${dbIndex} (${targetProjectId}) [Portal Match mode].`);
+        } else {
+            const { ACTIVE_DATABASE_INDEX } = await import('../constants');
+            targetIndexToLog = ACTIVE_DATABASE_INDEX;
+            console.log(`[Activation] Using Primary Database ${targetIndexToLog} (${targetProjectId}).`);
         }
 
         // 1. Trial Eligibility Check
         const isTrial = reference.startsWith('FREE_');
-        const subDocRef = doc(targetDb, 'subscriptions', baseName);
+        const collectionName = 'subscriptions';
+        const subDocRef = doc(targetDb, collectionName, baseName);
+        console.log(`[Activation] Target Document: ${collectionName}/${baseName} on ${targetProjectId}`);
+
         const existingSub = await getDoc(subDocRef);
 
         if (isTrial && existingSub.exists()) {
@@ -806,7 +817,8 @@ export const activateSchoolSubscriptionLocally = async (
         // 4. Batch Updates
         const batch = writeBatch(targetDb);
 
-        // Write subscription
+        // Write subscription (Creates the 'subscriptions' collection if it doesn't exist)
+        console.log(`[Activation] ✍️ Queueing write to '${collectionName}' collection...`);
         batch.set(subDocRef, subscriptionData, { merge: true });
 
         // Update Access for all variants
