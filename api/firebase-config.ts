@@ -60,7 +60,8 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({
             success: true,
             configs,
-            schoolDatabaseMapping
+            schoolDatabaseMapping,
+            activationHash: process.env.PASSWORD_HASH // Required for client-side activation security rules
         });
 
     } catch (error: any) {

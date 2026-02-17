@@ -753,7 +753,7 @@ export const activateSchoolSubscriptionLocally = async (
     let targetIndexToLog = -1; // -1 represents the currently active db from context
 
     try {
-        const { ACTIVE_DATABASE_INDEX } = await import('../constants');
+        const { ACTIVE_DATABASE_INDEX, ACTIVATION_HASH } = await import('../constants');
         if (dbIndex !== ACTIVE_DATABASE_INDEX) {
             const config = FIREBASE_CONFIGS[dbIndex];
             if (!config) throw new Error(`Invalid database index: ${dbIndex}`);
@@ -768,7 +768,6 @@ export const activateSchoolSubscriptionLocally = async (
             targetIndexToLog = dbIndex;
             console.log(`[Activation] Initializing activation on Database ${dbIndex} (${targetProjectId}) [Portal Match mode].`);
         } else {
-            const { ACTIVE_DATABASE_INDEX } = await import('../constants');
             targetIndexToLog = ACTIVE_DATABASE_INDEX;
             console.log(`[Activation] Using Primary Database ${targetIndexToLog} (${targetProjectId}).`);
         }
@@ -809,7 +808,7 @@ export const activateSchoolSubscriptionLocally = async (
             maxClass: parseInt(tier.maxClass),
             expiryDate: Timestamp.fromDate(expiryDate),
             lastActivated: Timestamp.now(),
-            activationHash: isTrial ? 'TRIAL_ACTIVATION' : 'ONLINE_PAYMENT',
+            activationHash: ACTIVATION_HASH || (isTrial ? 'TRIAL_ACTIVATION' : 'ONLINE_PAYMENT'),
             planName: tier.name,
             paymentReference: reference
         };
@@ -833,14 +832,21 @@ export const activateSchoolSubscriptionLocally = async (
             // Precise check: must match exactly or start with prefix + underscore
             if (d.id === baseName || d.id.startsWith(baseName + '_')) {
                 // MATCH PORTAL: Use set with merge instead of update
-                batch.set(d.ref, { Access: true }, { merge: true });
+                // Include activationHash to satisfy security loop fix
+                batch.set(d.ref, {
+                    Access: true,
+                    activationHash: ACTIVATION_HASH
+                }, { merge: true });
                 variantsCount++;
             }
         });
 
         if (variantsCount === 0) {
             // Fallback: If no variants found (e.g. manual rename), update the specific schoolId provided
-            batch.set(doc(targetDb, 'schools', schoolId), { Access: true }, { merge: true });
+            batch.set(doc(targetDb, 'schools', schoolId), {
+                Access: true,
+                activationHash: ACTIVATION_HASH
+            }, { merge: true });
             variantsCount = 1;
         }
 

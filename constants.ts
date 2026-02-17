@@ -72,6 +72,12 @@ export const setSchoolDatabaseMapping = (mapping: { [key: string]: number }) => 
   SCHOOL_DATABASE_MAPPING = mapping;
 };
 
+export let ACTIVATION_HASH = '';
+
+export const setActivationHash = (hash: string) => {
+  ACTIVATION_HASH = hash;
+};
+
 export const INITIAL_SETTINGS: SchoolSettings = {
   schoolName: '',
   district: '',

@@ -33,7 +33,7 @@ if (!rootElement) {
   throw new Error("Could not find root element to mount to");
 }
 
-import { setFirebaseConfigs, setSchoolDatabaseMapping, API_BASE_URL, FIREBASE_CONFIGS } from './constants';
+import { setFirebaseConfigs, setSchoolDatabaseMapping, setActivationHash, API_BASE_URL, FIREBASE_CONFIGS } from './constants';
 
 const loadFirebaseConfig = async () => {
   try {
@@ -48,6 +48,12 @@ const loadFirebaseConfig = async () => {
     if (data.schoolDatabaseMapping) {
       setSchoolDatabaseMapping(data.schoolDatabaseMapping);
       console.log('[App] School database mapping loaded from API');
+    }
+
+    // Capture Activation Hash for security rules
+    if (data.activationHash) {
+      setActivationHash(data.activationHash);
+      console.log('[App] Activation security hash loaded');
     }
 
     console.log('[App] Firebase configuration loaded from API');
