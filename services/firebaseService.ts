@@ -26,7 +26,8 @@ import {
     serverTimestamp,
     initializeFirestore,
     persistentLocalCache,
-    persistentMultipleTabManager
+    persistentMultipleTabManager,
+    Timestamp
 } from "firebase/firestore";
 import type { SchoolSettings, Student, Subject, Class, Grade, Assessment, Score, ReportSpecificData, ClassSpecificData, User, DeviceCredential, UserLog, OnlineUser, AppDataType } from '../types';
 
@@ -746,6 +747,117 @@ export const getSchoolList = async (prefix?: string, includeLocked: boolean = fa
 
     inflightSchoolListPromises.set(CACHE_KEY, fetchPromise);
     return fetchPromise;
+};
+
+/**
+ * Client-Side Subscription Activation
+ * Performs writes directly to the target database without a service account.
+ */
+export const activateSchoolSubscriptionLocally = async (
+    reference: string,
+    schoolDetails: { id: string, name: string, dbIndex: number },
+    tier: any
+): Promise<any> => {
+    const { id: schoolId, dbIndex } = schoolDetails;
+    const baseName = schoolId.split('_')[0];
+
+    // Determine target DB
+    let targetDb = db;
+    let tempApp: any = null;
+
+    try {
+        if (!isEmulator) {
+            const { ACTIVE_DATABASE_INDEX } = await import('../constants');
+            if (dbIndex !== ACTIVE_DATABASE_INDEX) {
+                const config = FIREBASE_CONFIGS[dbIndex];
+                if (!config) throw new Error(`Invalid database index: ${dbIndex}`);
+
+                const appName = `temp_activate_${dbIndex}_${Date.now()}`;
+                tempApp = initializeApp(config, appName);
+                targetDb = getFirestore(tempApp);
+                console.log(`[Activation] Switched to target Database ${dbIndex} for activation.`);
+            }
+        }
+
+        // 1. Trial Eligibility Check
+        const isTrial = reference.startsWith('FREE_');
+        const subDocRef = doc(targetDb, 'subscriptions', baseName);
+        const existingSub = await getDoc(subDocRef);
+
+        if (isTrial && existingSub.exists()) {
+            throw new Error('Trial Unavailable: A trial or subscription has already been activated for this school.');
+        }
+
+        // 2. Calculate Expiry
+        const now = new Date();
+        const expiryDate = new Date();
+        const durationStr = (tier.duration || '1 Year').toLowerCase();
+
+        if (durationStr.includes('week')) {
+            const weeks = parseInt(durationStr) || 1;
+            expiryDate.setDate(now.getDate() + (weeks * 7));
+        } else if (durationStr.includes('month')) {
+            const months = parseInt(durationStr) || 12;
+            expiryDate.setMonth(now.getMonth() + months);
+        } else if (durationStr.includes('year')) {
+            const years = parseInt(durationStr) || 1;
+            expiryDate.setFullYear(now.getFullYear() + years);
+        } else {
+            expiryDate.setFullYear(now.getFullYear() + 1);
+        }
+
+        // 3. Prepare Subscription
+        const subscriptionData = {
+            maxStudents: parseInt(tier.maxStudents),
+            maxClass: parseInt(tier.maxClass),
+            expiryDate: Timestamp.fromDate(expiryDate),
+            lastActivated: Timestamp.now(),
+            activationHash: isTrial ? 'TRIAL_ACTIVATION' : 'ONLINE_PAYMENT',
+            planName: tier.name,
+            paymentReference: reference
+        };
+
+        // 4. Batch Updates
+        const batch = writeBatch(targetDb);
+
+        // Write subscription
+        batch.set(subDocRef, subscriptionData, { merge: true });
+
+        // Update Access for all variants
+        console.log(`[Activation] Searching for variants of ${baseName}...`);
+        const schoolsRef = collection(targetDb, 'schools');
+        const q = query(schoolsRef, where(documentId(), '>=', baseName), where(documentId(), '<=', baseName + '\uf8ff'));
+        const snapshot = await getDocs(q);
+
+        let variantsCount = 0;
+        snapshot.forEach(d => {
+            if (d.id === baseName || d.id.startsWith(baseName + '_')) {
+                batch.set(d.ref, { Access: true }, { merge: true });
+                variantsCount++;
+            }
+        });
+
+        if (variantsCount === 0) {
+            batch.set(doc(targetDb, 'schools', schoolId), { Access: true }, { merge: true });
+            variantsCount = 1;
+        }
+
+        await batch.commit();
+        console.log(`[Activation] Success for ${baseName} on DB ${dbIndex}. Variants updated: ${variantsCount}`);
+
+        return {
+            success: true,
+            message: `Subscription activated for ${baseName} and ${variantsCount} variants.`,
+            expiryDate,
+            variantsActivated: variantsCount
+        };
+
+    } catch (error: any) {
+        console.error('[Activation Local Error]', error);
+        throw error;
+    } finally {
+        if (tempApp) deleteApp(tempApp).catch(() => { });
+    }
 };
 
 /**

@@ -61,6 +61,8 @@ export const verifyPayment = async (reference: string): Promise<VerifyPaymentRes
     }
 };
 
+import { activateSchoolSubscriptionLocally } from './firebaseService';
+
 /**
  * Activates subscription after successful payment
  * @param reference Payment reference
@@ -73,14 +75,7 @@ export const activateSubscription = async (
     tier: any
 ): Promise<any> => {
     try {
-        const response = await axios.post(`${API_BASE_URL}/activate-subscription`, {
-            reference,
-            schoolId: schoolDetails.id,
-            schoolName: schoolDetails.name,
-            dbIndex: schoolDetails.dbIndex,
-            tier
-        });
-        return response.data;
+        return await activateSchoolSubscriptionLocally(reference, schoolDetails, tier);
     } catch (error) {
         console.error('Subscription activation failed:', error);
         throw error;
