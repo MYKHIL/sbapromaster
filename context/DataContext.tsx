@@ -186,6 +186,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [activeSessions, setActiveSessions] = useState<Record<string, string>>({});
     const [subscription, setSubscription] = useState<any | null>(null);
 
+    // GATING: Track if the session is "unlocked" (password verified)
+    const [isSessionUnlocked, setIsSessionUnlocked] = useState(false);
+
     // Wrapped setUsers with logging to track all changes
     const setUsers = (value: React.SetStateAction<User[]>) => {
         const newValue = typeof value === 'function' ? value(users) : value;
@@ -976,7 +979,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (!schoolId) return;
 
         // OPTIMIZATION: Prevention of Double-Fetch on Login
-        // If AuthOverlay has already injected data (via loginOrRegisterSchool -> loadImportedData),
+        // Gate 1: Session must be unlocked (Login completed)
+        if (!isSessionUnlocked) {
+            console.log(`[DataContext] 🔒 Session locked. Deferring initial data fetch for ${schoolId}...`);
+            return;
+        }
+
+        // Gate 2: If we already have data (already loaded or offline persistence), 
         // we should NOT fetch again.
         // We check 'settings.schoolName' as a proxy for valid loaded data.
         if (settings.schoolName && users.length > 0) {
@@ -1024,7 +1033,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
 
         fetchInitialData();
-    }, [schoolId]);
+    }, [schoolId, isSessionUnlocked]);
 
     // Track initial mount to prevent auto-save before data is loaded from cloud
     const isInitialMount = React.useRef(true);
@@ -1571,12 +1580,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // OPTIMIZATION: Ensure Student Bucket Exists on Startup
     // This catches schools that haven't migrated yet, even if they don't visit the Student page immediately.
     useEffect(() => {
-        if (schoolId) {
+        if (schoolId && isSessionUnlocked) {
             // No preloaded students passed here; function will check bucket existence (1 read)
             // and fetch subcollection ONLY if bucket is missing.
+            console.log(`[DataContext] 📦 Checking student bucket existence for ${schoolId}...`);
             ensureStudentBucketExists(schoolId).catch(console.error);
         }
-    }, [schoolId]);
+    }, [schoolId, isSessionUnlocked]);
 
     // Heartbeat effect
     useEffect(() => {
@@ -1650,11 +1660,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.log('[DataContext] Sync PAUSED');
         isSyncPaused.current = true;
         isSyncingRef.current = false;
+        setIsSessionUnlocked(false); // Lock session on pause
     };
 
     const resumeSync = () => {
         console.log('[DataContext] Sync RESUMED');
         isSyncPaused.current = false;
+        setIsSessionUnlocked(true); // Unlock session on resume
 
         // CRITICAL FIX: Reset lastLocalUpdate to allow Firebase data to load immediately
         // Without this, if user navigates quickly after login, the 10-second check

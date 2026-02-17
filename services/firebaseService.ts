@@ -1,6 +1,6 @@
 import { initializeApp, deleteApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { getAuth, signInAnonymously, connectAuthEmulator } from "firebase/auth";
+import { getAuth, connectAuthEmulator } from "firebase/auth";
 import {
     getFirestore,
     connectFirestoreEmulator,
@@ -52,7 +52,7 @@ import { ACTIVE_DATABASE_INDEX, FIREBASE_CONFIGS } from '../constants';
 import { trackFirebaseRead, trackFirebaseWrite } from './analyticsTracking';
 
 // @ts-ignore
-const isEmulator = (import.meta as any).env.VITE_USE_EMULATOR === 'true';
+export const isEmulator = (import.meta as any).env.VITE_USE_EMULATOR === 'true';
 
 // In Emulator Mode, we ALWAYS use Index 2 (sba-pro-master-40f08) because that's what the Emulator is started with.
 const targetIndex = isEmulator ? 2 : ACTIVE_DATABASE_INDEX;
@@ -60,17 +60,27 @@ const targetIndex = isEmulator ? 2 : ACTIVE_DATABASE_INDEX;
 const selectedConfig = FIREBASE_CONFIGS[targetIndex] || FIREBASE_CONFIGS[1];
 console.log(`[Firebase] Initializing with Database Index: ${targetIndex} (${selectedConfig['projectId']}) ${isEmulator ? '[EMULATOR FORCED]' : ''}`);
 
-const app = initializeApp(selectedConfig);
+import { getApp, getApps } from "firebase/app";
+
+const app = getApps().length > 0 ? getApp() : initializeApp(selectedConfig);
 export const auth = getAuth(app);
 const analytics = getAnalytics(app);
 
 // ENABLE OFFLINE PERSISTENCE (The #1 Fix)
 // We use initializeFirestore instead of getFirestore to pass settings
-export const db = initializeFirestore(app, {
-    localCache: persistentLocalCache({
-        tabManager: persistentMultipleTabManager()
-    })
-});
+// In Vite/HMR, we must be careful not to initialize twice with different options
+let _db;
+try {
+    _db = initializeFirestore(app, {
+        localCache: persistentLocalCache({
+            tabManager: persistentMultipleTabManager()
+        })
+    });
+} catch (e) {
+    console.warn("[Firebase] initializeFirestore failed or already called, falling back to getFirestore()");
+    _db = getFirestore(app);
+}
+export const db = _db;
 
 export { analytics };
 
@@ -748,14 +758,11 @@ export const activateSchoolSubscriptionLocally = async (
 
             const appName = `temp_activate_${dbIndex}_${Date.now()}`;
             tempApp = initializeApp(config, appName);
-
-            // AUTHENTICATION: Must be signed in to write to target DB
-            const tempAuth = getAuth(tempApp);
-            console.log(`[Activation] Signing into Database ${dbIndex} anonymously...`);
-            await signInAnonymously(tempAuth);
-
-            targetDb = getFirestore(tempApp);
-            console.log(`[Activation] Switched to target Database ${dbIndex} (and authenticated).`);
+            // MATCH PORTAL: Use long polling for more stable connections
+            targetDb = initializeFirestore(tempApp, {
+                experimentalForceLongPolling: true
+            });
+            console.log(`[Activation] Switched to target Database ${dbIndex} (Portal Match mode).`);
         }
 
         // 1. Trial Eligibility Check
@@ -813,7 +820,8 @@ export const activateSchoolSubscriptionLocally = async (
         snapshot.forEach(d => {
             // Precise check: must match exactly or start with prefix + underscore
             if (d.id === baseName || d.id.startsWith(baseName + '_')) {
-                batch.update(d.ref, { Access: true });
+                // MATCH PORTAL: Use set with merge instead of update
+                batch.set(d.ref, { Access: true }, { merge: true });
                 variantsCount++;
             }
         });
