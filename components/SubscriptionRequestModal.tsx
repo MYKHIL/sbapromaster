@@ -310,7 +310,20 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                         )}
                     </div>
 
-                    {/* 2. Tier Selection */}
+                    {/* 2. Payment Details */}
+                    <div className="space-y-2">
+                        <label className="block text-sm font-semibold text-gray-700">Billing Email</label>
+                        <input
+                            type="email"
+                            placeholder="Enter email for receipt..."
+                            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none transition-all"
+                            value={paymentEmail}
+                            onChange={(e) => setPaymentEmail(e.target.value)}
+                        />
+                        <p className="text-xs text-gray-500">We'll send the receipt to this email.</p>
+                    </div>
+
+                    {/* 3. Tier Selection */}
                     <div className="space-y-2">
                         <label className="block text-sm font-semibold text-gray-700">Select Subscription Tier</label>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
@@ -333,19 +346,6 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                                 </button>
                             ))}
                         </div>
-                    </div>
-
-                    {/* 3. Payment Details */}
-                    <div className="space-y-2">
-                        <label className="block text-sm font-semibold text-gray-700">Billing Email</label>
-                        <input
-                            type="email"
-                            placeholder="Enter email for receipt..."
-                            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none transition-all"
-                            value={paymentEmail}
-                            onChange={(e) => setPaymentEmail(e.target.value)}
-                        />
-                        <p className="text-xs text-gray-500">We'll send the receipt to this email.</p>
                     </div>
 
                     {paymentError && (

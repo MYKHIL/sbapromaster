@@ -347,8 +347,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                     .map(([idx, _]) => Number(idx));
 
                 if (publicIndices.length > 0) {
-                    // FAIR DISTRIBUTION: Weight selection inversely by current count
-                    // Get current school count per database from the cached list
+                    // LEAST SCHOOLS DISTRIBUTION: Pick the DB with the absolute minimum schools
                     const dbCounts: { [key: number]: number } = {};
                     publicIndices.forEach(idx => dbCounts[idx] = 0);
 
@@ -359,23 +358,19 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                         }
                     });
 
-                    // Calculate weights (inverse of count + 1 to avoid division by zero)
-                    const weights = publicIndices.map(idx => 1 / (dbCounts[idx] + 1));
-                    const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+                    // Deterministic selection: Pick one of the indices with the minimum count
+                    let minCount = Infinity;
+                    let bestIndex = publicIndices[0];
 
-                    // Weighted random selection
-                    let random = Math.random() * totalWeight;
-                    targetIndex = publicIndices[0]; // Fallback
-
-                    for (let i = 0; i < publicIndices.length; i++) {
-                        random -= weights[i];
-                        if (random <= 0) {
-                            targetIndex = publicIndices[i];
-                            break;
+                    publicIndices.forEach(idx => {
+                        if (dbCounts[idx] < minCount) {
+                            minCount = dbCounts[idx];
+                            bestIndex = idx;
                         }
-                    }
+                    });
 
-                    console.log(`[AuthOverlay] Fair distribution selected DB ${targetIndex}. Current counts:`, dbCounts);
+                    targetIndex = bestIndex;
+                    console.log(`[AuthOverlay] Least-schools distribution selected DB ${targetIndex}. Final counts:`, dbCounts);
                 } else {
                     targetIndex = 1; // Fallback to primary
                 }
