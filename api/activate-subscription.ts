@@ -1,20 +1,41 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import * as admin from 'firebase-admin';
 
-// Initialize Firebase Admin if not already initialized
-if (!admin.apps.length) {
-    try {
-        const serviceAccount = process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT
-            ? JSON.parse(process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT)
-            : {};
+// -----------------------------------------------------------------------------
+// FIREBASE ADMIN MANAGEMENT
+// -----------------------------------------------------------------------------
+const getDbForIndex = (dbIndex: number) => {
+    const appName = `db_${dbIndex}`;
 
-        admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount)
-        });
-    } catch (error) {
-        console.error('Firebase Admin initialization failed:', error);
+    // If already initialized, return it
+    const existingApp = admin.apps.find(app => app?.name === appName);
+    if (existingApp) return existingApp.firestore();
+
+    const serviceAccountVar = process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT;
+    const serviceAccount = serviceAccountVar ? JSON.parse(serviceAccountVar) : null;
+
+    if (!serviceAccount) {
+        throw new Error('FIREBASE_ADMIN_SERVICE_ACCOUNT is missing in environment variables');
     }
-}
+
+    // Determine the Project ID for this index from environment variables
+    // This allows the API to write to any of the 4+ projects
+    const projectId = process.env[`FIREBASE_${dbIndex}_PROJECT_ID`];
+
+    if (!projectId) {
+        throw new Error(`Project ID for Database ${dbIndex} not found in environment`);
+    }
+
+    // CRITICAL: We use the same service account credentials but override the Project ID
+    // This works if the service account has been granted "Owner" or "Cloud Datastore User" 
+    // permissions across all projects in the Firebase Organization.
+    const app = admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        projectId: projectId
+    }, appName);
+
+    return app.firestore();
+};
 
 /**
  * Subscription Activation Endpoint
@@ -68,17 +89,30 @@ async function handler(req: VercelRequest, res: VercelResponse) {
             }
         }
 
-        const db = admin.firestore();
+        const db = getDbForIndex(Number(dbIndex || 1));
 
-        // 2. Logic to derive Base Name (e.g., "ayirebida" from "ayirebida_2025-2026_First-Term")
-        // The Web Approval tool uses school.id.split('_')[0]
+        // 2. Derive Base Name (e.g., "ayirebida" from "ayirebida_2025-2026_First-Term")
         const baseName = schoolId.split('_')[0];
 
         if (!baseName) {
             return res.status(400).json({ error: 'Invalid school ID format' });
         }
 
-        // 3. Calculate Expiry
+        // ---------------------------------------------------------------------
+        // 3. TRIAL ELIGIBILITY CHECK
+        // ---------------------------------------------------------------------
+        const isTrial = reference.startsWith('FREE_');
+        const subDocRef = db.collection('subscriptions').doc(baseName);
+        const existingSub = await subDocRef.get();
+
+        if (isTrial && existingSub.exists) {
+            return res.status(400).json({
+                error: 'Trial Unavailable',
+                message: 'A trial or subscription has already been activated for this school. Trials are one-time only.'
+            });
+        }
+
+        // 4. Calculate Expiry
         const now = new Date();
         const expiryDate = new Date();
         const durationStr = (tier.duration || '1 Year').toLowerCase();
@@ -97,35 +131,28 @@ async function handler(req: VercelRequest, res: VercelResponse) {
             expiryDate.setFullYear(now.getFullYear() + 1);
         }
 
-        // 4. Prepare Subscription Document (Matches Web Approval structure)
+        // 5. Prepare Subscription Document (Matches Web Approval structure)
         const subscriptionData = {
             maxStudents: parseInt(tier.maxStudents),
             maxClass: parseInt(tier.maxClass),
             expiryDate: admin.firestore.Timestamp.fromDate(expiryDate),
             lastActivated: admin.firestore.Timestamp.now(),
-            activationHash: 'ONLINE_PAYMENT', // Placeholder to indicate online activation
+            activationHash: isTrial ? 'TRIAL_ACTIVATION' : 'ONLINE_PAYMENT',
             planName: tier.name,
             paymentReference: reference
         };
 
-        // 5. Write to 'subscriptions' collection
-        console.log(`[Activation] Writing subscription for ${baseName}`);
-        await db.collection('subscriptions').doc(baseName).set(subscriptionData, { merge: true });
+        // 6. Write to 'subscriptions' collection
+        console.log(`[Activation] Writing subscription for ${baseName} on DB ${dbIndex}`);
+        await subDocRef.set(subscriptionData, { merge: true });
 
-        // 6. Batch Update Access for All Variants
-        // We need to find all documents in 'schools' that start with baseName + '_'
-        // Use a range query on document ID (__name__)
+        // 7. Batch Update Access for All Variants
         console.log(`[Activation] Searching for variants of ${baseName}...`);
 
-        // Query for exact match or prefix match
-        // Note: In Firestore admin, FieldPath.documentId() refers to the key
         const variantsSnapshot = await db.collection('schools')
             .where(admin.firestore.FieldPath.documentId(), '>=', baseName)
             .where(admin.firestore.FieldPath.documentId(), '<', baseName + '_\uf8ff')
             .get();
-
-        // Also check for the exact baseName itself if it exists as a school doc (unlikely but possible)
-        // actually the range query includes baseName itself if it matches.
 
         console.log(`[Activation] Found ${variantsSnapshot.size} variants.`);
 
@@ -133,7 +160,6 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         let variantsCount = 0;
 
         variantsSnapshot.forEach(doc => {
-            // Double check prefix to be safe (range query is reliable but good to be sure)
             if (doc.id === baseName || doc.id.startsWith(baseName + '_')) {
                 batch.set(doc.ref, { Access: true }, { merge: true });
                 variantsCount++;
@@ -143,8 +169,9 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         if (variantsCount > 0) {
             await batch.commit();
         } else {
-            // If no variants found via query, at least update the requested schoolId
+            // Ensure at least the requested schoolId is updated
             await db.collection('schools').doc(schoolId).set({ Access: true }, { merge: true });
+            variantsCount = 1;
         }
 
         return res.status(200).json({

@@ -24,40 +24,39 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
     const [isProcessingPayment, setIsProcessingPayment] = useState(false);
     const [paymentError, setPaymentError] = useState<string | null>(null);
     const [paymentEmail, setPaymentEmail] = useState('');
-    // Phone number removed as requested
+
+    const loadSchools = async () => {
+        setIsLoadingSchools(true);
+        try {
+            const list = await getSchoolList(undefined, true); // Include locked schools for activation
+
+            // Ensure uniqueness by displayName as requested
+            const uniqueSchools: SchoolListItem[] = [];
+            const seenNames = new Set<string>();
+
+            list.forEach(school => {
+                if (!seenNames.has(school.displayName)) {
+                    seenNames.add(school.displayName);
+                    uniqueSchools.push(school);
+                }
+            });
+
+            setAllSchools(uniqueSchools);
+
+            if (initialSchoolName) {
+                const found = uniqueSchools.find(s => s.displayName === initialSchoolName);
+                if (found) setSelectedSchool(found);
+            }
+        } catch (error) {
+            console.error('[Subscription] Failed to load schools:', error);
+        } finally {
+            setIsLoadingSchools(false);
+        }
+    };
 
     // 1. Fetch All Schools for Combobox
     useEffect(() => {
         if (!isOpen) return;
-
-        const loadSchools = async () => {
-            setIsLoadingSchools(true);
-            try {
-                const list = await getSchoolList(undefined, true); // Include locked schools for activation
-
-                // Ensure uniqueness by displayName as requested
-                const uniqueSchools: SchoolListItem[] = [];
-                const seenNames = new Set<string>();
-
-                list.forEach(school => {
-                    if (!seenNames.has(school.displayName)) {
-                        seenNames.add(school.displayName);
-                        uniqueSchools.push(school);
-                    }
-                });
-
-                setAllSchools(uniqueSchools);
-
-                if (initialSchoolName) {
-                    const found = uniqueSchools.find(s => s.displayName === initialSchoolName);
-                    if (found) setSelectedSchool(found);
-                }
-            } catch (error) {
-                console.error('[Subscription] Failed to load schools:', error);
-            } finally {
-                setIsLoadingSchools(false);
-            }
-        };
         loadSchools();
         loadPaystackScript(); // Preload script
     }, [isOpen, initialSchoolName]);
@@ -123,7 +122,7 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
             // Free tier or Request Quote
             if (tier.price.toLowerCase().includes('free')) {
                 // Handle free tier activation directly
-                activateFreeTier(tier);
+                activateFreeTier();
                 return;
             }
             if (tier.price.toLowerCase().includes('quote')) {
@@ -201,30 +200,53 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
 
         } catch (error: any) {
             console.error(error);
-            setPaymentError(error.message || "Payment initialization failed.");
+            const errMsg = error.response?.data?.message || error.message || "Payment initialization failed.";
+            setPaymentError(errMsg);
             setIsProcessingPayment(false);
         }
     };
 
-    const activateFreeTier = async (tier: any) => {
-        if (!selectedSchool) return;
+    const activateFreeTier = async () => {
+        if (!selectedSchool) {
+            setPaymentError("Please select a school first.");
+            return;
+        }
+
+        const confirmTrial = window.confirm(
+            `Activate 1-week FREE Trial for ${selectedSchool.displayName}?\n\nNote: Trials are one-time only and cannot be reactivated once used or expired.`
+        );
+
+        if (!confirmTrial) return;
+
         setIsProcessingPayment(true);
+        setPaymentError(null);
+
         try {
-            // Use a specific reference for free tier
-            const ref = `FREE_${Date.now()}`;
+            const trialTier = {
+                name: "Trial",
+                maxStudents: "10",
+                maxClass: "1",
+                duration: "1 Week"
+            };
+
             await activateSubscription(
-                ref,
+                `FREE_${Date.now()}`,
                 {
                     id: selectedSchool.docId,
                     name: selectedSchool.displayName,
                     dbIndex: selectedSchool._databaseIndex || 1
                 },
-                tier
+                trialTier
             );
-            alert(`Trial Activated for ${selectedSchool.displayName}!`);
+
+            // Re-fetch schools to show updated access
+            await loadSchools();
             onClose();
-        } catch (e) {
-            setPaymentError("Failed to activate trial.");
+            alert("Trial activated successfully! You now have full access for 7 days.");
+        } catch (error: any) {
+            console.error("Trial activation failed:", error);
+            const errMsg = error.response?.data?.message || error.message || "Failed to activate trial. Please contact support.";
+            setPaymentError(errMsg);
         } finally {
             setIsProcessingPayment(false);
         }

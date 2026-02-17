@@ -41,3 +41,12 @@ deploy.py
 .env.local
 .env.production
 .vercel
+
+# Others
+constants.ts
+constants.backup.ts
+consoledebugs.txt
+deploy.py
+run_server.py
+file_list.txt
+
