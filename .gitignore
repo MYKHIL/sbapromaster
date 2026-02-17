@@ -43,7 +43,6 @@ deploy.py
 .vercel
 
 # Others
-constants.ts
 constants.backup.ts
 consoledebugs.txt
 deploy.py

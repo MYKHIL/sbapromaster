@@ -39,11 +39,9 @@ export const ACTIVE_DATABASE_INDEX = storedIndex ? parseInt(storedIndex, 10) : 1
 const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 const isGitHubPages = typeof window !== 'undefined' && window.location.hostname.includes('github.io');
 
-export const API_BASE_URL = isLocal
-  ? 'http://localhost:3000/api'
-  : isGitHubPages
-    ? 'https://sbapromaster.vercel.app/api' // Default Vercel Project URL for GitHub Pages
-    : '/api'; // Relative path for Vercel deployment
+export const API_BASE_URL = isLocal || isGitHubPages
+  ? 'https://sbapromaster.vercel.app/api' // Use Production Vercel API even when local
+  : '/api'; // Relative path for Vercel deployment
 
 export interface FirebaseConfig {
   apiKey: string;

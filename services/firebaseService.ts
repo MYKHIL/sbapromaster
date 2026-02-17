@@ -54,6 +54,9 @@ import { trackFirebaseRead, trackFirebaseWrite } from './analyticsTracking';
 // @ts-ignore
 const isEmulator = (import.meta as any).env.VITE_USE_EMULATOR === 'true';
 
+// @ts-ignore
+const isEmulator = (import.meta as any).env.VITE_USE_EMULATOR === 'true';
+
 // In Emulator Mode, we ALWAYS use Index 2 (sba-pro-master-40f08) because that's what the Emulator is started with.
 const targetIndex = isEmulator ? 2 : ACTIVE_DATABASE_INDEX;
 
@@ -766,23 +769,21 @@ export const activateSchoolSubscriptionLocally = async (
     let tempApp: any = null;
 
     try {
-        if (!isEmulator) {
-            const { ACTIVE_DATABASE_INDEX } = await import('../constants');
-            if (dbIndex !== ACTIVE_DATABASE_INDEX) {
-                const config = FIREBASE_CONFIGS[dbIndex];
-                if (!config) throw new Error(`Invalid database index: ${dbIndex}`);
+        const { ACTIVE_DATABASE_INDEX } = await import('../constants');
+        if (dbIndex !== ACTIVE_DATABASE_INDEX) {
+            const config = FIREBASE_CONFIGS[dbIndex];
+            if (!config) throw new Error(`Invalid database index: ${dbIndex}`);
 
-                const appName = `temp_activate_${dbIndex}_${Date.now()}`;
-                tempApp = initializeApp(config, appName);
+            const appName = `temp_activate_${dbIndex}_${Date.now()}`;
+            tempApp = initializeApp(config, appName);
 
-                // AUTHENTICATION: Must be signed in to write to target DB
-                const tempAuth = getAuth(tempApp);
-                console.log(`[Activation] Signing into Database ${dbIndex} anonymously...`);
-                await signInAnonymously(tempAuth);
+            // AUTHENTICATION: Must be signed in to write to target DB
+            const tempAuth = getAuth(tempApp);
+            console.log(`[Activation] Signing into Database ${dbIndex} anonymously...`);
+            await signInAnonymously(tempAuth);
 
-                targetDb = getFirestore(tempApp);
-                console.log(`[Activation] Switched to target Database ${dbIndex} (and authenticated).`);
-            }
+            targetDb = getFirestore(tempApp);
+            console.log(`[Activation] Switched to target Database ${dbIndex} (and authenticated).`);
         }
 
         // 1. Trial Eligibility Check
