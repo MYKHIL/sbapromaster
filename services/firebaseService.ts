@@ -54,9 +54,6 @@ import { trackFirebaseRead, trackFirebaseWrite } from './analyticsTracking';
 // @ts-ignore
 const isEmulator = (import.meta as any).env.VITE_USE_EMULATOR === 'true';
 
-// @ts-ignore
-const isEmulator = (import.meta as any).env.VITE_USE_EMULATOR === 'true';
-
 // In Emulator Mode, we ALWAYS use Index 2 (sba-pro-master-40f08) because that's what the Emulator is started with.
 const targetIndex = isEmulator ? 2 : ACTIVE_DATABASE_INDEX;
 
@@ -642,31 +639,6 @@ export const getSchoolList = async (prefix?: string, includeLocked: boolean = fa
 
             const allSchools: SchoolListItem[] = [];
 
-            // EMULATOR OVERRIDE: Single Database Only
-            if (isEmulator) {
-                console.log('[Firebase] Emulator detected - Querying ONLY the current emulator instance.');
-                const schoolsRef = collection(db, 'schools');
-                const snapshot = await loggedGetDocs(schoolsRef, 'getSchoolList/emulator');
-                const list = snapshot.docs
-                    .map(doc => {
-                        const data = doc.data() as any;
-                        if (!includeLocked && data.Access === false) return null;
-                        return {
-                            docId: doc.id,
-                            displayName: data.settings?.schoolName || data.schoolName || doc.id,
-                            settings: data.settings,
-                            _databaseIndex: 2,
-                            access: data.Access // Capture access status
-                        } as SchoolListItem;
-                    })
-                    // Filter nulls if any
-                    .filter((s): s is SchoolListItem => s !== null)
-                    .sort((a, b) => a.displayName.localeCompare(b.displayName));
-
-                setCachedData(CACHE_KEY, list, 5 * 60 * 1000); // 5 min cache for discovery
-                return list;
-            }
-
             const promises = Object.entries(FIREBASE_CONFIGS).map(async ([indexStr, config]) => {
                 const index = Number(indexStr);
                 const appName = `temp_discovery_${index}_${Date.now()}`;
@@ -861,7 +833,6 @@ export const activateSchoolSubscriptionLocally = async (
             expiryDate,
             variantsActivated: variantsCount
         };
-
     } catch (error: any) {
         console.error('[Activation Local Error] Details:', {
             message: error.message,
@@ -911,7 +882,7 @@ export const getSchoolYearsAndTerms = async (schoolName: string, databaseIndex?:
             let tempApp: any = null;
 
             // If a specific database index is provided and it differs from active
-            if (databaseIndex !== undefined && !isEmulator) { // Disable cross-db query in Emulator
+            if (databaseIndex !== undefined) {
                 const { ACTIVE_DATABASE_INDEX } = await import('../constants');
                 if (databaseIndex !== ACTIVE_DATABASE_INDEX) {
                     // Use temporary app to query different database
@@ -1015,8 +986,8 @@ export const verifySchoolPassword = async (docId: string, password: string): Pro
         const baseName = docId.split('_')[0].toLowerCase();
         const sanitizedBotId = 'sbaacademylive';
 
-        if (isEmulator || baseName === sanitizedBotId) {
-            console.log(`[Auth] Bypass detected (${isEmulator ? 'Emulator' : 'Bot School'}) - Bypassing license check for ${baseName}`);
+        if (baseName === sanitizedBotId) {
+            console.log(`[Auth] Bypass detected (Bot School) - Bypassing license check for ${baseName}`);
             return { isValid: true, isExpired: false };
         }
 
