@@ -316,13 +316,20 @@ const clearCache = (key: string): void => {
  */
 export const clearAuthCaches = (): void => {
     clearCache('auth_school_list');
-    clearCache('cached_school_list'); // Clear new cache key too
-    // Clear all period caches (they start with auth_periods_)
+
+    // Improved clearing: Loop through all keys to find all school list and period variants
     try {
-        Object.keys(localStorage).forEach(key => {
-            if (key.startsWith('auth_periods_')) {
-                localStorage.removeItem(key);
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (key.startsWith('auth_periods_') || key.startsWith('cached_school_list'))) {
+                keysToRemove.push(key);
             }
+        }
+
+        keysToRemove.forEach(key => {
+            console.log(`[Cache] Clearing auth cache key: ${key}`);
+            localStorage.removeItem(key);
         });
     } catch (e) {
         console.warn('[Cache] Failed to clear auth caches:', e);

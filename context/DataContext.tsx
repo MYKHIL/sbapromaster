@@ -444,6 +444,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 ...(data.userLogs && { userLogs: data.userLogs }),
                 ...(data.activeSessions && { activeSessions: data.activeSessions }),
             };
+
+            // CRITICAL: Perform a full dirty recheck after remote data is loaded and originalData is updated.
+            // This catches cases where local data (from previous offline session or localStorage)
+            // differs from what was just downloaded from the cloud.
+            recheckAllDirtyStatus();
         } else {
             console.log('[DataContext] 💾 Local file import: Marking fields as dirty for verification');
             // We intentionally do NOT update originalData.current here.
@@ -588,6 +593,22 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }, [markDirty]);
 
+    const recheckAllDirtyStatus = React.useCallback(() => {
+        console.log('[DataContext] 🔍 Performing full dirty recheck against cloud baseline...');
+        const fieldsToCheck: (keyof AppDataType)[] = [
+            'settings', 'students', 'subjects', 'classes', 'grades', 'assessments',
+            'scores', 'reportData', 'classData', 'users', 'userLogs', 'activeSessions'
+        ];
+
+        const currentData: AppDataType = {
+            settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions
+        };
+
+        for (const field of fieldsToCheck) {
+            recheckDirtyStatus(field, currentData[field]);
+        }
+    }, [settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions, recheckDirtyStatus]);
+
     // Reactive effect to auto-recheck dirty status when data changes
     React.useEffect(() => {
         // Skip if we don't have original data loaded yet
@@ -659,8 +680,21 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         */
 
         // ---------------------------------------------------------------------
-        // NEW LOGIC: Only save dirty fields
+        // NEW LOGIC: Commit all "active typing" drafts before saving
         // ---------------------------------------------------------------------
+        if (draftScores.current.size > 0) {
+            console.log(`[DataContext] 📝 Committing ${draftScores.current.size} draft scores before cloud save...`);
+            draftScores.current.forEach((value, key) => {
+                const [studentId, subjectId, assessmentId] = key.split('-').map(Number);
+                // We use updateStudentScores which handles the markDirty logic and state updates
+                // Note: newScores expects string[]
+                updateStudentScores(studentId, subjectId, assessmentId, [value]);
+            });
+            // Clear drafts as they are now committed to the main state
+            draftScores.current.clear();
+            setDraftVersion(v => v + 1);
+        }
+
         if (dirtyFields.current.size === 0) {
             console.log('[DataContext] 💤 No dirty fields to sync. Skipping save.');
             return;
@@ -1959,6 +1993,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 count += 1;
             }
         });
+
+        // CRITICAL FIX: Add draft scores count to pending count
+        // This ensures the Save button is enabled while typing
+        count += draftScores.current.size;
+
         return count;
     }, [dirtyVersion, draftVersion, settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions]);
 
