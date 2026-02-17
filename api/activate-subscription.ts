@@ -12,23 +12,37 @@ const getDbForIndex = (dbIndex: number) => {
     if (existingApp) return existingApp.firestore();
 
     const serviceAccountVar = process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT;
-    const serviceAccount = serviceAccountVar ? JSON.parse(serviceAccountVar) : null;
+    let serviceAccount = null;
 
-    if (!serviceAccount) {
-        throw new Error('FIREBASE_ADMIN_SERVICE_ACCOUNT is missing in environment variables');
+    try {
+        serviceAccount = (serviceAccountVar && serviceAccountVar !== '{}')
+            ? JSON.parse(serviceAccountVar)
+            : null;
+    } catch (e) {
+        console.error('[Admin Init] JSON Parse failed for service account');
     }
 
     // Determine the Project ID for this index from environment variables
-    // This allows the API to write to any of the 4+ projects
     const projectId = process.env[`FIREBASE_${dbIndex}_PROJECT_ID`];
 
     if (!projectId) {
-        throw new Error(`Project ID for Database ${dbIndex} not found in environment`);
+        throw new Error(`Configuration Missing: Project ID for Database ${dbIndex} not found. Please check your environment variables.`);
     }
 
-    // CRITICAL: We use the same service account credentials but override the Project ID
-    // This works if the service account has been granted "Owner" or "Cloud Datastore User" 
-    // permissions across all projects in the Firebase Organization.
+    if (!serviceAccount) {
+        // If no service account provided, try to initialize with default credentials (if on GCP/Vercel)
+        // or throw a clearer error if we know it's required for cross-project access.
+        console.warn(`[Admin Init] No service account JSON provided for DB ${dbIndex}. Attempting default credentials.`);
+        try {
+            const app = admin.initializeApp({
+                projectId: projectId
+            }, appName);
+            return app.firestore();
+        } catch (e: any) {
+            throw new Error(`Authentication Required: FIREBASE_ADMIN_SERVICE_ACCOUNT is missing or invalid. This is required for cross-project activation. Error: ${e.message}`);
+        }
+    }
+
     const app = admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
         projectId: projectId
@@ -182,10 +196,17 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         });
 
     } catch (error: any) {
-        console.error('Activation error:', error);
-        return res.status(500).json({
-            error: 'Internal server error',
+        console.error('[ACTIVATION ERROR]', {
             message: error.message,
+            stack: error.stack,
+            dbIndex: req.body?.dbIndex,
+            schoolId: req.body?.schoolId
+        });
+
+        return res.status(500).json({
+            error: 'Activation Failed',
+            message: error.message || 'An unexpected error occurred during activation.',
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     }
 }
