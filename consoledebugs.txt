@@ -1,23 +1,284 @@
+main-81wjADa3.js:54 [Bootstrap] Environment: Object
+main-81wjADa3.js:54 [Bootstrap] Fetching configuration...
+main-81wjADa3.js:54 [App] School database mapping loaded from API
+main-81wjADa3.js:54 [App] Firebase configuration loaded from API
+main-81wjADa3.js:54 [Bootstrap] Configuration loaded.
+App-BQQTpZ28.js:3816 [Firebase] Initializing with Database Index: 2 (sba-pro-master-40f08) 
+App-BQQTpZ28.js:241  [2026-02-17T19:57:37.120Z]  @firebase/analytics: Analytics: Firebase Analytics is not supported in this environment. Wrap initialization of analytics in analytics.isSupported() to prevent initialization in unsupported environments. Details: (1) This is a browser extension environment. (analytics/invalid-analytics-context).
+F6 @ App-BQQTpZ28.js:241
+App-BQQTpZ28.js:3816 [SyncLogger] Log initialized: SyncLog_2026-02-17T19-57-37.txt
+App-BQQTpZ28.js:3816 [SyncLogger] Logs will be saved to browser when you call downloadLog()
+App-BQQTpZ28.js:3816 [SYNC_LOG] AuthOverlay component mounted
+App-BQQTpZ28.js:4140 [AuthOverlay] Pausing sync - authentication in progress
+App-BQQTpZ28.js:3822 [DataContext] Sync PAUSED
+App-BQQTpZ28.js:4140 [AuthOverlay] No saved school session found
+App-BQQTpZ28.js:3816 [Firebase Analytics] Tracking registered globally
+App-BQQTpZ28.js:3822 [DataContext] 📥 Fetching initial data from cloud (Auto-Sync Disabled)...
+App-BQQTpZ28.js:3816 [Firebase Analytics] 📖 READ: Loading main school data (1 doc)
+App-BQQTpZ28.js:4140 [AuthOverlay] Pausing sync - authentication in progress
+App-BQQTpZ28.js:3822 [DataContext] Sync PAUSED
+App-BQQTpZ28.js:3816 [Firebase] Fetching global school list from all databases (Locked: true)...
+App-BQQTpZ28.js:3816 [Firebase Analytics] 📖 READ: General discovery (0 docs)
+App-BQQTpZ28.js:3822 [DataContext] ✅ Initial data received via one-time fetch
+App-BQQTpZ28.js:3816 [SYNC_LOG] Initial data loaded. Users: 17, Scores: 0
+App-BQQTpZ28.js:3822 [DataContext] 📦 loadImportedData called (isRemote=true) with: Object
+App-BQQTpZ28.js:3822 [DataContext] 🚫 Skipping scores update - data is empty/undefined
+App-BQQTpZ28.js:3816 [SYNC_LOG] loadImportedData: Loading users from document. Count: 17
+App-BQQTpZ28.js:3822 [DataContext] ✅ Updating users: 17
+App-BQQTpZ28.js:3816 [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+App-BQQTpZ28.js:3816 [SYNC_LOG] Stack trace: Error
+    at V (App-BQQTpZ28.js:3822:2808)
+    at le (App-BQQTpZ28.js:3822:5794)
+    at App-BQQTpZ28.js:3822:15224
+App-BQQTpZ28.js:3822 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
+App-BQQTpZ28.js:3822 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+App-BQQTpZ28.js:3822 [DataContext] 🚀 Eagerly loading Metadata for app initialization...
+App-BQQTpZ28.js:3822 [DataContext] 🔍 loadMetadata Check: Object
+App-BQQTpZ28.js:3822 [DataContext] 🧠 Metadata up-to-date (Metadata Match). Skipping read.
+App-BQQTpZ28.js:4140 [AuthOverlay] Pausing sync - authentication in progress
+App-BQQTpZ28.js:3822 [DataContext] Sync PAUSED
+App-BQQTpZ28.js:4140 [AuthOverlay] Pausing sync - authentication in progress
+App-BQQTpZ28.js:3822 [DataContext] Sync PAUSED
+main-81wjADa3.js:48  Error: <path> attribute d: Expected arc flag ('0' or '1'), "M10 18a8 0 100-16 8 8 0 000 16…".
+Oe @ main-81wjADa3.js:48
+fl @ main-81wjADa3.js:49
+Rl @ main-81wjADa3.js:49
+td @ main-81wjADa3.js:48
+rn @ main-81wjADa3.js:48
+vo @ main-81wjADa3.js:48
+id @ main-81wjADa3.js:48
+Nc @ main-81wjADa3.js:48
+co @ main-81wjADa3.js:48
+Do @ main-81wjADa3.js:48
+ce @ main-81wjADa3.js:48
+Oo @ main-81wjADa3.js:48
+(anonymous) @ main-81wjADa3.js:48
+App-BQQTpZ28.js:3830   POST https://sbapromaster.vercel.app/api/activate-subscription 500 (Internal Server Error)
+(anonymous) @ App-BQQTpZ28.js:3830
+xhr @ App-BQQTpZ28.js:3830
+Wy @ App-BQQTpZ28.js:3832
+_request @ App-BQQTpZ28.js:3833
+request @ App-BQQTpZ28.js:3832
+(anonymous) @ App-BQQTpZ28.js:3833
+(anonymous) @ App-BQQTpZ28.js:3828
+Iv @ App-BQQTpZ28.js:4138
+U @ App-BQQTpZ28.js:4140
+O @ App-BQQTpZ28.js:4138
+Ho @ main-81wjADa3.js:48
+(anonymous) @ main-81wjADa3.js:48
+Yi @ main-81wjADa3.js:48
+Xc @ main-81wjADa3.js:48
+Pc @ main-81wjADa3.js:49
+Wd @ main-81wjADa3.js:49
+App-BQQTpZ28.js:4146  Subscription activation failed: AxiosError: Request failed with status code 500
+    at _3 (App-BQQTpZ28.js:3830:1091)
+    at XMLHttpRequest.b (App-BQQTpZ28.js:3830:5953)
+    at gl.request (App-BQQTpZ28.js:3832:2094)
+    at async Iv (App-BQQTpZ28.js:4138:68486)
+    at async U (App-BQQTpZ28.js:4140:172)
+console.error @ App-BQQTpZ28.js:4146
+Iv @ App-BQQTpZ28.js:4138
+await in Iv
+U @ App-BQQTpZ28.js:4140
+O @ App-BQQTpZ28.js:4138
+Ho @ main-81wjADa3.js:48
+(anonymous) @ main-81wjADa3.js:48
+Yi @ main-81wjADa3.js:48
+Xc @ main-81wjADa3.js:48
+Pc @ main-81wjADa3.js:49
+Wd @ main-81wjADa3.js:49
+App-BQQTpZ28.js:4146  Trial activation failed: AxiosError: Request failed with status code 500
+    at _3 (App-BQQTpZ28.js:3830:1091)
+    at XMLHttpRequest.b (App-BQQTpZ28.js:3830:5953)
+    at gl.request (App-BQQTpZ28.js:3832:2094)
+    at async Iv (App-BQQTpZ28.js:4138:68486)
+    at async U (App-BQQTpZ28.js:4140:172)
+console.error @ App-BQQTpZ28.js:4146
+U @ App-BQQTpZ28.js:4140
+await in U
+O @ App-BQQTpZ28.js:4138
+Ho @ main-81wjADa3.js:48
+(anonymous) @ main-81wjADa3.js:48
+Yi @ main-81wjADa3.js:48
+Xc @ main-81wjADa3.js:48
+Pc @ main-81wjADa3.js:49
+Wd @ main-81wjADa3.js:49
 Navigated to https://mykhil.github.io/sbapromaster/
-main-CNOmbkM4.js:54 [Bootstrap] Environment: {isGitHubPages: true, hostname: 'mykhil.github.io', API_BASE_URL: 'https://sbapromaster.vercel.app/api'}
-main-CNOmbkM4.js:54 [Bootstrap] Fetching configuration...
-sbapromaster/:1  Access to fetch at 'https://sbapromaster.vercel.app/api/firebase-config' from origin 'https://mykhil.github.io' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
-main-CNOmbkM4.js:54   GET https://sbapromaster.vercel.app/api/firebase-config net::ERR_FAILED 404 (Not Found)
-Gv @ main-CNOmbkM4.js:54
-jv @ main-CNOmbkM4.js:54
-(anonymous) @ main-CNOmbkM4.js:60
-main-CNOmbkM4.js:54  [App] Failed to load Firebase config: TypeError: Failed to fetch
-    at Gv (main-CNOmbkM4.js:54:138)
-    at jv (main-CNOmbkM4.js:54:628)
-    at main-CNOmbkM4.js:60:14
-Gv @ main-CNOmbkM4.js:54
-await in Gv
-jv @ main-CNOmbkM4.js:54
-(anonymous) @ main-CNOmbkM4.js:60
-main-CNOmbkM4.js:54  Failed to mount application: TypeError: Failed to fetch
-    at Gv (main-CNOmbkM4.js:54:138)
-    at jv (main-CNOmbkM4.js:54:628)
-    at main-CNOmbkM4.js:60:14
-jv @ main-CNOmbkM4.js:54
-await in jv
-(anonymous) @ main-CNOmbkM4.js:60
+main-jR3pQ1hn.js:54 [Bootstrap] Environment: {isGitHubPages: true, hostname: 'mykhil.github.io', API_BASE_URL: 'https://sbapromaster.vercel.app/api'}
+main-jR3pQ1hn.js:54 [Bootstrap] Fetching configuration...
+main-jR3pQ1hn.js:54 [App] School database mapping loaded from API
+main-jR3pQ1hn.js:54 [App] Firebase configuration loaded from API
+main-jR3pQ1hn.js:54 [Bootstrap] Configuration loaded.
+App-CkB4moWt.js:3816 [Firebase] Initializing with Database Index: 2 (sba-pro-master-40f08) 
+App-CkB4moWt.js:241  [2026-02-17T20:01:01.246Z]  @firebase/analytics: Analytics: Firebase Analytics is not supported in this environment. Wrap initialization of analytics in analytics.isSupported() to prevent initialization in unsupported environments. Details: (1) This is a browser extension environment. (analytics/invalid-analytics-context).
+F6 @ App-CkB4moWt.js:241
+warn @ App-CkB4moWt.js:241
+QS @ App-CkB4moWt.js:766
+e7 @ App-CkB4moWt.js:766
+(anonymous) @ App-CkB4moWt.js:766
+getOrInitializeService @ App-CkB4moWt.js:211
+initialize @ App-CkB4moWt.js:211
+r7 @ App-CkB4moWt.js:766
+t7 @ App-CkB4moWt.js:766
+(anonymous) @ App-CkB4moWt.js:3816
+App-CkB4moWt.js:3816 [SyncLogger] Log initialized: SyncLog_2026-02-17T20-01-01.txt
+App-CkB4moWt.js:3816 [SyncLogger] Logs will be saved to browser when you call downloadLog()
+App-CkB4moWt.js:3816 [SYNC_LOG] AuthOverlay component mounted
+App-CkB4moWt.js:4140 [AuthOverlay] Pausing sync - authentication in progress
+ [DataContext] Sync PAUSED
+ [AuthOverlay] No saved school session found
+ [Firebase Analytics] Tracking registered globally
+ [DataContext] 📥 Fetching initial data from cloud (Auto-Sync Disabled)...
+ [Firebase Analytics] 📖 READ: Loading main school data (1 doc)
+ [AuthOverlay] Pausing sync - authentication in progress
+ [DataContext] Sync PAUSED
+ [DataContext] ✅ Initial data received via one-time fetch
+ [SYNC_LOG] Initial data loaded. Users: 17, Scores: 0
+ [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 9, …}
+ [DataContext] 🚫 Skipping scores update - data is empty/undefined
+ [SYNC_LOG] loadImportedData: Loading users from document. Count: 17
+ [DataContext] ✅ Updating users: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at V (sbapromaster/assets/App-CkB4moWt.js:3822:2808)
+    at le (sbapromaster/assets/App-CkB4moWt.js:3822:5794)
+    at sbapromaster/assets/App-CkB4moWt.js:3822:15224
+ [DataContext] 🧹 Selectively cleared dirty fields after remote data load
+ [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+ [DataContext] 🚀 Eagerly loading Metadata for app initialization...
+ [DataContext] 🔍 loadMetadata Check: {hasData: true, previouslyLoaded: false, isUpToDate: true, inflight: false}
+ [DataContext] 🧠 Metadata up-to-date (Metadata Match). Skipping read.
+ [AuthOverlay] Pausing sync - authentication in progress
+ [DataContext] Sync PAUSED
+ [AuthOverlay] Pausing sync - authentication in progress
+ [DataContext] Sync PAUSED
+ [Firebase] Fetching global school list from all databases (Locked: true)...
+ [Firebase Analytics] 📖 READ: General discovery (0 docs)
+   POST https://sbapromaster.vercel.app/api/activate-subscription 500 (Internal Server Error)
+(anonymous) @ sbapromaster/assets/App-CkB4moWt.js:3830
+xhr @ sbapromaster/assets/App-CkB4moWt.js:3830
+Wy @ sbapromaster/assets/App-CkB4moWt.js:3832
+_request @ sbapromaster/assets/App-CkB4moWt.js:3833
+request @ sbapromaster/assets/App-CkB4moWt.js:3832
+(anonymous) @ sbapromaster/assets/App-CkB4moWt.js:3833
+(anonymous) @ sbapromaster/assets/App-CkB4moWt.js:3828
+Iv @ sbapromaster/assets/App-CkB4moWt.js:4138
+U @ sbapromaster/assets/App-CkB4moWt.js:4140
+O @ sbapromaster/assets/App-CkB4moWt.js:4138
+Ho @ sbapromaster/assets/main-jR3pQ1hn.js:48
+(anonymous) @ sbapromaster/assets/main-jR3pQ1hn.js:48
+Yi @ sbapromaster/assets/main-jR3pQ1hn.js:48
+Xc @ sbapromaster/assets/main-jR3pQ1hn.js:48
+Pc @ sbapromaster/assets/main-jR3pQ1hn.js:49
+Wd @ sbapromaster/assets/main-jR3pQ1hn.js:49
+  Subscription activation failed: 
+console.error @ sbapromaster/assets/App-CkB4moWt.js:4146
+Iv @ sbapromaster/assets/App-CkB4moWt.js:4138
+await in Iv
+U @ sbapromaster/assets/App-CkB4moWt.js:4140
+O @ sbapromaster/assets/App-CkB4moWt.js:4138
+Ho @ sbapromaster/assets/main-jR3pQ1hn.js:48
+(anonymous) @ sbapromaster/assets/main-jR3pQ1hn.js:48
+Yi @ sbapromaster/assets/main-jR3pQ1hn.js:48
+Xc @ sbapromaster/assets/main-jR3pQ1hn.js:48
+Pc @ sbapromaster/assets/main-jR3pQ1hn.js:49
+Wd @ sbapromaster/assets/main-jR3pQ1hn.js:49
+  Trial activation failed: 
+console.error @ sbapromaster/assets/App-CkB4moWt.js:4146
+U @ sbapromaster/assets/App-CkB4moWt.js:4140
+await in U
+O @ sbapromaster/assets/App-CkB4moWt.js:4138
+Ho @ sbapromaster/assets/main-jR3pQ1hn.js:48
+(anonymous) @ sbapromaster/assets/main-jR3pQ1hn.js:48
+Yi @ sbapromaster/assets/main-jR3pQ1hn.js:48
+Xc @ sbapromaster/assets/main-jR3pQ1hn.js:48
+Pc @ sbapromaster/assets/main-jR3pQ1hn.js:49
+Wd @ sbapromaster/assets/main-jR3pQ1hn.js:49
+Navigated to https://mykhil.github.io/sbapromaster/
+ [Bootstrap] Environment: {isGitHubPages: true, hostname: 'mykhil.github.io', API_BASE_URL: 'https://sbapromaster.vercel.app/api'}
+ [Bootstrap] Fetching configuration...
+ [App] School database mapping loaded from API
+ [App] Firebase configuration loaded from API
+ [Bootstrap] Configuration loaded.
+ [Firebase] Initializing with Database Index: 2 (sba-pro-master-40f08) 
+  [2026-02-17T20:09:27.473Z]  @firebase/analytics: Analytics: Firebase Analytics is not supported in this environment. Wrap initialization of analytics in analytics.isSupported() to prevent initialization in unsupported environments. Details: (1) This is a browser extension environment. (analytics/invalid-analytics-context).
+B6 @ App-C-b9WV6g.js:241
+warn @ App-C-b9WV6g.js:241
+e7 @ App-C-b9WV6g.js:766
+t7 @ App-C-b9WV6g.js:766
+(anonymous) @ App-C-b9WV6g.js:766
+getOrInitializeService @ App-C-b9WV6g.js:211
+initialize @ App-C-b9WV6g.js:211
+n7 @ App-C-b9WV6g.js:766
+r7 @ App-C-b9WV6g.js:766
+(anonymous) @ App-C-b9WV6g.js:3816
+ [SyncLogger] Log initialized: SyncLog_2026-02-17T20-09-27.txt
+ [SyncLogger] Logs will be saved to browser when you call downloadLog()
+ [SYNC_LOG] AuthOverlay component mounted
+ [AuthOverlay] Pausing sync - authentication in progress
+ [DataContext] Sync PAUSED
+ [AuthOverlay] No saved school session found
+ [Firebase Analytics] Tracking registered globally
+ [DataContext] 📥 Fetching initial data from cloud (Auto-Sync Disabled)...
+ [Firebase Analytics] 📖 READ: Loading main school data (1 doc)
+ [AuthOverlay] Pausing sync - authentication in progress
+ [DataContext] Sync PAUSED
+ [DataContext] ✅ Initial data received via one-time fetch
+ [SYNC_LOG] Initial data loaded. Users: 17, Scores: 0
+ [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 9, …}
+ [DataContext] 🚫 Skipping scores update - data is empty/undefined
+ [SYNC_LOG] loadImportedData: Loading users from document. Count: 17
+ [DataContext] ✅ Updating users: 17
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 17
+ [SYNC_LOG] Stack trace: Error
+    at V (App-C-b9WV6g.js:3822:2808)
+    at le (App-C-b9WV6g.js:3822:5794)
+    at App-C-b9WV6g.js:3822:15224
+ [DataContext] 🧹 Selectively cleared dirty fields after remote data load
+ [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+ [DataContext] 🚀 Eagerly loading Metadata for app initialization...
+ [DataContext] 🔍 loadMetadata Check: {hasData: true, previouslyLoaded: false, isUpToDate: true, inflight: false}
+ [DataContext] 🧠 Metadata up-to-date (Metadata Match). Skipping read.
+ [AuthOverlay] Pausing sync - authentication in progress
+ [DataContext] Sync PAUSED
+ [AuthOverlay] Pausing sync - authentication in progress
+ [DataContext] Sync PAUSED
+ [Firebase] Returning cached school list (Locked: true)
+ [Activation] Switched to target Database 4 for activation.
+ [Activation] Searching for variants of scol...
+  [Activation Local Error] 
+console.error @ App-C-b9WV6g.js:4146
+H4 @ App-C-b9WV6g.js:3816
+await in H4
+Iv @ App-C-b9WV6g.js:4138
+U @ App-C-b9WV6g.js:4140
+O @ App-C-b9WV6g.js:4138
+Ho @ main-CVTEsgbC.js:48
+(anonymous) @ main-CVTEsgbC.js:48
+Yi @ main-CVTEsgbC.js:48
+Xc @ main-CVTEsgbC.js:48
+Pc @ main-CVTEsgbC.js:49
+Wd @ main-CVTEsgbC.js:49
+  Subscription activation failed: 
+console.error @ App-C-b9WV6g.js:4146
+Iv @ App-C-b9WV6g.js:4138
+await in Iv
+U @ App-C-b9WV6g.js:4140
+O @ App-C-b9WV6g.js:4138
+Ho @ main-CVTEsgbC.js:48
+(anonymous) @ main-CVTEsgbC.js:48
+Yi @ main-CVTEsgbC.js:48
+Xc @ main-CVTEsgbC.js:48
+Pc @ main-CVTEsgbC.js:49
+Wd @ main-CVTEsgbC.js:49
+  Trial activation failed: 
+console.error @ App-C-b9WV6g.js:4146
+U @ App-C-b9WV6g.js:4140
+await in U
+O @ App-C-b9WV6g.js:4138
+Ho @ main-CVTEsgbC.js:48
+(anonymous) @ main-CVTEsgbC.js:48
+Yi @ main-CVTEsgbC.js:48
+Xc @ main-CVTEsgbC.js:48
+Pc @ main-CVTEsgbC.js:49
+Wd @ main-CVTEsgbC.js:49

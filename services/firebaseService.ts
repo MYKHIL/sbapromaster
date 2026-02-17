@@ -774,8 +774,14 @@ export const activateSchoolSubscriptionLocally = async (
 
                 const appName = `temp_activate_${dbIndex}_${Date.now()}`;
                 tempApp = initializeApp(config, appName);
+
+                // AUTHENTICATION: Must be signed in to write to target DB
+                const tempAuth = getAuth(tempApp);
+                console.log(`[Activation] Signing into Database ${dbIndex} anonymously...`);
+                await signInAnonymously(tempAuth);
+
                 targetDb = getFirestore(tempApp);
-                console.log(`[Activation] Switched to target Database ${dbIndex} for activation.`);
+                console.log(`[Activation] Switched to target Database ${dbIndex} (and authenticated).`);
             }
         }
 
@@ -826,37 +832,49 @@ export const activateSchoolSubscriptionLocally = async (
         // Update Access for all variants
         console.log(`[Activation] Searching for variants of ${baseName}...`);
         const schoolsRef = collection(targetDb, 'schools');
+        // Range query to catch all variants (e.g. scol, scol_2024, scol_2025)
         const q = query(schoolsRef, where(documentId(), '>=', baseName), where(documentId(), '<=', baseName + '\uf8ff'));
         const snapshot = await getDocs(q);
 
         let variantsCount = 0;
         snapshot.forEach(d => {
+            // Precise check: must match exactly or start with prefix + underscore
             if (d.id === baseName || d.id.startsWith(baseName + '_')) {
-                batch.set(d.ref, { Access: true }, { merge: true });
+                batch.update(d.ref, { Access: true });
                 variantsCount++;
             }
         });
 
         if (variantsCount === 0) {
+            // Fallback: If no variants found (e.g. manual rename), update the specific schoolId provided
             batch.set(doc(targetDb, 'schools', schoolId), { Access: true }, { merge: true });
             variantsCount = 1;
         }
 
         await batch.commit();
-        console.log(`[Activation] Success for ${baseName} on DB ${dbIndex}. Variants updated: ${variantsCount}`);
+        console.log(`[Activation] Success! ${baseName} activated on DB ${isEmulator ? 2 : dbIndex}. Variants: ${variantsCount}`);
 
         return {
             success: true,
-            message: `Subscription activated for ${baseName} and ${variantsCount} variants.`,
+            message: `Subscription successfully activated for ${baseName}.`,
             expiryDate,
             variantsActivated: variantsCount
         };
 
     } catch (error: any) {
-        console.error('[Activation Local Error]', error);
+        console.error('[Activation Local Error] Details:', {
+            message: error.message,
+            code: error.code,
+            baseName,
+            dbIndex,
+            error
+        });
         throw error;
     } finally {
-        if (tempApp) deleteApp(tempApp).catch(() => { });
+        if (tempApp) {
+            // Short delay to ensure batch commit propagates before deleting app
+            setTimeout(() => deleteApp(tempApp).catch(() => { }), 2000);
+        }
     }
 };
 
