@@ -59,8 +59,8 @@ const Students: React.FC = () => {
     // Filter students based on user permissions
     const accessibleStudents = useMemo(() => {
         if (!isAuthenticated || !currentUser) return students;
-        if (currentUser.role === 'Admin' || currentUser.role === 'Teacher') return students;
-        // Guest restricted to allowed classes
+        if (currentUser.role === 'Admin') return students;
+        // Teachers and Guests are restricted to allowed classes
         return students.filter(s => currentUser.allowedClasses.includes(s.class));
     }, [students, currentUser, isAuthenticated]);
 
@@ -348,7 +348,7 @@ const Students: React.FC = () => {
                         onChange={(e) => setSelectedClass(e.target.value)}
                         className="w-full md:w-1/4 px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                        <option value="">All Classes</option>
+                        {currentUser?.role === 'Admin' && <option value="">All Classes</option>}
                         {availableClasses.map(cls => (
                             <option key={cls.id} value={cls.name}>{cls.name}</option>
                         ))}
