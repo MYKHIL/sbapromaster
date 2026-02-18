@@ -469,6 +469,7 @@ const ScoreEntry: React.FC = () => {
             const isExam = assessment.name.toLowerCase().includes('exam');
 
             const sumOfNumerators = scores.reduce((sum, scoreStr) => {
+                if (!scoreStr) return sum;
                 const [score] = scoreStr.split('/').map(Number);
                 return sum + (score || 0);
             }, 0);
@@ -479,6 +480,7 @@ const ScoreEntry: React.FC = () => {
             } else {
                 // For classwork, weighted score based on max totals
                 const totalMaxPossibleScore = scores.reduce((sum, scoreStr) => {
+                    if (!scoreStr) return sum;
                     const [, max] = scoreStr.split('/').map(Number);
                     return sum + (max || assessment.weight);
                 }, 0);

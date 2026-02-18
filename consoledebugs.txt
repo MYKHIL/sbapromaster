@@ -1,40 +1,6 @@
-App-DypMWvC6.js:3816 [Activation] Initializing activation on Database 4 (sba-pro-master-716ee) [Portal Match mode].
-App-DypMWvC6.js:3816 [Activation] Target Document: subscriptions/scol on sba-pro-master-716ee
-App-DypMWvC6.js:3816 [Activation] ✍️ Queueing write to 'subscriptions' collection...
-App-DypMWvC6.js:3816 [Activation] Searching for variants of scol...
-App-DypMWvC6.js:4146  [Activation Local Error] Details: {message: 'Missing or insufficient permissions.', code: 'permission-denied', baseName: 'scol', dbIndex: 4, error: FirebaseError: Missing or insufficient permissions.}
-console.error @ App-DypMWvC6.js:4146
-W4 @ App-DypMWvC6.js:3816
-await in W4
-Pv @ App-DypMWvC6.js:4138
-V @ App-DypMWvC6.js:4140
-O @ App-DypMWvC6.js:4138
-Ho @ main-DYtxoRY7.js:48
-(anonymous) @ main-DYtxoRY7.js:48
-Yi @ main-DYtxoRY7.js:48
-Xc @ main-DYtxoRY7.js:48
-Pc @ main-DYtxoRY7.js:49
-Wd @ main-DYtxoRY7.js:49
-App-DypMWvC6.js:4146  Subscription activation failed: FirebaseError: Missing or insufficient permissions.
-console.error @ App-DypMWvC6.js:4146
-Pv @ App-DypMWvC6.js:4138
-await in Pv
-V @ App-DypMWvC6.js:4140
-O @ App-DypMWvC6.js:4138
-Ho @ main-DYtxoRY7.js:48
-(anonymous) @ main-DYtxoRY7.js:48
-Yi @ main-DYtxoRY7.js:48
-Xc @ main-DYtxoRY7.js:48
-Pc @ main-DYtxoRY7.js:49
-Wd @ main-DYtxoRY7.js:49
-App-DypMWvC6.js:4146  Trial activation failed: FirebaseError: Missing or insufficient permissions.
-console.error @ App-DypMWvC6.js:4146
-V @ App-DypMWvC6.js:4140
-await in V
-O @ App-DypMWvC6.js:4138
-Ho @ main-DYtxoRY7.js:48
-(anonymous) @ main-DYtxoRY7.js:48
-Yi @ main-DYtxoRY7.js:48
-Xc @ main-DYtxoRY7.js:48
-Pc @ main-DYtxoRY7.js:49
-Wd @ main-DYtxoRY7.js:49
+approvesba/:78 [Auth] Hashing password...
+approvesba/:84 [Auth] Generated Hash: c93a215026f36ac783bcac8ba5e4bbea1c3cdb6c79d3824f9712143c44dbb0f3
+approvesba/:575  FirebaseError: Missing or insufficient permissions.
+window.activateLicense @ approvesba/:575
+await in window.activateLicense
+onclick @ approvesba/:790

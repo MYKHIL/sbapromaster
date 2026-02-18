@@ -1293,7 +1293,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                             ...score,
                             assessmentScores: {
                                 ...score.assessmentScores,
-                                [assessmentId]: newScores,
+                                [assessmentId]: newScores.filter(s => s !== null && s !== undefined),
                             },
                         };
                     }

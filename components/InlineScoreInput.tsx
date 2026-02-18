@@ -17,6 +17,7 @@ const calculateDisplayScore = (scores: string[], assessment: Assessment): number
     const isExam = assessment.name.toLowerCase().includes('exam');
 
     const sumOfNumerators = scores.reduce((sum, scoreStr) => {
+        if (!scoreStr) return sum;
         const [score] = scoreStr.split('/').map(Number);
         return sum + (score || 0);
     }, 0);
@@ -27,6 +28,7 @@ const calculateDisplayScore = (scores: string[], assessment: Assessment): number
     } else {
         // For classwork, we show the combined weighted score
         const totalMaxPossibleScore = scores.reduce((sum, scoreStr) => {
+            if (!scoreStr) return sum;
             const [, max] = scoreStr.split('/').map(Number);
             return sum + (max || assessment.weight);
         }, 0);

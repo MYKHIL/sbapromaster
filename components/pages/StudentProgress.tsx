@@ -227,12 +227,21 @@ const StudentProgress: React.FC = () => {
                 if (scoresArr.length === 0) return total;
                 const isExam = assessment.name.toLowerCase().includes('exam');
                 if (isExam) {
-                    const sumOfScores = scoresArr.reduce((sum: number, scoreStr: string) => sum + Number(scoreStr.split('/')[0]), 0);
+                    const sumOfScores = scoresArr.reduce((sum: number, scoreStr: string) => {
+                        if (!scoreStr) return sum;
+                        return sum + (Number(scoreStr.split('/')[0]) || 0);
+                    }, 0);
                     const averageScoreOutOf100 = sumOfScores / scoresArr.length;
                     return total + ((averageScoreOutOf100 / 100) * assessment.weight);
                 } else {
-                    const totalScore = scoresArr.reduce((sum: number, scoreStr: string) => sum + Number(scoreStr.split('/')[0]), 0);
-                    const totalMaxPossibleScore = scoresArr.reduce((sum: number, scoreStr: string) => sum + (Number(scoreStr.split('/')[1]) || assessment.weight), 0);
+                    const totalScore = scoresArr.reduce((sum: number, scoreStr: string) => {
+                        if (!scoreStr) return sum;
+                        return sum + (Number(scoreStr.split('/')[0]) || 0);
+                    }, 0);
+                    const totalMaxPossibleScore = scoresArr.reduce((sum: number, scoreStr: string) => {
+                        if (!scoreStr) return sum;
+                        return sum + (Number(scoreStr.split('/')[1]) || assessment.weight);
+                    }, 0);
                     if (totalMaxPossibleScore === 0) return total;
                     return total + ((totalScore / totalMaxPossibleScore) * assessment.weight);
                 }
@@ -654,17 +663,27 @@ const StudentProgress: React.FC = () => {
 
                         classAss.forEach(ass => {
                             const rawArr = scoreObj?.assessmentScores?.[ass.id] || [];
-                            classRawScores.push(rawArr.map(r => r.split('/')[0]).join(', ') || '-');
+                            classRawScores.push(rawArr.map(r => (r || '').split('/')[0]).join(', ') || '-');
 
-                            const rawSum = rawArr.reduce((a, b) => a + Number(b.split('/')[0]), 0);
-                            const maxSum = rawArr.reduce((a, b) => a + (Number(b.split('/')[1]) || ass.weight), 0);
+                            const rawSum = rawArr.reduce((a: number, b: string) => {
+                                if (!b) return a;
+                                return a + (Number(b.split('/')[0]) || 0);
+                            }, 0);
+                            const maxSum = rawArr.reduce((a: number, b: string) => {
+                                if (!b) return a;
+                                return a + (Number(b.split('/')[1]) || ass.weight);
+                            }, 0);
                             if (maxSum > 0) subTotalA += (rawSum / maxSum * ass.weight);
                         });
 
                         if (examAss) {
                             const rawArr = scoreObj?.assessmentScores?.[examAss.id] || [];
-                            examRawScore = rawArr.map(r => r.split('/')[0]).join(', ') || '-';
-                            const avg = rawArr.length > 0 ? rawArr.reduce((a, b) => a + Number(b.split('/')[0]), 0) / rawArr.length : 0;
+                            examRawScore = rawArr.map(r => (r || '').split('/')[0]).join(', ') || '-';
+                            const rawSum = rawArr.reduce((a: number, b: string) => {
+                                if (!b) return a;
+                                return a + (Number(b.split('/')[0]) || 0);
+                            }, 0);
+                            const avg = rawArr.length > 0 ? rawSum / rawArr.length : 0;
                             subTotalB += (avg / 100 * examAss.weight);
                         }
 

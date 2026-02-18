@@ -69,7 +69,10 @@ export const calculateReportData = (student: Student, data: DataContextType) => 
 
             if (isExam) {
                 // EXAM LOGIC: Average scores (which are out of 100) and convert to actual weight
-                const sumOfScores = scores.reduce((sum, scoreStr) => sum + Number(scoreStr.split('/')[0]), 0);
+                const sumOfScores = scores.reduce((sum, scoreStr) => {
+                    if (!scoreStr) return sum;
+                    return sum + (Number(scoreStr.split('/')[0]) || 0);
+                }, 0);
                 if (scores.length === 0) return total;
                 const averageScoreOutOf100 = sumOfScores / scores.length;
                 const finalExamScore = (averageScoreOutOf100 / 100) * assessment.weight;
@@ -77,8 +80,14 @@ export const calculateReportData = (student: Student, data: DataContextType) => 
 
             } else {
                 // CLASSWORK LOGIC: Sum weighted scores based on their individual max scores
-                const totalScore = scores.reduce((sum, scoreStr) => sum + Number(scoreStr.split('/')[0]), 0);
-                const totalMaxPossibleScore = scores.reduce((sum, scoreStr) => sum + (Number(scoreStr.split('/')[1]) || assessment.weight), 0);
+                const totalScore = scores.reduce((sum, scoreStr) => {
+                    if (!scoreStr) return sum;
+                    return sum + (Number(scoreStr.split('/')[0]) || 0);
+                }, 0);
+                const totalMaxPossibleScore = scores.reduce((sum, scoreStr) => {
+                    if (!scoreStr) return sum;
+                    return sum + (Number(scoreStr.split('/')[1]) || assessment.weight);
+                }, 0);
 
                 if (totalMaxPossibleScore === 0) return total;
 
