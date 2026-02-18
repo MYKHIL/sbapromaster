@@ -379,35 +379,31 @@ const WrappedActionBar: React.FC<any> = ({
                                 </button>
                             )}
 
-                            {/* Refresh Button (Admin Only) */}
-                            {isAdmin && (
-                                <button
-                                    onClick={handleRefresh}
-                                    disabled={isSyncing || isRefreshing || !isOnline}
-                                    className={`p-2 text-gray-500 hover:text-green-600 bg-gray-50 hover:bg-green-100 rounded-lg transition-colors border border-gray-100 lg:p-2.5 ${(isSyncing || isRefreshing || !isOnline) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    title="Refresh data"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${(isSyncing || isRefreshing) ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                    </svg>
-                                </button>
-                            )}
-                        </>
-                    )}
-
-                    {!isExpanded ? (
-                        isAdmin && (
+                            {/* Refresh Button (Visible to all) */}
                             <button
                                 onClick={handleRefresh}
                                 disabled={isSyncing || isRefreshing || !isOnline}
-                                className="p-2 text-gray-500 hover:text-green-600 rounded-lg transition-colors"
+                                className={`p-2 text-gray-500 hover:text-green-600 bg-gray-50 hover:bg-green-100 rounded-lg transition-colors border border-gray-100 lg:p-2.5 ${(isSyncing || isRefreshing || !isOnline) ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 title="Refresh data"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${(isSyncing || isRefreshing) ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                 </svg>
                             </button>
-                        )
+                        </>
+                    )}
+
+                    {!isExpanded ? (
+                        <button
+                            onClick={handleRefresh}
+                            disabled={isSyncing || isRefreshing || !isOnline}
+                            className="p-2 text-gray-500 hover:text-green-600 rounded-lg transition-colors"
+                            title="Refresh data"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${(isSyncing || isRefreshing) ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                        </button>
                     ) : (
                         /* Save Button */
                         <button
