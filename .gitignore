@@ -41,6 +41,7 @@ deploy.py
 .env.local
 .env.production
 .vercel
+*.example
 
 # Others
 constants.backup.ts
