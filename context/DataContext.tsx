@@ -297,41 +297,82 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
 
         // ✅ ONLY update if imported data is ACTUALLY provided, not empty, AND different from current state
-        if (importedSettings && !deepEqual(importedSettings, settings)) {
-            console.log('[DataContext] ✅ Updating settings');
-            setSettings(prev => ({ ...prev, ...importedSettings }));
-            if (!isRemote) markDirty('settings');
-        }
-        if (importedStudents && importedStudents.length > 0 && !deepEqual(importedStudents, students)) {
-            console.log('[DataContext] ✅ Updating students:', importedStudents.length);
-            setStudents(importedStudents);
-            if (!isRemote) markDirty('students');
-        }
-        if (importedSubjects && importedSubjects.length > 0 && !deepEqual(importedSubjects, subjects)) {
-            console.log('[DataContext] ✅ Updating subjects:', importedSubjects.length);
-            setSubjects(importedSubjects);
-            if (!isRemote) markDirty('subjects');
-        }
-        if (importedClasses && importedClasses.length > 0 && !deepEqual(importedClasses, classes)) {
-            console.log('[DataContext] ✅ Updating classes:', importedClasses.length);
-            setClasses(importedClasses);
-            if (!isRemote) markDirty('classes');
-        }
-        if (importedGrades && importedGrades.length > 0 && !deepEqual(importedGrades, grades)) {
-            console.log('[DataContext] ✅ Updating grades:', importedGrades.length);
-            setGrades(importedGrades);
-            if (!isRemote) markDirty('grades');
-        }
-        if (importedAssessments && importedAssessments.length > 0 && !deepEqual(importedAssessments, assessments)) {
-            console.log('[DataContext] ✅ Updating assessments:', importedAssessments.length);
-            setAssessments(importedAssessments);
-            if (!isRemote) markDirty('assessments');
-        }
-        // SCORES: Smart Merge with Pending Data
+        const isInitialLaunch = isRemote && Object.keys(originalData.current).length === 0;
+
+        const processField = (field: keyof AppDataType, imported: any, current: any, setter: any) => {
+            if (imported === undefined) return; // Only process if imported data is provided
+
+            // For initial launch, we PREFER local uncommitted changes IF they are meaningful
+            if (isInitialLaunch) {
+                if (!isDataEqual(imported, current)) {
+                    // Check if the local discrepancy is "meaningful" (i.e. not just default initial state)
+                    if (isMeaningfulDiscrepancy(field, current)) {
+                        console.log(`[DataContext] 🛡️ Preservation: Meaningful discrepancy in ${field} on initial load. Keeping local version.`);
+                        markDirty(field, true);
+                        return; // Keep local state
+                    } else {
+                        console.log(`[DataContext] 🔄 Initial Load: Local ${field} is just default state. Adopting cloud version.`);
+                        // Continue to setter(imported) below...
+                    }
+                }
+            }
+
+            // Regular update or remote sync
+            if (!isDataEqual(imported, current)) {
+                console.log(`[DataContext] ✅ Updating ${field}`);
+                setter(imported);
+                if (!isRemote) markDirty(field);
+            }
+        };
+
+        processField('settings', importedSettings, settings, setSettings);
+        processField('students', importedStudents, students, setStudents);
+        processField('subjects', importedSubjects, subjects, setSubjects);
+        processField('classes', importedClasses, classes, setClasses);
+        processField('grades', importedGrades, grades, setGrades);
+        processField('assessments', importedAssessments, assessments, setAssessments);
+        processField('reportData', importedReportData, reportData, setReportData);
+        processField('classData', importedClassData, classData, setClassData);
+        processField('userLogs', data.userLogs, userLogs, setUserLogs);
+        processField('activeSessions', data.activeSessions, activeSessions, setActiveSessions);
+
+        // SCORES: Custom Logic to handle preservation of specific IDs
         if (importedScores && importedScores.length > 0) {
             let finalScores = importedScores;
-            // If we have pending changes, we MUST preserve them against the cloud update
-            if (isRemote && pendingScoreChanges.current.size > 0) {
+
+            if (isInitialLaunch) {
+                console.log('[DataContext] 🔍 Initial Cloud Load: Checking for uncommitted local scores...');
+                finalScores = importedScores.map(cloudScore => {
+                    const local = scores.find(s => s.id === cloudScore.id);
+                    if (local && !isDataEqual(local, cloudScore)) {
+                        // Only preserve if local has actual uncommitted data
+                        const hasData = local.assessmentScores && Object.values(local.assessmentScores).some(s => Array.isArray(s) && s.some(v => v && String(v).trim() !== ''));
+
+                        if (hasData) {
+                            console.log(`[DataContext] 🛡️ Preservation: Keeping local uncommitted version of score ${cloudScore.id}`);
+                            pendingScoreChanges.current.add(cloudScore.id);
+                            markDirty('scores', true);
+                            return local;
+                        }
+                    }
+                    return cloudScore;
+                });
+
+                // Add any Local-Only scores (not in cloud yet)
+                const cloudIds = new Set(importedScores.map(s => s.id));
+                scores.forEach(localScore => {
+                    if (localScore.id && !cloudIds.has(localScore.id)) {
+                        const hasData = localScore.assessmentScores && Object.values(localScore.assessmentScores).some(s => Array.isArray(s) && s.some(v => v && String(v).trim() !== ''));
+                        if (hasData) {
+                            console.log(`[DataContext] ➕ Preservation: Keeping local-only score ${localScore.id}`);
+                            finalScores.push(localScore);
+                            pendingScoreChanges.current.add(localScore.id);
+                            markDirty('scores', true);
+                        }
+                    }
+                });
+            } else if (isRemote && pendingScoreChanges.current.size > 0) {
+                // Standard Smart Merge for mid-session remote updates
                 console.log(`[DataContext] 🛡️ Smart Merge: Preserving ${pendingScoreChanges.current.size} local score edits`);
 
                 // Map Cloud scores but override with Local if pending
@@ -344,7 +385,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     return cloudScore;
                 });
 
-                // Add any Local-Only scores (newly created items not in cloud yet)
+                // Add any Local-Only scores
                 const cloudIds = new Set(importedScores.map(s => s.id));
                 scores.forEach(localScore => {
                     if (pendingScoreChanges.current.has(localScore.id) && !cloudIds.has(localScore.id)) {
@@ -353,49 +394,31 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 });
             }
 
-            if (!deepEqual(finalScores, scores)) {
+            if (!isDataEqual(finalScores, scores)) {
                 console.log(`[DataContext] ✅ Updating scores: ${finalScores.length} (Merged)`);
                 setScores(finalScores);
                 if (!isRemote) markDirty('scores');
+                else if (isInitialLaunch && pendingScoreChanges.current.size > 0) markDirty('scores', true);
             }
-        } else {
-            console.log('[DataContext] 🚫 Skipping scores update - data is empty/undefined');
+        } else if (importedScores && importedScores.length === 0) {
+            // Explicit empty array update
+            if (scores.length > 0) {
+                setScores([]);
+                if (!isRemote) markDirty('scores');
+            }
         }
-        if (importedReportData && importedReportData.length > 0 && !deepEqual(importedReportData, reportData)) {
-            console.log('[DataContext] ✅ Updating reportData:', importedReportData.length);
-            setReportData(importedReportData);
-            if (!isRemote) markDirty('reportData');
-        }
-        if (importedClassData && importedClassData.length > 0 && !deepEqual(importedClassData, classData)) {
-            console.log('[DataContext] ✅ Updating classData:', importedClassData.length);
-            setClassData(importedClassData);
-            if (!isRemote) markDirty('classData');
-        }
-
 
         // Sync users if present
-        if (importedUsers && importedUsers.length > 0) {
+        if (importedUsers) {
             SyncLogger.log(`loadImportedData: Loading users from document. Count: ${importedUsers.length}`);
-            if (!deepEqual(importedUsers, users)) {
+            if (isInitialLaunch && !isDataEqual(importedUsers, users)) {
+                console.log(`[DataContext] 🛡️ Preservation: Discrepancy in users. Keeping local.`);
+                markDirty('users', true);
+            } else if (!isDataEqual(importedUsers, users)) {
                 console.log('[DataContext] ✅ Updating users:', importedUsers.length);
                 setUsers(importedUsers);
                 if (!isRemote) markDirty('users');
             }
-        } else if (importedUsers && importedUsers.length === 0) {
-            // Explicit empty array update
-            if (users.length > 0) {
-                setUsers([]);
-                if (!isRemote) markDirty('users');
-            }
-        }
-
-        if (data.userLogs) {
-            setUserLogs(data.userLogs);
-            if (!isRemote) markDirty('userLogs');
-        }
-        if (data.activeSessions) {
-            setActiveSessions(data.activeSessions);
-            if (!isRemote) markDirty('activeSessions');
         }
 
         if (isRemote) {
@@ -549,6 +572,110 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return false;
     };
 
+    /**
+     * Normalizes data for semantic comparison.
+     * Trims strings, removes undefined/null keys, sorts arrays by ID,
+     * and ensures consistent key types in assessment objects.
+     */
+    const normalizeData = (data: any): any => {
+        if (data === null || data === undefined) return null;
+
+        // 1. Strings: Trim
+        if (typeof data === 'string') return data.trim();
+
+        // 2. Arrays: Normalize elements and sort if they have IDs
+        if (Array.isArray(data)) {
+            const normalized = data.map(normalizeData).filter(item => item !== null);
+            // Sort by ID if present to ensure order-independence
+            if (normalized.length > 0 && normalized[0] && typeof normalized[0] === 'object' && 'id' in normalized[0]) {
+                return normalized.sort((a, b) => String(a.id).localeCompare(String(b.id)));
+            }
+            return normalized;
+        }
+
+        // 3. Objects
+        if (typeof data === 'object') {
+            const normalized: any = {};
+            const keys = Object.keys(data).sort();
+
+            for (const key of keys) {
+                const value = normalizeData(data[key]);
+                // Only include non-null values
+                if (value !== null && value !== undefined && value !== '') {
+                    normalized[key] = value;
+                }
+            }
+
+            // Special handling for Scores to normalize assessmentScores keys
+            if ('assessmentScores' in data && typeof data.assessmentScores === 'object') {
+                const normScores: any = {};
+                const sKeys = Object.keys(data.assessmentScores).sort();
+                for (const skey of sKeys) {
+                    const sVal = normalizeData(data.assessmentScores[skey]);
+                    if (sVal && Array.isArray(sVal) && sVal.some(v => v !== '')) {
+                        normScores[String(skey)] = sVal.filter(v => v !== '');
+                    }
+                }
+                normalized.assessmentScores = normScores;
+
+                // If assessmentScores is empty after cleanup, remove it
+                if (Object.keys(normScores).length === 0) {
+                    delete normalized.assessmentScores;
+                }
+            }
+
+            // If object is empty after cleanup (and was not empty originally), return null to prune
+            if (Object.keys(normalized).length === 0 && Object.keys(data).length > 0) {
+                return null;
+            }
+
+            return normalized;
+        }
+
+        return data;
+    };
+
+    /**
+     * Checks if two data sets are semantically equal by normalizing them first.
+     */
+    const isDataEqual = (a: any, b: any): boolean => {
+        if (a === b) return true;
+        const normA = normalizeData(a);
+        const normB = normalizeData(b);
+        return deepEqual(normA, normB);
+    };
+
+    /**
+     * Determines if a discrepancy between local and cloud data is "meaningful".
+     * A discrepancy is NOT meaningful if the local data is just the default initial state.
+     */
+    const isMeaningfulDiscrepancy = (field: keyof AppDataType, local: any): boolean => {
+        // Define initial states for comparison
+        const initialStates: Partial<Record<keyof AppDataType, any>> = {
+            settings: INITIAL_SETTINGS,
+            students: INITIAL_STUDENTS,
+            subjects: INITIAL_SUBJECTS,
+            classes: INITIAL_CLASSES,
+            grades: INITIAL_GRADES,
+            assessments: INITIAL_ASSESSMENTS,
+            scores: INITIAL_SCORES,
+            reportData: INITIAL_REPORT_DATA,
+            classData: INITIAL_CLASS_DATA,
+            users: [],
+            userLogs: [],
+            activeSessions: {}
+        };
+
+        const initialState = initialStates[field];
+
+        // If local data is semantically equal to the initial state, it's not a meaningful discrepancy
+        // (i.e., it's just a fresh login/reload with no real uncommitted changes)
+        if (isDataEqual(local, initialState)) return false;
+
+        // Otherwise, if it differs from cloud (checked elsewhere), it's a real change to preserve
+        return true;
+    };
+
     // Keep stateRef in sync with latest state for save operations
     useEffect(() => {
         stateRef.current = {
@@ -580,7 +707,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Check if current data actually differs from original cloud data
     const recheckDirtyStatus = React.useCallback((field: keyof AppDataType, currentValue: any) => {
         const originalValue = originalData.current[field];
-        const isEqual = deepEqual(currentValue, originalValue);
+
+        // CRITICAL: If originalValue is undefined, we haven't loaded the cloud version for this field yet.
+        // In this case, we cannot safely say the field is "dirty" compared to the cloud.
+        if (originalValue === undefined) return;
+
+        const isEqual = isDataEqual(currentValue, originalValue);
 
         // If values are the same, remove from dirty
         if (isEqual) {
@@ -592,7 +724,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
         } else {
             // Values differ, ensure it's marked dirty
-            markDirty(field);
+            markDirty(field, true);
         }
     }, [markDirty]);
 
@@ -1259,7 +1391,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     const orig = originalData.current.scores?.find(o => o.id === otherScoreId);
                     // Note: We need to check ALL assessments for that score, not just current assessmentId.
                     // Score object contains assessmentScores map.
-                    if (!deepEqual(s.assessmentScores, orig?.assessmentScores || {})) {
+                    if (!isDataEqual(s.assessmentScores, orig?.assessmentScores || {})) {
                         anyOtherDirty = true;
                         break;
                     }
@@ -1697,6 +1829,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // 1. Revert each dirty field to originalData
         dirtyFields.current.forEach(field => {
             const original = originalData.current[field];
+
+            // Safeguard: Only revert if original data exists. 
+            // If it doesn't, it means we don't have a server baseline yet, so reverting might clear data.
+            if (original === undefined) {
+                console.warn(`[DataContext] ⚠️ Skipping revert for ${field} - originalData not available.`);
+                return;
+            }
+
             // @ts-ignore
             const setter = {
                 settings: setSettings,
@@ -1893,50 +2033,21 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     if (item && typeof item === 'object' && 'id' in item) {
                         const originalItem = originalVal.find((o: any) => o.id === item.id);
 
-                        // Special handling for SCORES to match saveToCloud logic
-                        if (field === 'scores') {
-
-                            // 1. Normalize: Treat [''] same as []
-                            // FIX: Preserve empty strings to ensure [''] is treated as a valid value distinct from []
-                            const cleanScores = (s: string[]) => s.map(val => val.trim());
-
-                            // 2. Check if it's a NEW item (no original)
-                            if (!originalItem) {
-                                // If the user explicitly modified this score (it's in pendingScoreChanges),
-                                // we MUST send it, even if it appears to be a "Ghost".
-                                const isPending = pendingScoreChanges.current.has(String(item.id));
-                                if (isPending) return true;
-
-                                // If it's a new item (or one we didn't know about), check if it's effectively empty.
-                                // If it is empty, DO NOT SEND IT. This prevents overwriting valid server data with empty local placeholders.
-                                // FIX: Allow [''] (explicit empty string) to count as "Data" so we can clear values on server
+                        // If it's a new item, check if it's effectively empty (for scores)
+                        if (!originalItem) {
+                            if (field === 'scores') {
                                 // @ts-ignore
-                                const hasData = item.assessmentScores && Object.values(item.assessmentScores).some(scores => Array.isArray(scores) && (scores.some(s => s.trim() !== '') || (scores.length === 1 && scores[0] === '')));
-                                if (!hasData) return false;
-                                return true; // It has data and is new, so save it
+                                const hasData = item.assessmentScores && Object.values(item.assessmentScores).some(scores => Array.isArray(scores) && scores.some(s => s && s.trim() !== ''));
+                                if (!hasData && !pendingScoreChanges.current.has(String(item.id))) return false;
                             }
-
-                            // 3. Check if it's an EXISTING item (compare against original)
-                            // @ts-ignore
-                            const itemScores = item.assessmentScores || {};
-                            // @ts-ignore
-                            const origScores = originalItem.assessmentScores || {};
-
-                            // Check deep equality on cleaned scores
-                            // Simplified: Just compare the assessment keys present
-                            const allKeys = new Set([...Object.keys(itemScores), ...Object.keys(origScores)]);
-                            for (const key of allKeys) {
-                                const s1 = cleanScores(itemScores[key] || []);
-                                const s2 = cleanScores(origScores[key] || []);
-                                if (!deepEqual(s1, s2)) return true; // Found a difference!
-                            }
-                            return false; // No changes found after normalization
+                            return true;
                         }
 
-                        if (!originalItem) return true; // New item
-                        return !deepEqual(item, originalItem); // Modified item
+                        // Existing item: Semantic comparison
+                        return !isDataEqual(item, originalItem);
                     }
-                    // Fallback for non-ID arrays (if any)
+                    // Fallback for non-ID arrays: Semantic comparison of whole array? 
+                    // Usually we don't hit this for our top-level fields
                     return true;
                 });
 
