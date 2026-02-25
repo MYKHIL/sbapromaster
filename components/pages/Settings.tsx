@@ -35,7 +35,7 @@ const EnhanceButton: React.FC<{ isEnhancing: boolean }> = ({ isEnhancing }) => (
 const Settings: React.FC = () => {
   const { currentUser } = useUser();
   const isAdmin = currentUser?.role === 'Admin';
-  const { settings, updateSettings, saveSettings, isDirty, isSyncing, isOnline } = useData();
+  const { settings, updateSettings, saveSettings, isDirty, isSettingDirty, isSyncing, isOnline } = useData();
   const [isEnhancingLogo, setIsEnhancingLogo] = useState(false);
   const [isEnhancingSignature, setIsEnhancingSignature] = useState(false);
 
@@ -164,27 +164,27 @@ const Settings: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">School Name</label>
-              <input type="text" name="schoolName" value={settings.schoolName} onChange={handleChange} className={inputStyles} disabled={!isAdmin} />
+              <input type="text" name="schoolName" value={settings.schoolName} onChange={handleChange} className={`${inputStyles} ${isSettingDirty('schoolName') ? 'bg-amber-50 border-amber-500' : ''}`} disabled={!isAdmin} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">District</label>
-              <input type="text" name="district" value={settings.district} onChange={handleChange} className={inputStyles} disabled={!isAdmin} />
+              <input type="text" name="district" value={settings.district} onChange={handleChange} className={`${inputStyles} ${isSettingDirty('district') ? 'bg-amber-50 border-amber-500' : ''}`} disabled={!isAdmin} />
             </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-            <textarea name="address" value={settings.address} onChange={handleChange} className={inputStyles} rows={3} disabled={!isAdmin} />
+            <textarea name="address" value={settings.address} onChange={handleChange} className={`${inputStyles} ${isSettingDirty('address') ? 'bg-amber-50 border-amber-500' : ''}`} rows={3} disabled={!isAdmin} />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Academic Year</label>
-              <input type="text" name="academicYear" value={settings.academicYear} onChange={handleChange} className={inputStyles} disabled={!isAdmin} />
+              <input type="text" name="academicYear" value={settings.academicYear} onChange={handleChange} className={`${inputStyles} ${isSettingDirty('academicYear') ? 'bg-amber-50 border-amber-500' : ''}`} disabled={!isAdmin} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Academic Term</label>
-              <input type="text" name="academicTerm" value={settings.academicTerm} onChange={handleChange} className={inputStyles} disabled={!isAdmin} />
+              <input type="text" name="academicTerm" value={settings.academicTerm} onChange={handleChange} className={`${inputStyles} ${isSettingDirty('academicTerm') ? 'bg-amber-50 border-amber-500' : ''}`} disabled={!isAdmin} />
             </div>
           </div>
 
@@ -204,7 +204,7 @@ const Settings: React.FC = () => {
                 />
                 <div
                   onClick={() => isAdmin && handleDateClick(vacationRef)}
-                  className={`${inputStyles} flex items-center justify-between ${!isAdmin ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:border-blue-400 transition-colors'}`}
+                  className={`${inputStyles} flex items-center justify-between ${!isAdmin ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:border-blue-400 transition-colors'} ${isSettingDirty('vacationDate') ? 'bg-amber-50 border-amber-500' : ''}`}
                 >
                   <span className={settings.vacationDate ? 'text-gray-900 font-medium' : 'text-gray-400'}>
                     {settings.vacationDate ? formatDateString(settings.vacationDate) : 'Select vacation date'}
@@ -230,7 +230,7 @@ const Settings: React.FC = () => {
                 />
                 <div
                   onClick={() => isAdmin && handleDateClick(reopeningRef)}
-                  className={`${inputStyles} flex items-center justify-between ${!isAdmin ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:border-blue-400 transition-colors'}`}
+                  className={`${inputStyles} flex items-center justify-between ${!isAdmin ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:border-blue-400 transition-colors'} ${isSettingDirty('reopeningDate') ? 'bg-amber-50 border-amber-500' : ''}`}
                 >
                   <span className={settings.reopeningDate ? 'text-gray-900 font-medium' : 'text-gray-400'}>
                     {settings.reopeningDate ? formatDateString(settings.reopeningDate) : 'Select reopening date'}
@@ -393,12 +393,16 @@ const Settings: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Headmaster's Name</label>
-              <input type="text" name="headmasterName" value={settings.headmasterName || ''} onChange={handleChange} className={inputStyles} disabled={!isAdmin} />
+              <input type="text" name="headmasterName" value={settings.headmasterName || ''} onChange={handleChange} className={`${inputStyles} ${isSettingDirty('headmasterName') ? 'bg-amber-50 border-amber-500' : ''}`} disabled={!isAdmin} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">School Logo</label>
               <div className="flex items-center space-x-4">
-                <img src={settings.logo || LOGO_PLACEHOLDER} alt="Logo Preview" className="h-32 w-32 object-contain border p-2 rounded-lg bg-gray-50" />
+                <div className="relative">
+                  <img src={settings.logo || LOGO_PLACEHOLDER} alt="Logo Preview" className={`h-32 w-32 object-contain border p-2 rounded-lg bg-gray-50 transition-colors ${isSettingDirty('logo') ? 'border-amber-500' : ''}`} />
+                  {isSettingDirty('logo') && (
+                    <span className="absolute -top-2 -right-2 bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">MODIFIED</span>
+                  )}
+                </div>
                 {isAdmin && (
                   <div className="space-y-2 w-full">
                     <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'logo')} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
@@ -429,7 +433,12 @@ const Settings: React.FC = () => {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Headmaster's Signature</label>
               <div className="flex items-center space-x-4">
-                <img src={settings.headmasterSignature || SIGNATURE_PLACEHOLDER} alt="Signature Preview" className="h-12 w-36 object-contain border p-1 rounded-md bg-gray-50" />
+                <div className="relative">
+                  <img src={settings.headmasterSignature || SIGNATURE_PLACEHOLDER} alt="Signature Preview" className={`h-12 w-36 object-contain border p-1 rounded-md bg-gray-50 transition-colors ${isSettingDirty('headmasterSignature') ? 'border-amber-500' : ''}`} />
+                  {isSettingDirty('headmasterSignature') && (
+                    <span className="absolute -top-2 -right-2 bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">MODIFIED</span>
+                  )}
+                </div>
                 {isAdmin && (
                   <div className="space-y-2 w-full">
                     <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'headmasterSignature')} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />

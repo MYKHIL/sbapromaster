@@ -41,7 +41,7 @@ const calculateAge = (dobString: string): string => {
 
 
 const Students: React.FC = () => {
-    const { students, classes, addStudent, updateStudent, deleteStudent, saveStudents, isDirty, isSyncing, isOnline, settings, updateSettings, loadStudents, subscription } = useData();
+    const { students, classes, addStudent, updateStudent, deleteStudent, saveStudents, isDirty, isItemDirty, isSyncing, isOnline, settings, updateSettings, loadStudents, subscription } = useData();
     const { currentUser, isAuthenticated } = useUser();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentStudent, setCurrentStudent] = useState<Student | Omit<Student, 'id'> | null>(null);
@@ -426,9 +426,13 @@ const Students: React.FC = () => {
                                 {filteredStudents.length > 0 ? (
                                     filteredStudents.map((student, index) => {
                                         const canManage = canManageStudentsInClass(currentUser, student.class);
+                                        const isDirtyRow = isItemDirty('students', student.id);
                                         return (
-                                            <tr key={student.id} className="border-b hover:bg-gray-50">
-                                                <td className="p-4 text-gray-600 font-semibold">{index + 1}</td>
+                                            <tr key={student.id} className={`border-b transition-colors ${isDirtyRow ? 'bg-amber-50 hover:bg-amber-100' : 'hover:bg-gray-50'}`}>
+                                                <td className="p-4 text-gray-600 font-semibold relative">
+                                                    {isDirtyRow && <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500" title="Unsaved changes"></div>}
+                                                    {index + 1}
+                                                </td>
                                                 <td className="p-2">
                                                     <img src={student.picture || USER_PLACEHOLDER} alt={student.name} className="h-10 w-10 rounded-full object-cover bg-gray-200" />
                                                 </td>
@@ -472,12 +476,14 @@ const Students: React.FC = () => {
                     {filteredStudents.length > 0 ? (
                         filteredStudents.map((student, index) => {
                             const canManage = canManageStudentsInClass(currentUser, student.class);
+                            const isDirtyRow = isItemDirty('students', student.id);
                             return (
-                                <div key={student.id} className="bg-white p-4 rounded-xl shadow-md border border-gray-200">
+                                <div key={student.id} className={`p-4 rounded-xl shadow-md border transition-colors ${isDirtyRow ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-200'}`}>
                                     <div className="flex items-start justify-between">
                                         <div className="flex items-center space-x-4">
-                                            <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                                <span className="text-blue-700 font-bold text-sm">{index + 1}</span>
+                                            <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center relative">
+                                                <div className={`absolute inset-0 rounded-full opacity-20 ${isDirtyRow ? 'bg-amber-500' : 'bg-blue-500'}`}></div>
+                                                <span className={`${isDirtyRow ? 'text-amber-700' : 'text-blue-700'} font-bold text-sm z-10`}>{index + 1}</span>
                                             </div>
                                             <img src={student.picture || USER_PLACEHOLDER} alt={student.name} className="h-12 w-12 rounded-full object-cover bg-gray-200" />
                                             <div>

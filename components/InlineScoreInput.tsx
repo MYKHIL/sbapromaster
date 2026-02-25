@@ -45,7 +45,7 @@ const formatScore = (score: number): string => {
 
 
 const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId, assessments, onOpenModal, readOnly, index }) => {
-    const { getStudentScores, updateStudentScores, setHasLocalChanges, updateDraftScore, removeDraftScore, getComputedScore, draftVersion } = useData();
+    const { getStudentScores, updateStudentScores, setHasLocalChanges, updateDraftScore, removeDraftScore, getComputedScore, draftVersion, isScoreDirty, isDraftScore } = useData();
 
     const [inlineValues, setInlineValues] = useState<{ [key: number]: string }>({});
     const [errors, setErrors] = useState<{ [key: number]: string | undefined }>({});
@@ -267,21 +267,24 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
             {assessments.map(assessment => {
                 const scores = getStudentScores(student.id, subjectId, assessment.id);
 
+                const isDirty = isScoreDirty(student.id, subjectId, assessment.id);
+                const isDraft = isDraftScore(student.id, subjectId, assessment.id);
+
                 if (scores.length > 1) {
                     const displayScore = calculateDisplayScore(scores, assessment);
                     return (
-                        <td key={assessment.id} className="p-4 text-center">
+                        <td key={assessment.id} className={`p-4 text-center transition-colors ${isDirty ? 'bg-amber-50' : ''}`}>
                             {MULTI_SCORE_ENTRY_ENABLED ? (
                                 <button
                                     onClick={() => onOpenModal(student, assessment)}
-                                    className="w-full text-center px-2 py-1 rounded-md hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                    className={`w-full text-center px-2 py-1 rounded-md hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-400 ${isDirty ? 'ring-1 ring-amber-300' : ''}`}
                                 >
-                                    <span className="font-mono text-blue-700">{formatScore(displayScore)}</span>
+                                    <span className={`font-mono ${isDirty ? 'text-amber-700 font-bold' : 'text-blue-700'}`}>{formatScore(displayScore)}</span>
                                     <div className="text-xs text-gray-500">{scores.length} score(s)</div>
                                 </button>
                             ) : (
                                 <div className="w-full text-center px-2 py-1 rounded-md">
-                                    <span className="font-mono text-gray-700">{formatScore(displayScore)}</span>
+                                    <span className={`font-mono ${isDirty ? 'text-amber-700 font-bold' : 'text-gray-700'}`}>{formatScore(displayScore)}</span>
                                     <div className="text-xs text-gray-500">{scores.length} score(s)</div>
                                 </div>
                             )}
@@ -290,7 +293,7 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
                 }
 
                 return (
-                    <td key={assessment.id} className="p-2 text-center align-top">
+                    <td key={assessment.id} className={`p-2 text-center align-top transition-colors ${isDirty ? 'bg-amber-50' : ''}`}>
                         <div className="flex flex-col items-center">
                             <div className="flex items-center space-x-1">
                                 <input
@@ -301,14 +304,16 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
                                     onBlur={() => handleSave(assessment.id)}
                                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSave(assessment.id); (e.target as HTMLInputElement).blur(); } }}
                                     placeholder={assessment.name.toLowerCase().includes('exam') ? 'e.g., 85' : '-'}
-                                    className="w-24 p-1 text-center font-mono bg-white border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                    className={`w-24 p-1 text-center font-mono border rounded-md shadow-sm transition-all focus:outline-none focus:ring-2 
+                                        ${isDirty ? 'bg-white border-amber-400 text-amber-900 focus:ring-amber-500' : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500'}
+                                    `}
                                     aria-label={`Score for ${student.name} in ${assessment.name}`}
                                     disabled={readOnly}
                                 />
                                 {MULTI_SCORE_ENTRY_ENABLED && !readOnly && (
                                     <button
                                         onClick={() => onOpenModal(student, assessment)}
-                                        className="p-1 text-gray-500 border border-gray-300 rounded-full hover:bg-blue-100 hover:text-blue-600 hover:border-blue-400 transition-colors"
+                                        className={`p-1 border rounded-full transition-colors ${isDirty ? 'text-amber-600 border-amber-300 hover:bg-amber-100' : 'text-gray-500 border-gray-300 hover:bg-blue-100 hover:text-blue-600 hover:border-blue-400'}`}
                                         title="Add multiple scores"
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

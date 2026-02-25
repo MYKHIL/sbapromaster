@@ -13,7 +13,7 @@ const EMPTY_GRADE_FORM: Omit<Grade, 'id'> = {
 };
 
 const GradingSystem: React.FC = () => {
-    const { grades, addGrade, updateGrade, deleteGrade, blockRemoteUpdates, allowRemoteUpdates, saveGrades, isDirty, isSyncing, isOnline } = useData();
+    const { grades, addGrade, updateGrade, deleteGrade, blockRemoteUpdates, allowRemoteUpdates, saveGrades, isDirty, isItemDirty, isSyncing, isOnline } = useData();
     const { currentUser } = useUser();
     const isAdmin = currentUser?.role === 'Admin';
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -48,9 +48,6 @@ const GradingSystem: React.FC = () => {
         // Check for gaps
         for (let i = 0; i < sortedGrades.length - 1; i++) {
             const diff = sortedGrades[i + 1].minScore - sortedGrades[i].maxScore;
-            // Allow a gap of 1 (integer boundaries) or less (decimal precision)
-            // e.g. 59 -> 60 (diff 1) is ok. 59.9 -> 60 (diff 0.1) is ok.
-            // But 59 -> 61 (diff 2) is a gap.
             if (diff > 1 + Number.EPSILON) {
                 issues.push(`There is a gap between ${sortedGrades[i].maxScore}% and ${sortedGrades[i + 1].minScore}%.`);
             }
@@ -70,13 +67,13 @@ const GradingSystem: React.FC = () => {
     }, [grades]);
 
     const handleAddNew = () => {
-        blockRemoteUpdates(); // Block sync while editing
+        blockRemoteUpdates();
         setCurrentGrade(EMPTY_GRADE_FORM);
         setIsModalOpen(true);
     };
 
     const handleEdit = (grade: Grade) => {
-        blockRemoteUpdates(); // Block sync while editing
+        blockRemoteUpdates();
         setCurrentGrade(grade);
         setIsModalOpen(true);
     };
@@ -95,7 +92,7 @@ const GradingSystem: React.FC = () => {
     };
 
     const handleCloseModal = () => {
-        allowRemoteUpdates(); // Re-enable sync after closing
+        allowRemoteUpdates();
         setIsModalOpen(false);
         setCurrentGrade(null);
         setModalError('');
@@ -118,9 +115,8 @@ const GradingSystem: React.FC = () => {
 
         const isOverlapping = grades.some(grade => {
             if ('id' in currentGrade && grade.id === currentGrade.id) {
-                return false; // Skip self-check when editing
+                return false;
             }
-            // Check if the new range [min, max] overlaps with an existing range [g.min, g.max]
             return currentGrade.minScore <= grade.maxScore && currentGrade.maxScore >= grade.minScore;
         });
 
@@ -142,7 +138,6 @@ const GradingSystem: React.FC = () => {
             <div className="space-y-6 pb-20">
                 <div className="flex items-center justify-between">
                     <h1 className="text-3xl font-bold text-gray-800">Manage Grading System</h1>
-                    {/* Save Button Removed - Using Global Action Bar */}
                 </div>
 
                 <div className="bg-gray-100 py-4">
@@ -178,26 +173,32 @@ const GradingSystem: React.FC = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {[...grades].sort((a, b) => b.minScore - a.minScore).map((grade, index) => (
-                                    <tr key={grade.id} className="border-b hover:bg-gray-50">
-                                        <td className="p-4 text-gray-600 font-semibold">{index + 1}</td>
-                                        <td className="p-4 font-medium text-gray-900">{grade.name}</td>
-                                        <td className="p-4 text-gray-900">{grade.minScore}% - {grade.maxScore}%</td>
-                                        <td className="p-4 text-gray-900">{grade.remark}</td>
-                                        <td className="p-4 space-x-4 flex items-center">
-                                            {isAdmin && (
-                                                <>
-                                                    <button onClick={() => handleEdit(grade)} className="text-blue-600 hover:text-blue-800" title="Edit">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
-                                                    </button>
-                                                    <button onClick={() => handleDeleteClick(grade.id)} className="text-red-600 hover:text-red-800" title="Delete">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                                    </button>
-                                                </>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))}
+                                {[...grades].sort((a, b) => b.minScore - a.minScore).map((grade, index) => {
+                                    const isDirtyRow = isItemDirty('grades', grade.id);
+                                    return (
+                                        <tr key={grade.id} className={`border-b transition-colors ${isDirtyRow ? 'bg-amber-50 hover:bg-amber-100' : 'hover:bg-gray-50'}`}>
+                                            <td className="p-4 text-gray-600 font-semibold relative">
+                                                {isDirtyRow && <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500" title="Unsaved changes"></div>}
+                                                {index + 1}
+                                            </td>
+                                            <td className="p-4 font-medium text-gray-900">{grade.name}</td>
+                                            <td className="p-4 text-gray-900">{grade.minScore}% - {grade.maxScore}%</td>
+                                            <td className="p-4 text-gray-900">{grade.remark}</td>
+                                            <td className="p-4 space-x-4 flex items-center">
+                                                {isAdmin && (
+                                                    <>
+                                                        <button onClick={() => handleEdit(grade)} className="text-blue-600 hover:text-blue-800" title="Edit">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
+                                                        </button>
+                                                        <button onClick={() => handleDeleteClick(grade.id)} className="text-red-600 hover:text-red-800" title="Delete">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>
@@ -205,33 +206,36 @@ const GradingSystem: React.FC = () => {
 
                 {/* Mobile Card View */}
                 <div className="lg:hidden space-y-4">
-                    {[...grades].sort((a, b) => b.minScore - a.minScore).map((grade, index) => (
-                        <div key={grade.id} className="bg-white p-4 rounded-xl shadow-md border border-gray-200 flex justify-between items-center">
-                            <div className="flex items-center gap-3">
-                                <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                    <span className="text-blue-700 font-bold text-sm">{index + 1}</span>
+                    {[...grades].sort((a, b) => b.minScore - a.minScore).map((grade, index) => {
+                        const isDirtyRow = isItemDirty('grades', grade.id);
+                        return (
+                            <div key={grade.id} className={`p-4 rounded-xl shadow-md border transition-colors flex justify-between items-center ${isDirtyRow ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-200'}`}>
+                                <div className="flex items-center gap-3">
+                                    <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center relative">
+                                        <div className={`absolute inset-0 rounded-full opacity-20 ${isDirtyRow ? 'bg-amber-500' : 'bg-blue-500'}`}></div>
+                                        <span className={`${isDirtyRow ? 'text-amber-700' : 'text-blue-700'} font-bold text-sm z-10`}>{index + 1}</span>
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-gray-800">{grade.name} <span className="font-normal text-gray-600">({grade.minScore}% - {grade.maxScore}%)</span></p>
+                                        <p className="text-sm text-gray-600">{grade.remark}</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="font-bold text-gray-800">{grade.name} <span className="font-normal text-gray-600">({grade.minScore}% - {grade.maxScore}%)</span></p>
-                                    <p className="text-sm text-gray-600">{grade.remark}</p>
+                                <div className="flex space-x-2 flex-shrink-0">
+                                    {isAdmin && (
+                                        <>
+                                            <button onClick={() => handleEdit(grade)} className="text-blue-600 p-2 rounded-full hover:bg-blue-100" title="Edit">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
+                                            </button>
+                                            <button onClick={() => handleDeleteClick(grade.id)} className="text-red-600 p-2 rounded-full hover:bg-red-100" title="Delete">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                             </div>
-                            <div className="flex space-x-2 flex-shrink-0">
-                                {isAdmin && (
-                                    <>
-                                        <button onClick={() => handleEdit(grade)} className="text-blue-600 p-2 rounded-full hover:bg-blue-100" title="Edit">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
-                                        </button>
-                                        <button onClick={() => handleDeleteClick(grade.id)} className="text-red-600 p-2 rounded-full hover:bg-red-100" title="Delete">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                        </button>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
-
 
                 {isModalOpen && currentGrade && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
@@ -265,6 +269,7 @@ const GradingSystem: React.FC = () => {
                         </div>
                     </div>
                 )}
+
                 <ConfirmationModal
                     isOpen={isConfirmOpen}
                     onClose={() => setIsConfirmOpen(false)}

@@ -127,6 +127,10 @@ export interface DataContextType {
     isPageDirty: (pageName: Page) => boolean;
     revertPendingChanges: (field: keyof AppDataType, id?: number | string) => void;
     revertAllPendingChanges: () => void;
+    isItemDirty: (field: keyof AppDataType, id: string | number) => boolean;
+    isSettingDirty: (field: keyof SchoolSettings) => boolean;
+    isScoreDirty: (studentId: number, subjectId: number, assessmentId: number) => boolean;
+    isDraftScore: (studentId: number, subjectId: number, assessmentId: number) => boolean;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -242,8 +246,49 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }, []);
 
+    const isItemDirty = React.useCallback((field: keyof AppDataType, id: string | number) => {
+        const fieldStr = String(field);
+        if (pendingChangesMap.current[fieldStr]) {
+            return pendingChangesMap.current[fieldStr].has(String(id));
+        }
+        return false;
+    }, []);
+
+    const isSettingDirty = React.useCallback((field: keyof SchoolSettings) => {
+        if (!settings || !originalData.current.settings) return false;
+        return !deepEqual(settings[field], originalData.current.settings[field]);
+    }, [settings]);
+
+    const isScoreDirty = React.useCallback((studentId: number, subjectId: number, assessmentId: number) => {
+        const scoreId = `${studentId}-${subjectId}`;
+
+        // 1. Check Draft Scores first (most immediate)
+        const draftKey = `${studentId}-${subjectId}-${assessmentId}`;
+        if (draftScores.current.has(draftKey)) return true;
+
+        // 2. Check individual assessment within a "locally saved" score
+        const existingScore = scores.find(s => s.id === scoreId);
+        if (!existingScore) return false;
+
+        const originalScore = originalData.current.scores?.find(s => String(s.id) === scoreId);
+        if (!originalScore) {
+            // If it's a completely new score item, it's dirty if it has any meaningful content
+            const val = existingScore.assessmentScores?.[assessmentId];
+            return val && Array.isArray(val) && val.some(v => v !== null && v !== undefined && String(v).trim() !== '');
+        }
+
+        const currentVal = existingScore.assessmentScores?.[assessmentId] || [];
+        const originalVal = originalScore.assessmentScores?.[assessmentId] || [];
+
+        return !deepEqual(currentVal, originalVal);
+    }, [scores]);
+
+    const isDraftScore = React.useCallback((studentId: number, subjectId: number, assessmentId: number) => {
+        const draftKey = `${studentId}-${subjectId}-${assessmentId}`;
+        return draftScores.current.has(draftKey);
+    }, []);
+
     // FIX: Use a Ref to hold the latest state for saveToCloud to access during retries
-    // This prevents the "stale closure" bug where a postponed save uses old data
     const stateRef = React.useRef<AppDataType>({
         settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions
     });
@@ -540,7 +585,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             // CRITICAL: Clear dirty fields to prevent stale save state
             dirtyFields.current.clear();
-            pendingScoreChanges.current.clear();
             setHasLocalChanges(false);
 
             // Clear draft scores to prevent stale UI state
@@ -1859,7 +1903,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setDirtyVersion(v => v + 1);
 
         // 3. Clear pending score changes specifically
-        Object.values(pendingChangesMap.current).forEach(set => set.clear());
+        Object.values(pendingChangesMap.current).forEach(set => {
+            if (set instanceof Set) set.clear();
+        });
     };
 
     const revertPendingChanges = (field: keyof AppDataType, id?: number | string) => {
@@ -1948,12 +1994,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // @ts-ignore
             setter(newArray);
 
-            // Special handling for Score pending set
+            // Clear drafts related to this score ID (studentId-subjectId)
             if (field === 'scores') {
-                pendingScoreChanges.current.delete(String(id));
-                // ALSO CLEAR DRAFTS related to this score ID (studentId-subjectId)
-                // Score ID format: "studentId-subjectId"
-                // Draft Key format: "studentId-subjectId-assessmentId"
                 const scoreIdPrefix = String(id) + '-';
                 for (const key of draftScores.current.keys()) {
                     if (key.startsWith(scoreIdPrefix)) {
@@ -2528,6 +2570,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         pendingCount,
         isPageDirty,
         subscription,
+        isItemDirty,
+        isSettingDirty,
+        isScoreDirty,
+        isDraftScore,
     };
 
     // Initialize originalData from local storage on load/schoolId change

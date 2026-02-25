@@ -20,7 +20,7 @@ const EMPTY_TEACHER_FORM: Omit<Class, 'id'> = {
 const SIGNATURE_PLACEHOLDER = 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTUwIDUwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0yIDI1LjVDMiAyNS41IDE1LjUgMTUuNSAyOS41IDI4QzQzLjUgNDAuNSA1MyAyNS41IDY2LjUgMjAuNUM4MCAxNS41IDg4LjUgMjkgMTAwIDI5QzExMS41IDI5IDEyMyAxNS41IDEzNyAyOS41IiBzdHJva2U9IiM5Y2EzYWYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+';
 
 const Teachers: React.FC = () => {
-    const { classes, addClass, updateClass, deleteClass, saveClasses, isDirty, isSyncing, isOnline, subscription } = useData();
+    const { classes, addClass, updateClass, deleteClass, saveClasses, isDirty, isItemDirty, isSyncing, isOnline, subscription } = useData();
     const { currentUser } = useUser();
     const isAdmin = currentUser?.role === 'Admin';
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -308,25 +308,31 @@ const Teachers: React.FC = () => {
                             </thead>
                             <tbody>
                                 {filteredClasses.length > 0 ? (
-                                    filteredClasses.map((cls, index) => (
-                                        <tr key={cls.id} className="border-b hover:bg-gray-50">
-                                            <td className="p-4 text-gray-600 font-semibold">{index + 1}</td>
-                                            <td className="p-4 font-medium text-gray-900">{cls.name}</td>
-                                            <td className="p-4 text-gray-900">{cls.teacherName}</td>
-                                            <td className="p-4 space-x-4 flex items-center">
-                                                {canEditClass(cls) && (
-                                                    <button onClick={() => handleEdit(cls)} className="text-blue-600 hover:text-blue-800" title="Edit">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
-                                                    </button>
-                                                )}
-                                                {isAdmin && (
-                                                    <button onClick={() => handleDeleteClick(cls.id)} className="text-red-600 hover:text-red-800" title="Delete">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                                    </button>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))
+                                    filteredClasses.map((cls, index) => {
+                                        const isDirtyRow = isItemDirty('classes', cls.id);
+                                        return (
+                                            <tr key={cls.id} className={`border-b transition-colors ${isDirtyRow ? 'bg-amber-50 hover:bg-amber-100' : 'hover:bg-gray-50'}`}>
+                                                <td className="p-4 text-gray-600 font-semibold relative">
+                                                    {isDirtyRow && <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500" title="Unsaved changes"></div>}
+                                                    {index + 1}
+                                                </td>
+                                                <td className="p-4 font-medium text-gray-900">{cls.name}</td>
+                                                <td className="p-4 text-gray-900">{cls.teacherName}</td>
+                                                <td className="p-4 space-x-4 flex items-center">
+                                                    {canEditClass(cls) && (
+                                                        <button onClick={() => handleEdit(cls)} className="text-blue-600 hover:text-blue-800" title="Edit">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
+                                                        </button>
+                                                    )}
+                                                    {isAdmin && (
+                                                        <button onClick={() => handleDeleteClick(cls.id)} className="text-red-600 hover:text-red-800" title="Delete">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                        </button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
                                 ) : (
                                     <tr>
                                         <td colSpan={4} className="text-center p-8 text-gray-500">
@@ -342,31 +348,35 @@ const Teachers: React.FC = () => {
                 {/* Mobile Card View */}
                 <div className="lg:hidden space-y-4">
                     {filteredClasses.length > 0 ? (
-                        filteredClasses.map((cls, index) => (
-                            <div key={cls.id} className="bg-white p-4 rounded-xl shadow-md border border-gray-200 flex justify-between items-center">
-                                <div className="flex items-center gap-3">
-                                    <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                        <span className="text-blue-700 font-bold text-sm">{index + 1}</span>
+                        filteredClasses.map((cls, index) => {
+                            const isDirtyRow = isItemDirty('classes', cls.id);
+                            return (
+                                <div key={cls.id} className={`p-4 rounded-xl shadow-md border transition-colors flex justify-between items-center ${isDirtyRow ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-200'}`}>
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center relative">
+                                            <div className={`absolute inset-0 rounded-full opacity-20 ${isDirtyRow ? 'bg-amber-500' : 'bg-blue-500'}`}></div>
+                                            <span className={`${isDirtyRow ? 'text-amber-700' : 'text-blue-700'} font-bold text-sm z-10`}>{index + 1}</span>
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-gray-800">{cls.teacherName}</p>
+                                            <p className="text-sm text-gray-600">Class Teacher for: {cls.name}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="font-bold text-gray-800">{cls.teacherName}</p>
-                                        <p className="text-sm text-gray-600">Class Teacher for: {cls.name}</p>
+                                    <div className="flex space-x-2 flex-shrink-0">
+                                        {canEditClass(cls) && (
+                                            <button onClick={() => handleEdit(cls)} className="text-blue-600 p-2 rounded-full hover:bg-blue-100" title="Edit">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
+                                            </button>
+                                        )}
+                                        {isAdmin && (
+                                            <button onClick={() => handleDeleteClick(cls.id)} className="text-red-600 p-2 rounded-full hover:bg-red-100" title="Delete">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
-                                <div className="flex space-x-2 flex-shrink-0">
-                                    {canEditClass(cls) && (
-                                        <button onClick={() => handleEdit(cls)} className="text-blue-600 p-2 rounded-full hover:bg-blue-100" title="Edit">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
-                                        </button>
-                                    )}
-                                    {isAdmin && (
-                                        <button onClick={() => handleDeleteClick(cls.id)} className="text-red-600 p-2 rounded-full hover:bg-red-100" title="Delete">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        ))
+                            );
+                        })
                     ) : (
                         <div className="text-center p-8 text-gray-500 bg-white rounded-xl shadow-md border border-gray-200">
                             No data found matching your search.
