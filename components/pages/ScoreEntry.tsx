@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useData } from '../../context/DataContext';
+import { DIRTY_INDICATOR_BG, DIRTY_INDICATOR_TEXT, DIRTY_INDICATOR_SECONDARY_TEXT, DIRTY_INDICATOR_HOVER_BG, DIRTY_INDICATOR_BORDER } from '../../constants';
 import { useUser } from '../../context/UserContext';
 import ReadOnlyWrapper from '../ReadOnlyWrapper';
 import InlineScoreInput from '../InlineScoreInput';
@@ -13,7 +14,7 @@ import { sortClassesByName } from '../../utils/classSort';
 
 const ScoreEntry: React.FC = () => {
     // Destructure with default empty arrays to prevent undefined errors
-    const { students = [], subjects: allSubjects = [], assessments = [], classes: allClasses = [], getStudentScores, updateStudentScores, isOnline, isSyncing, isFetching, queuedCount, hasLocalChanges, setHasLocalChanges, isDirty, updateDraftScore, removeDraftScore, getComputedScore, draftVersion, scores, saveToCloud, refreshFromCloud, pendingCount, getPendingUploadData, loadScores } = useData();
+    const { students = [], subjects: allSubjects = [], assessments = [], classes: allClasses = [], getStudentScores, updateStudentScores, isOnline, isSyncing, isFetching, queuedCount, hasLocalChanges, setHasLocalChanges, isDirty, updateDraftScore, removeDraftScore, getComputedScore, draftVersion, scores, saveToCloud, refreshFromCloud, pendingCount, getPendingUploadData, loadScores, isDraftScore, isScoreDirty, refreshVersion } = useData();
     const { currentUser } = useUser();
     const isReadOnly = currentUser?.role === 'Guest';
 
@@ -251,12 +252,17 @@ const ScoreEntry: React.FC = () => {
     const [localScore, setLocalScore] = useState('');
     const [scoreModified, setScoreModified] = useState(false); // Track if user has modified the score
 
+    // Reset score modification state on manual refresh or when changing context (student/subject/assessment)
+    useEffect(() => {
+        setScoreModified(false);
+    }, [refreshVersion, selectedStudentIndex, selectedSubjectId, selectedAssessmentId]);
+
     // Sync local score when student/assessment changes OR when scores in DataContext change
     useEffect(() => {
         const student = filteredStudents[selectedStudentIndex];
         if (student) {
             // Get computed score (draft > saved)
-            const score = getComputedScore(student.id, selectedAssessmentId, selectedSubjectId);
+            const score = getComputedScore(student.id, selectedSubjectId, selectedAssessmentId);
 
             // Fix Input Fighting: Only update localScore if:
             // 1. It's different from current localScore
@@ -327,6 +333,7 @@ const ScoreEntry: React.FC = () => {
             });
             // FIX: Use [''] instead of [] to ensure change is detected
             updateStudentScores(student.id, selectedSubjectId, assessment.id, ['']);
+            removeDraftScore(student.id, selectedSubjectId, assessment.id);
             setScoreModified(false); // Clear modification flag
             return;
         }
@@ -394,7 +401,7 @@ const ScoreEntry: React.FC = () => {
         setScoreModified(false);
 
         // Unregister pending change / remove from draft
-        removeDraftScore(student.id, assessment.id, selectedSubjectId);
+        removeDraftScore(student.id, selectedSubjectId, assessment.id);
 
         console.log('[ScoreEntry - Mobile] ✅ Score committed successfully');
     };
@@ -720,7 +727,7 @@ const ScoreEntry: React.FC = () => {
                                                                 // Update global draft
                                                                 const student = filteredStudents[selectedStudentIndex];
                                                                 if (student) {
-                                                                    updateDraftScore(student.id, selectedAssessmentId, filtered);
+                                                                    updateDraftScore(student.id, selectedSubjectId, selectedAssessmentId, filtered);
                                                                 }
                                                             }}
                                                             onBlur={commitScore}
@@ -731,9 +738,18 @@ const ScoreEntry: React.FC = () => {
                                                                 }
                                                             }}
                                                             placeholder={getPlaceholder()}
-                                                            className={`w-full p-3 pl-20 text-center text-2xl font-mono bg-gray-50 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${isReadOnly ? 'cursor-not-allowed text-gray-500' : ''}`}
+                                                            className={`w-full p-3 pl-20 text-center text-2xl font-mono border rounded-md shadow-sm focus:outline-none focus:ring-2 ${isScoreDirty(filteredStudents[selectedStudentIndex]?.id, selectedSubjectId, selectedAssessmentId)
+                                                                ? `${DIRTY_INDICATOR_BG} ${DIRTY_INDICATOR_TEXT} ${DIRTY_INDICATOR_BORDER} focus:ring-blue-400 focus:border-blue-400`
+                                                                : 'bg-gray-50 border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500'
+                                                                } ${isReadOnly ? 'cursor-not-allowed opacity-60' : ''}`}
                                                             readOnly={isReadOnly}
                                                         />
+
+                                                        {isScoreDirty(filteredStudents[selectedStudentIndex]?.id, selectedSubjectId, selectedAssessmentId) && (
+                                                            <div className="absolute top-0 right-0 bg-yellow-400 text-black text-[10px] font-bold px-1.5 py-0.5 rounded-bl uppercase z-10">
+                                                                Unsaved
+                                                            </div>
+                                                        )}
 
                                                         {/* Rank Badge inside Input (Moved after input for stacking) */}
                                                         {!isReadOnly && projectedStats && projectedStats.rawRank > 0 && (
@@ -763,7 +779,7 @@ const ScoreEntry: React.FC = () => {
                                                                         updateStudentScores(student.id, selectedSubjectId, selectedAssessmentId, ['']);
 
                                                                         // 3. Clean up draft state (since we just committed)
-                                                                        removeDraftScore(student.id, selectedAssessmentId, selectedSubjectId);
+                                                                        removeDraftScore(student.id, selectedSubjectId, selectedAssessmentId);
                                                                     }
 
                                                                     scoreInputRef.current?.focus();

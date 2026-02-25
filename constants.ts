@@ -17,6 +17,16 @@ export const SHOW_USER_EXPORT_BUTTON = false;
 export const WHATSAPP_DEVELOPER_NUMBER = '233542410613';
 export const AUTO_SANITIZE_TEACHERS = true;
 
+// GLOBAL STYLING: Dirty Indicators
+// Brick Red Pattern: bg-red-900 / text-white
+// Navy Blue Pattern: bg-blue-900 / text-white
+// Amber Pattern: bg-amber-50 / text-amber-900
+export const DIRTY_INDICATOR_BG = 'bg-rose-600';
+export const DIRTY_INDICATOR_TEXT = 'text-white';
+export const DIRTY_INDICATOR_SECONDARY_TEXT = 'text-rose-100';
+export const DIRTY_INDICATOR_HOVER_BG = 'hover:bg-rose-500';
+export const DIRTY_INDICATOR_BORDER = 'border-rose-700';
+
 // ONE-TIME IMAGE REPAIR: Set to true to compress oversized student images on startup
 // This reduces image resolution to prevent Firestore document size errors
 // NOTE: This is now controlled manually via Firebase Analytics page

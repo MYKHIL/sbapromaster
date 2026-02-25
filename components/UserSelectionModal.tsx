@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { User } from '../../types';
-import { useData } from '../../context/DataContext';
+import { User } from '../types';
+import { useData } from '../context/DataContext';
 
 interface UserSelectionModalProps {
     isOpen: boolean;

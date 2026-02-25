@@ -4,6 +4,7 @@ import type { Grade } from '../../types';
 import ReadOnlyWrapper from '../ReadOnlyWrapper';
 import ConfirmationModal from '../ConfirmationModal';
 import { useUser } from '../../context/UserContext';
+import { DIRTY_INDICATOR_BG, DIRTY_INDICATOR_TEXT, DIRTY_INDICATOR_SECONDARY_TEXT, DIRTY_INDICATOR_HOVER_BG, DIRTY_INDICATOR_BORDER } from '../../constants';
 
 const EMPTY_GRADE_FORM: Omit<Grade, 'id'> = {
     name: '',
@@ -176,21 +177,25 @@ const GradingSystem: React.FC = () => {
                                 {[...grades].sort((a, b) => b.minScore - a.minScore).map((grade, index) => {
                                     const isDirtyRow = isItemDirty('grades', grade.id);
                                     return (
-                                        <tr key={grade.id} className={`border-b transition-colors ${isDirtyRow ? 'bg-amber-50 hover:bg-amber-100' : 'hover:bg-gray-50'}`}>
-                                            <td className="p-4 text-gray-600 font-semibold relative">
-                                                {isDirtyRow && <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500" title="Unsaved changes"></div>}
+                                        <tr key={grade.id} className={`border-b transition-colors ${isDirtyRow ? `${DIRTY_INDICATOR_BG} ${DIRTY_INDICATOR_TEXT} ${DIRTY_INDICATOR_HOVER_BG}` : 'hover:bg-gray-50'}`}>
+                                            <td className="p-4 relative">
                                                 {index + 1}
+                                                {isDirtyRow && (
+                                                    <span className="absolute left-0 top-0 text-[10px] font-bold uppercase tracking-wider px-1 py-0.5 bg-yellow-400 text-black leading-none rounded-br z-10">
+                                                        Unsaved
+                                                    </span>
+                                                )}
                                             </td>
-                                            <td className="p-4 font-medium text-gray-900">{grade.name}</td>
-                                            <td className="p-4 text-gray-900">{grade.minScore}% - {grade.maxScore}%</td>
-                                            <td className="p-4 text-gray-900">{grade.remark}</td>
+                                            <td className="p-4 font-medium">{grade.name}</td>
+                                            <td className={`p-4 ${isDirtyRow ? DIRTY_INDICATOR_SECONDARY_TEXT : 'text-gray-900'}`}>{grade.minScore}% - {grade.maxScore}%</td>
+                                            <td className={`p-4 ${isDirtyRow ? DIRTY_INDICATOR_SECONDARY_TEXT : 'text-gray-900'}`}>{grade.remark}</td>
                                             <td className="p-4 space-x-4 flex items-center">
                                                 {isAdmin && (
                                                     <>
-                                                        <button onClick={() => handleEdit(grade)} className="text-blue-600 hover:text-blue-800" title="Edit">
+                                                        <button onClick={() => handleEdit(grade)} className={`${isDirtyRow ? `${DIRTY_INDICATOR_SECONDARY_TEXT} hover:text-white` : 'text-blue-600 hover:text-blue-800'}`} title="Edit">
                                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
                                                         </button>
-                                                        <button onClick={() => handleDeleteClick(grade.id)} className="text-red-600 hover:text-red-800" title="Delete">
+                                                        <button onClick={() => handleDeleteClick(grade.id)} className={`${isDirtyRow ? 'text-white hover:text-gray-200 opacity-90' : 'text-red-600 hover:text-red-800'}`} title="Delete">
                                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                                         </button>
                                                     </>
@@ -209,24 +214,29 @@ const GradingSystem: React.FC = () => {
                     {[...grades].sort((a, b) => b.minScore - a.minScore).map((grade, index) => {
                         const isDirtyRow = isItemDirty('grades', grade.id);
                         return (
-                            <div key={grade.id} className={`p-4 rounded-xl shadow-md border transition-colors flex justify-between items-center ${isDirtyRow ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-200'}`}>
+                            <div key={grade.id} className={`p-4 rounded-xl shadow-md border transition-colors flex justify-between items-center relative ${isDirtyRow ? `${DIRTY_INDICATOR_BG} ${DIRTY_INDICATOR_BORDER} ${DIRTY_INDICATOR_TEXT}` : 'bg-white border-gray-200'}`}>
+                                {isDirtyRow && (
+                                    <div className="absolute top-0 right-0 bg-yellow-400 text-black text-[10px] font-bold px-1.5 py-0.5 rounded-bl uppercase z-10">
+                                        Unsaved
+                                    </div>
+                                )}
                                 <div className="flex items-center gap-3">
                                     <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center relative">
-                                        <div className={`absolute inset-0 rounded-full opacity-20 ${isDirtyRow ? 'bg-amber-500' : 'bg-blue-500'}`}></div>
-                                        <span className={`${isDirtyRow ? 'text-amber-700' : 'text-blue-700'} font-bold text-sm z-10`}>{index + 1}</span>
+                                        <div className={`absolute inset-0 rounded-full opacity-20 ${isDirtyRow ? 'bg-white' : 'bg-blue-500'}`}></div>
+                                        <span className={`${isDirtyRow ? 'text-white' : 'text-blue-700'} font-bold text-sm z-10`}>{index + 1}</span>
                                     </div>
                                     <div>
-                                        <p className="font-bold text-gray-800">{grade.name} <span className="font-normal text-gray-600">({grade.minScore}% - {grade.maxScore}%)</span></p>
-                                        <p className="text-sm text-gray-600">{grade.remark}</p>
+                                        <p className="font-bold">{grade.name} <span className={`font-normal ${isDirtyRow ? DIRTY_INDICATOR_SECONDARY_TEXT : 'text-gray-600'}`}>({grade.minScore}% - {grade.maxScore}%)</span></p>
+                                        <p className={`text-sm ${isDirtyRow ? DIRTY_INDICATOR_SECONDARY_TEXT : 'text-gray-600'}`}>{grade.remark}</p>
                                     </div>
                                 </div>
                                 <div className="flex space-x-2 flex-shrink-0">
                                     {isAdmin && (
                                         <>
-                                            <button onClick={() => handleEdit(grade)} className="text-blue-600 p-2 rounded-full hover:bg-blue-100" title="Edit">
+                                            <button onClick={() => handleEdit(grade)} className={`${isDirtyRow ? `${DIRTY_INDICATOR_SECONDARY_TEXT} hover:text-white` : 'text-blue-600 hover:bg-blue-100'} p-2 rounded-full`} title="Edit">
                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
                                             </button>
-                                            <button onClick={() => handleDeleteClick(grade.id)} className="text-red-600 p-2 rounded-full hover:bg-red-100" title="Delete">
+                                            <button onClick={() => handleDeleteClick(grade.id)} className={`${isDirtyRow ? 'text-white hover:bg-black/20' : 'text-red-600 hover:bg-red-100'} p-2 rounded-full`} title="Delete">
                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                             </button>
                                         </>

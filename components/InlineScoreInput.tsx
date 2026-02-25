@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useData } from '../context/DataContext';
 import type { Student, Assessment } from '../types';
-import { MULTI_SCORE_ENTRY_ENABLED } from '../constants';
+import { MULTI_SCORE_ENTRY_ENABLED, DIRTY_INDICATOR_BG, DIRTY_INDICATOR_TEXT, DIRTY_INDICATOR_SECONDARY_TEXT, DIRTY_INDICATOR_HOVER_BG, DIRTY_INDICATOR_BORDER } from '../constants';
 
 interface InlineScoreInputProps {
     student: Student;
@@ -45,24 +45,25 @@ const formatScore = (score: number): string => {
 
 
 const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId, assessments, onOpenModal, readOnly, index }) => {
-    const { getStudentScores, updateStudentScores, setHasLocalChanges, updateDraftScore, removeDraftScore, getComputedScore, draftVersion, isScoreDirty, isDraftScore } = useData();
+    const { getStudentScores, updateStudentScores, setHasLocalChanges, updateDraftScore, removeDraftScore, getComputedScore, draftVersion, isScoreDirty, isDraftScore, refreshVersion } = useData();
 
     const [inlineValues, setInlineValues] = useState<{ [key: number]: string }>({});
     const [errors, setErrors] = useState<{ [key: number]: string | undefined }>({});
     const [modifiedFields, setModifiedFields] = useState<Set<number>>(new Set()); // Track which fields user has modified
     const originalValues = useRef<{ [key: number]: string }>({}); // Track original values for comparison
 
-    // Reset original values when student changes
+    // Reset original values when student changes or when a manual refresh occurs
     useEffect(() => {
         originalValues.current = {};
-    }, [student.id]);
+        setModifiedFields(new Set());
+    }, [student.id, refreshVersion]);
 
     useEffect(() => {
         const initialValues: { [key: number]: string } = {};
         assessments.forEach(assessment => {
             // Get the computed score (draft > saved)
             // PASS subjectId to ensure we get the correct draft for this subject
-            const val = getComputedScore(student.id, assessment.id, subjectId);
+            const val = getComputedScore(student.id, subjectId, assessment.id);
 
             // Should we update? Only if meaningful change to avoid cursor jumps?
             // Since we control local state, we can just sync.
@@ -111,7 +112,7 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
         if (isActuallyChanged) {
             setModifiedFields(prev => new Set(prev).add(assessmentId)); // Mark as modified
             // Update global draft
-            updateDraftScore(student.id, assessmentId, subjectId, filteredValue);
+            updateDraftScore(student.id, subjectId, assessmentId, filteredValue);
         } else {
             // Reverted to original
             setModifiedFields(prev => {
@@ -120,7 +121,7 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
                 return newSet;
             });
             // Remove from global draft (it matches saved)
-            removeDraftScore(student.id, assessmentId, subjectId);
+            removeDraftScore(student.id, subjectId, assessmentId);
         }
 
         if (errors[assessmentId]) {
@@ -168,7 +169,7 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
             setModifiedFields(prev => new Set(prev).add(assessmentId));
 
             // Remove from draft since we've already updated the local state
-            removeDraftScore(student.id, assessmentId, subjectId);
+            removeDraftScore(student.id, subjectId, assessmentId);
             return;
         }
 
@@ -273,19 +274,24 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
                 if (scores.length > 1) {
                     const displayScore = calculateDisplayScore(scores, assessment);
                     return (
-                        <td key={assessment.id} className={`p-4 text-center transition-colors ${isDirty ? 'bg-amber-50' : ''}`}>
+                        <td key={assessment.id} className={`p-4 text-center transition-colors relative ${isDirty ? `${DIRTY_INDICATOR_BG} ${DIRTY_INDICATOR_TEXT}` : ''}`}>
+                            {isDirty && (
+                                <span className="absolute left-0 top-0 text-[8px] font-bold uppercase px-0.5 bg-yellow-400 text-black leading-none rounded-br z-10">
+                                    Unsaved
+                                </span>
+                            )}
                             {MULTI_SCORE_ENTRY_ENABLED ? (
                                 <button
                                     onClick={() => onOpenModal(student, assessment)}
-                                    className={`w-full text-center px-2 py-1 rounded-md hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-400 ${isDirty ? 'ring-1 ring-amber-300' : ''}`}
+                                    className={`w-full text-center px-2 py-1 rounded-md hover:bg-black/10 focus:outline-none focus:ring-2 focus:ring-blue-400 ${isDirty ? `ring-1 ${DIRTY_INDICATOR_BORDER}` : ''}`}
                                 >
-                                    <span className={`font-mono ${isDirty ? 'text-amber-700 font-bold' : 'text-blue-700'}`}>{formatScore(displayScore)}</span>
-                                    <div className="text-xs text-gray-500">{scores.length} score(s)</div>
+                                    <span className={`font-mono ${isDirty ? 'font-bold' : 'text-blue-700'}`}>{formatScore(displayScore)}</span>
+                                    <div className={`text-xs ${isDirty ? DIRTY_INDICATOR_SECONDARY_TEXT : 'text-gray-500'}`}>{scores.length} score(s)</div>
                                 </button>
                             ) : (
                                 <div className="w-full text-center px-2 py-1 rounded-md">
-                                    <span className={`font-mono ${isDirty ? 'text-amber-700 font-bold' : 'text-gray-700'}`}>{formatScore(displayScore)}</span>
-                                    <div className="text-xs text-gray-500">{scores.length} score(s)</div>
+                                    <span className={`font-mono ${isDirty ? 'font-bold' : 'text-gray-700'}`}>{formatScore(displayScore)}</span>
+                                    <div className={`text-xs ${isDirty ? DIRTY_INDICATOR_SECONDARY_TEXT : 'text-gray-500'}`}>{scores.length} score(s)</div>
                                 </div>
                             )}
                         </td>
@@ -293,7 +299,12 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
                 }
 
                 return (
-                    <td key={assessment.id} className={`p-2 text-center align-top transition-colors ${isDirty ? 'bg-amber-50' : ''}`}>
+                    <td key={assessment.id} className={`p-2 text-center align-top transition-colors relative ${isDirty ? `${DIRTY_INDICATOR_BG} ${DIRTY_INDICATOR_TEXT}` : ''}`}>
+                        {isDirty && (
+                            <span className="absolute left-0 top-0 text-[8px] font-bold uppercase px-0.5 bg-yellow-400 text-black leading-none rounded-br z-10">
+                                Unsaved
+                            </span>
+                        )}
                         <div className="flex flex-col items-center">
                             <div className="flex items-center space-x-1">
                                 <input
@@ -305,7 +316,7 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
                                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSave(assessment.id); (e.target as HTMLInputElement).blur(); } }}
                                     placeholder={assessment.name.toLowerCase().includes('exam') ? 'e.g., 85' : '-'}
                                     className={`w-24 p-1 text-center font-mono border rounded-md shadow-sm transition-all focus:outline-none focus:ring-2 
-                                        ${isDirty ? 'bg-white border-amber-400 text-amber-900 focus:ring-amber-500' : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500'}
+                                        ${isDirty ? `bg-white border-yellow-500 text-red-600 font-bold focus:ring-yellow-500` : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500'}
                                     `}
                                     aria-label={`Score for ${student.name} in ${assessment.name}`}
                                     disabled={readOnly}
@@ -313,7 +324,7 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
                                 {MULTI_SCORE_ENTRY_ENABLED && !readOnly && (
                                     <button
                                         onClick={() => onOpenModal(student, assessment)}
-                                        className={`p-1 border rounded-full transition-colors ${isDirty ? 'text-amber-600 border-amber-300 hover:bg-amber-100' : 'text-gray-500 border-gray-300 hover:bg-blue-100 hover:text-blue-600 hover:border-blue-400'}`}
+                                        className={`p-1 border rounded-full transition-colors ${isDirty ? `text-white border-white/50 hover:bg-white/20` : 'text-gray-500 border-gray-300 hover:bg-blue-100 hover:text-blue-600 hover:border-blue-400'}`}
                                         title="Add multiple scores"
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
