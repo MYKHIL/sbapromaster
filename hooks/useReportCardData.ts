@@ -46,7 +46,7 @@ export const calculateReportData = (student: Student, data: DataContextType) => 
             // FIX: Only include subject if there is ACTUAL data (non-empty strings)
             // This prevents "cleared" scores (['']) from triggering the subject to appear
             // @ts-ignore
-            const hasValidData = score.assessmentScores && Object.values(score.assessmentScores).some((val: any) => Array.isArray(val) && val.some((s: string) => s.trim() !== ''));
+            const hasValidData = score.assessmentScores && Object.values(score.assessmentScores).some((val: any) => Array.isArray(val) && val.some((s: string) => s && typeof s === 'string' && s.trim() !== ''));
 
             if (hasValidData) {
                 relevantSubjectIds.add(score.subjectId);
