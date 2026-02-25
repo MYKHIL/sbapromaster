@@ -30,10 +30,9 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [deviceId] = useState<string>(generateDeviceId());
     const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-    const [users, setUsers] = useState<User[]>([]);
 
     // Access schoolId and actions from DataContext
-    const { schoolId, sendHeartbeat, logUserAction } = useData();
+    const { schoolId, sendHeartbeat, logUserAction, users, setUsers } = useData();
 
     // Heartbeat Effect
     useEffect(() => {

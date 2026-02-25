@@ -449,7 +449,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 console.log('[AuthOverlay] ✅ School registered successfully (Bot Mode)');
 
                 // Load data and proceed to admin setup
-                loadImportedData(result.data, false, (result as any).subscription);
+                loadImportedData(result.data, true, (result as any).subscription);
                 setSchoolData(result.data);
                 setCurrentSchoolId(result.docId || docId);
                 setSchoolId(result.docId || docId);
@@ -641,7 +641,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 console.log('[AuthOverlay] ✅ Users saved to Firestore');
 
                 // Then update local state which might trigger dirty check but data is already safe
-                loadImportedData({ users: users }, false);
+                loadImportedData({ users: users }, true);
             }
 
             // Auto-login as admin - call UserContext.login with (userId, password, userOverride)

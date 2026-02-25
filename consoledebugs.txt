@@ -1,6 +1,111 @@
-approvesba/:78 [Auth] Hashing password...
-approvesba/:84 [Auth] Generated Hash: c93a215026f36ac783bcac8ba5e4bbea1c3cdb6c79d3824f9712143c44dbb0f3
-approvesba/:575  FirebaseError: Missing or insufficient permissions.
-window.activateLicense @ approvesba/:575
-await in window.activateLicense
-onclick @ approvesba/:790
+Navigated to http://localhost:3000/
+react-dom-client.development.js:28004 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+index.tsx:73 [Bootstrap] Environment: {isGitHubPages: false, hostname: 'localhost', API_BASE_URL: 'https://sbapromaster.vercel.app/api'}
+index.tsx:78 [Bootstrap] Fetching configuration...
+index.tsx:50 [App] School database mapping loaded from API
+index.tsx:56 [App] Activation security hash loaded
+index.tsx:59 [App] Firebase configuration loaded from API
+index.tsx:91 [Bootstrap] Configuration loaded.
+firebaseService.ts:61 [Firebase] Initializing with Database Index: 1 (sba-pro-master-759f6) 
+firebaseService.ts:67  [2026-02-25T18:00:28.988Z]  @firebase/analytics: Analytics: Firebase Analytics is not supported in this environment. Wrap initialization of analytics in analytics.isSupported() to prevent initialization in unsupported environments. Details: (1) This is a browser extension environment. (analytics/invalid-analytics-context).
+defaultLogHandler @ logger.ts:115
+warn @ logger.ts:206
+warnOnBrowserContextMismatch @ factory.ts:169
+factory @ factory.ts:182
+(anonymous) @ index.ts:58
+getOrInitializeService @ provider.ts:318
+initialize @ provider.ts:242
+initializeAnalytics @ api.ts:112
+getAnalytics @ api.ts:85
+(anonymous) @ firebaseService.ts:67
+syncLogger.ts:31 [SyncLogger] Log initialized: SyncLog_2026-02-25T18-00-29.txt
+syncLogger.ts:32 [SyncLogger] Logs will be saved to browser when you call downloadLog()
+syncLogger.ts:59 [SYNC_LOG] AuthOverlay component mounted
+AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
+DataContext.tsx:1804 [DataContext] Sync PAUSED
+AuthOverlay.tsx:112 [AuthOverlay] Found saved school session, fetching data...
+FirebaseAnalyticsContext.tsx:68 [Firebase Analytics] Tracking registered globally
+DataContext.tsx:1128 [DataContext] 🔒 Session locked. Deferring initial data fetch for gyewanidabasicschool_20252026_Second-Term...
+syncLogger.ts:59 [SYNC_LOG] AuthOverlay component unmounting
+syncLogger.ts:31 [SyncLogger] Log initialized: SyncLog_2026-02-25T18-00-29.txt
+syncLogger.ts:32 [SyncLogger] Logs will be saved to browser when you call downloadLog()
+syncLogger.ts:59 [SYNC_LOG] AuthOverlay component mounted
+AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
+DataContext.tsx:1804 [DataContext] Sync PAUSED
+AuthOverlay.tsx:112 [AuthOverlay] Found saved school session, fetching data...
+FirebaseAnalyticsContext.tsx:68 [Firebase Analytics] Tracking registered globally
+DataContext.tsx:1128 [DataContext] 🔒 Session locked. Deferring initial data fetch for gyewanidabasicschool_20252026_Second-Term...
+firebaseService.ts:1932 [FIREBASE_DEBUG] loginOrRegisterSchool called for docId: gyewanidabasicschool_20252026_Second-Term, createIfMissing: false
+firebaseService.ts:1937 [FIREBASE_DEBUG] Fetching document: schools/gyewanidabasicschool_20252026_Second-Term
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Checking school existence: gyewanidabasicschool_20252026_Second-Term (1 doc)
+firebaseService.ts:1838 [Firebase] 🛡️ Returning inflight promise for login/register: gyewanidabasicschool_20252026_Second-Term
+AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
+DataContext.tsx:1804 [DataContext] Sync PAUSED
+firebaseService.ts:1940 [FIREBASE_DEBUG] Document exists? true
+firebaseService.ts:1963 [FIREBASE_DEBUG] Processing existing document...
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Checking license status (1 doc)
+firebaseService.ts:2011 [FIREBASE_DEBUG] Login successful. Returning data.
+ [FIREBASE_DEBUG] Login successful. Returning data.
+ [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 0, …}
+ [DataContext] 🔄 Initial Load: Local userLogs is just default state. Adopting cloud version.
+ [DataContext] ✅ Updating userLogs
+ [DataContext] 🔄 Initial Load: Local activeSessions is just default state. Adopting cloud version.
+ [DataContext] ✅ Updating activeSessions
+ [SYNC_LOG] loadImportedData: Loading users from document. Count: 16
+ [DataContext] 🛡️ Preservation: Discrepancy in users. Keeping local.
+ [DataContext] 🧹 Selectively cleared dirty fields after remote data load
+ [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+ [SYNC_LOG] setUsers called. Current count: 0, New count: 16
+ [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx?t=1772042097830:60:36)
+    at restoreSession (AuthOverlay.tsx?t=1772042097830:105:9)
+ [AuthOverlay] Full session data loaded, showing restore dialog
+ [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 0, …}
+ [DataContext] ✅ Updating userLogs
+DataContext.tsx:310 [DataContext] ✅ Updating activeSessions
+syncLogger.ts:59 [SYNC_LOG] loadImportedData: Loading users from document. Count: 16
+DataContext.tsx:411 [DataContext] ✅ Updating users: 16
+syncLogger.ts:59 [SYNC_LOG] setUsers called. Current count: 0, New count: 16
+syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx:197:40)
+    at loadImportedData (DataContext.tsx:412:17)
+    at restoreSession (AuthOverlay.tsx:141:17)
+DataContext.tsx:444 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
+DataContext.tsx:744 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+syncLogger.ts:59 [SYNC_LOG] setUsers called. Current count: 0, New count: 16
+syncLogger.ts:59 [SYNC_LOG] Stack trace: Error
+    at setUsers (DataContext.tsx:197:40)
+    at restoreSession (AuthOverlay.tsx:145:17)
+AuthOverlay.tsx:158 [AuthOverlay] Full session data loaded, showing restore dialog
+AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
+DataContext.tsx:1804 [DataContext] Sync PAUSED
+AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
+DataContext.tsx:1804 [DataContext] Sync PAUSED
+UserContext.tsx:106 Logging user login activity for: Secure
+AuthOverlay.tsx:60 [AuthOverlay] Pausing sync - authentication in progress
+DataContext.tsx:1804 [DataContext] Sync PAUSED
+UserContext.tsx:108 Login activity logged successfully
+DataContext.tsx:1811 [DataContext] Sync RESUMED
+AuthOverlay.tsx:194 [AuthOverlay] ✅ Session restored successfully
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Loading main school data (1 doc)
+firebaseService.ts:384 [Firebase] Returning inflight promise for school data: gyewanidabasicschool_20252026_Second-Term
+DataContext.tsx:2304 [DataContext] 📥 Lazy Loading Scores for Subject 1...
+FirebaseAnalyticsContext.tsx:48 [Firebase Analytics] 📖 READ: Fetching bucket: subject_1 (1 doc)
+DataContext.tsx:1136 [DataContext] 🛑 Initial data already present (School: GYEWANI D/A BASIC SCHOOL). Skipping auto-fetch to prevent leaks.
+DataContext.tsx:2364 [DataContext] 🔍 loadMetadata Check: {hasData: true, previouslyLoaded: false, isUpToDate: true, inflight: false}
+DataContext.tsx:2379 [DataContext] 🧠 Metadata up-to-date (Metadata Match). Skipping read.
+DataContext.tsx:1730 [DataContext] 📦 Checking student bucket existence for gyewanidabasicschool_20252026_Second-Term...
+firebaseService.ts:384 [Firebase] Returning inflight promise for school data: gyewanidabasicschool_20252026_Second-Term
+firebaseService.ts:384 [Firebase] Returning inflight promise for school data: gyewanidabasicschool_20252026_Second-Term
+DataContext.tsx:2297 [DataContext] ⏳ Scores fetch for Subject 1 already in progress. Deduping...
+DataContext.tsx:2314 [DataContext] ✅ Loaded 119 scores for Subject 1.
+InlineScoreInput.tsx:138 [InlineScoreInput] handleSave called: {studentId: 11, studentName: 'TWUM MICHEAL', subjectId: 1, assessmentId: 4, assessmentName: 'Class Test', …}
+InlineScoreInput.tsx:148 [InlineScoreInput] Empty score - clearing: {studentId: 11, studentName: 'TWUM MICHEAL', assessmentId: 4, subjectId: 1}
+DataContext.tsx:1371 [DataContext] 🕵️ Smart Dirty Check DEBUG: {id: '11-1', new: Array(1), orig: Array(0), changed: true, originalFound: false}
+DataContext.tsx:1418 [DataContext] 📥 updateStudentScores called: {studentId: 11, subjectId: 1, assessmentId: 4, scoreId: '11-1', newScores: Array(1), …}
+DataContext.tsx:1433 [DataContext] 🔄 Updating existing score entry
+DataContext.tsx:1460 [DataContext] ✅ Score saved to local cache (React state)
+DataContext.tsx:1461 [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook
+DataContext.tsx:1433 [DataContext] 🔄 Updating existing score entry
+DataContext.tsx:1460 [DataContext] ✅ Score saved to local cache (React state)
+DataContext.tsx:1461 [DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook

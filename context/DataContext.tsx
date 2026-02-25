@@ -41,6 +41,7 @@ export interface DataContextType {
     onlineUsers: OnlineUser[];
 
     // Setters
+    setUsers: React.Dispatch<React.SetStateAction<User[]>>;
     setSettings: React.Dispatch<React.SetStateAction<SchoolSettings>>;
     updateSettings: (updates: Partial<SchoolSettings>) => void;
     setAssessments: React.Dispatch<React.SetStateAction<Assessment[]>>; // For reordering
@@ -211,23 +212,35 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [dirtyVersion, setDirtyVersion] = useState(0);
 
     // Track original cloud data to compare against current state
-    const originalData = React.useRef<Partial<AppDataType>>({
-        settings: INITIAL_SETTINGS,
-        students: INITIAL_STUDENTS,
-        subjects: INITIAL_SUBJECTS,
-        classes: INITIAL_CLASSES,
-        grades: INITIAL_GRADES,
-        assessments: INITIAL_ASSESSMENTS,
-        scores: INITIAL_SCORES,
-        reportData: INITIAL_REPORT_DATA,
-        classData: INITIAL_CLASS_DATA,
-        users: [],
-        userLogs: [],
-        activeSessions: {}
+    const originalData = React.useRef<Partial<AppDataType>>({});
+
+    // Track pending (uncommitted) changes for individual items in collections
+    // Format: Record<field, Set<item_id>>
+    const pendingChangesMap = React.useRef<Record<string, Set<string>>>({
+        students: new Set(),
+        subjects: new Set(),
+        classes: new Set(),
+        grades: new Set(),
+        assessments: new Set(),
+        scores: new Set(),
+        reportData: new Set(),
+        classData: new Set(),
+        users: new Set(),
     });
 
-    // Track pending (uncommitted) score changes - fields that have been modified but not saved
-    const pendingScoreChanges = React.useRef<Set<string>>(new Set()); // Format: "studentId-assessmentId"
+    const markItemDirty = React.useCallback((field: string, id: string | number) => {
+        if (!pendingChangesMap.current[field]) pendingChangesMap.current[field] = new Set();
+        pendingChangesMap.current[field].add(String(id));
+        markDirty(field as keyof AppDataType, true);
+    }, []);
+
+    const markItemClean = React.useCallback((field: string, id: string | number) => {
+        if (pendingChangesMap.current[field]) {
+            pendingChangesMap.current[field].delete(String(id));
+            // Optional: If set becomes empty, we COULD unmark the field as dirty?
+            // But recheckDirtyStatus handles that more robustly.
+        }
+    }, []);
 
     // FIX: Use a Ref to hold the latest state for saveToCloud to access during retries
     // This prevents the "stale closure" bug where a postponed save uses old data
@@ -262,10 +275,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // ONLY if it's a remote update. If it's a local file import, we WANT to mark as dirty.
         if (isRemote) {
             isRemoteUpdate.current = true;
-            // Automatically reset after 500ms to allow all effects to settle
+            // Automatically reset after 1000ms (increased from 500ms) to allow all effects to settle
             setTimeout(() => {
                 isRemoteUpdate.current = false;
-            }, 500);
+            }, 1000);
         }
 
         // SMART MERGING: Only update state if imported data is ACTUALLY provided and not empty
@@ -321,7 +334,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (!isDataEqual(imported, current)) {
                 console.log(`[DataContext] ✅ Updating ${field}`);
                 setter(imported);
-                if (!isRemote) markDirty(field);
+
+                // CRITICAL: Only mark dirty if it's NOT a remote sync.
+                // Remote syncs are the baseline, not "new local changes".
+                if (!isRemote) {
+                    markDirty(field, true);
+                }
             }
         };
 
@@ -350,8 +368,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
                         if (hasData) {
                             console.log(`[DataContext] 🛡️ Preservation: Keeping local uncommitted version of score ${cloudScore.id}`);
-                            pendingScoreChanges.current.add(cloudScore.id);
-                            markDirty('scores', true);
+                            markItemDirty('scores', cloudScore.id);
                             return local;
                         }
                     }
@@ -366,20 +383,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         if (hasData) {
                             console.log(`[DataContext] ➕ Preservation: Keeping local-only score ${localScore.id}`);
                             finalScores.push(localScore);
-                            pendingScoreChanges.current.add(localScore.id);
-                            markDirty('scores', true);
+                            markItemDirty('scores', localScore.id);
                         }
                     }
                 });
-            } else if (isRemote && pendingScoreChanges.current.size > 0) {
+            } else if (isRemote && pendingChangesMap.current.scores.size > 0) {
                 // Standard Smart Merge for mid-session remote updates
-                console.log(`[DataContext] 🛡️ Smart Merge: Preserving ${pendingScoreChanges.current.size} local score edits`);
+                console.log(`[DataContext] 🛡️ Smart Merge: Preserving ${pendingChangesMap.current.scores.size} local score edits`);
 
                 // Map Cloud scores but override with Local if pending
                 finalScores = importedScores.map(cloudScore => {
-                    if (pendingScoreChanges.current.has(cloudScore.id)) {
+                    if (pendingChangesMap.current.scores.has(String(cloudScore.id))) {
                         // Keep local version (find it in current state)
-                        const local = scores.find(s => s.id === cloudScore.id);
+                        const local = scores.find(s => String(s.id) === String(cloudScore.id));
                         return local || cloudScore; // Fallback to cloud if local missing
                     }
                     return cloudScore;
@@ -388,7 +404,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 // Add any Local-Only scores
                 const cloudIds = new Set(importedScores.map(s => s.id));
                 scores.forEach(localScore => {
-                    if (pendingScoreChanges.current.has(localScore.id) && !cloudIds.has(localScore.id)) {
+                    if (pendingChangesMap.current.scores.has(String(localScore.id)) && !cloudIds.has(localScore.id)) {
                         finalScores.push(localScore);
                     }
                 });
@@ -398,7 +414,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 console.log(`[DataContext] ✅ Updating scores: ${finalScores.length} (Merged)`);
                 setScores(finalScores);
                 if (!isRemote) markDirty('scores');
-                else if (isInitialLaunch && pendingScoreChanges.current.size > 0) markDirty('scores', true);
+                else if (isInitialLaunch && pendingChangesMap.current.scores.size > 0) markDirty('scores', true);
             }
         } else if (importedScores && importedScores.length === 0) {
             // Explicit empty array update
@@ -434,7 +450,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (importedAssessments && importedAssessments.length > 0 && !deepEqual(importedAssessments, assessments)) dirtyFields.current.delete('assessments');
             if (importedScores && importedScores.length > 0) {
                 // Only clear dirty flags if we DON'T have pending local changes to preserve
-                if (pendingScoreChanges.current.size === 0) {
+                if (pendingChangesMap.current.scores.size === 0) {
                     if (!deepEqual(importedScores, scores)) {
                         dirtyFields.current.delete('scores');
                     }
@@ -455,21 +471,30 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // Store original cloud data for smart dirty detection
             // We ONLY update originalData if it came from the cloud!
             // If we import a file, that file is effectively "New Local Changes" vs "Old Cloud Data"
-            originalData.current = {
-                ...originalData.current,
-                ...(importedSettings && { settings: importedSettings }),
-                ...(importedStudents && { students: importedStudents }),
-                ...(importedSubjects && { subjects: importedSubjects }),
-                ...(importedClasses && { classes: importedClasses }),
-                ...(importedGrades && { grades: importedGrades }),
-                ...(importedAssessments && { assessments: importedAssessments }),
-                ...(importedScores && { scores: importedScores }),
-                ...(importedReportData && { reportData: importedReportData }),
-                ...(importedClassData && { classData: importedClassData }),
-                ...(importedUsers && { users: importedUsers }),
-                ...(data.userLogs && { userLogs: data.userLogs }),
-                ...(data.activeSessions && { activeSessions: data.activeSessions }),
+
+            // SECURITY: Deep clone/Immutable merge for arrays to prevent reference sharing
+            const mergeArrays = (field: keyof AppDataType, incoming: any[]) => {
+                if (!incoming) return;
+                const existing = (originalData.current[field] as any[]) || [];
+                const map = new Map(existing.map((item: any) => [String(item.id), item]));
+                incoming.forEach(item => map.set(String(item.id), item));
+                originalData.current[field] = Array.from(map.values()) as any;
             };
+
+            if (importedSettings) originalData.current.settings = importedSettings;
+            if (importedStudents) mergeArrays('students', importedStudents);
+            if (importedSubjects) mergeArrays('subjects', importedSubjects);
+            if (importedClasses) mergeArrays('classes', importedClasses);
+            if (importedGrades) mergeArrays('grades', importedGrades);
+            if (importedAssessments) mergeArrays('assessments', importedAssessments);
+            if (importedScores) mergeArrays('scores', importedScores);
+            if (importedReportData) mergeArrays('reportData', importedReportData);
+            if (importedClassData) mergeArrays('classData', importedClassData);
+            if (importedUsers) mergeArrays('users', importedUsers);
+            if (data.userLogs) originalData.current.userLogs = data.userLogs;
+            if (data.activeSessions) originalData.current.activeSessions = data.activeSessions;
+
+            console.log('[DataContext] 💾 Updated originalData baseline with merge strategy');
 
             // CRITICAL: Perform a full dirty recheck after remote data is loaded and originalData is updated.
             // This catches cases where local data (from previous offline session or localStorage)
@@ -587,7 +612,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (Array.isArray(data)) {
             const normalized = data.map(normalizeData).filter(item => item !== null);
             // Sort by ID if present to ensure order-independence
-            if (normalized.length > 0 && normalized[0] && typeof normalized[0] === 'object' && 'id' in normalized[0]) {
+            if (normalized.length > 0 && normalized[0] && typeof normalized[0] === 'object' && ('id' in normalized[0])) {
+                // Ensure IDs are compared as strings for sorting
                 return normalized.sort((a, b) => String(a.id).localeCompare(String(b.id)));
             }
             return normalized;
@@ -599,9 +625,24 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const keys = Object.keys(data).sort();
 
             for (const key of keys) {
+                // EXCEPTION: Convert 'id' and any key ending in 'Id' to string to ensure consistent comparison
+                // (Firestore number vs LocalStorage string)
+                if (key.toLowerCase() === 'id' || key.toLowerCase().endsWith('id')) {
+                    normalized[key] = data[key] !== null && data[key] !== undefined ? String(data[key]) : data[key];
+                    continue;
+                }
+
                 const value = normalizeData(data[key]);
-                // Only include non-null values
-                if (value !== null && value !== undefined && value !== '') {
+                // Only include meaningful values (not null, undefined, or empty string)
+                // Filter out empty arrays and objects as well to ensure semantic equality
+                const isMeaningfulValue = (v: any) => {
+                    if (v === null || v === undefined || v === '') return false;
+                    if (Array.isArray(v) && v.length === 0) return false;
+                    if (typeof v === 'object' && Object.keys(v).length === 0) return false;
+                    return true;
+                };
+
+                if (isMeaningfulValue(value)) {
                     normalized[key] = value;
                 }
             }
@@ -612,23 +653,26 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 const sKeys = Object.keys(data.assessmentScores).sort();
                 for (const skey of sKeys) {
                     const sVal = normalizeData(data.assessmentScores[skey]);
+                    // Only include non-empty arrays of scores
                     if (sVal && Array.isArray(sVal) && sVal.some(v => v !== '')) {
                         normScores[String(skey)] = sVal.filter(v => v !== '');
                     }
                 }
-                normalized.assessmentScores = normScores;
 
-                // If assessmentScores is empty after cleanup, remove it
-                if (Object.keys(normScores).length === 0) {
-                    delete normalized.assessmentScores;
+                if (Object.keys(normScores).length > 0) {
+                    normalized.assessmentScores = normScores;
                 }
             }
 
-            // If object is empty after cleanup (and was not empty originally), return null to prune
+            // Pruning: If object is empty after cleanup, treat as null for comparison
+            // However, don't prune if the original object was already empty (base case)
             if (Object.keys(normalized).length === 0 && Object.keys(data).length > 0) {
+                // Special case: don't prune if 'id' was the only property
+                if (Object.keys(data).length === 1 && 'id' in data) {
+                    return normalized;
+                }
                 return null;
             }
-
             return normalized;
         }
 
@@ -950,8 +994,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // FIX: Explicitly clear pending score changes and force pendingCount update
             // This ensures that scores are no longer marked as "Pending" even if deepEqual logic has edge cases
             if (fieldsToSave.includes('scores')) {
-                pendingScoreChanges.current.clear();
+                pendingChangesMap.current.scores.clear();
             }
+            // Clear other maps if field was saved
+            fieldsToSave.forEach(field => {
+                if (pendingChangesMap.current[field]) pendingChangesMap.current[field].clear();
+            });
             setDirtyVersion(v => v + 1);
 
             setIsSyncing(false);
@@ -1021,7 +1069,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
                 // 2. Clear relevant pending states
                 if (!keysToRefresh || keysToRefresh.includes('scores')) {
-                    pendingScoreChanges.current.clear();
+                    pendingChangesMap.current.scores.clear();
                     // CRITICAL FIX: Clear the score cache so fresh scores are fetched when user navigates back
                     loadedSubjects.current.clear();
                     console.log('[DataContext] 🧹 Cleared score subject cache to force fresh fetch on next load');
@@ -1029,7 +1077,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
                 // 3. Mark as remote update & Apply Main Doc Data
                 isRemoteUpdate.current = true;
-                loadImportedData(data);
+                loadImportedData(data, true);
 
                 // 4. Force Fetch Subcollections (The "Missing Link" for Global Refresh)
                 // This ensures we actually download fresh Students, Classes, etc.
@@ -1338,87 +1386,41 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const scoreId = `${studentId}-${subjectId}`;
 
         // FIX: Check if scores actually changed to prevent false dirty flags
-        // Access 'scores' from closure which is fresh on every render
         const existingScore = scores.find(s => s.id === scoreId);
         const currentScores = existingScore?.assessmentScores?.[assessmentId] || [];
 
         if (deepEqual(currentScores, newScores)) {
-            // console.log('[DataContext] updateStudentScores: No change detected, skipping update');
             return;
         }
 
         // SMART DIRTY CHECK
-        // Instead of blindly marking dirty, we check if this change actually differs from the cloud state
-        const originalScore = originalData.current.scores?.find(s => s.id === scoreId);
+        const originalScore = originalData.current.scores?.find(s => String(s.id) === scoreId);
         const originalAssessmentScores = originalScore?.assessmentScores?.[assessmentId] || [];
-
-        // Compare actual values WITHOUT normalizing - clearing a score [''] is different from original ['95']
-        // This ensures that clearing/deleting scores is recognized as a valid change
         const isActuallyChanged = !deepEqual(newScores, originalAssessmentScores);
 
-        console.log('[DataContext] 🕵️ Smart Dirty Check DEBUG:', {
-            id: scoreId,
-            new: newScores,
-            orig: originalAssessmentScores,
-            changed: isActuallyChanged,
-            originalFound: !!originalScore
-        });
-
         if (isActuallyChanged) {
-            markDirty('scores', true);
-            pendingScoreChanges.current.add(scoreId);
+            markItemDirty('scores', scoreId);
         } else {
-            // Current item matches original.
-            // We technically could unmark 'scores', but only if NO OTHER scores are different.
-            // We will attempt to check our local Pending Set to be smart.
-            // If pendingScoreChanges only contains this ScoreId (or is empty), we can unmark.
-            // BUT pendingScoreChanges is just a set of "touched" items, not necessarily dirty ones.
+            markItemClean('scores', scoreId);
 
-            // To be absolutely correct without iterating effectively everything:
-            // We can check if pendingScoreChanges has only 1 item (this one).
-            // If so, and this one is clean -> unmark.
-            // If pendingScoreChanges has multiple, we'd have to check all of them.
+            // Re-verify if any OTHER assessments in this score are still dirty
+            // This is more thorough than just deleting from a set
+            const hasOtherDirtyAssessments = Object.entries(existingScore?.assessmentScores || {}).some(([id, val]) => {
+                if (Number(id) === assessmentId) return false;
+                const origVal = originalScore?.assessmentScores?.[id] || [];
+                return !deepEqual(val, origVal);
+            });
 
-            // Let's iterate pendingScoreChanges. Typically user changes < 50 items in a session.
-            // This is fast enough.
-            pendingScoreChanges.current.delete(scoreId); // This one is clean now.
-
-            let anyOtherDirty = false;
-            for (const otherScoreId of pendingScoreChanges.current) {
-                // Re-verify if other touched scores are still dirty
-                const s = scores.find(x => x.id === otherScoreId);
-                if (s) {
-                    const orig = originalData.current.scores?.find(o => o.id === otherScoreId);
-                    // Note: We need to check ALL assessments for that score, not just current assessmentId.
-                    // Score object contains assessmentScores map.
-                    if (!isDataEqual(s.assessmentScores, orig?.assessmentScores || {})) {
-                        anyOtherDirty = true;
-                        break;
-                    }
-                }
-            }
-
-            if (!anyOtherDirty) {
-                unmarkDirty('scores');
+            if (!hasOtherDirtyAssessments) {
+                markItemClean('scores', scoreId);
             }
         }
 
-        console.log('[DataContext] 📥 updateStudentScores called:', {
-            studentId,
-            subjectId,
-            assessmentId,
-            scoreId,
-            newScores,
-            timestamp: new Date().toISOString()
-        });
-
         setScores(prevScores => {
             const existingScoreIndex = prevScores.findIndex(s => s.id === scoreId);
-
             let updatedScores;
+
             if (existingScoreIndex > -1) {
-                // Update existing score object
-                console.log('[DataContext] 🔄 Updating existing score entry');
                 updatedScores = prevScores.map((score, index) => {
                     if (index === existingScoreIndex) {
                         return {
@@ -1432,26 +1434,18 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     return score;
                 });
             } else {
-                // Add new score object
-                console.log('[DataContext] ➕ Adding new score entry');
                 const newScoreEntry: Score = {
                     id: scoreId,
                     studentId,
                     subjectId,
                     assessmentScores: {
-                        [assessmentId]: newScores,
+                        [assessmentId]: newScores.filter(s => s !== null && s !== undefined),
                     },
                 };
                 updatedScores = [...prevScores, newScoreEntry];
             }
 
-            console.log('[DataContext] ✅ Score saved to local cache (React state)');
-            console.log('[DataContext] 📝 Note: This will be persisted to localStorage automatically by useLocalStorage hook');
-
-            // CRITICAL: Increment draftVersion to notify all listeners (inputs) that data has changed
-            // This ensures InlineScoreInput re-reads the new "saved" value
             setDraftVersion(v => v + 1);
-
             return updatedScores;
         });
     };
@@ -1865,7 +1859,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setDirtyVersion(v => v + 1);
 
         // 3. Clear pending score changes specifically
-        pendingScoreChanges.current.clear();
+        Object.values(pendingChangesMap.current).forEach(set => set.clear());
     };
 
     const revertPendingChanges = (field: keyof AppDataType, id?: number | string) => {
@@ -1943,6 +1937,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     // It was deleted, so add it back
                     newArray.push(originalItem);
                 }
+                markItemClean(field, id);
             } else {
                 // REMOVE: It was a NEW item, so just remove it
                 // @ts-ignore
@@ -2031,16 +2026,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 const updates = currentVal.filter(item => {
                     // Start by checking if item has an ID (most of our data types do)
                     if (item && typeof item === 'object' && 'id' in item) {
-                        const originalItem = originalVal.find((o: any) => o.id === item.id);
+                        // Use loose ID comparison to prevent type mismatch issues (string vs number)
+                        const originalItem = originalVal.find((o: any) => String(o.id) === String(item.id));
 
-                        // If it's a new item, check if it's effectively empty (for scores)
+                        // If it's a new item, check if it's explicitly marked as a local addition/preserved change
                         if (!originalItem) {
-                            if (field === 'scores') {
-                                // @ts-ignore
-                                const hasData = item.assessmentScores && Object.values(item.assessmentScores).some(scores => Array.isArray(scores) && scores.some(s => s && s.trim() !== ''));
-                                if (!hasData && !pendingScoreChanges.current.has(String(item.id))) return false;
-                            }
-                            return true;
+                            const pendingSet = pendingChangesMap.current[field];
+                            return pendingSet && pendingSet.has(String(item.id));
                         }
 
                         // Existing item: Semantic comparison
@@ -2230,14 +2222,30 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
                     // Merge with existing students if paginating or forcing update
                     setStudents(prev => {
-                        // Simple replacement for now as we load "all" or "limit"
-                        // In a real pagination scenario, we'd append and dedup.
-                        // Since we are doing a bucket load (all at once usually), replacing is fine.
-                        // But if we use limit, we should be careful.
-                        // For this pass, we assume "Bucket" contains ALL students, so replacing is correct
-                        // to ensure deleted students are removed.
-                        return newStudents;
+                        // 1. Update originalData (Baseline)
+                        const currentOriginal = originalData.current.students || [];
+                        const originalMap = new Map(currentOriginal.map(s => [String(s.id), s]));
+                        newStudents.forEach(s => originalMap.set(String(s.id), s));
+                        originalData.current.students = Array.from(originalMap.values());
+
+                        // 2. Smart Merge to preserve local edits
+                        const prevMap = new Map(prev.map(s => [String(s.id), s]));
+                        newStudents.forEach(cloudStudent => {
+                            const local = prevMap.get(String(cloudStudent.id));
+
+                            // If local has real changes (not default state) and cloud is different, preserve local
+                            if (local && !isDataEqual(local, cloudStudent) && isMeaningfulDiscrepancy('students', local)) {
+                                console.log(`[DataContext] 🛡️ Preservation: Keeping local version of student ${cloudStudent.id}`);
+                                markDirty('students', true);
+                                return;
+                            }
+                            prevMap.set(String(cloudStudent.id), cloudStudent);
+                        });
+
+                        return Array.from(prevMap.values());
                     });
+
+                    recheckAllDirtyStatus();
 
                     // OPTIMIZATION: Ensure student bucket exists (create if missing)
                     // We only pass preloaded students if we likely fetched ALL of them (length < limit)
@@ -2300,17 +2308,41 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     if (newScores.length > 0) {
                         console.log(`[DataContext] ✅ Loaded ${newScores.length} scores for Subject ${subjectId}.`);
                         setScores(prev => {
-                            // OPTIMIZED MERGE:
-                            // 1. Create Map of existing scores
-                            const prevMap = new Map(prev.map(s => [s.id, s]));
+                            // 1. Update originalData first (Baseline)
+                            const currentOriginal = originalData.current.scores || [];
+                            const originalMap = new Map(currentOriginal.map(s => [String(s.id), s]));
+                            newScores.forEach(s => originalMap.set(String(s.id), s));
+                            originalData.current.scores = Array.from(originalMap.values());
 
-                            // 2. Set/Overwrite with new scores
-                            // Since bucket contains ALL scores for the subject, this effectively updates 
-                            // all students in all classes for this subject.
-                            newScores.forEach(s => prevMap.set(s.id, s));
+                            // 2. Perform Smart Merge to preserve local changes
+                            const prevMap = new Map(prev.map(s => [String(s.id), s]));
+
+                            newScores.forEach(cloudScore => {
+                                const local = prevMap.get(String(cloudScore.id)) as Score | undefined;
+
+                                // Preserve local if it differs from cloud AND is meaningful
+                                // (meaningful = has data that cloud doesn't have or differs)
+                                if (local && !isDataEqual(local, cloudScore)) {
+                                    const hasMeaningfulLocalChange = Object.values(local.assessmentScores || {}).some(
+                                        s => Array.isArray(s) && s.some(v => v !== null && v !== undefined && String(v).trim() !== '')
+                                    );
+
+                                    if (hasMeaningfulLocalChange) {
+                                        console.log(`[DataContext] 🛡️ Preservation: Keeping local version of score ${cloudScore.id} during lazy load`);
+                                        markItemDirty('scores', cloudScore.id);
+                                        return; // Don't overwrite local with cloud
+                                    }
+                                }
+
+                                // Otherwise adoption cloud version
+                                prevMap.set(String(cloudScore.id), cloudScore);
+                            });
 
                             return Array.from(prevMap.values());
                         });
+
+                        // Recalculate dirty states now that originalData is updated
+                        recheckAllDirtyStatus();
                     } else {
                         console.log(`[DataContext] ⚠️ No scores found for Subject ${subjectId}.`);
                     }
@@ -2386,9 +2418,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 setSubjects(fetchedSubjects);
                 setAssessments(fetchedAssessments);
 
+                // Update originalData (Baseline)
+                originalData.current.classes = fetchedClasses;
+                originalData.current.subjects = fetchedSubjects;
+                originalData.current.assessments = fetchedAssessments;
+
                 lastLoadedTimestamps.current['_loaded_classes'] = cTS || 'loaded_once';
                 lastLoadedTimestamps.current['_loaded_subjects'] = sTS || 'loaded_once';
                 lastLoadedTimestamps.current['_loaded_assessments'] = aTS || 'loaded_once';
+
+                // Recalculate dirty states
+                recheckAllDirtyStatus();
 
                 console.log(`[DataContext] ✅ Metadata Loaded: ${fetchedClasses.length} Classes, ${fetchedSubjects.length} Subjects, ${fetchedAssessments.length} Assessments`);
             } catch (e) {
@@ -2408,6 +2448,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Should be called on Dashboard or App Init
 
     const value: DataContextType = {
+        users, setUsers,
         settings, setSettings, updateSettings,
         revertPendingChanges,
         revertAllPendingChanges,

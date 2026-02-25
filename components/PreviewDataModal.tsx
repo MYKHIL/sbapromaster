@@ -142,7 +142,7 @@ const PreviewDataModal: React.FC<PreviewDataModalProps> = ({
                                             const updates = Object.entries(score.assessmentScores || {}).map(([aid, scores]: [string, any]) => {
                                                 const aName = getAssessmentName(parseInt(aid));
                                                 // @ts-ignore
-                                                const scoreStr = Array.isArray(scores) ? scores.filter(s => s.trim() !== '').join(', ') : '';
+                                                const scoreStr = Array.isArray(scores) ? scores.filter(s => s && typeof s === 'string' && s.trim() !== '').join(', ') : '';
                                                 return scoreStr ? `${aName}: [${scoreStr}]` : null;
                                             }).filter(Boolean).join(', ');
 
