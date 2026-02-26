@@ -242,7 +242,8 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
             return newSet;
         });
 
-
+        // Remove from global draft since it's now saved to local state
+        removeDraftScore(student.id, subjectId, assessmentId);
 
         console.log('[InlineScoreInput] ✅ Score committed successfully');
     };
