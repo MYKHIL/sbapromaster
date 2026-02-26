@@ -41,8 +41,8 @@ const Teachers: React.FC = () => {
         // Filter by search query
         if (query) {
             result = result.filter(cls =>
-                cls.name.toLowerCase().includes(query) ||
-                cls.teacherName.toLowerCase().includes(query)
+                (cls.name || '').toLowerCase().includes(query) ||
+                (cls.teacherName || '').toLowerCase().includes(query)
             );
         }
 
@@ -57,7 +57,7 @@ const Teachers: React.FC = () => {
         const duplicates: number[] = [];
 
         classes.forEach(cls => {
-            const key = `${cls.name.trim().toLowerCase()}_${cls.teacherName.trim().toLowerCase()}`;
+            const key = `${(cls.name || '').trim().toLowerCase()}_${(cls.teacherName || '').trim().toLowerCase()}`;
             if (seen.has(key)) {
                 duplicates.push(cls.id);
             } else {
@@ -184,8 +184,8 @@ const Teachers: React.FC = () => {
 
         // DUPLICATE PREVENTION: Check if Class Name + Teacher Name already exists
         const isDuplicate = classes.some(cls =>
-            cls.name.trim().toLowerCase() === currentClassData.name.trim().toLowerCase() &&
-            cls.teacherName.trim().toLowerCase() === currentClassData.teacherName.trim().toLowerCase() &&
+            (cls.name || '').trim().toLowerCase() === (currentClassData.name || '').trim().toLowerCase() &&
+            (cls.teacherName || '').trim().toLowerCase() === (currentClassData.teacherName || '').trim().toLowerCase() &&
             ('id' in currentClassData ? cls.id !== currentClassData.id : true)
         );
 

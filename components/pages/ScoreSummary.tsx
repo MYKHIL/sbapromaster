@@ -69,7 +69,7 @@ const ScoreSummary: React.FC = () => {
 
         // De-duplicate classes by name to avoid duplicate summary cards
         const uniqueClasses = classes.filter((cls, index, self) =>
-            index === self.findIndex((t) => t.name.trim() === cls.name.trim())
+            index === self.findIndex((t) => (t.name || '').trim() === (cls.name || '').trim())
         );
 
         return sortClassesByName(uniqueClasses).map(cls => {

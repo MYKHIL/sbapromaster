@@ -103,7 +103,31 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    const hasMissingPrices = SUBSCRIPTION_TIERS.some(tier => tier.price === undefined || tier.price === null || String(tier.price).trim() === '');
+
     if (!isOpen) return null;
+
+    if (hasMissingPrices) {
+        return (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-[60] p-4">
+                <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center">
+                    <div className="text-red-500 mb-4">
+                        <svg className="w-16 h-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">Configuration Error</h3>
+                    <p className="text-gray-600 mb-6">Subscription tier pricing could not be fetched from the server. Please contact support.</p>
+                    <button
+                        onClick={onClose}
+                        className="w-full bg-indigo-600 text-white font-semibold py-3 px-6 rounded-xl hover:bg-indigo-700 transition-colors"
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     const handlePayment = async () => {
         setPaymentError(null);

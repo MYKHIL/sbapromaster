@@ -69,7 +69,7 @@ const Students: React.FC = () => {
         const available = getAvailableClasses(currentUser, classes);
         // De-duplicate by class name to prevent redundant entries in the dropdown
         const unique = available.filter((cls, index, self) =>
-            index === self.findIndex((t) => t.name.trim() === cls.name.trim())
+            index === self.findIndex((t) => (t.name || '').trim() === (cls.name || '').trim())
         );
         return sortClassesByName(unique);
     }, [currentUser, classes]);
@@ -99,9 +99,9 @@ const Students: React.FC = () => {
         // Filter by search query
         if (query) {
             results = results.filter(student =>
-                student.name.toLowerCase().includes(query) ||
-                student.indexNumber.toLowerCase().includes(query) ||
-                student.class.toLowerCase().includes(query)
+                (student.name || '').toLowerCase().includes(query) ||
+                (student.indexNumber || '').toLowerCase().includes(query) ||
+                (student.class || '').toLowerCase().includes(query)
             );
         }
 

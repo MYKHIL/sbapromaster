@@ -43,7 +43,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
 
     // CRITICAL FIX: Use useMemo to dynamically update when classes/subjects change
     // This ensures we always have the latest data, not just the initial default values
-    const classNames = React.useMemo(() => Array.from(new Set(classes.map(c => c.name.trim()))), [classes]);
+    const classNames = React.useMemo(() => Array.from(new Set(classes.map(c => (c.name || '').trim()))), [classes]);
     const subjectNames = React.useMemo(() => subjects.map(s => s.subject), [subjects]);
 
     // Ref for auto-scrolling to bottom of user list

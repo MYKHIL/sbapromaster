@@ -112,13 +112,13 @@ const debounce = (func: Function, wait: number) => {
 
 // Sanitize helpers
 export const sanitizeSchoolName = (schoolName: string): string =>
-    schoolName.trim().replace(/_/g, '-').replace(/\//g, '').replace(/\s+/g, '').toLowerCase();
+    (schoolName || '').trim().replace(/_/g, '-').replace(/\//g, '').replace(/\s+/g, '').toLowerCase();
 
 export const sanitizeAcademicYear = (year: string): string =>
-    year.trim().replace(/_/g, '-').replace(/\//g, '').replace(/\s+/g, '').toLowerCase();
+    (year || '').trim().replace(/_/g, '-').replace(/\//g, '').replace(/\s+/g, '').toLowerCase();
 
 export const sanitizeAcademicTerm = (term: string): string =>
-    term.trim().replace(/\s+/g, '-');
+    (term || '').trim().replace(/\s+/g, '-');
 
 export const createDocumentId = (schoolName: string, academicYear: string, academicTerm: string): string => {
     const sanitizedSchool = sanitizeSchoolName(schoolName);
