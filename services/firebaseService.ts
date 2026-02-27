@@ -1141,35 +1141,50 @@ export const fetchMetadataBundle = async (schoolId: string) => {
 };
 
 /**
- * Ensure metadata bundle exists/updated by aggregating classes/subjects/assessments
- * If arrays are provided in `options`, they are used; otherwise subcollections are read.
+ * Ensure metadata bundle exists/updated by aggregating classes/subjects/assessments.
+ * 
+ * CRITICAL FIX: To prevent "Partial Overwrite" corruption caused by flaky network or 
+ * filtered views, this function now ALWAYS fetches the full subcollections from 
+ * Firestore (Source of Truth) before rebuilding the bundle.
  */
 export const updateMetadataBundle = async (schoolId: string, options?: { classes?: Class[]; subjects?: Subject[]; assessments?: Assessment[] }) => {
     try {
         const bundleRef = doc(db, "schools", schoolId, "config", "metadata_bundle");
-        const bundleData: any = { lastUpdated: serverTimestamp() };
 
-        if (options?.classes) {
-            bundleData.classes = options.classes;
-        } else {
-            bundleData.classes = await fetchSubcollection<Class>(schoolId, 'classes');
+        // Check for existing bundle to compare size (safety check)
+        const oldBundleSnap = await loggedGetDoc(bundleRef, `updateMetadataBundle/check/${schoolId}`);
+        const oldBundle = oldBundleSnap.exists() ? oldBundleSnap.data() : null;
+
+        // FETCH SOURCE OF TRUTH: 
+        // We use fetchSubcollection for all fields to ensure we never have a partial set.
+        // Even if options are provided, we only use them as a "hint" that a change happened,
+        // but we rely on the DB to give us the full state for the bundle.
+        const [fullClasses, fullSubjects, fullAssessments] = await Promise.all([
+            fetchSubcollection<Class>(schoolId, 'classes'),
+            fetchSubcollection<Subject>(schoolId, 'subjects'),
+            fetchSubcollection<Assessment>(schoolId, 'assessments')
+        ]);
+
+        // SAFETY: If the new count is critically lower than the old count, 
+        // suspect a race condition or failure and abort unless it's a small dataset.
+        if (oldBundle) {
+            const oldSubjectCount = oldBundle.subjects?.length || 0;
+            if (oldSubjectCount > 10 && fullSubjects.length < oldSubjectCount * 0.5) {
+                console.error(`[Firebase] 🚫 BUNDLE PROTECTION: Aborting update. New subject count (${fullSubjects.length}) is < 50% of old count (${oldSubjectCount}). This suggests a failed fetch or race condition.`);
+                return;
+            }
         }
 
-        if (options?.subjects) {
-            bundleData.subjects = options.subjects;
-        } else {
-            bundleData.subjects = await fetchSubcollection<Subject>(schoolId, 'subjects');
-        }
+        const bundleData: any = {
+            classes: fullClasses,
+            subjects: fullSubjects,
+            assessments: fullAssessments,
+            lastUpdated: serverTimestamp()
+        };
 
-        if (options?.assessments) {
-            bundleData.assessments = options.assessments;
-        } else {
-            bundleData.assessments = await fetchSubcollection<Assessment>(schoolId, 'assessments');
-        }
-
-        trackFirebaseWrite('updateMetadataBundle', 'config', `Writing metadata_bundle for ${schoolId}`);
+        trackFirebaseWrite('updateMetadataBundle', 'config', `Rebuilding metadata_bundle for ${schoolId} (Source of Truth Merge)`);
         await loggedSetDoc(bundleRef, bundleData, { merge: true }, `updateMetadataBundle/${schoolId}`);
-        console.log(`[Firebase] 📦 metadata_bundle updated for ${schoolId}`);
+        console.log(`[Firebase] 📦 metadata_bundle rebuilt from subcollections for ${schoolId}`);
     } catch (error) {
         console.error('[Firebase] Failed to update metadata bundle:', error);
         throw error;
@@ -1725,9 +1740,20 @@ export const saveDataTransaction = async (
         // and re-chunks it.
         if (hasStudentUpdates) {
             console.log(`[Optimization] 🔄 Student changes detected. Rebuilding bucket chunks...`);
-            // We await this to ensure consistency before returning
-            // Note: using no-args to force fetch from subcollection (Source of Truth)
             await updateStudentBucket(docId);
+        }
+
+        // ---------------------------------------------------------------------
+        // POST-TRANSACTION: REBUILD METADATA BUNDLE
+        // ---------------------------------------------------------------------
+        const hasMetadataUpdates = updates.subjects || updates.classes || updates.assessments ||
+            (deletions?.subjects && deletions.subjects.length > 0) ||
+            (deletions?.classes && deletions.classes.length > 0) ||
+            (deletions?.assessments && deletions.assessments.length > 0);
+
+        if (hasMetadataUpdates) {
+            console.log(`[Optimization] 📦 Metadata changes detected. Rebuilding bundle...`);
+            await updateMetadataBundle(docId);
         }
 
     } catch (error) {

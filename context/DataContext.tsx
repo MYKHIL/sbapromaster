@@ -1,5 +1,6 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect, useRef, useMemo } from 'react';
 import { subscribeToSchoolData, AppDataType, updateHeartbeat, logUserActivity, getSchoolData, saveDataTransaction, fetchStudents, fetchScoresForClass, subscribeToResource, fetchSubcollection, fetchMetadataBundle, updateMetadataBundle, updateStudentBucket, ensureStudentBucketExists } from '../services/firebaseService';
+import { getDeviceCredential } from '../services/authService';
 import * as SyncLogger from '../services/syncLogger';
 import useLocalStorage from '../hooks/useLocalStorage';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
@@ -219,7 +220,20 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [refreshVersion, setRefreshVersion] = useState(0);
 
     // Track original cloud data to compare against current state
-    const originalData = React.useRef<Partial<AppDataType>>({});
+    const originalData = React.useRef<Partial<AppDataType>>({
+        settings: INITIAL_SETTINGS,
+        students: [],
+        subjects: [],
+        classes: [],
+        grades: [],
+        assessments: [],
+        scores: [],
+        reportData: [],
+        classData: [],
+        users: [],
+        userLogs: [],
+        activeSessions: {}
+    });
 
     // Track pending (uncommitted) changes for individual items in collections
     // Format: Record<field, Set<item_id>>
@@ -744,8 +758,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     /**
      * Checks if two data sets are semantically equal by normalizing them first.
      */
-    const isDataEqual = (a: any, b: any): boolean => {
+    const isDataEqual = (a: any, b: any, field?: keyof AppDataType): boolean => {
         if (a === b) return true;
+
+        // 1. Treat null, undefined, and empty arrays as equivalent for collection fields
+        const isEmpty = (v: any) => v === null || v === undefined || (Array.isArray(v) && v.length === 0);
+        if (isEmpty(a) && isEmpty(b)) return true;
+
         const normA = normalizeData(a);
         const normB = normalizeData(b);
         return deepEqual(normA, normB);
@@ -2130,15 +2149,30 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (fieldsToSave.length === 0) return {};
 
         // Use current state variables directly instead of Ref to ensure Render-Cycle freshness
-        // This fixes the "First Edit" lag where the Ref wasn't updated yet during the render cycle
         const currentData: AppDataType = {
             settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions
         };
         const payload: any = {};
         const deletions: any = {};
 
+        // GRANULAR ROLE-BASED GUARD
+        // Fetch current user from localStorage/state to verify permissions
+        const cred = schoolId ? getDeviceCredential(schoolId) : null;
+        const currentUser = (cred && users) ? users.find(u => u.id === cred.userId) : null;
+        const userRole = currentUser?.role || 'Guest';
+        const isAdmin = userRole === 'Admin';
+        const allowedClasses = currentUser?.allowedClasses || [];
+
         fieldsToSave.forEach(f => {
             const field = f as keyof AppDataType;
+
+            // 1. METADATA GUARD: Non-admins cannot modify global metadata
+            const isMetadata = ['subjects', 'classes', 'assessments', 'grades'].includes(field);
+            if (isMetadata && !isAdmin) {
+                console.warn(`[DataContext] 🛡️ Role-Based Guard: stripping unauthorized metadata change to '${field}' (Role: ${userRole})`);
+                return;
+            }
+
             // @ts-ignore
             const currentVal = currentData[field];
             const originalVal = originalData.current[field];
@@ -2146,35 +2180,52 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // Perform smart diff for arrays to only show changed items in preview
             if (Array.isArray(currentVal) && Array.isArray(originalVal)) {
 
-                // 1. Check for Deletions
-                const deletedIds = originalVal
+                // 2. DELETION GUARD (Scoped Data)
+                let deletedIds = originalVal
                     .filter((o: any) => o && o.id && !currentVal.find((c: any) => c && c.id === o.id))
                     .map((o: any) => String(o.id));
 
                 if (deletedIds.length > 0) {
-                    console.log(`[DataContext] 🗑️ Detected Deletions for ${field}:`, deletedIds);
-                    deletions[field] = deletedIds;
+                    // Filter deletions based on user scope if not admin
+                    if (!isAdmin && (field === 'students' || field === 'reportData')) {
+                        const originalDeletedIdsLength = deletedIds.length;
+                        deletedIds = deletedIds.filter(id => {
+                            const item = originalVal.find((o: any) => String(o.id) === id);
+                            // Only allow deletion if item class is in allowedClasses
+                            const itemClass = item?.class || item?.className;
+                            return itemClass && allowedClasses.includes(itemClass);
+                        });
+
+                        if (deletedIds.length < originalDeletedIdsLength) {
+                            console.warn(`[DataContext] 🛡️ Role-Based Guard: Filtered out ${originalDeletedIdsLength - deletedIds.length} unauthorized deletions for ${field}`);
+                        }
+                    }
+
+                    // 3. MASS-DELETION PROTECTION
+                    const isMassDeletion = deletedIds.length > 5 && (deletedIds.length > originalVal.length * 0.2);
+                    if (isMassDeletion && !isAdmin) {
+                        console.error(`[DataContext] 🚫 SAFETY BLOCK: Preventing suspicious mass deletion of ${deletedIds.length} ${field} by non-admin user.`);
+                        // Do not add to deletions map
+                    } else if (deletedIds.length > 0) {
+                        console.log(`[DataContext] 🗑️ Detected Deletions for ${field}:`, deletedIds);
+                        deletions[field] = deletedIds;
+                    }
                 }
 
-                // 2. Check for Adds/Updates
+                // 4. Update Logic
                 // @ts-ignore
                 const updates = currentVal.filter(item => {
-                    // Start by checking if item has an ID (most of our data types do)
                     if (item && typeof item === 'object' && 'id' in item) {
-                        // Use loose ID comparison to prevent type mismatch issues (string vs number)
                         const originalItem = originalVal.find((o: any) => String(o.id) === String(item.id));
 
-                        // If it's a new item, check if it's explicitly marked as a local addition/preserved change
                         if (!originalItem) {
                             const pendingSet = pendingChangesMap.current[field];
                             return pendingSet && pendingSet.has(String(item.id));
                         }
 
-                        // Existing item: Semantic comparison
-                        return !isDataEqual(item, originalItem);
+                        // Semantic comparison
+                        return !isDataEqual(item, originalItem, field);
                     }
-                    // Fallback for non-ID arrays: Semantic comparison of whole array? 
-                    // Usually we don't hit this for our top-level fields
                     return true;
                 });
 
@@ -2183,6 +2234,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 }
 
             } else {
+                // Non-array fields (settings, activeSessions, etc.)
+                // SETTINGS GUARD: Admin only
+                if (field === 'settings' && !isAdmin) {
+                    console.warn(`[DataContext] 🛡️ Role-Based Guard: stripping unauthorized change to 'settings'`);
+                    return;
+                }
                 // @ts-ignore
                 payload[field] = currentVal;
             }
@@ -2329,8 +2386,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
 
         // PROTECTION: Never overwrite local data if we have unsaved students
+        const previouslyLoaded = lastLoadedTimestamps.current['_loaded_students'] !== undefined;
         const isDirty = dirtyFields.current.has('students');
-        if (isDirty && !force) {
+        if (isDirty && !force && previouslyLoaded) {
             console.log(`[DataContext] 🛡️ Students have unsaved local changes. Skipping fetch to prevent data loss.`);
             return;
         }
@@ -2548,9 +2606,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             inflight: inflightPromises.current.has('metadata')
         });
 
-        // PROTECTION: Skip if metadata fields are dirty
+        // PROTECTION: Skip if metadata fields are dirty AND we have successfully loaded previously
         const isDirty = dirtyFields.current.has('classes') || dirtyFields.current.has('subjects') || dirtyFields.current.has('assessments');
-        if (isDirty && !force) {
+        if (isDirty && !force && previouslyLoaded) {
             console.log(`[DataContext] 🛡️ Metadata has unsaved local changes. Skipping fetch to prevent data loss.`);
             return;
         }
