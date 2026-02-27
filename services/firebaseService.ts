@@ -1168,7 +1168,8 @@ export const updateMetadataBundle = async (schoolId: string, options?: { classes
         // SAFETY: If the new count is critically lower than the old count, 
         // suspect a race condition or failure and abort unless it's a small dataset.
         if (oldBundle) {
-            const oldSubjectCount = oldBundle.subjects?.length || 0;
+            const oldSubjects = (oldBundle as any).subjects;
+            const oldSubjectCount = Array.isArray(oldSubjects) ? oldSubjects.length : 0;
             if (oldSubjectCount > 10 && fullSubjects.length < oldSubjectCount * 0.5) {
                 console.error(`[Firebase] 🚫 BUNDLE PROTECTION: Aborting update. New subject count (${fullSubjects.length}) is < 50% of old count (${oldSubjectCount}). This suggests a failed fetch or race condition.`);
                 return;
@@ -1746,12 +1747,12 @@ export const saveDataTransaction = async (
         // ---------------------------------------------------------------------
         // POST-TRANSACTION: REBUILD METADATA BUNDLE
         // ---------------------------------------------------------------------
-        const hasMetadataUpdates = updates.subjects || updates.classes || updates.assessments ||
+        const metadataNeedsRebuild = hasMetadataUpdates ||
             (deletions?.subjects && deletions.subjects.length > 0) ||
             (deletions?.classes && deletions.classes.length > 0) ||
             (deletions?.assessments && deletions.assessments.length > 0);
 
-        if (hasMetadataUpdates) {
+        if (metadataNeedsRebuild) {
             console.log(`[Optimization] 📦 Metadata changes detected. Rebuilding bundle...`);
             await updateMetadataBundle(docId);
         }
