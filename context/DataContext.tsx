@@ -2475,7 +2475,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // loadUsers removed - users now in main document
 
-    const loadScores = React.useCallback(async (classId: number, subjectId: number, force: boolean = false) => {
+    const loadScores = React.useCallback(async (classId: number | undefined, subjectId: number, force: boolean = false) => {
         if (!schoolId) return;
 
         // Cache Check - We track loaded subjects, not class-subjects

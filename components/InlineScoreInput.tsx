@@ -45,18 +45,18 @@ const formatScore = (score: number): string => {
 
 
 const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId, assessments, onOpenModal, readOnly, index }) => {
-    const { getStudentScores, updateStudentScores, setHasLocalChanges, updateDraftScore, removeDraftScore, getComputedScore, draftVersion, isScoreDirty, isDraftScore, refreshVersion } = useData();
+    const { scores, getStudentScores, updateStudentScores, setHasLocalChanges, updateDraftScore, removeDraftScore, getComputedScore, draftVersion, isScoreDirty, isDraftScore, refreshVersion } = useData();
 
     const [inlineValues, setInlineValues] = useState<{ [key: number]: string }>({});
     const [errors, setErrors] = useState<{ [key: number]: string | undefined }>({});
     const [modifiedFields, setModifiedFields] = useState<Set<number>>(new Set()); // Track which fields user has modified
     const originalValues = useRef<{ [key: number]: string }>({}); // Track original values for comparison
 
-    // Reset original values when student changes or when a manual refresh occurs
+    // Reset original values when student or subject changes or when a manual refresh occurs
     useEffect(() => {
         originalValues.current = {};
         setModifiedFields(new Set());
-    }, [student.id, refreshVersion]);
+    }, [student.id, subjectId, refreshVersion]);
 
     useEffect(() => {
         const initialValues: { [key: number]: string } = {};
@@ -84,7 +84,7 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
         // No, we want to overwrite if draftVersion changes (meaning someone else updated it)
         setInlineValues(prev => ({ ...prev, ...initialValues }));
         setErrors({});
-    }, [student, subjectId, assessments, draftVersion]); // Listen to draftVersion for external changes
+    }, [student, subjectId, assessments, draftVersion, scores]); // Listen to draftVersion and scores for external changes
 
     const handleValueChange = (assessmentId: number, value: string) => {
         const filteredValue = value.replace(/[^0-9/.]/g, '');

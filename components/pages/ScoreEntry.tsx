@@ -138,15 +138,18 @@ const ScoreEntry: React.FC = () => {
 
     // Lazy Load Scores when Class or Subject changes
     useEffect(() => {
-        if (selectedClass && selectedSubjectId) {
-            const cls = allClasses.find(c => c.name === selectedClass);
-            if (cls) {
-                // Determine logic to avoid excessive calls?
-                // DataContext.loadScores handles isFetching check.
-                loadScores(cls.id, selectedSubjectId);
+        if (selectedSubjectId) {
+            if (selectedClass) {
+                const cls = allClasses.find(c => c.name === selectedClass);
+                if (cls) {
+                    loadScores(cls.id, selectedSubjectId);
+                }
+            } else if (currentUser?.role === 'Admin') {
+                // For Admins, load all scores for the subject across all classes
+                loadScores(undefined, selectedSubjectId);
             }
         }
-    }, [selectedClass, selectedSubjectId, allClasses, loadScores]);
+    }, [selectedClass, selectedSubjectId, allClasses, loadScores, currentUser?.role]);
 
     // Mobile View State
     // PERSISTENCE: Initialize from localStorage
@@ -621,9 +624,11 @@ const ScoreEntry: React.FC = () => {
                                 }}
                                 className={selectStyles}
                             >
-                                <option value="">
-                                    {currentUser?.role === 'Admin' ? '-- All Classes --' : '-- Select Class --'}
-                                </option>
+                                {currentUser?.role === 'Admin' || (classes.length === 0) ? (
+                                    <option value="">
+                                        {currentUser?.role === 'Admin' ? '-- All Classes --' : '-- Select Class --'}
+                                    </option>
+                                ) : null}
                                 {classes.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                             </select>
                         </div>

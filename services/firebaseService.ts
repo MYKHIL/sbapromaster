@@ -555,7 +555,7 @@ export const fetchStudents = async (
 /**
  * Optimized Score Fetching (Supports both Old Individual Docs & New Buckets)
  */
-export const fetchScoresForClass = async (docId: string, classId: number, subjectId: number): Promise<Score[]> => {
+export const fetchScoresForClass = async (docId: string, classId: number | undefined, subjectId: number): Promise<Score[]> => {
     const scores: Score[] = [];
 
     // 1. Try fetching from the "Bucket" first (schools/{schoolId}/score_buckets/{classId}_{subjectId})
