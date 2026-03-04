@@ -43,7 +43,7 @@ interface MissingRemarkEntry {
 }
 
 const ScoreSummary: React.FC = () => {
-    const { students, subjects, classes, assessments, getStudentScores, refreshFromCloud, isSyncing, isOnline, users, reportData, getReportData, updateStudent, loadScores } = useData();
+    const { students, subjects, classes, assessments, scores, getStudentScores, refreshFromCloud, isSyncing, isOnline, users, reportData, getReportData, updateStudent, loadScores } = useData();
     const { currentUser } = useUser();
 
     // State to toggle specific class view details
@@ -94,16 +94,28 @@ const ScoreSummary: React.FC = () => {
 
             // STRATEGY: Use classSubjects mapping if available, otherwise fall back to score-based filtering
 
-            // Step 1: Find subjects assigned via classSubjects mapping
+            // Step 1: Find subjects assigned via classSubjects mapping (including legacy fallback)
             const mappedSubjects = new Set<number>();
             if (users && users.length > 0) {
                 users
                     .filter(user => user.role !== 'Guest')
                     .forEach(user => {
-                        const classSubjects = user.classSubjects?.[cls.name];
-                        if (classSubjects && classSubjects.length > 0) {
-                            classSubjects.forEach(subjectName => {
-                                const subject = subjects.find(s => s.subject === subjectName);
+                        const hasDetailedAssignments = user.classSubjects && Object.keys(user.classSubjects).length > 0;
+                        const classSpecificSubjects = user.classSubjects?.[cls.name];
+
+                        if (classSpecificSubjects && classSpecificSubjects.length > 0) {
+                            // Detailed Mapping: User has specific subjects for this specific class
+                            classSpecificSubjects.forEach(subjectName => {
+                                const subNameLower = subjectName.trim().toLowerCase();
+                                const subject = subjects.find(s => s.subject.trim().toLowerCase() === subNameLower);
+                                if (subject) mappedSubjects.add(subject.id);
+                            });
+                        } else if (!hasDetailedAssignments && user.role === 'Teacher' && (user.allowedClasses || []).some(cn => cn.trim() === cls.name.trim())) {
+                            // Legacy Fallback: ONLY IF they haven't started using the specific assignment system AT ALL.
+                            // If they are assigned to this class broadly, we assume all their 'allowedSubjects' are for this class.
+                            (user.allowedSubjects || []).forEach(subjectName => {
+                                const subNameLower = subjectName.trim().toLowerCase();
+                                const subject = subjects.find(s => s.subject.trim().toLowerCase() === subNameLower);
                                 if (subject) mappedSubjects.add(subject.id);
                             });
                         }
@@ -112,25 +124,26 @@ const ScoreSummary: React.FC = () => {
 
             // Step 2: Find subjects that have existing score data for students in this class
             const subjectsWithScores = new Set<number>();
-            classStudents.forEach(student => {
-                subjects.forEach(sub => {
-                    // Check if this subject has any scores for this student
-                    assessments.forEach(assessment => {
-                        const score = getStudentScores(student.id, sub.id, assessment.id);
-                        if (score && score.length > 0 && score[0]?.toString().trim() !== '') {
-                            subjectsWithScores.add(sub.id);
-                        }
-                    });
-                });
+            const classStudentIds = new Set(classStudents.map(s => s.id));
+
+            // Optimization: Iterate through scores once, filtering for current class students
+            // and checking for any non-empty assessment data.
+            (scores || []).forEach(score => {
+                if (classStudentIds.has(score.studentId)) {
+                    const hasValidScore = Object.values(score.assessmentScores || {}).some(scoreArray =>
+                        Array.isArray(scoreArray) && scoreArray.some(val => val && val.toString().trim() !== '')
+                    );
+                    if (hasValidScore) {
+                        subjectsWithScores.add(score.subjectId);
+                    }
+                }
             });
 
             // Step 3: Combine mapped subjects AND subjects with scores
             // This ensures we show both teacher-assigned subjects AND subjects with existing data (admin-entered)
             const relevantSubjects = new Set([...mappedSubjects, ...subjectsWithScores]);
 
-            const filteredSubjects = relevantSubjects.size > 0
-                ? subjects.filter(sub => relevantSubjects.has(sub.id))
-                : subjects;
+            const filteredSubjects = subjects.filter(sub => relevantSubjects.has(sub.id));
 
             const subjectSummaries: SubjectSummary[] = filteredSubjects.map(sub => {
                 let completedCount = 0;
