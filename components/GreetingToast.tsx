@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User } from '../types';
+import { useData } from '../context/DataContext';
 
 interface GreetingToastProps {
     currentUser: User | null;
@@ -40,9 +41,13 @@ const GreetingToast: React.FC<GreetingToastProps> = ({ currentUser, currentPage 
     const [message, setMessage] = useState('');
     const [lastPage, setLastPage] = useState('');
 
-    // Handle Login Greeting
+    const { settings } = useData();
+    const [hasShownAnnouncement, setHasShownAnnouncement] = useState(false);
+
+    // Handle Login Greeting & Term Announcement
     useEffect(() => {
-        if (currentUser && !isVisible && lastPage === '') {
+        // Trigger only when user is logged in, settings are available, and we haven't shown the session announcement yet
+        if (currentUser && settings?.academicYear && !hasShownAnnouncement) {
             const hour = new Date().getHours();
             let timeGreeting = '';
 
@@ -52,13 +57,17 @@ const GreetingToast: React.FC<GreetingToastProps> = ({ currentUser, currentPage 
 
             setTitle(`${timeGreeting}, ${currentUser.name.split(' ')[0]}!`);
 
-            // Per user request, show the page description below the greeting
-            const pageMsgs = PAGE_MESSAGES[currentPage] || ["Welcome to " + currentPage];
-            setMessage(pageMsgs[Math.floor(Math.random() * pageMsgs.length)]);
-
+            // Boldly announce the current School, Academic Year and Term
+            const schoolName = settings.schoolName || 'Your School';
+            const year = settings.academicYear || '---';
+            const term = settings.academicTerm || '---';
+            
+            setMessage(`Welcome to ${schoolName}|You are currently logged into the ${term} of the ${year} academic year`);
+            
+            setHasShownAnnouncement(true);
             showToast();
         }
-    }, [currentUser]);
+    }, [currentUser, settings, hasShownAnnouncement]);
 
     // Handle Page Navigation Greeting
     useEffect(() => {
@@ -96,7 +105,7 @@ const GreetingToast: React.FC<GreetingToastProps> = ({ currentUser, currentPage 
         setIsVisible(true);
         const timer = setTimeout(() => {
             setIsVisible(false);
-        }, 4000); // Show for 4 seconds
+        }, 7000); // Show for 7 seconds
         return () => clearTimeout(timer);
     };
 
@@ -115,7 +124,18 @@ const GreetingToast: React.FC<GreetingToastProps> = ({ currentUser, currentPage 
                 </div>
                 <div className="flex-1">
                     <h4 className="font-bold text-gray-800 text-lg leading-tight">{title}</h4>
-                    <p className="text-gray-600 text-sm mt-1">{message}</p>
+                    {message.includes('|') ? (
+                        <div className="mt-2 space-y-1">
+                            <p className="text-blue-800 font-extrabold text-base leading-snug">
+                                {message.split('|')[0]}
+                            </p>
+                            <p className="text-indigo-600 font-semibold text-sm bg-indigo-50/50 px-2 py-1 rounded border border-indigo-100/50">
+                                {message.split('|')[1]}
+                            </p>
+                        </div>
+                    ) : (
+                        <p className="text-gray-600 text-sm mt-1">{message}</p>
+                    )}
                 </div>
                 <button
                     onClick={() => setIsVisible(false)}

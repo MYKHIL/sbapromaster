@@ -123,8 +123,8 @@ const UserBadge: React.FC = () => {
                             </>
                         )}
 
-                        {/* Online Users Count (Admin only) */}
-                        {isAdmin && (
+                        {/* Online Users Count (Admin only) - Commented out per user request */}
+                        {/* {isAdmin && (
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
@@ -140,7 +140,7 @@ const UserBadge: React.FC = () => {
                                     <span className="text-xs font-semibold">{onlineUsers.length}</span>
                                 )}
                             </button>
-                        )}
+                        )} */}
 
                         {/* Lock Status Indicator */}
                         {isLocked && (
@@ -161,14 +161,14 @@ const UserBadge: React.FC = () => {
                                 className="flex flex-col items-center gap-0.5 ml-2 cursor-pointer group"
                                 title="View Term Information"
                             >
-                                <div className="p-1.5 rounded-full bg-blue-50 text-blue-600 group-hover:bg-blue-100 transition-colors">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                    </svg>
+                                <div className="flex flex-col items-center leading-[1.1] text-center select-none border-l border-blue-200/50 pl-2">
+                                    <span className="text-[10px] font-black text-blue-800 uppercase tracking-tight">
+                                        {settings?.academicYear || 'Year'}
+                                    </span>
+                                    <span className="text-[9px] font-bold text-blue-600/80">
+                                        {settings?.academicTerm || 'Term'}
+                                    </span>
                                 </div>
-                                <span className="text-[9px] font-medium text-blue-600 opacity-80">
-                                    Term Info
-                                </span>
                             </button>
 
                             {/* Term Info Popup */}
