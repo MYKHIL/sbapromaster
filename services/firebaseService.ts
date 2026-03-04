@@ -1042,39 +1042,9 @@ export const verifySchoolPassword = async (docId: string, password: string): Pro
 
 
 // -----------------------------------------------------------------------------
-// SMART SUBSCRIPTIONS
 // -----------------------------------------------------------------------------
-
-/**
- * subscribeToSchoolData - Reduced scope. Only listens to MAIN document.
- */
-export const subscribeToSchoolData = (docId: string, callback: (data: AppDataType) => void) => {
-    const docRef = doc(db, "schools", docId);
-    return onSnapshot(docRef, { includeMetadataChanges: true }, (docSnap) => {
-        if (docSnap.exists()) {
-            callback(docSnap.data() as AppDataType);
-        }
-    });
-};
-
-/**
- * On-Demand Subscriptions for specific lists
- */
-export const subscribeToResource = (
-    docId: string,
-    resourceName: 'students' | 'classes' | 'subjects' | 'assessments',
-    callback: (data: any[]) => void,
-    limitCount?: number
-): Unsubscribe => {
-    const colRef = collection(db, "schools", docId, resourceName);
-    const q = limitCount ? query(colRef, limit(limitCount)) : colRef;
-
-    return onSnapshot(q, (snapshot) => {
-        const items = snapshot.docs.map(d => d.data());
-        callback(items);
-    });
-};
-
+// CORE FETCHING (LAZY LOADING)
+// -----------------------------------------------------------------------------
 /**
  * Generic Fetch for simple subcollections (Classes, Subjects, Assessments)
  */

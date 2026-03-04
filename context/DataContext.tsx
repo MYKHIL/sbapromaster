@@ -1,5 +1,5 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect, useRef, useMemo } from 'react';
-import { subscribeToSchoolData, AppDataType, updateHeartbeat, logUserActivity, getSchoolData, saveDataTransaction, fetchStudents, fetchScoresForClass, subscribeToResource, fetchSubcollection, fetchMetadataBundle, updateMetadataBundle, updateStudentBucket, ensureStudentBucketExists } from '../services/firebaseService';
+import { updateHeartbeat, logUserActivity, getSchoolData, saveDataTransaction, fetchStudents, fetchScoresForClass, fetchSubcollection, fetchMetadataBundle, updateMetadataBundle, updateStudentBucket, ensureStudentBucketExists } from '../services/firebaseService';
 import { getDeviceCredential } from '../services/authService';
 import * as SyncLogger from '../services/syncLogger';
 import useLocalStorage from '../hooks/useLocalStorage';
@@ -218,6 +218,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [dirtyVersion, setDirtyVersion] = useState(0);
     // Track manual refreshes to force components to drop unsaved data
     const [refreshVersion, setRefreshVersion] = useState(0);
+
+    // Force hard reload on version mismatch to clear ghost listeners after update
+    useEffect(() => {
+        const LATEST_VERSION = "1.0.76";
+        const currentVersion = localStorage.getItem("app_version");
+
+        if (currentVersion !== LATEST_VERSION) {
+            localStorage.setItem("app_version", LATEST_VERSION);
+            window.location.reload();
+        }
+    }, []);
 
     // Track original cloud data to compare against current state
     const originalData = React.useRef<Partial<AppDataType>>({
@@ -1395,9 +1406,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             markItemDirty('students', newId);
             const newItem = { ...student, id: newId } as Student;
             const next = [...prev, newItem];
-            if (schoolId) {
-                updateStudentBucket(schoolId, next).catch(e => console.error('Failed to update student bucket after addStudent', e));
-            }
             return next;
         });
     };
@@ -1407,9 +1415,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         markItemDirty('students', updatedStudent.id);
         setStudents(prev => {
             const next = prev.map(item => item.id === updatedStudent.id ? updatedStudent : item);
-            if (schoolId) {
-                updateStudentBucket(schoolId, next).catch(e => console.error('Failed to update student bucket after updateStudent', e));
-            }
             return next;
         });
     };
@@ -1419,9 +1424,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         markItemDirty('students', id);
         setStudents(prev => {
             const next = prev.filter(item => item.id !== id);
-            if (schoolId) {
-                updateStudentBucket(schoolId, next).catch(e => console.error('Failed to update student bucket after deleteStudent', e));
-            }
             return next;
         });
     };
@@ -1463,9 +1465,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             markItemDirty('subjects', newId);
             const newItem = { ...subject, id: newId } as Subject;
             const next = [...prev, newItem];
-            if (schoolId) {
-                updateMetadataBundle(schoolId, { subjects: next }).catch(e => console.error('Failed to update metadata bundle after addSubject', e));
-            }
             return next;
         });
     };
@@ -1475,9 +1474,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         markItemDirty('subjects', updatedSubject.id);
         setSubjects(prev => {
             const next = prev.map(item => item.id === updatedSubject.id ? updatedSubject : item);
-            if (schoolId) {
-                updateMetadataBundle(schoolId, { subjects: next }).catch(e => console.error('Failed to update metadata bundle after updateSubject', e));
-            }
             return next;
         });
     };
@@ -1487,9 +1483,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         markItemDirty('subjects', id);
         setSubjects(prev => {
             const next = prev.filter(item => item.id !== id);
-            if (schoolId) {
-                updateMetadataBundle(schoolId, { subjects: next }).catch(e => console.error('Failed to update metadata bundle after deleteSubject', e));
-            }
             return next;
         });
     };
@@ -1504,9 +1497,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             markItemDirty('classes', newId);
             const newItem = { ...cls, id: newId } as Class;
             const next = [...prev, newItem];
-            if (schoolId) {
-                updateMetadataBundle(schoolId, { classes: next }).catch(e => console.error('Failed to update metadata bundle after addClass', e));
-            }
             return next;
         });
     };
@@ -1516,9 +1506,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         markItemDirty('classes', updatedClass.id);
         setClasses(prev => {
             const next = prev.map(item => item.id === updatedClass.id ? updatedClass : item);
-            if (schoolId) {
-                updateMetadataBundle(schoolId, { classes: next }).catch(e => console.error('Failed to update metadata bundle after updateClass', e));
-            }
             return next;
         });
     };
@@ -1528,9 +1515,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         markItemDirty('classes', id);
         setClasses(prev => {
             const next = prev.filter(item => item.id !== id);
-            if (schoolId) {
-                updateMetadataBundle(schoolId, { classes: next }).catch(e => console.error('Failed to update metadata bundle after deleteClass', e));
-            }
             return next;
         });
     };
@@ -1730,6 +1714,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     useEffect(() => {
         if (isOnline && queuedCount > 0 && schoolId) {
             console.log('Network restored - syncing current state and clearing queue');
+            // ... (rest of the logic)
+        }
+    }, [isOnline, schoolId, queuedCount]);
+
+    // FIX: Add logic to process activeSessions and determine online users
+    // An online user is one who has a heartbeat within the last 5 minutes (300000ms)
+    // We update our own heartbeat every minute if active
+    const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
+
+    // Process offline queue when coming back online
+    useEffect(() => {
+        if (isOnline && queuedCount > 0 && schoolId) {
+            console.log('Network restored - syncing current state and clearing queue');
             setIsSyncing(true);
 
             // Instead of processing old queued snapshots, sync the CURRENT state
@@ -1789,11 +1786,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     }
                 }
             });
-            // Or we could trust the queue. The queue contains partials now.
-            // But 'currentData' here is the FULL state.
-            // The `saveDataTransaction` function performs the smart merge:
-            // 1. Adds/Updates items from `currentData`
-            // 2. Removes items specified in `deletions` (if safe)
 
             // Use the transactional save to perform a SMART MERGE of the offline state
             // This prevents overwriting server data (like the "Data Wipe" bug caused by setDoc/merge:true on arrays)
@@ -1823,12 +1815,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     setIsSyncing(false);
                 });
         }
-    }, [isOnline, schoolId, settings, students, subjects, classes, grades, assessments, scores, reportData, classData]);
+    }, [isOnline, schoolId, queuedCount]);
 
-    // FIX: Add logic to process activeSessions and determine online users
-    // An online user is one who has a heartbeat within the last 5 minutes (300000ms)
-    // We update our own heartbeat every minute if active
-    const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
 
     useEffect(() => {
         if (!activeSessions || !users) {
