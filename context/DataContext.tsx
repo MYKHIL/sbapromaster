@@ -221,7 +221,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Force hard reload on version mismatch to clear ghost listeners after update
     useEffect(() => {
-        const LATEST_VERSION = "1.0.79";
+        const LATEST_VERSION = "1.0.80";
         const currentVersion = localStorage.getItem("app_version");
 
         if (currentVersion !== LATEST_VERSION) {
@@ -1187,7 +1187,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         try {
             isSyncingRef.current = true;
-            setIsSyncing(true);
+            setIsFetching(true);
             const refreshType = keysToRefresh ? `Partial (${keysToRefresh.join(', ')})` : 'FULL';
             console.log(`[DataContext] 📥 Manual refresh initiated - fetching data from cloud [${refreshType}]...`);
 
@@ -1291,7 +1291,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             showDatabaseError(error, 'read');
             return 'error';
         } finally {
-            setIsSyncing(false);
+            setIsFetching(false);
             isSyncingRef.current = false;
         }
     };

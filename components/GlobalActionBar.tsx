@@ -382,11 +382,11 @@ const WrappedActionBar: React.FC<any> = ({
                             {/* Refresh Button (Visible to all) */}
                             <button
                                 onClick={handleRefresh}
-                                disabled={isSyncing || isRefreshing || !isOnline}
-                                className={`p-2 text-gray-500 hover:text-green-600 bg-gray-50 hover:bg-green-100 rounded-lg transition-colors border border-gray-100 lg:p-2.5 ${(isSyncing || isRefreshing || !isOnline) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                disabled={isSyncing || isFetching || isRefreshing || !isOnline}
+                                className={`p-2 text-gray-500 hover:text-green-600 bg-gray-50 hover:bg-green-100 rounded-lg transition-colors border border-gray-100 lg:p-2.5 ${(isSyncing || isFetching || isRefreshing || !isOnline) ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 title="Refresh data"
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${(isSyncing || isRefreshing) ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${(isSyncing || isFetching || isRefreshing) ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                 </svg>
                             </button>
@@ -396,11 +396,11 @@ const WrappedActionBar: React.FC<any> = ({
                     {!isExpanded ? (
                         <button
                             onClick={handleRefresh}
-                            disabled={isSyncing || isRefreshing || !isOnline}
+                            disabled={isSyncing || isFetching || isRefreshing || !isOnline}
                             className="p-2 text-gray-500 hover:text-green-600 rounded-lg transition-colors"
                             title="Refresh data"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${(isSyncing || isRefreshing) ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${(isSyncing || isFetching || isRefreshing) ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                             </svg>
                         </button>
@@ -419,7 +419,7 @@ const WrappedActionBar: React.FC<any> = ({
                                     localSyncing = false;
                                 }
                             }}
-                            disabled={pendingCount === 0 || isSyncing || !isOnline || isQuotaExceeded}
+                            disabled={pendingCount === 0 || isSyncing || isFetching || isRefreshing || !isOnline || isQuotaExceeded}
                             title={isQuotaExceeded ? "Daily upload quota reached. Changes saved offline." : "Save changes to cloud"}
                             className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all shadow-sm lg:px-5 lg:py-2.5 lg:shadow-md ${(pendingCount === 0 || isSyncing || !isOnline || isQuotaExceeded)
                                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
