@@ -221,7 +221,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Force hard reload on version mismatch to clear ghost listeners after update
     useEffect(() => {
-        const LATEST_VERSION = "1.0.82";
+        const LATEST_VERSION = "1.0.83";
         const currentVersion = localStorage.getItem("app_version");
 
         if (currentVersion !== LATEST_VERSION) {
@@ -1741,6 +1741,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 scores,
                 reportData,
                 classData,
+                users: users || [],
                 // Prune logs to max 50 to prevent hitting Firestore 1MB limit
                 userLogs: (userLogs || []).slice(-50),
                 // Prune stale sessions (> 24h)
@@ -2624,7 +2625,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 setClasses(fetchedClasses);
                 setSubjects(fetchedSubjects);
                 setAssessments(fetchedAssessments);
-                if (fetchedGrades) setGrades(fetchedGrades);
+
+                // FIX: Only overwrite grades if we actually found some OR if we don't already have any.
+                // This protects legacy schools where grades are still in the main school document.
+                if (fetchedGrades && (fetchedGrades.length > 0 || grades.length === 0)) {
+                    setGrades(fetchedGrades);
+                } else {
+                    console.log("[DataContext] 🛡️ Preserving existing grades (None found in metadata fetch)");
+                }
 
                 // Update originalData (Baseline)
                 originalData.current.classes = fetchedClasses;

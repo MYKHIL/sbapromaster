@@ -168,51 +168,47 @@ export const calculateReportData = (student: Student, data: DataContextType) => 
     });
 
     // Calculate Aggregate Score
-    const coreSubjectGrades: number[] = [];
-    const electiveSubjectGrades: number[] = [];
+    const leastGradeValue = numericGradeMap.size > 0
+        ? [...numericGradeMap.values()].reduce((max, v) => Math.max(max, v), 0)
+        : 9; // Default to 9 if no grades defined
 
-    // Find all core subjects taken by the class
-    const coreSubjectsForClass = relevantSubjects.filter(s => s.type === 'Core');
+    // 1. Identify all core subjects defined in the system
+    const allCoreSubjects = subjects.filter(s => s.type === 'Core');
 
-    // Find all subjects the current student has a valid score/grade for
-    const studentTakenSubjects = new Set(
-        results.filter(r => r.totalScore > 0).map(r => r.subject)
-    );
-
-    // Populate grades for subjects the student actually took
-    results.forEach(result => {
-        if (!studentTakenSubjects.has(result.subject)) return;
-
-        const subjectInfo = subjects.find(s => s.subject === result.subject);
-        const numericGrade = numericGradeMap.get(result.grade);
-
-        if (subjectInfo && numericGrade) {
-            if (subjectInfo.type === 'Core') {
-                coreSubjectGrades.push(numericGrade);
-            } else if (subjectInfo.type === 'Elective') {
-                electiveSubjectGrades.push(numericGrade);
-            }
+    // 2. Map student's results for quick lookup
+    const studentGradesMap = new Map<string, number>();
+    results.forEach(r => {
+        const numeric = numericGradeMap.get(r.grade);
+        if (numeric !== undefined) {
+            studentGradesMap.set(r.subject, numeric);
         }
     });
 
-    let coreSum = coreSubjectGrades.reduce((a, b) => a + b, 0);
+    // 3. Sum ALL cores (if missing, use penalty)
+    let coreSum = 0;
+    allCoreSubjects.forEach(core => {
+        const grade = studentGradesMap.get(core.subject);
+        coreSum += (grade !== undefined) ? grade : leastGradeValue;
+    });
 
-    // Handle missing core subjects by assigning the least possible grade
-    if (numericGradeMap.size > 0) {
-        // FIX: Using `reduce` is a safer way to find the maximum grade value (worst grade).
-        // It avoids a type inference issue seen with `Math.max` and the spread operator.
-        const leastGradeValue = [...numericGradeMap.values()].reduce((max, v) => Math.max(max, v), 0);
+    // 4. Find the 2 best electives
+    const electiveGrades: number[] = [];
+    subjects.filter(s => s.type === 'Elective').forEach(elective => {
+        const grade = studentGradesMap.get(elective.subject);
+        if (grade !== undefined) {
+            electiveGrades.push(grade);
+        }
+    });
 
-        coreSubjectsForClass.forEach(coreSubject => {
-            if (!studentTakenSubjects.has(coreSubject.subject)) {
-                // Student is missing this core subject that the class takes, apply penalty
-                coreSum += leastGradeValue;
-            }
-        });
+    // Sort electives: lower grade is better
+    const bestElectives = electiveGrades.sort((a, b) => a - b).slice(0, 2);
+
+    // If fewer than 2 electives taken, fill the remaining with the least grade value
+    let electiveSum = bestElectives.reduce((a, b) => a + b, 0);
+    if (bestElectives.length < 2) {
+        electiveSum += (2 - bestElectives.length) * leastGradeValue;
     }
 
-    const bestElectives = electiveSubjectGrades.sort((a, b) => a - b).slice(0, 2);
-    const electiveSum = bestElectives.reduce((a, b) => a + b, 0);
     const finalAggregateScore = coreSum + electiveSum;
 
 

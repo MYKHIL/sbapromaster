@@ -13,6 +13,7 @@ import DataManagement from './components/pages/DataManagement';
 import ScoreSummary from './components/pages/ScoreSummary';
 import StudentProgress from './components/pages/StudentProgress';
 import FirebaseAnalytics from './components/pages/FirebaseAnalytics';
+import SubjectAnalysis from './components/pages/SubjectAnalysis';
 import { DataProvider, useData } from './context/DataContext';
 import { UserProvider, useUser } from './context/UserContext';
 import { DatabaseErrorProvider, useDatabaseError } from './context/DatabaseErrorContext';
@@ -59,9 +60,10 @@ const ActivePage: React.FC<{
     case 'Score Entry': return <ScoreEntry />;
     case 'Score Summary': return <ScoreSummary />;
     case 'Student Progress': return <StudentProgress />;
+    case 'Subject Analysis': return <SubjectAnalysis />;
     case 'Report Viewer': return <ReportViewer />;
     case 'Firebase Analytics': return <FirebaseAnalytics />;
-    // Data Management is handled separately to preserve its state
+    // Settings is handled separately to preserve its state
     default: return null;
   }
 };
@@ -239,13 +241,13 @@ const AppContent: React.FC = () => {
       <div className="flex h-screen overflow-hidden bg-gray-50">
         <Sidebar currentPage={currentPage} setCurrentPage={handleNavigate} />
         <main className="flex-1 p-4 pt-20 md:p-6 md:pt-20 lg:p-10 overflow-auto">
-          {/* Data Management is always rendered but its visibility is toggled to preserve state. */}
-          <PageWrapper name="Data Management" currentPage={currentPage}>
+          {/* Settings is always rendered but its visibility is toggled to preserve state. */}
+          <PageWrapper name="Settings" currentPage={currentPage}>
             <DataManagement />
           </PageWrapper>
 
           {/* All other pages are rendered conditionally, causing them to remount on navigation. */}
-          {currentPage !== 'Data Management' && <ActivePage page={currentPage} onNavigate={handleNavigate} navigationMeta={navigationMeta} />}
+          {currentPage !== 'Settings' && <ActivePage page={currentPage} onNavigate={handleNavigate} navigationMeta={navigationMeta} />}
         </main>
       </div>
     </AuthOverlay>

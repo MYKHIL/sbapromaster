@@ -8,46 +8,49 @@ export type Page =
   | 'Grading System'
   | 'Assessment Types'
   | 'School Setup'
-  | 'Data Management'
   | 'Score Summary'
   | 'Student Progress'
+  | 'Subject Analysis'
+  | 'Settings'
   | 'Firebase Analytics';
 
 export interface NavigationMeta {
   openAddModal?: boolean;
-  [key: string]: any;
 }
 
-export interface Student {
-  id: number;
-  name: string;
-  indexNumber: string;
-  gender: 'Male' | 'Female';
-  class: string;
-  dateOfBirth: string;
-  age: string;
-
-  picture: string; // base64 string
+export interface SchoolSettings {
+  schoolName: string;
+  address: string;
+  academicYear: string;
+  academicTerm: string;
+  headmasterName: string;
+  district: string;
+  logo: string;
+  headmasterSignature: string;
+  vacationDate: string;
+  reopeningDate: string;
+  allowStudentProgressView?: boolean;
+  isPromotionTerm?: boolean;
 }
 
 export interface Subject {
   id: number;
   subject: string;
   type: 'Core' | 'Elective';
-  facilitator: string; // From DB schema
-  signature: string; // From DB schema, base64 string
+  signature?: string;
 }
 
 export interface Class {
   id: number;
   name: string;
-  teacherName: string;
-  teacherSignature: string; // base64 string
+  teacherSignature?: string;
+}
 
-  // Index Number Configuration (when per-class mode is enabled)
-  indexNumberPrefix?: string; // Class-specific prefix (e.g., "JHS1-")
-  indexNumberSuffix?: string; // Class-specific suffix (e.g., "-A")
-  indexNumberCounter?: number; // Current counter for this class
+export interface Teacher {
+  id: number;
+  name: string;
+  gender: 'Male' | 'Female';
+  class: string;
 }
 
 export interface Grade {
@@ -58,122 +61,82 @@ export interface Grade {
   remark: string;
 }
 
-export interface Assessment {
+export interface Student {
   id: number;
   name: string;
-  weight: number; // Percentage & Max Score
+  gender: 'Male' | 'Female';
+  class: string;
+  age: string;
+  picture?: string;
+  indexNumber?: string;
+  guardianName?: string;
+  guardianPhone?: string;
 }
 
 export interface Score {
-  id: string; // e.g., `${studentId}-${subjectId}`
+  id: string; // Composite ID: `${studentId}-${subjectId}`
   studentId: number;
   subjectId: number;
-  assessmentScores: {
-    [assessmentId: number]: string[]; // Array of scores, e.g., ["15/20", "18/20"]
-  };
+  assessmentScores: { [assessmentId: number]: string[] };
 }
 
-export interface SchoolSettings {
-  schoolName: string;
-  district: string;
-  address: string;
-  academicYear: string;
-  academicTerm: string;
-  vacationDate: string;
-  reopeningDate: string;
-  headmasterName: string;
-  logo: string; // base64 string
-  headmasterSignature: string; // base64 string
-  isDataEntryLocked?: boolean; // If true, non-admins cannot add/edit/delete
-
-  // Index Number Auto-Assignment Configuration
-  autoAssignIndexNumbers?: boolean; // If true, index numbers will be auto-assigned
-  indexNumberGlobalPrefix?: string; // Global prefix for all index numbers (e.g., "0220009")
-  indexNumberGlobalSuffix?: string; // Global suffix for all index numbers (e.g., "25")
-  indexNumberCounterDigits?: number; // Number of digits for counter (default: 3)
-  indexNumberPerClass?: boolean; // If true, each class has its own counter
-  indexNumberAutoSort?: boolean; // If true, sort students alphabetically before assigning
-  indexNumberGlobalCounter?: number; // Global counter when not using per-class counters
-  allowStudentProgressView?: boolean; // Allow non-admins to view student progress page
-  isPromotionTerm?: boolean; // If true, enables the promotion field in reports
-}
-
-export interface ReportSpecificData {
-  studentId: number;
-  attendance: string;
-  conduct: string;
-  interest: string;
-  attitude: string;
-  teacherRemark: string;
-  promotedTo?: string; // Optional field for promotion status (e.g. "JHS 2")
-}
-
-export interface ClassSpecificData {
-  classId: number;
-  totalSchoolDays: string;
-}
-
-// Authentication & Authorization Types
-export type UserRole = 'Admin' | 'Teacher' | 'Guest';
-
-export interface Notification {
-  id: string;
-  senderId?: number; // Optional for system messages, required for user messages
-  senderName?: string;
-  type: 'system' | 'missing_data_alert' | 'feedback';
-  context?: {
-    classId?: number;
-    subjectId?: number;
-    dataType: 'scores' | 'remarks';
-  };
-  message: string;
-  link?: string;
-  read: boolean;
-  date: string;
-  classId?: number; // Deprecated, use context.classId
-  replies?: {
-    senderId: number;
-    senderName: string;
-    message: string;
-    date: string;
-  }[];
+export interface Assessment {
+  id: number;
+  name: string;
+  weight: number;
+  type: 'Class' | 'Exam';
 }
 
 export interface User {
   id: number;
   name: string;
-  role: UserRole;
-  allowedClasses: string[]; // Class names the user has access to
-  allowedSubjects: string[]; // Subject names the user has access to
-  classSubjects?: { [className: string]: string[] }; // Optional: class -> subjects mapping
-  passwordHash: string; // Hashed password
-  isReadOnly?: boolean; // If true, user cannot edit anything regardless of role
-  notifications?: Notification[];
+  role: 'Admin' | 'Teacher' | 'Guest';
+  isReadOnly?: boolean;
+  allowedClasses?: string[];
+  allowedSubjects?: number[];
+  passwordHash?: string;
+}
+
+export interface SchoolPeriod {
+  year: string;
+  term: string;
+  docId: string;
+}
+
+export interface ReportSpecificData {
+  studentId: number;
+  attendance?: string;
+  conduct?: string;
+  interest?: string;
+  attitude?: string;
+  teacherRemark?: string;
+  promotedTo?: string;
+}
+
+export interface ClassSpecificData {
+  classId: number;
+  totalSchoolDays?: string;
 }
 
 export interface DeviceCredential {
-  deviceId: string; // Unique device fingerprint
-  userId: number; // User ID associated with this device
-  lastLogin: string; // ISO timestamp of last login
+  schoolId: string;
+  userId: number;
+  lastLogin: string;
 }
 
 export interface UserLog {
-  id: string; // timestamp-random
+  id: number;
   userId: number;
   userName: string;
-  role: UserRole;
-  action: 'Login' | 'Logout' | 'Page Visit';
-  timestamp: string; // ISO
-  deviceId?: string;
-  pageName?: string; // Current page being visited
-  previousPage?: string; // Last page visited (for navigation logs)
+  action: string;
+  timestamp: string;
 }
 
 export interface OnlineUser {
   userId: number;
   userName: string;
-  role: string;
-  lastActive: string; // ISO
+  role?: string;
+  lastHeartbeat: string;
 }
 
 export interface AppDataType {
@@ -186,19 +149,12 @@ export interface AppDataType {
   scores: Score[];
   reportData: ReportSpecificData[];
   classData: ClassSpecificData[];
-  users?: User[];
-  userLogs?: UserLog[];
-  activeSessions?: Record<string, string>;
-  Access?: boolean;
+  users: User[];
   password?: string;
-  deviceCredentials?: DeviceCredential[];
+  Access?: boolean;
+  activeSessions?: Record<string, string>;
+  userLogs?: UserLog[];
   metadata?: {
-    lastUpdated?: Record<string, any>;
+    lastUpdated: Record<string, any>;
   };
-}
-
-export interface SchoolPeriod {
-  year: string;
-  term: string;
-  docId: string;
 }
