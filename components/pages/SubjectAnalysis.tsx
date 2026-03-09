@@ -3,6 +3,7 @@ import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
 import { calculateReportData } from '../../hooks/useReportCardData';
 import { sortClassesByName } from '../../utils/classSort';
+import { exportToExcel, exportToPDF, exportSubjectAnalysisExcel } from '../../utils/exportUtils';
 
 const SubjectAnalysis: React.FC = () => {
     const data = useData();
@@ -10,6 +11,7 @@ const SubjectAnalysis: React.FC = () => {
     const { currentUser } = useUser();
 
     const [selectedClassId, setSelectedClassId] = useState<number | 'all' | ''>('');
+    const [passMark, setPassMark] = useState<number>(36);
 
     // Initialize default class
     React.useEffect(() => {
@@ -28,8 +30,6 @@ const SubjectAnalysis: React.FC = () => {
     React.useEffect(() => {
         if (selectedClassId && subjects.length > 0) {
             subjects.forEach(subject => {
-                // Pass undefined as classId if 'all' is selected, 
-                // loadScores handles this through subject-based bucketing
                 const classIdParam = selectedClassId === 'all' ? undefined : (selectedClassId as number);
                 loadScores(classIdParam, subject.id);
             });
@@ -57,14 +57,12 @@ const SubjectAnalysis: React.FC = () => {
         };
         const allAggregates = new Set<number>();
 
-        // Unique grade names for columns
         const gradeNames = [...grades].sort((a, b) => b.minScore - a.minScore).map(g => g.name);
 
         classStudents.forEach(student => {
             const report = calculateReportData(student, data);
             const genderKey = student.gender === 'Male' ? 'Male' : 'Female';
 
-            // Subject analysis (Gender Separated)
             report.subjectResults.forEach(res => {
                 if (res.totalScore > 0 && res.grade !== '-') {
                     if (!subjectGradeCounts[res.subject]) {
@@ -84,18 +82,36 @@ const SubjectAnalysis: React.FC = () => {
                 }
             });
 
-            // Aggregate analysis by gender (Agg 6 onwards)
             if (report.aggregateScore >= 6) {
                 aggregateCountsByGender[genderKey][report.aggregateScore] = (aggregateCountsByGender[genderKey][report.aggregateScore] || 0) + 1;
                 allAggregates.add(report.aggregateScore);
             }
         });
 
-        // Filter subjects to only those that have at least one score
         const activeSubjects = Object.keys(subjectGradeCounts).sort();
-
-        // Sorted unique aggregate scores
         const sortedAggregates = Array.from(allAggregates).sort((a, b) => a - b);
+
+        // Calculate Pass stats
+        const passStats = {
+            Male: { count: 0, percentage: 0 },
+            Female: { count: 0, percentage: 0 },
+            Total: { count: 0, percentage: 0 }
+        };
+
+        const maleTotal = students.filter(s => (selectedClassId === 'all' || s.class === activeClass?.name) && s.gender === 'Male').length;
+        const femaleTotal = students.filter(s => (selectedClassId === 'all' || s.class === activeClass?.name) && s.gender === 'Female').length;
+
+        Object.entries(aggregateCountsByGender['Male']).forEach(([agg, count]) => {
+            if (Number(agg) <= passMark) passStats.Male.count += count;
+        });
+        Object.entries(aggregateCountsByGender['Female']).forEach(([agg, count]) => {
+            if (Number(agg) <= passMark) passStats.Female.count += count;
+        });
+
+        passStats.Total.count = passStats.Male.count + passStats.Female.count;
+        passStats.Male.percentage = maleTotal > 0 ? (passStats.Male.count / maleTotal) * 100 : 0;
+        passStats.Female.percentage = femaleTotal > 0 ? (passStats.Female.count / femaleTotal) * 100 : 0;
+        passStats.Total.percentage = (maleTotal + femaleTotal) > 0 ? (passStats.Total.count / (maleTotal + femaleTotal)) * 100 : 0;
 
         // Average Aggregate
         let aggSum = 0;
@@ -115,9 +131,124 @@ const SubjectAnalysis: React.FC = () => {
             gradeNames,
             activeSubjects,
             totalStudents: classStudents.length,
-            averageAggregate
+            averageAggregate,
+            passStats
         };
-    }, [activeClass, students, data, grades, selectedClassId]);
+    }, [activeClass, students, data, grades, selectedClassId, passMark]);
+
+    const handleExportExcel = async () => {
+        if (!analysisData) return;
+        const filename = `Subject_Analysis_${activeClass?.name || 'School'}_${new Date().toISOString().split('T')[0]}`;
+        
+        await exportSubjectAnalysisExcel(
+            analysisData.subjectGradeCounts,
+            analysisData.aggregateCountsByGender,
+            analysisData.gradeNames,
+            analysisData.activeSubjects,
+            analysisData.sortedAggregates,
+            analysisData.totalStudents,
+            analysisData.averageAggregate,
+            activeClass?.name || 'Entire School',
+            filename,
+            passMark,
+            analysisData.passStats
+        );
+    };
+
+    const handleExportPDF = () => {
+        if (!analysisData) return;
+
+        const { subjectGradeCounts, activeSubjects, gradeNames, sortedAggregates, aggregateCountsByGender, totalStudents, averageAggregate } = analysisData;
+        
+        // Data for Subject Table
+        const pdfDataSubject: any[][] = [];
+        const headersSubject = ['SUBJECT', 'GENDER', ...gradeNames.map(g => `G${g}`), 'TOTAL'];
+
+        activeSubjects.forEach(subject => {
+            ['Male', 'Female', 'Total'].forEach(gender => {
+                const row = [subject, gender];
+                let total = 0;
+                gradeNames.forEach(grade => {
+                    const count = subjectGradeCounts[subject][gender][grade] || 0;
+                    row.push(count);
+                    total += count;
+                });
+                row.push(total);
+                pdfDataSubject.push(row);
+            });
+        });
+
+        // Data for Aggregates Table
+        const pdfDataAgg: any[][] = [];
+        const headersAgg = ['GENDER', ...sortedAggregates.map(a => `Agg ${a}`), 'PASSED', 'PASS %', 'TOTAL'];
+        ['Male', 'Female', 'Total'].forEach(gender => {
+            const row = [gender];
+            let genTotal = 0;
+            sortedAggregates.forEach(agg => {
+                const count = gender === 'Total' 
+                    ? (aggregateCountsByGender['Male'][agg] || 0) + (aggregateCountsByGender['Female'][agg] || 0)
+                    : (aggregateCountsByGender[gender][agg] || 0);
+                row.push(count);
+                genTotal += count;
+            });
+            // Add Pass stats to row
+            const stats = gender === 'Total' ? analysisData.passStats.Total : (gender === 'Male' ? analysisData.passStats.Male : analysisData.passStats.Female);
+            row.push(stats.count);
+            row.push(`${stats.percentage.toFixed(1)}%`);
+            
+            row.push(gender === 'Total' ? totalStudents : genTotal);
+            pdfDataAgg.push(row);
+        });
+
+        const title = `Subject Analysis Report - ${activeClass?.name || 'Entire School'}`;
+        const filename = `Subject_Analysis_${activeClass?.name || 'School'}_${new Date().toISOString().split('T')[0]}`;
+        
+        // We bypass the generic exportToPDF and use jspdf directly for multi-table layout
+        import('jspdf').then(({ default: jsPDF }) => {
+            import('jspdf-autotable').then(({ default: autoTable }) => {
+                const doc = new jsPDF('l', 'mm', 'a4'); // Landscape for more columns
+                
+                doc.setFontSize(20);
+                doc.text(title, 14, 20);
+                doc.setFontSize(10);
+                doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 28);
+                doc.text(`Total Students: ${totalStudents} | Average Aggregate: ${averageAggregate}`, 14, 34);
+                doc.text(`Pass Aggregate: ≤ ${passMark} | Male Pass: ${analysisData.passStats.Male.count} (${analysisData.passStats.Male.percentage.toFixed(1)}%) | Female Pass: ${analysisData.passStats.Female.count} (${analysisData.passStats.Female.percentage.toFixed(1)}%)`, 14, 40);
+
+                doc.setFontSize(14);
+                doc.text("Section 1: Subject-wise Grade Analysis", 14, 50);
+                
+                autoTable(doc, {
+                    head: [headersSubject],
+                    body: pdfDataSubject,
+                    startY: 55,
+                    theme: 'grid',
+                    headStyles: { fillColor: [68, 114, 196] },
+                    styles: { fontSize: 7, cellPadding: 1.5 },
+                    didParseCell: (data) => {
+                        if (data.row.index % 3 === 2) { // Total Row
+                            data.cell.styles.fontStyle = 'bold';
+                            data.cell.styles.fillColor = [240, 240, 240];
+                        }
+                    }
+                });
+
+                const finalY = (doc as any).lastAutoTable.finalY + 15;
+                doc.text("Section 2: Aggregate Performance Analysis", 14, finalY);
+
+                autoTable(doc, {
+                    head: [headersAgg],
+                    body: pdfDataAgg,
+                    startY: finalY + 5,
+                    theme: 'grid',
+                    headStyles: { fillColor: [68, 114, 196] },
+                    styles: { fontSize: 8, cellPadding: 2 },
+                });
+
+                doc.save(`${filename}.pdf`);
+            });
+        });
+    };
 
     if (currentUser?.role !== 'Admin') {
         return (
@@ -132,12 +263,37 @@ const SubjectAnalysis: React.FC = () => {
     return (
         <div className="space-y-6 pb-10 pt-14 px-4 sm:px-0">
             <div className="flex flex-col gap-6">
-                <div>
-                    <h1 className="text-3xl font-bold text-gray-800">Subject Analysis</h1>
-                    <p className="text-gray-600">Detailed breakdown of performance for {selectedClassId === 'all' ? 'the entire school' : (activeClass?.name || 'selected class')}.</p>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-800">Subject Analysis</h1>
+                        <p className="text-gray-600">Detailed breakdown of performance for {selectedClassId === 'all' ? 'the entire school' : (activeClass?.name || 'selected class')}.</p>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleExportExcel}
+                            disabled={!analysisData}
+                            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg shadow-sm hover:bg-emerald-700 transition-all font-bold text-xs uppercase tracking-tight disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Excel
+                        </button>
+                        <button
+                            onClick={handleExportPDF}
+                            disabled={!analysisData}
+                            className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg shadow-sm hover:bg-rose-700 transition-all font-bold text-xs uppercase tracking-tight disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                            PDF
+                        </button>
+                    </div>
                 </div>
                 
-                <div className="flex flex-wrap items-center gap-3 pb-2">
+                <div className="flex flex-wrap items-center gap-6 pb-2">
                     <div className="flex items-center gap-2">
                         <span className="text-xs font-bold text-gray-400 uppercase tracking-widest px-1">Scope:</span>
                         <select
@@ -158,20 +314,29 @@ const SubjectAnalysis: React.FC = () => {
                         </select>
                     </div>
 
-                    <button
-                        onClick={() => refreshFromCloud()}
-                        disabled={isSyncing || !isOnline}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg shadow-sm transition-all border ${isSyncing || !isOnline
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
-                            : 'bg-white text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300 hover:shadow-md active:scale-95'
-                            }`}
-                        title="Refresh Data"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${isSyncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        <span className="text-sm font-bold uppercase tracking-tight">Sync Cloud</span>
-                    </button>
+                    <div className="flex items-center gap-2 border-l pl-6 border-gray-100">
+                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest px-1 whitespace-nowrap">Pass Aggregate:</span>
+                        <input
+                            type="number"
+                            value={passMark}
+                            onChange={(e) => setPassMark(Math.max(6, Math.min(72, Number(e.target.value) || 0)))}
+                            className="w-20 px-3 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-lg border bg-white shadow-sm font-medium text-center"
+                        />
+                        <div className="flex items-center gap-4 ml-4">
+                            <div className="flex flex-col">
+                                <span className="text-[10px] text-gray-400 uppercase font-black leading-none">Male Pass</span>
+                                <span className="text-sm font-bold text-blue-600">{analysisData?.passStats.Male.count} ({analysisData?.passStats.Male.percentage.toFixed(1)}%)</span>
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-[10px] text-gray-400 uppercase font-black leading-none">Female Pass</span>
+                                <span className="text-sm font-bold text-rose-600">{analysisData?.passStats.Female.count} ({analysisData?.passStats.Female.percentage.toFixed(1)}%)</span>
+                            </div>
+                            <div className="flex flex-col border-l pl-4 border-gray-100">
+                                <span className="text-[10px] text-gray-400 uppercase font-black leading-none">Total Pass</span>
+                                <span className="text-sm font-bold text-gray-800">{analysisData?.passStats.Total.count} ({analysisData?.passStats.Total.percentage.toFixed(1)}%)</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -254,6 +419,8 @@ const SubjectAnalysis: React.FC = () => {
                                                 Agg {agg}
                                             </th>
                                         ))}
+                                        <th className="p-4 text-center font-semibold text-emerald-600 bg-emerald-50 whitespace-nowrap border-l text-xs sticky top-0">PASSED</th>
+                                        <th className="p-4 text-center font-semibold text-emerald-600 bg-emerald-50 whitespace-nowrap border-l text-xs sticky top-0">PASS %</th>
                                         <th className="p-4 text-center font-semibold text-gray-600 bg-blue-50 whitespace-nowrap border-l text-xs sticky top-0">TOTAL</th>
                                     </tr>
                                 </thead>
@@ -269,7 +436,13 @@ const SubjectAnalysis: React.FC = () => {
                                                 </td>
                                             );
                                         })}
-                                        <td className="p-4 text-center font-bold text-blue-800 bg-blue-50/30 border-l text-sm">
+                                        <td className="p-4 text-center font-bold text-emerald-700 bg-emerald-50 border-l text-sm">
+                                            {analysisData.passStats.Male.count}
+                                        </td>
+                                        <td className="p-4 text-center font-bold text-emerald-700 bg-emerald-50 border-l text-sm">
+                                            {analysisData.passStats.Male.percentage.toFixed(1)}%
+                                        </td>
+                                        <td className="p-4 text-center font-bold text-blue-800 bg-blue-50 border-l text-sm">
                                             {Object.values(analysisData.aggregateCountsByGender['Male']).reduce((a: number, b: number) => a + b, 0)}
                                         </td>
                                     </tr>
@@ -284,7 +457,13 @@ const SubjectAnalysis: React.FC = () => {
                                                 </td>
                                             );
                                         })}
-                                        <td className="p-4 text-center font-bold text-rose-800 bg-rose-50/30 border-l text-sm">
+                                        <td className="p-4 text-center font-bold text-emerald-700 bg-emerald-50 border-l text-sm">
+                                            {analysisData.passStats.Female.count}
+                                        </td>
+                                        <td className="p-4 text-center font-bold text-emerald-700 bg-emerald-50 border-l text-sm">
+                                            {analysisData.passStats.Female.percentage.toFixed(1)}%
+                                        </td>
+                                        <td className="p-4 text-center font-bold text-rose-800 bg-rose-50 border-l text-sm">
                                             {Object.values(analysisData.aggregateCountsByGender['Female']).reduce((a: number, b: number) => a + b, 0)}
                                         </td>
                                     </tr>
@@ -301,6 +480,12 @@ const SubjectAnalysis: React.FC = () => {
                                                 </td>
                                             );
                                         })}
+                                        <td className="p-4 text-center text-emerald-900 bg-emerald-100 border-l text-sm">
+                                            {analysisData.passStats.Total.count}
+                                        </td>
+                                        <td className="p-4 text-center text-emerald-900 bg-emerald-100 border-l text-sm">
+                                            {analysisData.passStats.Total.percentage.toFixed(1)}%
+                                        </td>
                                         <td className="p-4 text-center text-blue-900 bg-blue-100 border-l text-sm">
                                             {analysisData.totalStudents}
                                         </td>
