@@ -9,7 +9,7 @@ const SubjectAnalysis: React.FC = () => {
     const { classes, students, subjects, grades, scores, assessments, refreshFromCloud, loadScores, loadStudents, isFetching, isSyncing, isOnline } = data;
     const { currentUser } = useUser();
 
-    const [selectedClassId, setSelectedClassId] = useState<number | ''>('');
+    const [selectedClassId, setSelectedClassId] = useState<number | 'all' | ''>('');
 
     // Initialize default class
     React.useEffect(() => {
@@ -28,17 +28,26 @@ const SubjectAnalysis: React.FC = () => {
     React.useEffect(() => {
         if (selectedClassId && subjects.length > 0) {
             subjects.forEach(subject => {
-                loadScores(selectedClassId as number, subject.id);
+                // Pass undefined as classId if 'all' is selected, 
+                // loadScores handles this through subject-based bucketing
+                const classIdParam = selectedClassId === 'all' ? undefined : (selectedClassId as number);
+                loadScores(classIdParam, subject.id);
             });
         }
     }, [selectedClassId, subjects, loadScores]);
 
-    const activeClass = useMemo(() => classes.find(c => c.id === selectedClassId), [classes, selectedClassId]);
+    const activeClass = useMemo(() => {
+        if (selectedClassId === 'all') return { id: 'all', name: 'All Classes' } as any;
+        return classes.find(c => c.id === selectedClassId);
+    }, [classes, selectedClassId]);
 
     const analysisData = useMemo(() => {
         if (!activeClass || students.length === 0 || grades.length === 0) return null;
 
-        const classStudents = students.filter(s => s.class === activeClass.name);
+        const classStudents = selectedClassId === 'all' 
+            ? students 
+            : students.filter(s => s.class === activeClass?.name);
+
         if (classStudents.length === 0) return null;
 
         const subjectGradeCounts: Record<string, Record<string, Record<string, number>>> = {};
@@ -108,7 +117,7 @@ const SubjectAnalysis: React.FC = () => {
             totalStudents: classStudents.length,
             averageAggregate
         };
-    }, [activeClass, students, data, grades]);
+    }, [activeClass, students, data, grades, selectedClassId]);
 
     if (currentUser?.role !== 'Admin') {
         return (
@@ -125,18 +134,22 @@ const SubjectAnalysis: React.FC = () => {
             <div className="flex flex-col gap-6">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-800">Subject Analysis</h1>
-                    <p className="text-gray-600">Detailed breakdown of performance for {activeClass?.name || 'selected class'}.</p>
+                    <p className="text-gray-600">Detailed breakdown of performance for {selectedClassId === 'all' ? 'the entire school' : (activeClass?.name || 'selected class')}.</p>
                 </div>
                 
                 <div className="flex flex-wrap items-center gap-3 pb-2">
                     <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest px-1">Class:</span>
+                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest px-1">Scope:</span>
                         <select
-                            value={selectedClassId}
-                            onChange={(e) => setSelectedClassId(Number(e.target.value))}
+                            value={String(selectedClassId)}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setSelectedClassId(val === 'all' ? 'all' : Number(val));
+                            }}
                             className="pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-lg border bg-white shadow-sm font-medium"
                         >
                             <option value="">-- Select Class --</option>
+                            <option value="all">Entire School (All Classes)</option>
                             {sortedClasses.map((cls) => (
                                 <option key={cls.id} value={cls.id}>
                                     {cls.name}
