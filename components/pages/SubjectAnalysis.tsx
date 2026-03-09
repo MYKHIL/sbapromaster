@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
-import { calculateReportData } from '../../hooks/useReportCardData';
 import { sortClassesByName } from '../../utils/classSort';
 import { exportToExcel, exportToPDF, exportSubjectAnalysisExcel } from '../../utils/exportUtils';
 
@@ -44,8 +43,8 @@ const SubjectAnalysis: React.FC = () => {
     const analysisData = useMemo(() => {
         if (!activeClass || students.length === 0 || grades.length === 0) return null;
 
-        const classStudents = selectedClassId === 'all' 
-            ? students 
+        const classStudents = selectedClassId === 'all'
+            ? students
             : students.filter(s => s.class === activeClass?.name);
 
         if (classStudents.length === 0) return null;
@@ -59,32 +58,103 @@ const SubjectAnalysis: React.FC = () => {
 
         const gradeNames = [...grades].sort((a, b) => b.minScore - a.minScore).map(g => g.name);
 
-        classStudents.forEach(student => {
-            const report = calculateReportData(student, data);
-            const genderKey = student.gender === 'Male' ? 'Male' : 'Female';
+        // Highly optimized computation to avoid O(N^3)
+        const numericGradeMap = new Map<string, number>();
+        const sortedGrades = [...grades].sort((a, b) => b.maxScore - a.maxScore);
+        const sortedGradesAsc = [...grades].sort((a, b) => b.minScore - a.minScore);
 
-            report.subjectResults.forEach(res => {
-                if (res.totalScore > 0 && res.grade !== '-') {
-                    if (!subjectGradeCounts[res.subject]) {
-                        subjectGradeCounts[res.subject] = {
-                            'Male': {},
-                            'Female': {},
-                            'Total': {}
-                        };
-                        gradeNames.forEach(g => {
-                            subjectGradeCounts[res.subject]['Male'][g] = 0;
-                            subjectGradeCounts[res.subject]['Female'][g] = 0;
-                            subjectGradeCounts[res.subject]['Total'][g] = 0;
-                        });
+        sortedGrades.forEach((grade, index) => numericGradeMap.set(grade.name, index + 1));
+
+        const leastGradeValue = numericGradeMap.size > 0
+            ? [...numericGradeMap.values()].reduce((max, v) => Math.max(max, v), 0)
+            : 9;
+
+        const examAssessment = assessments.find(a => a.name.toLowerCase().includes('exam'));
+        const classAssessments = assessments.filter(a => !examAssessment || a.id !== examAssessment.id);
+
+        const studentSubjectTotalScores = new Map<string, number>();
+
+        scores.forEach(score => {
+            const hasValidData = score.assessmentScores && Object.values(score.assessmentScores).some((val: any) => Array.isArray(val) && val.some((s: string) => s && typeof s === 'string' && s.trim() !== ''));
+
+            if (hasValidData) {
+                const classScore = classAssessments.reduce((total, assessment) => {
+                    const vals = score.assessmentScores?.[assessment.id];
+                    if (!vals || vals.length === 0) return total;
+                    const totalScore = vals.reduce((sum, scoreStr) => sum + (Number(scoreStr.split('/')[0]) || 0), 0);
+                    const totalMaxPossibleScore = vals.reduce((sum, scoreStr) => sum + (Number(scoreStr.split('/')[1]) || assessment.weight), 0);
+                    if (totalMaxPossibleScore === 0) return total;
+                    return total + (totalScore / totalMaxPossibleScore) * assessment.weight;
+                }, 0);
+
+                const examScore = examAssessment ? [examAssessment].reduce((total, assessment) => {
+                    const vals = score.assessmentScores?.[assessment.id];
+                    if (!vals || vals.length === 0) return total;
+                    const sumOfScores = vals.reduce((sum, scoreStr) => sum + (Number(scoreStr.split('/')[0]) || 0), 0);
+                    const averageScoreOutOf100 = sumOfScores / vals.length;
+                    return total + (averageScoreOutOf100 / 100) * assessment.weight;
+                }, 0) : 0;
+
+                studentSubjectTotalScores.set(score.id, classScore + examScore);
+            }
+        });
+
+        classStudents.forEach(student => {
+            const genderKey = student.gender === 'Male' ? 'Male' : 'Female';
+            const subjectResults: { subject: string, grade: string }[] = [];
+
+            subjects.forEach(subject => {
+                const totalScore = studentSubjectTotalScores.get(`${student.id}-${subject.id}`);
+                if (totalScore !== undefined && totalScore > 0) {
+                    const roundedMark = Math.round(totalScore);
+                    const gradeInfo = sortedGradesAsc.find(g => roundedMark >= g.minScore && roundedMark <= g.maxScore);
+                    const grade = gradeInfo?.name || '-';
+                    subjectResults.push({ subject: subject.subject, grade });
+
+                    if (grade !== '-') {
+                        if (!subjectGradeCounts[subject.subject]) {
+                            subjectGradeCounts[subject.subject] = {
+                                'Male': {},
+                                'Female': {},
+                                'Total': {}
+                            };
+                            gradeNames.forEach(g => {
+                                subjectGradeCounts[subject.subject]['Male'][g] = 0;
+                                subjectGradeCounts[subject.subject]['Female'][g] = 0;
+                                subjectGradeCounts[subject.subject]['Total'][g] = 0;
+                            });
+                        }
+                        subjectGradeCounts[subject.subject][genderKey][grade]++;
+                        subjectGradeCounts[subject.subject]['Total'][grade]++;
                     }
-                    subjectGradeCounts[res.subject][genderKey][res.grade]++;
-                    subjectGradeCounts[res.subject]['Total'][res.grade]++;
                 }
             });
 
-            if (report.aggregateScore >= 6) {
-                aggregateCountsByGender[genderKey][report.aggregateScore] = (aggregateCountsByGender[genderKey][report.aggregateScore] || 0) + 1;
-                allAggregates.add(report.aggregateScore);
+            let coreSum = 0;
+            subjects.filter(s => s.type === 'Core').forEach(core => {
+                const res = subjectResults.find(r => r.subject === core.subject);
+                const gradeVal = res ? numericGradeMap.get(res.grade) : undefined;
+                coreSum += (gradeVal !== undefined) ? gradeVal : leastGradeValue;
+            });
+
+            const electiveGrades: number[] = [];
+            subjects.filter(s => s.type === 'Elective').forEach(elective => {
+                const res = subjectResults.find(r => r.subject === elective.subject);
+                const gradeVal = res ? numericGradeMap.get(res.grade) : undefined;
+                if (gradeVal !== undefined) electiveGrades.push(gradeVal);
+            });
+
+            const bestElectives = electiveGrades.sort((a, b) => a - b).slice(0, 2);
+            let electiveSum = bestElectives.reduce((a, b) => a + b, 0);
+            if (bestElectives.length < 2) {
+                electiveSum += (2 - bestElectives.length) * leastGradeValue;
+            }
+
+            const aggregateScore = coreSum + electiveSum;
+
+            if (aggregateScore >= 6) {
+                aggregateCountsByGender[genderKey][aggregateScore] = (aggregateCountsByGender[genderKey][aggregateScore] || 0) + 1;
+                allAggregates.add(aggregateScore);
             }
         });
 
@@ -134,12 +204,12 @@ const SubjectAnalysis: React.FC = () => {
             averageAggregate,
             passStats
         };
-    }, [activeClass, students, data, grades, selectedClassId, passMark]);
+    }, [activeClass, students, scores, assessments, subjects, grades, selectedClassId, passMark]);
 
     const handleExportExcel = async () => {
         if (!analysisData) return;
         const filename = `Subject_Analysis_${activeClass?.name || 'School'}_${new Date().toISOString().split('T')[0]}`;
-        
+
         await exportSubjectAnalysisExcel(
             analysisData.subjectGradeCounts,
             analysisData.aggregateCountsByGender,
@@ -159,7 +229,7 @@ const SubjectAnalysis: React.FC = () => {
         if (!analysisData) return;
 
         const { subjectGradeCounts, activeSubjects, gradeNames, sortedAggregates, aggregateCountsByGender, totalStudents, averageAggregate } = analysisData;
-        
+
         // Data for Subject Table
         const pdfDataSubject: any[][] = [];
         const headersSubject = ['SUBJECT', 'GENDER', ...gradeNames.map(g => `G${g}`), 'TOTAL'];
@@ -185,7 +255,7 @@ const SubjectAnalysis: React.FC = () => {
             const row = [gender];
             let genTotal = 0;
             sortedAggregates.forEach(agg => {
-                const count = gender === 'Total' 
+                const count = gender === 'Total'
                     ? (aggregateCountsByGender['Male'][agg] || 0) + (aggregateCountsByGender['Female'][agg] || 0)
                     : (aggregateCountsByGender[gender][agg] || 0);
                 row.push(count);
@@ -195,19 +265,19 @@ const SubjectAnalysis: React.FC = () => {
             const stats = gender === 'Total' ? analysisData.passStats.Total : (gender === 'Male' ? analysisData.passStats.Male : analysisData.passStats.Female);
             row.push(stats.count);
             row.push(`${stats.percentage.toFixed(1)}%`);
-            
+
             row.push(gender === 'Total' ? totalStudents : genTotal);
             pdfDataAgg.push(row);
         });
 
         const title = `Subject Analysis Report - ${activeClass?.name || 'Entire School'}`;
         const filename = `Subject_Analysis_${activeClass?.name || 'School'}_${new Date().toISOString().split('T')[0]}`;
-        
+
         // We bypass the generic exportToPDF and use jspdf directly for multi-table layout
         import('jspdf').then(({ default: jsPDF }) => {
             import('jspdf-autotable').then(({ default: autoTable }) => {
                 const doc = new jsPDF('l', 'mm', 'a4'); // Landscape for more columns
-                
+
                 doc.setFontSize(20);
                 doc.text(title, 14, 20);
                 doc.setFontSize(10);
@@ -217,7 +287,7 @@ const SubjectAnalysis: React.FC = () => {
 
                 doc.setFontSize(14);
                 doc.text("Section 1: Subject-wise Grade Analysis", 14, 50);
-                
+
                 autoTable(doc, {
                     head: [headersSubject],
                     body: pdfDataSubject,
@@ -268,7 +338,7 @@ const SubjectAnalysis: React.FC = () => {
                         <h1 className="text-3xl font-bold text-gray-800">Subject Analysis</h1>
                         <p className="text-gray-600">Detailed breakdown of performance for {selectedClassId === 'all' ? 'the entire school' : (activeClass?.name || 'selected class')}.</p>
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
                         <button
                             onClick={handleExportExcel}
@@ -292,7 +362,7 @@ const SubjectAnalysis: React.FC = () => {
                         </button>
                     </div>
                 </div>
-                
+
                 <div className="flex flex-wrap items-center gap-6 pb-2">
                     <div className="flex items-center gap-2">
                         <span className="text-xs font-bold text-gray-400 uppercase tracking-widest px-1">Scope:</span>
