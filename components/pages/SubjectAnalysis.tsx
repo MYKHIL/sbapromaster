@@ -3,6 +3,7 @@ import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
 import { sortClassesByName } from '../../utils/classSort';
 import { exportToExcel, exportToPDF, exportSubjectAnalysisExcel } from '../../utils/exportUtils';
+import useLocalStorage from '../../hooks/useLocalStorage';
 
 const SubjectAnalysis: React.FC = () => {
     const data = useData();
@@ -11,6 +12,9 @@ const SubjectAnalysis: React.FC = () => {
 
     const [selectedClassId, setSelectedClassId] = useState<number | 'all' | ''>('');
     const [passMark, setPassMark] = useState<number>(36);
+    const [freezeHeader, setFreezeHeader] = useLocalStorage<boolean>('subject-analysis-freeze-header', true);
+    const [freezeSubjects, setFreezeSubjects] = useLocalStorage<boolean>('subject-analysis-freeze-subjects', true);
+    const [freezeGender, setFreezeGender] = useLocalStorage<boolean>('subject-analysis-freeze-gender', true);
 
     // Initialize default class
     React.useEffect(() => {
@@ -420,21 +424,56 @@ const SubjectAnalysis: React.FC = () => {
                 <div className="space-y-12">
                     {/* Subject-wise Grade Analysis Table */}
                     <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
-                        <div className="p-4 bg-gray-50 border-b border-gray-100">
+                        <div className="p-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center flex-wrap gap-4">
                             <h2 className="text-lg font-bold text-gray-800 uppercase tracking-wider">Subject-wise Grade Analysis</h2>
+                            <div className="flex items-center gap-4">
+                                <label className="flex items-center gap-2 text-sm font-medium text-gray-600 cursor-pointer select-none">
+                                    <input
+                                        type="checkbox"
+                                        checked={freezeHeader}
+                                        onChange={(e) => setFreezeHeader(e.target.checked)}
+                                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
+                                    />
+                                    Freeze Header
+                                </label>
+                                <label className="flex items-center gap-2 text-sm font-medium text-gray-600 cursor-pointer select-none">
+                                    <input
+                                        type="checkbox"
+                                        checked={freezeSubjects}
+                                        onChange={(e) => {
+                                            const checked = e.target.checked;
+                                            setFreezeSubjects(checked);
+                                            if (!checked) setFreezeGender(false);
+                                        }}
+                                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
+                                    />
+                                    Freeze Subjects
+                                </label>
+                                {freezeSubjects && (
+                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-600 cursor-pointer select-none">
+                                        <input
+                                            type="checkbox"
+                                            checked={freezeGender}
+                                            onChange={(e) => setFreezeGender(e.target.checked)}
+                                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
+                                        />
+                                        Freeze Gender
+                                    </label>
+                                )}
+                            </div>
                         </div>
                         <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
                             <table className="w-full text-left border-collapse">
-                                <thead className="sticky top-0 z-20 shadow-sm">
+                                <thead className={freezeHeader ? "sticky top-0 z-20 shadow-sm" : ""}>
                                     <tr className="bg-gray-100 border-b">
-                                        <th className="p-3 font-semibold text-gray-600 border-r text-xs sticky top-0 bg-gray-100 z-30">SUBJECT</th>
-                                        <th className="p-3 font-semibold text-gray-600 border-r text-xs sticky top-0 bg-gray-100 z-30">GENDER</th>
+                                        <th className={`p-3 font-semibold text-gray-600 border-r text-xs bg-gray-100 w-40 min-w-40 ${freezeHeader ? 'sticky top-0' : ''} ${freezeSubjects ? 'sticky left-0' : ''} ${(freezeHeader || freezeSubjects) ? 'z-30' : ''} ${(freezeHeader && freezeSubjects) ? 'z-40' : ''}`}>SUBJECT</th>
+                                        <th className={`p-3 font-semibold text-gray-600 border-r text-xs bg-gray-100 ${freezeHeader ? 'sticky top-0' : ''} ${freezeGender ? 'sticky left-40' : ''} ${(freezeHeader || freezeGender) ? 'z-30' : ''} ${(freezeHeader && freezeGender) ? 'z-40' : ''}`}>GENDER</th>
                                         {analysisData.gradeNames.map(grade => (
-                                            <th key={grade} className="p-3 text-center font-semibold text-gray-600 text-xs sticky top-0 bg-gray-100">
+                                            <th key={grade} className={`p-3 text-center font-semibold text-gray-600 text-xs bg-gray-100 ${freezeHeader ? 'sticky top-0 z-20' : ''}`}>
                                                 Grade {grade}
                                             </th>
                                         ))}
-                                        <th className="p-3 text-center font-semibold text-gray-600 bg-blue-50 text-xs border-l sticky top-0">TOTAL</th>
+                                        <th className={`p-3 text-center font-semibold text-gray-600 bg-blue-50 text-xs border-l ${freezeHeader ? 'sticky top-0 z-20' : ''}`}>TOTAL</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -445,11 +484,11 @@ const SubjectAnalysis: React.FC = () => {
                                                 {genders.map((gender, gIdx) => (
                                                     <tr key={`${subject}-${gender}`} className={`border-b hover:bg-gray-50 transition-colors ${gender === 'Total' ? 'bg-gray-100/50 font-bold' : ''}`}>
                                                         {gIdx === 0 && (
-                                                            <td rowSpan={3} className="p-3 font-bold text-gray-800 border-r text-sm align-middle bg-white">
+                                                            <td rowSpan={3} className={`p-3 font-bold text-gray-800 border-r text-sm align-middle w-40 min-w-40 bg-white ${freezeSubjects ? 'sticky left-0 z-10' : ''}`}>
                                                                 {subject}
                                                             </td>
                                                         )}
-                                                        <td className={`p-3 text-[10px] font-bold uppercase tracking-tight border-r ${gender === 'Male' ? 'text-blue-600' : gender === 'Female' ? 'text-rose-600' : 'text-gray-700'}`}>
+                                                        <td className={`p-3 text-[10px] font-bold uppercase tracking-tight border-r ${gender === 'Male' ? 'text-blue-600' : gender === 'Female' ? 'text-rose-600' : 'text-gray-700'} ${freezeGender ? (gIdx === 0 ? 'sticky left-40 z-10 bg-white' : gIdx === 2 ? 'sticky left-40 bg-gray-100/50 z-10' : 'sticky left-40 bg-white z-10') : (gIdx === 2 ? 'bg-gray-100/50' : 'bg-white')}`}>
                                                             {gender}
                                                         </td>
                                                         {analysisData.gradeNames.map(grade => {
@@ -481,23 +520,23 @@ const SubjectAnalysis: React.FC = () => {
                         </div>
                         <div className="overflow-x-auto overflow-y-auto max-h-[400px]">
                             <table className="w-full text-left border-collapse">
-                                <thead className="sticky top-0 z-20 shadow-sm">
+                                <thead className={freezeHeader ? "sticky top-0 z-20 shadow-sm" : ""}>
                                     <tr className="bg-gray-100 border-b">
-                                        <th className="p-4 font-semibold text-gray-600 border-r w-32 sticky left-0 top-0 bg-gray-100 text-xs z-30">GENDER</th>
+                                        <th className={`p-4 font-semibold text-gray-600 border-r w-32 text-xs bg-gray-100 ${freezeHeader ? 'sticky top-0' : ''} ${freezeSubjects ? 'sticky left-0' : ''} ${(freezeHeader || freezeSubjects) ? 'z-30' : ''} ${(freezeHeader && freezeSubjects) ? 'z-40' : ''}`}>GENDER</th>
                                         {analysisData.sortedAggregates.map(agg => (
-                                            <th key={agg} className="p-4 text-center font-semibold text-gray-600 whitespace-nowrap min-w-16 text-xs sticky top-0 bg-gray-100">
+                                            <th key={agg} className={`p-4 text-center font-semibold text-gray-600 whitespace-nowrap min-w-16 text-xs bg-gray-100 ${freezeHeader ? 'sticky top-0 z-20' : ''}`}>
                                                 Agg {agg}
                                             </th>
                                         ))}
-                                        <th className="p-4 text-center font-semibold text-emerald-600 bg-emerald-50 whitespace-nowrap border-l text-xs sticky top-0">PASSED</th>
-                                        <th className="p-4 text-center font-semibold text-emerald-600 bg-emerald-50 whitespace-nowrap border-l text-xs sticky top-0">PASS %</th>
-                                        <th className="p-4 text-center font-semibold text-gray-600 bg-blue-50 whitespace-nowrap border-l text-xs sticky top-0">TOTAL</th>
+                                        <th className={`p-4 text-center font-semibold text-emerald-600 bg-emerald-50 whitespace-nowrap border-l text-xs ${freezeHeader ? 'sticky top-0 z-20' : ''}`}>PASSED</th>
+                                        <th className={`p-4 text-center font-semibold text-emerald-600 bg-emerald-50 whitespace-nowrap border-l text-xs ${freezeHeader ? 'sticky top-0 z-20' : ''}`}>PASS %</th>
+                                        <th className={`p-4 text-center font-semibold text-gray-600 bg-blue-50 whitespace-nowrap border-l text-xs ${freezeHeader ? 'sticky top-0 z-20' : ''}`}>TOTAL</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {/* Male Row */}
                                     <tr className="border-b hover:bg-gray-50 transition-colors">
-                                        <td className="p-4 font-bold text-blue-600 border-r sticky left-0 bg-white text-sm">Male</td>
+                                        <td className={`p-4 font-bold text-blue-600 border-r text-sm bg-white ${freezeSubjects ? 'sticky left-0 z-10' : ''}`}>Male</td>
                                         {analysisData.sortedAggregates.map(agg => {
                                             const count = (analysisData.aggregateCountsByGender['Male'][agg] || 0) as number;
                                             return (
@@ -518,7 +557,7 @@ const SubjectAnalysis: React.FC = () => {
                                     </tr>
                                     {/* Female Row */}
                                     <tr className="border-b hover:bg-gray-50 transition-colors">
-                                        <td className="p-4 font-bold text-rose-600 border-r sticky left-0 bg-white text-sm">Female</td>
+                                        <td className={`p-4 font-bold text-rose-600 border-r text-sm bg-white ${freezeSubjects ? 'sticky left-0 z-10' : ''}`}>Female</td>
                                         {analysisData.sortedAggregates.map(agg => {
                                             const count = (analysisData.aggregateCountsByGender['Female'][agg] || 0) as number;
                                             return (
@@ -539,7 +578,7 @@ const SubjectAnalysis: React.FC = () => {
                                     </tr>
                                     {/* Total Row */}
                                     <tr className="bg-gray-200/50 font-bold border-t-2 border-gray-300">
-                                        <td className="p-4 text-gray-800 border-r sticky left-0 bg-gray-200/50 text-sm italic">TOTAL</td>
+                                        <td className={`p-4 text-gray-800 border-r text-sm italic bg-gray-200/50 ${freezeSubjects ? 'sticky left-0 z-10' : ''}`}>TOTAL</td>
                                         {analysisData.sortedAggregates.map(agg => {
                                             const maleCount = (analysisData.aggregateCountsByGender['Male'][agg] || 0) as number;
                                             const femaleCount = (analysisData.aggregateCountsByGender['Female'][agg] || 0) as number;
