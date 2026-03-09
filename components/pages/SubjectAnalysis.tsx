@@ -461,7 +461,7 @@ const SubjectAnalysis: React.FC = () => {
                                                             );
                                                         })}
                                                         <td className={`p-3 text-center font-bold text-sm border-l ${gender === 'Total' ? 'bg-blue-100 text-blue-900' : 'bg-blue-50/20 text-blue-800'}`}>
-                                                            {Object.values(analysisData.subjectGradeCounts[subject][gender]).reduce((a, b) => a + b, 0)}
+                                                            {Object.values(analysisData.subjectGradeCounts[subject][gender]).reduce((a: number, b: number) => a + b, 0)}
                                                         </td>
                                                     </tr>
                                                 ))}
