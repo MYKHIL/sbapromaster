@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SUBSCRIPTION_TIERS, ADMIN_EMAIL } from '../constants';
-import { getSchoolList, SchoolListItem } from '../services/firebaseService';
+import { getExistingSubscription, loginOrRegisterSchool, AppDataType, getSchoolList, SchoolListItem } from '../services/firebaseService';
 import { initializePayment, loadPaystackScript, activateSubscription } from '../services/paystackService';
+import MessageBox from './MessageBox';
 
 interface SubscriptionRequestModalProps {
-    isOpen: boolean;
     onClose: () => void;
+    onSuccess?: (data: AppDataType, docId: string, password: string, subscription: any) => void;
     initialSchoolName?: string;
+    pendingRegistration?: { docId: string; password: string; registrationData: AppDataType; targetIndex: number } | null;
 }
 
-const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isOpen, onClose, initialSchoolName }) => {
+const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isOpen, onClose, onSuccess, initialSchoolName, pendingRegistration }) => {
     const [selectedTier, setSelectedTier] = useState(SUBSCRIPTION_TIERS[1].name);
     const [selectedSchool, setSelectedSchool] = useState<SchoolListItem | null>(null);
     const [searchTerm, setSearchTerm] = useState(initialSchoolName || '');
@@ -24,6 +26,41 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
     const [isProcessingPayment, setIsProcessingPayment] = useState(false);
     const [paymentError, setPaymentError] = useState<string | null>(null);
     const [paymentEmail, setPaymentEmail] = useState('');
+
+    // MessageBox State
+    const [messageBox, setMessageBox] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string | React.ReactNode;
+        confirmText?: string;
+        cancelText?: string;
+        onConfirm: () => void;
+        onCancel?: () => void;
+        variant?: 'info' | 'success' | 'warning' | 'danger';
+        hideCancel?: boolean;
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => { }
+    });
+
+    const showMsg = (config: Omit<typeof messageBox, 'isOpen'>) => {
+        return new Promise<boolean>((resolve) => {
+            setMessageBox({
+                ...config,
+                isOpen: true,
+                onConfirm: () => {
+                    setMessageBox(prev => ({ ...prev, isOpen: false }));
+                    resolve(true);
+                },
+                onCancel: () => {
+                    setMessageBox(prev => ({ ...prev, isOpen: false }));
+                    resolve(false);
+                }
+            });
+        });
+    };
 
     const loadSchools = async () => {
         setIsLoadingSchools(true);
@@ -54,12 +91,25 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
         }
     };
 
-    // 1. Fetch All Schools for Combobox
     useEffect(() => {
         if (!isOpen) return;
-        loadSchools();
+
+        if (pendingRegistration) {
+            // Pre-select the pending registration school
+            const virtualSchool: SchoolListItem = {
+                docId: pendingRegistration.docId,
+                displayName: pendingRegistration.registrationData.settings?.schoolName || pendingRegistration.docId,
+                _databaseIndex: pendingRegistration.targetIndex,
+                access: false
+            };
+            setSelectedSchool(virtualSchool);
+            setSearchTerm(virtualSchool.displayName);
+        } else {
+            loadSchools();
+        }
+
         loadPaystackScript(); // Preload script
-    }, [isOpen, initialSchoolName]);
+    }, [isOpen, initialSchoolName, pendingRegistration]);
 
     // 2. Filter Schools for Combobox
     useEffect(() => {
@@ -191,32 +241,81 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                     ]
                 },
                 callback: (response: any) => {
-                    // Wrap async logic in a sync function to satisfy Paystack library check
                     const handleSuccess = async () => {
-                        // 3. Verify & Activate
                         try {
-                            // Paystack Popup returns 'reference' in response object
-                            await activateSubscription(
+                            // Check for existing expiry to choose accumulation
+                            const existingExpiry = await getExistingSubscription(selectedSchool.docId, selectedSchool._databaseIndex || 1);
+                            let addTime = false;
+
+                            if (existingExpiry && existingExpiry > new Date()) {
+                                addTime = await showMsg({
+                                    title: "Active Subscription Found",
+                                    message: `This school has an active subscription until ${existingExpiry.toLocaleDateString()}. \n\nWould you like to ADD the new duration to the existing time?`,
+                                    confirmText: "Accumulate Time",
+                                    cancelText: "Start Fresh",
+                                    variant: "info"
+                                });
+                            }
+
+                            // 1. ACTIVATE SUBSCRIPTION (Atomic creation if pendingRegistration exists)
+                            const subResult = await activateSubscription(
                                 response.reference,
                                 {
                                     id: selectedSchool.docId,
                                     name: selectedSchool.displayName,
                                     dbIndex: selectedSchool._databaseIndex || 1
                                 },
-                                tier
+                                tier,
+                                addTime,
+                                pendingRegistration ? {
+                                    password: pendingRegistration.password,
+                                    initialData: pendingRegistration.registrationData
+                                } : undefined
                             );
-                            alert(`Success! Activation complete for ${selectedSchool.displayName}.`);
-                            onClose();
-                        } catch (err) {
+
+                            await showMsg({
+                                title: "Activation Successful",
+                                message: `Success! ${tier.name} activated for ${selectedSchool.displayName}.`,
+                                confirmText: "Excellent",
+                                hideCancel: true,
+                                variant: "success"
+                            });
+
+                            // If we registered a new school, we might need a reload for DB switch
+                            const { ACTIVE_DATABASE_INDEX } = await import('../constants');
+                            if (pendingRegistration && pendingRegistration.targetIndex !== ACTIVE_DATABASE_INDEX) {
+                                localStorage.setItem('active_database_index', pendingRegistration.targetIndex.toString());
+                                localStorage.setItem('sba_school_id', pendingRegistration.docId);
+                                localStorage.setItem('sba_school_password', pendingRegistration.password);
+                                window.location.reload();
+                                return;
+                            }
+
+                            if (pendingRegistration && onSuccess) {
+                                onSuccess(pendingRegistration.registrationData, pendingRegistration.docId, pendingRegistration.password, subResult);
+                            } else {
+                                onClose();
+                            }
+                        } catch (err: any) {
                             console.error(err);
-                            setPaymentError("Payment successful but activation failed. Please contact support.");
+                            const userFriendlyMsg = err.message?.includes('permission') || err.message?.includes('auth')
+                                ? "Activation failed due to a connection or authorization issue. Please try again or contact support."
+                                : (err.message || "Payment successful but activation failed. Please contact support.");
+
+                            await showMsg({
+                                title: "Activation Failed",
+                                message: userFriendlyMsg,
+                                confirmText: "Understood",
+                                hideCancel: true,
+                                variant: "danger"
+                            });
+                            setPaymentError(userFriendlyMsg);
                         }
                     };
                     handleSuccess();
                 },
                 onClose: () => {
                     setIsProcessingPayment(false);
-                    // alert('Transaction cancelled.');
                 }
             });
 
@@ -236,9 +335,12 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
             return;
         }
 
-        const confirmTrial = window.confirm(
-            `Activate 1-week FREE Trial for ${selectedSchool.displayName}?\n\nNote: Trials are one-time only and cannot be reactivated once used or expired.`
-        );
+        const confirmTrial = await showMsg({
+            title: "Activate Trial?",
+            message: `Activate 1-week FREE Trial for ${selectedSchool.displayName}?\n\nNote: Trials are one-time only and cannot be reactivated once used or expired.`,
+            confirmText: "Activate Now",
+            variant: "warning"
+        });
 
         if (!confirmTrial) return;
 
@@ -253,6 +355,7 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                 duration: "1 Week"
             };
 
+            // 1. ACTIVATE SUBSCRIPTION (Atomic creation if pendingRegistration exists)
             await activateSubscription(
                 `FREE_${Date.now()}`,
                 {
@@ -260,17 +363,53 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                     name: selectedSchool.displayName,
                     dbIndex: selectedSchool._databaseIndex || 1
                 },
-                trialTier
+                trialTier,
+                false,
+                pendingRegistration ? {
+                    password: pendingRegistration.password,
+                    initialData: pendingRegistration.registrationData
+                } : undefined
             );
 
             // Re-fetch schools to show updated access
             await loadSchools();
-            onClose();
-            alert("Trial activated successfully! You now have full access for 7 days.");
+            await showMsg({
+                title: "Trial Activated",
+                message: "Your 7-day free trial is now active! You have full access to all features.",
+                confirmText: "Get Started",
+                hideCancel: true,
+                variant: "success"
+            });
+
+            // If we registered a new school, we might need a reload for DB switch
+            const { ACTIVE_DATABASE_INDEX } = await import('../constants');
+            if (pendingRegistration && pendingRegistration.targetIndex !== ACTIVE_DATABASE_INDEX) {
+                localStorage.setItem('active_database_index', pendingRegistration.targetIndex.toString());
+                localStorage.setItem('sba_school_id', pendingRegistration.docId);
+                localStorage.setItem('sba_school_password', pendingRegistration.password);
+                window.location.reload();
+                return;
+            }
+
+            if (pendingRegistration && onSuccess) {
+                onSuccess(pendingRegistration.registrationData, pendingRegistration.docId, pendingRegistration.password, null); // For trial, subscription will be fetched on login
+            } else {
+                onClose();
+            }
         } catch (error: any) {
             console.error("Trial activation failed:", error);
-            const errMsg = error.response?.data?.message || error.message || "Failed to activate trial. Please contact support.";
-            setPaymentError(errMsg);
+            const userFriendlyMsg = error.message?.includes('permission') || error.message?.includes('auth')
+                ? "Trial activation failed due to a connection issue. Please try again later."
+                : (error.message || "Failed to activate trial. Please contact support.");
+
+            await showMsg({
+                title: "Activation Failed",
+                message: userFriendlyMsg,
+                confirmText: "Understood",
+                hideCancel: true,
+                variant: "danger"
+            });
+            setPaymentError(userFriendlyMsg);
         } finally {
             setIsProcessingPayment(false);
         }
@@ -310,15 +449,21 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                                 }}
                                 onFocus={() => setShowSchoolDropdown(true)}
                                 placeholder="Search school to activate..."
-                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
+                                readOnly={!!pendingRegistration}
+                                className={`w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none ${pendingRegistration ? 'bg-indigo-50 border-indigo-200 cursor-default' : 'bg-gray-50'}`}
                             />
                             <div className="absolute right-3 top-3 flex items-center gap-2">
                                 {isLoadingSchools && (
                                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600"></div>
                                 )}
-                                <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 text-gray-400 transition-transform ${showSchoolDropdown ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
+                                {!pendingRegistration && (
+                                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 text-gray-400 transition-transform ${showSchoolDropdown ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                )}
+                                {pendingRegistration && (
+                                    <span className="bg-indigo-600 text-white text-[10px] font-bold px-2 py-1 rounded-full">NEW</span>
+                                )}
                             </div>
 
                             {showSchoolDropdown && (
@@ -441,6 +586,8 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                     </div>
                 </div>
             </div>
+            {/* MessageBox */}
+            <MessageBox {...messageBox} />
         </div>
     );
 };

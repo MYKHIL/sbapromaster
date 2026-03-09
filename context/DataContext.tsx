@@ -8,7 +8,7 @@ import { offlineQueue } from '../services/offlineQueue';
 import { useDatabaseError } from './DatabaseErrorContext';
 import { useFirebaseAnalytics } from './FirebaseAnalyticsContext';
 import { isQuotaExhaustedError } from '../utils/databaseErrorHandler';
-import type { Student, Subject, Class, Grade, Assessment, Score, SchoolSettings, ReportSpecificData, ClassSpecificData, User, UserLog, OnlineUser, Page } from '../types';
+import type { Student, Subject, Class, Grade, Assessment, Score, SchoolSettings, ReportSpecificData, ClassSpecificData, User, UserLog, OnlineUser, Page, AppDataType } from '../types';
 import {
     INITIAL_SETTINGS,
     INITIAL_STUDENTS,
@@ -221,7 +221,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Force hard reload on version mismatch to clear ghost listeners after update
     useEffect(() => {
-        const LATEST_VERSION = "1.0.81";
+        const LATEST_VERSION = "1.0.82";
         const currentVersion = localStorage.getItem("app_version");
 
         if (currentVersion !== LATEST_VERSION) {
@@ -397,12 +397,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 if (!isDataEqual(imported, current)) {
                     // Check if the local discrepancy is "meaningful" (i.e. not just default initial state)
                     if (isMeaningfulDiscrepancy(field, current)) {
-                        console.log(`[DataContext] 🛡️ Preservation: Meaningful discrepancy in ${field} on initial load. Keeping local version.`);
+                        console.log(`[DataContext] 🛡️ Preservation: Meaningful discrepancy in ${String(field)} on initial load. Keeping local version.`);
                         markDirty(field, true);
                         // nextState[field] remains as current
                         return; // Keep local state
                     } else {
-                        console.log(`[DataContext] 🔄 Initial Load: Local ${field} is just default state. Adopting cloud version.`);
+                        console.log(`[DataContext] 🔄 Initial Load: Local ${String(field)} is just default state. Adopting cloud version.`);
                         // Continue to setter(imported) below...
                     }
                 }
@@ -410,7 +410,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             // Regular update or remote sync
             if (!isDataEqual(imported, current)) {
-                console.log(`[DataContext] ✅ Updating ${field}`);
+                console.log(`[DataContext] ✅ Updating ${String(field)}`);
                 setter(imported);
                 (nextState as any)[field] = imported; // Track next state for recheck
 
@@ -1113,7 +1113,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     // This prevents loadStudents/loadMetadata from thinking the local data is stale 
                     // and triggering a redundant fetch immediately after save.
                     if (lastLoadedTimestamps.current[key]) {
-                        lastLoadedTimestamps.current[`_loaded_${key}`] = lastLoadedTimestamps.current[key];
+                        lastLoadedTimestamps.current[`_loaded_${String(key)}`] = lastLoadedTimestamps.current[key];
                     }
                 }
             });
@@ -1693,7 +1693,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setIsSyncing(false);
             isSyncingRef.current = false;
         } catch (error) {
-            console.error(`[savePageData] ❌ Failed to save ${field}:`, error);
+            console.error(`[savePageData] ❌ Failed to save ${String(field)}:`, error);
             showDatabaseError(error, 'write');
             setIsSyncing(false);
             isSyncingRef.current = false;
@@ -2009,7 +2009,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const revertPendingChanges = (field: keyof AppDataType, id?: number | string) => {
-        console.log(`[DataContext] 🔄 Reverting pending change for ${field} (ID: ${id})`);
+        console.log(`[DataContext] 🔄 Reverting pending change for ${String(field)} (ID: ${id})`);
 
         const originalVal = originalData.current[field];
         // @ts-ignore
@@ -2157,7 +2157,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // 1. METADATA GUARD: Non-admins cannot modify global metadata
             const isMetadata = ['subjects', 'classes', 'assessments', 'grades'].includes(field);
             if (isMetadata && !isAdmin) {
-                console.warn(`[DataContext] 🛡️ Role-Based Guard: stripping unauthorized metadata change to '${field}' (Role: ${userRole})`);
+                console.warn(`[DataContext] 🛡️ Role-Based Guard: stripping unauthorized metadata change to '${String(field)}' (Role: ${userRole})`);
                 return;
             }
 
@@ -2185,17 +2185,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         });
 
                         if (deletedIds.length < originalDeletedIdsLength) {
-                            console.warn(`[DataContext] 🛡️ Role-Based Guard: Filtered out ${originalDeletedIdsLength - deletedIds.length} unauthorized deletions for ${field}`);
+                            console.warn(`[DataContext] 🛡️ Role-Based Guard: Filtered out ${originalDeletedIdsLength - deletedIds.length} unauthorized deletions for ${String(field)}`);
                         }
                     }
 
                     // 3. MASS-DELETION PROTECTION
                     const isMassDeletion = deletedIds.length > 5 && (deletedIds.length > originalVal.length * 0.2);
                     if (isMassDeletion && !isAdmin) {
-                        console.error(`[DataContext] 🚫 SAFETY BLOCK: Preventing suspicious mass deletion of ${deletedIds.length} ${field} by non-admin user.`);
+                        console.error(`[DataContext] 🚫 SAFETY BLOCK: Preventing suspicious mass deletion of ${deletedIds.length} ${String(field)} by non-admin user.`);
                         // Do not add to deletions map
                     } else if (deletedIds.length > 0) {
-                        console.log(`[DataContext] 🗑️ Detected Deletions for ${field}:`, deletedIds);
+                        console.log(`[DataContext] 🗑️ Detected Deletions for ${String(field)}:`, deletedIds);
                         deletions[field] = deletedIds;
                     }
                 }
@@ -2618,17 +2618,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             try {
                 console.log(`[DataContext] 📥 Loading Metadata (Classes, Subjects, Assessments)...`);
 
-                // Use composite bundle strategy: 1 read for all metadata vs 3 separate reads
-                const { classes: fetchedClasses, subjects: fetchedSubjects, assessments: fetchedAssessments } = await fetchMetadataBundle(schoolId);
+                // Use composite bundle strategy: 1 read for all metadata vs 3 separate reads (now 4: includes grades)
+                const { classes: fetchedClasses, subjects: fetchedSubjects, assessments: fetchedAssessments, grades: fetchedGrades } = await fetchMetadataBundle(schoolId);
 
                 setClasses(fetchedClasses);
                 setSubjects(fetchedSubjects);
                 setAssessments(fetchedAssessments);
+                if (fetchedGrades) setGrades(fetchedGrades);
 
                 // Update originalData (Baseline)
                 originalData.current.classes = fetchedClasses;
                 originalData.current.subjects = fetchedSubjects;
                 originalData.current.assessments = fetchedAssessments;
+                if (fetchedGrades) originalData.current.grades = fetchedGrades;
 
                 lastLoadedTimestamps.current['_loaded_classes'] = cTS || 'loaded_once';
                 lastLoadedTimestamps.current['_loaded_subjects'] = sTS || 'loaded_once';
@@ -2637,7 +2639,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 // Recalculate dirty states
                 recheckAllDirtyStatus();
 
-                console.log(`[DataContext] ✅ Metadata Loaded: ${fetchedClasses.length} Classes, ${fetchedSubjects.length} Subjects, ${fetchedAssessments.length} Assessments`);
+                console.log(`[DataContext] ✅ Metadata Loaded: ${fetchedClasses.length} Classes, ${fetchedSubjects.length} Subjects, ${fetchedAssessments.length} Assessments, ${fetchedGrades?.length || 0} Grades`);
             } catch (e) {
                 console.error("Failed to load metadata", e);
                 showDatabaseError(e, 'read');

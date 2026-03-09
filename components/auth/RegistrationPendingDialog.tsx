@@ -32,22 +32,22 @@ const RegistrationPendingDialog: React.FC<RegistrationPendingDialogProps> = ({ s
 
                 {/* Title */}
                 <h2 className="text-2xl font-bold text-center text-gray-800 mb-4">
-                    Registration Successful!
+                    Registration Pre-confirmed!
                 </h2>
 
                 {/* School Name */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                    <p className="text-sm text-gray-600 mb-1">School Registered:</p>
+                    <p className="text-sm text-gray-600 mb-1">School Profile Captured:</p>
                     <p className="font-semibold text-gray-800">{schoolName}</p>
                 </div>
 
                 {/* Message */}
                 <div className="mb-6 space-y-3">
                     <p className="text-gray-700 text-center">
-                        Your school has been successfully registered!
+                        Great! We've captured your school details and verified the name is available.
                     </p>
-                    <p className="text-gray-600 text-sm text-center">
-                        To activate your account, please contact the administrator on WhatsApp or use the form below to provide payment details.
+                    <p className="text-gray-600 text-sm text-center font-medium">
+                        To finalise your registration and gain access to your portal, please select a subscription tier below.
                     </p>
                 </div>
 

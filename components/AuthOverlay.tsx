@@ -40,6 +40,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
     const [sessionInfo, setSessionInfo] = useState<{ schoolName: string; userName: string; academicYear?: string; academicTerm?: string } | null>(null);
     const [showRegistrationPending, setShowRegistrationPending] = useState<boolean>(false);
     const [pendingSchoolName, setPendingSchoolName] = useState<string>('');
+    const [pendingRegistration, setPendingRegistration] = useState<{ docId: string; password: string; registrationData: AppDataType; targetIndex: number } | null>(null);
     const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
 
     // Loading state
@@ -378,13 +379,29 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
 
             console.log(`[AuthOverlay] Targeted Database Index: ${targetIndex} for ${docId}`);
 
-            // Update Access to false for new registrations (unless it's a bot school in dev)
+            // Pre-calculate full registration data
             const registrationData: AppDataType = {
                 ...initialData,
                 Access: isBotSchool, // FALSE for real users, TRUE for Bot
             };
 
-            // Register school: loginOrRegisterSchool(docId, password, initialData, createIfMissing, targetDbIndex)
+            // -------------------------------------------------------------
+            // OPTIMIZATION: Defer Registration until Subscription Successful
+            // -------------------------------------------------------------
+            if (!isBotSchool) {
+                console.log('[AuthOverlay] Deferring registration until subscription is successfull');
+                setPendingRegistration({
+                    docId,
+                    password,
+                    registrationData,
+                    targetIndex
+                });
+                setPendingSchoolName(schoolName);
+                setShowRegistrationPending(true);
+                return;
+            }
+
+            // BOT/DEBUG MODE: Register immediately as before
             const result = await loginOrRegisterSchool(docId, password, registrationData, true, targetIndex);
 
             // -------------------------------------------------------------
@@ -407,58 +424,25 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 }
             }
 
-            // -------------------------------------------------------------
-            // HANDLE DATABASE SWITCH IF NEEDED
-            // -------------------------------------------------------------
+            // HANDLE DATABASE SWITCH IF NEEDED (Bots)
             if (result.status === 'success' && targetIndex !== ACTIVE_DATABASE_INDEX) {
-                // STRICT DUPLICATE CHECK: If it returns success (and wasn't pending), it implies we logged into an EXISTING account
-                // BUT wait, if we just created it with Access=true (Bot Mode), it returns success.
-                // If it was real user (Access=false), it returns 'created_pending_access'.
-                // If we logged into an EXISTING account (which shouldn't happen due to check above, but might via race condition), it returns success.
-
-                // If it's a BOT school, we allow the switch. 
-                // If it's a REAL school, result.status should be 'created_pending_access'.
-                // So if we get 'success' here for a REAL school, it means it already existed (Duplicate!).
-                if (!isBotSchool) {
-                    console.warn(`[AuthOverlay] Unexpected 'success' status for new registration on DB ${targetIndex}. Likely duplicate.`);
-                    alert(`This school is already registered on Database ${targetIndex}.\n\nPlease select it from the School List.`);
-                    return;
-                }
-
                 console.warn(`[AuthOverlay] Registration successful on DB ${targetIndex}. Switching context...`);
-
-                // Save context and credentials
                 localStorage.setItem('active_database_index', targetIndex.toString());
                 localStorage.setItem('sba_school_id', result.docId || docId);
                 localStorage.setItem('sba_school_password', password);
-
-                // Force reload to switch database
                 window.location.reload();
                 return;
             }
 
-            // SUCCESS HANDLER (Unlikely for Real Users now, only Bots)
+            // SUCCESS HANDLER (Bots)
             if (result.status === 'success' && result.data) {
-                // STRICT DUPLICATE CHECK
-                if (!isBotSchool) {
-                    console.warn(`[AuthOverlay] Unexpected 'success' status for new registration. Likely duplicate.`);
-                    alert(`This school is already registered.\n\nPlease select it from the School List.`);
-                    return;
-                }
-
                 console.log('[AuthOverlay] ✅ School registered successfully (Bot Mode)');
-
-                // Load data and proceed to admin setup
                 loadImportedData(result.data, true, (result as any).subscription);
                 setSchoolData(result.data);
                 setCurrentSchoolId(result.docId || docId);
                 setSchoolId(result.docId || docId);
-
-                // Save credentials
                 localStorage.setItem('sba_school_id', result.docId || docId);
                 localStorage.setItem('sba_school_password', password);
-
-                // Clear auth caches
                 clearAuthCaches();
 
                 // -------------------------------------------------------------
@@ -469,74 +453,27 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                     try {
                         console.log('[AuthOverlay] 🤖 Debug Mode: Auto-logging in as admin...');
                         setUsers(usersArray);
-
-                        // Auto-login as the pre-created admin
                         const loginSuccess = await login(1, 'password', usersArray[0]);
-
-                        if (!loginSuccess) {
-                            throw new Error('Login returned false');
-                        }
-
+                        if (!loginSuccess) throw new Error('Login returned false');
                         setUserPassword('password');
-
-                        // Save user credentials (ignore quota errors - not critical for debug)
-                        try {
-                            localStorage.setItem('sba_user_id', '1');
-                            localStorage.setItem('sba_user_password', 'password');
-                        } catch (storageError) {
-                            console.warn('[AuthOverlay] ⚠️ Could not save credentials to localStorage (quota exceeded)');
-                        }
-
-                        // Complete authentication
+                        localStorage.setItem('sba_user_id', '1');
+                        localStorage.setItem('sba_user_password', 'password');
                         setCurrentStep('authenticated');
                         resumeSync();
-
-                        console.log('[AuthOverlay] ✅ Debug auto-login complete');
                     } catch (loginError) {
                         console.error('[AuthOverlay] ❌ Debug auto-login failed:', loginError);
-                        // Fallback: go to user selection screen
                         setUsers(usersArray);
                         setCurrentStep('user-selection');
                     }
                 } else {
-                    // Normal flow: check if admin setup is needed
                     const hasUsers = result.data.users && result.data.users.length > 0;
                     if (!hasUsers) {
-                        console.log('[AuthOverlay] No users found - proceeding to admin setup');
                         setCurrentStep('admin-setup');
                     } else {
-                        console.log('[AuthOverlay] Users found - proceeding to user selection');
                         setUsers(result.data.users);
                         setCurrentStep('user-selection');
                     }
                 }
-
-            } else if (result.status === 'created_pending_access') {
-                console.log('[AuthOverlay] ✅ School created, pending activation');
-
-                // DEBUG OVERRIDE: If debug mode, we can force access? 
-                // Actually if we passed Access:true in initialData (which we do if we modify initialData above?), 
-                // checking result.status...
-                // But handleRegistration sets Access:true in initialData locally:
-                // Access: true (line 224). 
-                // So likely it won't be 'created_pending_access' unless server overrides.
-                // But if it DOES return pending (e.g. security rules), we handle it.
-
-                // @ts-ignore - DEV and VITE_USE_EMULATOR exist in Vite env
-                if (((import.meta as any).env.DEV || (import.meta as any).env.VITE_USE_EMULATOR === 'true') && schoolName === 'Dummy School') {
-                    // Force Admin Setup anyway? No, if pending, we can't login usually.
-                    // But for emulator, we might want to allow it.
-                    console.log('[AuthOverlay] 🤖 Debug Mode: Ignoring pending status for Dummy School');
-                    // We would need to set Access=true in DB if server denied it?
-                    // Assuming initialData.Access = true works in Emulator.
-                }
-
-                // Show registration pending dialog
-                setPendingSchoolName(schoolName);
-                setShowRegistrationPending(true);
-
-                // Clear auth caches
-                clearAuthCaches();
             } else {
                 console.error('[AuthOverlay] ❌ Registration failed:', result.message || result.status);
                 alert(result.message || `Registration failed: ${result.status}`);
@@ -545,6 +482,32 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             console.error('[AuthOverlay] Registration error:', error);
             alert('Failed to register school. Please try again.');
         }
+    };
+
+    const handleRegistrationComplete = (data: AppDataType, docId: string, _password: string, _subscription: any) => {
+        console.log('[AuthOverlay] ✅ Deferred registration successful:', docId);
+
+        // 1. Clear modal and registration states
+        setShowRegistrationPending(false);
+        setIsSubscriptionModalOpen(false);
+        setPendingRegistration(null);
+
+        // 2. Track as last accessed so it appears at the top of the school list
+        const schoolMetadata = {
+            docId,
+            displayName: data.settings?.schoolName || docId,
+            _databaseIndex: pendingRegistration?.targetIndex || 1
+        };
+        localStorage.setItem('sba_last_accessed_school', JSON.stringify(schoolMetadata));
+        localStorage.setItem('sba_last_accessed_school_id', docId); // Backward compatibility if needed
+
+        // 3. Purge auth cache to ensure the new school shows up in search/listing
+        clearAuthCaches();
+
+        // 4. Return to school selection (Login) instead of auto-logging in
+        setSelectedSchool(null);
+        setSelectedPeriod(null);
+        setCurrentStep('school-list');
     };
 
     const handleBackToWelcome = () => {
@@ -794,8 +757,13 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 />
                 <SubscriptionRequestModal
                     isOpen={isSubscriptionModalOpen}
-                    onClose={() => setIsSubscriptionModalOpen(false)}
+                    onClose={() => {
+                        setIsSubscriptionModalOpen(false);
+                        setPendingRegistration(null);
+                    }}
+                    onSuccess={handleRegistrationComplete}
                     initialSchoolName={pendingSchoolName}
+                    pendingRegistration={pendingRegistration}
                 />
             </>
         );
@@ -830,6 +798,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                     <SubscriptionRequestModal
                         isOpen={isSubscriptionModalOpen}
                         onClose={() => setIsSubscriptionModalOpen(false)}
+                        onSuccess={handleRegistrationComplete}
                     />
                 </>
             );

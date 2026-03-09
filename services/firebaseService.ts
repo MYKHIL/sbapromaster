@@ -27,7 +27,8 @@ import {
     initializeFirestore,
     persistentLocalCache,
     persistentMultipleTabManager,
-    Timestamp
+    Timestamp,
+    Firestore
 } from "firebase/firestore";
 import type { SchoolSettings, Student, Subject, Class, Grade, Assessment, Score, ReportSpecificData, ClassSpecificData, User, DeviceCredential, UserLog, OnlineUser, AppDataType } from '../types';
 
@@ -735,74 +736,99 @@ export const getSchoolList = async (prefix?: string, includeLocked: boolean = fa
 };
 
 /**
+ * Checks for an existing active subscription for a school
+ */
+export const getExistingSubscription = async (schoolId: string, dbIndex: number): Promise<Date | null> => {
+    try {
+        const baseName = schoolId.split('_')[0];
+        const { ACTIVE_DATABASE_INDEX } = await import('../constants');
+        let targetDb = db;
+        let tempApp: any = null;
+
+        if (dbIndex !== ACTIVE_DATABASE_INDEX) {
+            const config = FIREBASE_CONFIGS[dbIndex];
+            if (!config) throw new Error(`Invalid database index: ${dbIndex}`);
+            const appName = `temp_check_${dbIndex}_${Date.now()}`;
+            tempApp = initializeApp(config, appName);
+            targetDb = getFirestore(tempApp);
+        }
+
+        const subDoc = await getDoc(doc(targetDb, 'subscriptions', baseName));
+        const result = subDoc.exists() && subDoc.data()?.expiryDate ? subDoc.data()?.expiryDate.toDate() : null;
+
+        if (tempApp) deleteApp(tempApp).catch(() => { });
+        return result;
+    } catch (e) {
+        console.error("[Firebase] Failed to check existing subscription:", e);
+        return null;
+    }
+};
+
+/**
  * Client-Side Subscription Activation
  * Performs writes directly to the target database without a service account.
  */
 export const activateSchoolSubscriptionLocally = async (
     reference: string,
     schoolDetails: { id: string, name: string, dbIndex: number },
-    tier: any
+    tier: any,
+    addRemainingTime: boolean = false,
+    registrationData?: { password: string; initialData: AppDataType }
 ): Promise<any> => {
     const { id: schoolId, dbIndex } = schoolDetails;
     const baseName = schoolId.split('_')[0];
-
-    // Determine target DB
-    let targetDb = db;
     let tempApp: any = null;
-    let targetProjectId = (db as any).app?.options?.projectId || 'primary';
-    let targetIndexToLog = -1; // -1 represents the currently active db from context
 
     try {
         const { ACTIVE_DATABASE_INDEX, ACTIVATION_HASH } = await import('../constants');
+
+        // Determine target DB
+        let targetDb = db;
+        let targetProjectId = (db as any).app?.options?.projectId || 'primary';
+
         if (dbIndex !== ACTIVE_DATABASE_INDEX) {
             const config = FIREBASE_CONFIGS[dbIndex];
             if (!config) throw new Error(`Invalid database index: ${dbIndex}`);
 
             const appName = `temp_activate_${dbIndex}_${Date.now()}`;
             tempApp = initializeApp(config, appName);
-            // MATCH PORTAL: Use long polling for more stable connections
             targetDb = initializeFirestore(tempApp, {
                 experimentalForceLongPolling: true
             });
             targetProjectId = config.projectId;
-            targetIndexToLog = dbIndex;
-            console.log(`[Activation] Initializing activation on Database ${dbIndex} (${targetProjectId}) [Portal Match mode].`);
-        } else {
-            targetIndexToLog = ACTIVE_DATABASE_INDEX;
-            console.log(`[Activation] Using Primary Database ${targetIndexToLog} (${targetProjectId}).`);
+            console.log(`[Activation] Targeting Database ${dbIndex} (${targetProjectId}).`);
         }
 
-        // 1. Trial Eligibility Check
+        // 1. Subscription Calculations
         const isTrial = reference.startsWith('FREE_');
         const collectionName = 'subscriptions';
         const subDocRef = doc(targetDb, collectionName, baseName);
-        console.log(`[Activation] Target Document: ${collectionName}/${baseName} on ${targetProjectId}`);
-
         const existingSub = await getDoc(subDocRef);
 
         if (isTrial && existingSub.exists()) {
             throw new Error('Trial Unavailable: A trial or subscription has already been activated for this school.');
         }
 
-        // 2. Calculate Expiry
         const now = new Date();
-        const expiryDate = new Date();
-        const durationStr = (tier.duration || '1 Year').toLowerCase();
-
-        if (durationStr.includes('week')) {
-            const weeks = parseInt(durationStr) || 1;
-            expiryDate.setDate(now.getDate() + (weeks * 7));
-        } else if (durationStr.includes('month')) {
-            const months = parseInt(durationStr) || 12;
-            expiryDate.setMonth(now.getMonth() + months);
-        } else if (durationStr.includes('year')) {
-            const years = parseInt(durationStr) || 1;
-            expiryDate.setFullYear(now.getFullYear() + years);
-        } else {
-            expiryDate.setFullYear(now.getFullYear() + 1);
+        let baseDate = new Date();
+        if (addRemainingTime && existingSub.exists()) {
+            const data = existingSub.data() as any;
+            if (data?.expiryDate) {
+                const existingExpiry = data.expiryDate.toDate();
+                if (existingExpiry > now) baseDate = new Date(existingExpiry.getTime());
+            }
         }
 
-        // 3. Prepare Subscription
+        const expiryDate = new Date(baseDate.getTime());
+        const durationStr = (tier.duration || '1 Year').toLowerCase();
+        if (durationStr.includes('week')) {
+            expiryDate.setDate(baseDate.getDate() + ((parseInt(durationStr) || 1) * 7));
+        } else if (durationStr.includes('month')) {
+            expiryDate.setMonth(baseDate.getMonth() + (parseInt(durationStr) || 12));
+        } else {
+            expiryDate.setFullYear(baseDate.getFullYear() + (parseInt(durationStr) || 1));
+        }
+
         const subscriptionData = {
             maxStudents: parseInt(tier.maxStudents),
             maxClass: parseInt(tier.maxClass),
@@ -813,66 +839,115 @@ export const activateSchoolSubscriptionLocally = async (
             paymentReference: reference
         };
 
-        // 4. Batch Updates
-        const batch = writeBatch(targetDb);
+        // 2. Step 1: Create Root School and Subscription (Must exist for subcollection writes)
+        const batch1 = writeBatch(targetDb);
 
-        // Write subscription (Creates the 'subscriptions' collection if it doesn't exist)
-        console.log(`[Activation] ✍️ Queueing write to '${collectionName}' collection...`);
-        batch.set(subDocRef, subscriptionData, { merge: true });
+        if (registrationData) {
+            console.log(`[Activation] ✍️ Step 1: Queueing root school creation for ${schoolId}...`);
+            const { initialData, password } = registrationData;
+            const mainDocRef = doc(targetDb, 'schools', schoolId);
 
-        // Update Access for all variants
-        console.log(`[Activation] Searching for variants of ${baseName}...`);
-        const schoolsRef = collection(targetDb, 'schools');
-        // Range query to catch all variants (e.g. scol, scol_2024, scol_2025)
-        const q = query(schoolsRef, where(documentId(), '>=', baseName), where(documentId(), '<=', baseName + '\uf8ff'));
-        const snapshot = await getDocs(q);
+            const {
+                subjects, assessments, classes, students, scores, ...mainData
+            } = initialData;
 
-        let variantsCount = 0;
-        snapshot.forEach(d => {
-            // Precise check: must match exactly or start with prefix + underscore
-            if (d.id === baseName || d.id.startsWith(baseName + '_')) {
-                // MATCH PORTAL: Use set with merge instead of update
-                // Include activationHash to satisfy security loop fix
-                batch.set(d.ref, {
-                    Access: true,
-                    activationHash: ACTIVATION_HASH
-                }, { merge: true });
-                variantsCount++;
-            }
-        });
-
-        if (variantsCount === 0) {
-            // Fallback: If no variants found (e.g. manual rename), update the specific schoolId provided
-            batch.set(doc(targetDb, 'schools', schoolId), {
+            batch1.set(mainDocRef, {
+                ...mainData,
+                password,
                 Access: true,
                 activationHash: ACTIVATION_HASH
             }, { merge: true });
+        }
+
+        // B. UPDATE ACCESS FOR ALL VARIANTS
+        const schoolsRefList = collection(targetDb, 'schools');
+        const qVariants = query(schoolsRefList, where(documentId(), '>=', baseName), where(documentId(), '<=', baseName + '\uf8ff'));
+        let variantsCount = 0;
+
+        try {
+            const variantSnapshot = await getDocs(qVariants);
+            variantSnapshot.forEach(d => {
+                if (d.id === baseName || d.id.startsWith(baseName + '_')) {
+                    batch1.set(d.ref, { Access: true, activationHash: ACTIVATION_HASH }, { merge: true });
+                    variantsCount++;
+                }
+            });
+        } catch (e) {
+            console.warn("[Activation] Variant search failed, falling back to direct update.");
+        }
+
+        if (variantsCount === 0) {
+            batch1.set(doc(targetDb, 'schools', schoolId), { Access: true, activationHash: ACTIVATION_HASH }, { merge: true });
             variantsCount = 1;
         }
 
-        await batch.commit();
-        console.log(`[Activation] Success! ${baseName} activated on DB ${isEmulator ? 2 : dbIndex}. Variants: ${variantsCount}`);
+        // C. WRITE SUBSCRIPTION RECORD (Crucial for B-G rules)
+        console.log(`[Activation] ✍️ Step 1: Queueing subscription record...`);
+        batch1.set(subDocRef, subscriptionData, { merge: true });
 
-        return {
-            success: true,
-            message: `Subscription successfully activated for ${baseName}.`,
-            expiryDate,
-            variantsActivated: variantsCount
-        };
+        // COMMIT STEP 1: Foundational documents
+        await batch1.commit();
+        console.log(`[Activation] ✅ Step 1 complete. Foundation created.`);
+
+        // 3. Step 2: Initialize Buckets (Crucially AFTER subscription exists in DB)
+        if (registrationData) {
+            const { initialData } = registrationData;
+            console.log(`[Activation] 📦 Step 2: Initializing buckets for ${schoolId}...`);
+            const batch2 = writeBatch(targetDb);
+
+            // Initialize Subcollections individual docs
+            ['subjects', 'assessments', 'classes', 'grades'].forEach(col => {
+                const data = (initialData as any)[col];
+                if (data && Array.isArray(data)) {
+                    data.forEach((item: any) => {
+                        if (item.id) {
+                            const ref = doc(targetDb, 'schools', schoolId, col, String(item.id));
+                            batch2.set(ref, item, { merge: true });
+                        }
+                    });
+                }
+            });
+
+            // Initialize Metadata Bundle ('Bucket' for fast loads)
+            const bundleRef = doc(targetDb, 'schools', schoolId, 'config', 'metadata_bundle');
+            batch2.set(bundleRef, {
+                subjects: initialData.subjects || [],
+                assessments: initialData.assessments || [],
+                classes: initialData.classes || [],
+                grades: initialData.grades || [],
+                lastUpdated: serverTimestamp()
+            }, { merge: true });
+
+            // Initialize Student Bucket Manifest
+            const studentManifestRef = doc(targetDb, "schools", schoolId, "config", "student_bucket_manifest");
+            batch2.set(studentManifestRef, {
+                totalChunks: 0,
+                totalStudents: 0,
+                lastUpdated: serverTimestamp(),
+                chunkSize: 10000
+            });
+
+            await batch2.commit();
+            console.log(`[Activation] ✅ Step 2: Buckets initialized.`);
+        }
+
+        // 4. POST-COMMIT: Chunked Student Bucketing (Final optimization)
+        if (registrationData?.initialData?.students && registrationData.initialData.students.length > 0) {
+            try {
+                await updateStudentBucket(schoolId, registrationData.initialData.students, 10000, targetDb);
+            } catch (e) {
+                console.error("[Activation] Initial student chunking failed.", e);
+            }
+        }
+
+        console.log(`[Activation] ✅ Success! Activated ${baseName} on ${targetProjectId}.`);
+        return { success: true, expiryDate, variantsActivated: variantsCount };
+
     } catch (error: any) {
-        console.error('[Activation Local Error] Details:', {
-            message: error.message,
-            code: error.code,
-            baseName,
-            dbIndex,
-            error
-        });
+        console.error('[Activation Local Error]:', error);
         throw error;
     } finally {
-        if (tempApp) {
-            // Short delay to ensure batch commit propagates before deleting app
-            setTimeout(() => deleteApp(tempApp).catch(() => { }), 2000);
-        }
+        if (tempApp) setTimeout(() => deleteApp(tempApp).catch(() => { }), 2000);
     }
 };
 
@@ -1048,9 +1123,9 @@ export const verifySchoolPassword = async (docId: string, password: string): Pro
 /**
  * Generic Fetch for simple subcollections (Classes, Subjects, Assessments)
  */
-export const fetchSubcollection = async <T>(docId: string, resourceName: string): Promise<T[]> => {
+export const fetchSubcollection = async <T>(docId: string, resourceName: string, dbInstance: any = db): Promise<T[]> => {
     try {
-        const colRef = collection(db, "schools", docId, resourceName);
+        const colRef = collection(dbInstance, "schools", docId, resourceName);
         trackFirebaseRead('fetchSubcollection', resourceName, 0, `Fetching all ${resourceName}`);
         const snapshot = await loggedGetDocs(colRef, `fetchSubcollection/${docId}/${resourceName}`);
         trackFirebaseRead('fetchSubcollection', resourceName, snapshot.size, `Fetched all ${resourceName}`);
@@ -1083,7 +1158,8 @@ export const fetchMetadataBundle = async (schoolId: string) => {
             return {
                 classes: (bundleData.classes || []) as Class[],
                 subjects: (bundleData.subjects || []) as Subject[],
-                assessments: (bundleData.assessments || []) as Assessment[]
+                assessments: (bundleData.assessments || []) as Assessment[],
+                grades: (bundleData.grades || []) as Grade[]
             };
         }
 
@@ -1093,20 +1169,22 @@ export const fetchMetadataBundle = async (schoolId: string) => {
         trackFirebaseRead('fetchMetadataBundle_fallback', 'subjects', 0, 'Bundle missing - fetching subjects');
         trackFirebaseRead('fetchMetadataBundle_fallback', 'assessments', 0, 'Bundle missing - fetching assessments');
 
-        const [classes, subjects, assessments] = await Promise.all([
+        const [classes, subjects, assessments, grades] = await Promise.all([
             fetchSubcollection<Class>(schoolId, "classes"),
             fetchSubcollection<Subject>(schoolId, "subjects"),
-            fetchSubcollection<Assessment>(schoolId, "assessments")
+            fetchSubcollection<Assessment>(schoolId, "assessments"),
+            fetchSubcollection<Grade>(schoolId, "grades")
         ]);
 
         trackFirebaseRead('fetchMetadataBundle_fallback', 'classes', classes.length, `Fallback fetched ${classes.length} classes`);
         trackFirebaseRead('fetchMetadataBundle_fallback', 'subjects', subjects.length, `Fallback fetched ${subjects.length} subjects`);
         trackFirebaseRead('fetchMetadataBundle_fallback', 'assessments', assessments.length, `Fallback fetched ${assessments.length} assessments`);
+        trackFirebaseRead('fetchMetadataBundle_fallback', 'grades', grades.length, `Fallback fetched ${grades.length} grades`);
 
-        return { classes, subjects, assessments };
+        return { classes, subjects, assessments, grades };
     } catch (error) {
         console.error("[Firebase] Error fetching metadata bundle:", error);
-        return { classes: [], subjects: [], assessments: [] };
+        return { classes: [], subjects: [], assessments: [], grades: [] };
     }
 };
 
@@ -1129,10 +1207,11 @@ export const updateMetadataBundle = async (schoolId: string, options?: { classes
         // We use fetchSubcollection for all fields to ensure we never have a partial set.
         // Even if options are provided, we only use them as a "hint" that a change happened,
         // but we rely on the DB to give us the full state for the bundle.
-        const [fullClasses, fullSubjects, fullAssessments] = await Promise.all([
+        const [fullClasses, fullSubjects, fullAssessments, fullGrades] = await Promise.all([
             fetchSubcollection<Class>(schoolId, 'classes'),
             fetchSubcollection<Subject>(schoolId, 'subjects'),
-            fetchSubcollection<Assessment>(schoolId, 'assessments')
+            fetchSubcollection<Assessment>(schoolId, 'assessments'),
+            fetchSubcollection<Grade>(schoolId, 'grades')
         ]);
 
         // SAFETY: If the new count is critically lower than the old count, 
@@ -1150,6 +1229,7 @@ export const updateMetadataBundle = async (schoolId: string, options?: { classes
             classes: fullClasses,
             subjects: fullSubjects,
             assessments: fullAssessments,
+            grades: fullGrades,
             lastUpdated: serverTimestamp()
         };
 
@@ -1171,9 +1251,9 @@ export const updateMetadataBundle = async (schoolId: string, options?: { classes
  * Splits students into multiple documents to avoid 1MB limit.
  * If a chunk is too large, it automatically splits smaller until Firestore accepts it.
  */
-export const updateStudentBucket = async (schoolId: string, students?: Student[], initialChunkSize: number = 10000) => {
+export const updateStudentBucket = async (schoolId: string, students?: Student[], initialChunkSize: number = 10000, dbInstance: any = db) => {
     try {
-        const studentsToStore = students || (await fetchSubcollection<Student>(schoolId, 'students'));
+        const studentsToStore = students || (await fetchSubcollection<Student>(schoolId, 'students', dbInstance));
 
         // Recursive helper function to write chunks with automatic backoff
         const writeChunksWithBackoff = async (
@@ -1185,10 +1265,10 @@ export const updateStudentBucket = async (schoolId: string, students?: Student[]
 
             console.log(`[Firebase] 🎓 Attempt ${attempt}: Bucketing ${studentsData.length} students into ${totalChunks} chunks (size: ${chunkSize})...`);
 
-            const batch = writeBatch(db);
+            const batch = writeBatch(dbInstance);
 
             // 1. Write Manifest
-            const manifestRef = doc(db, "schools", schoolId, "config", "student_bucket_manifest");
+            const manifestRef = doc(dbInstance, "schools", schoolId, "config", "student_bucket_manifest");
             batch.set(manifestRef, {
                 totalChunks,
                 totalStudents: studentsData.length,
@@ -1199,7 +1279,7 @@ export const updateStudentBucket = async (schoolId: string, students?: Student[]
             // 2. Write Chunks
             for (let i = 0; i < totalChunks; i++) {
                 const chunk = studentsData.slice(i * chunkSize, (i + 1) * chunkSize);
-                const chunkRef = doc(db, "schools", schoolId, "config", `student_bucket_${i}`);
+                const chunkRef = doc(dbInstance, "schools", schoolId, "config", `student_bucket_${i}`);
                 batch.set(chunkRef, { students: chunk });
             }
 
@@ -1595,7 +1675,7 @@ export const saveDataTransaction = async (
     try {
         const operations: ((batch: WriteBatch) => void)[] = [];
         const mainUpdates: any = {};
-        const MAIN_KEYS = ['settings', 'userLogs', 'activeSessions', 'access', 'password', 'users'];
+        const MAIN_KEYS = ['settings', 'userLogs', 'activeSessions', 'access', 'password', 'users', 'reportData', 'classData'];
 
         // --- HANDLE SCORES (Subject Bucketing) ---
         if (updates.scores && Array.isArray(updates.scores)) {
@@ -1616,7 +1696,7 @@ export const saveDataTransaction = async (
         }
 
         // --- HANDLE SUBCOLLECTIONS (Fan-Out with Batch) ---
-        const SUBCOLLECTION_KEYS = ['students', 'classes', 'subjects', 'assessments'];
+        const SUBCOLLECTION_KEYS = ['students', 'classes', 'subjects', 'assessments', 'grades'];
         const hasStudentUpdates = updates.students && Array.isArray(updates.students) && updates.students.length > 0;
 
         for (const key of Object.keys(updates)) {
@@ -1639,7 +1719,7 @@ export const saveDataTransaction = async (
 
         // --- COMPOSITE STORAGE: Write Metadata Bundle (if metadata updated) ---
         // This implements "Write-Double" strategy: Update both individual collections AND the bundle
-        const METADATA_KEYS = ['classes', 'subjects', 'assessments'];
+        const METADATA_KEYS = ['classes', 'subjects', 'assessments', 'grades'];
         const hasMetadataUpdates = Object.keys(updates).some(key => METADATA_KEYS.includes(key));
 
         if (hasMetadataUpdates) {
@@ -1660,6 +1740,9 @@ export const saveDataTransaction = async (
             }
             if (updates.assessments) {
                 bundleData.assessments = updates.assessments;
+            }
+            if (updates.grades) {
+                bundleData.grades = updates.grades;
             }
 
             const bundleRef = doc(db, "schools", docId, "config", "metadata_bundle");
@@ -1720,7 +1803,8 @@ export const saveDataTransaction = async (
         const metadataNeedsRebuild = hasMetadataUpdates ||
             (deletions?.subjects && deletions.subjects.length > 0) ||
             (deletions?.classes && deletions.classes.length > 0) ||
-            (deletions?.assessments && deletions.assessments.length > 0);
+            (deletions?.assessments && deletions.assessments.length > 0) ||
+            (deletions?.grades && deletions.grades.length > 0);
 
         if (metadataNeedsRebuild) {
             console.log(`[Optimization] 📦 Metadata changes detected. Rebuilding bundle...`);

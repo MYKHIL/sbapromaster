@@ -17,7 +17,7 @@ import { DataProvider, useData } from './context/DataContext';
 import { UserProvider, useUser } from './context/UserContext';
 import { DatabaseErrorProvider, useDatabaseError } from './context/DatabaseErrorContext';
 import { FirebaseAnalyticsProvider } from './context/FirebaseAnalyticsContext';
-import type { Page } from './types';
+import type { Page, NavigationMeta } from './types';
 import GlobalActionBar from './components/GlobalActionBar';
 import UserBadge from './components/UserBadge';
 import MaintenancePage from './components/MaintenancePage';
@@ -40,16 +40,20 @@ const PageWrapper: React.FC<{ name: Page; currentPage: Page; children: React.Rea
 };
 
 // Renders the currently active page, causing it to remount on change.
-const ActivePage: React.FC<{ page: Page; onNavigate: (page: Page) => void }> = ({ page, onNavigate }) => {
+const ActivePage: React.FC<{
+  page: Page;
+  onNavigate: (page: Page, meta?: NavigationMeta) => void;
+  navigationMeta: NavigationMeta | null
+}> = ({ page, onNavigate, navigationMeta }) => {
   // Data loading is now handled centrally in DataContext (fetchInitialData)
   // This ensures "Load Once" behavior.
 
   switch (page) {
     case 'Dashboard': return <Dashboard onNavigate={onNavigate} />;
     case 'School Setup': return <Settings />;
-    case 'Teachers': return <Teachers />;
+    case 'Teachers': return <Teachers navigationMeta={navigationMeta} />;
     case 'Subjects': return <Subjects />;
-    case 'Students': return <Students />;
+    case 'Students': return <Students onNavigate={onNavigate} />;
     case 'Grading System': return <GradingSystem />;
     case 'Assessment Types': return <AssessmentTypes />;
     case 'Score Entry': return <ScoreEntry />;
@@ -130,33 +134,49 @@ const AppContent: React.FC = () => {
 
   // Navigation Guard State
   const [pendingPage, setPendingPage] = useState<Page | null>(null);
+  const [pendingMeta, setPendingMeta] = useState<NavigationMeta | null>(null);
+  const [navigationMeta, setNavigationMeta] = useState<NavigationMeta | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
+  // Clear navigation meta after use
+  React.useEffect(() => {
+    if (navigationMeta) {
+      // Short timeout to ensure daughter component picks it up
+      const timer = setTimeout(() => setNavigationMeta(null), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [navigationMeta, currentPage]);
+
   // Navigation handler with unsaved changes check
-  const handleNavigate = React.useCallback((page: Page) => {
-    if (page === currentPage) return;
+  const handleNavigate = React.useCallback((page: Page, meta?: NavigationMeta) => {
+    if (page === currentPage && !meta) return;
 
     // Granular Per-Page Check: Only prompt if the CURRENT page has unsaved changes
     if (isPageDirty(currentPage)) {
       setPendingPage(page);
+      setPendingMeta(meta || null);
       setShowConfirmModal(true);
       return;
     }
 
+    setNavigationMeta(meta || null);
     setCurrentPage(page);
   }, [currentPage, isPageDirty]);
 
   const confirmNavigation = () => {
     if (pendingPage) {
+      setNavigationMeta(pendingMeta);
       setCurrentPage(pendingPage);
     }
     setShowConfirmModal(false);
     setPendingPage(null);
+    setPendingMeta(null);
   };
 
   const cancelNavigation = () => {
     setShowConfirmModal(false);
     setPendingPage(null);
+    setPendingMeta(null);
   };
 
   // Handle browser refresh/close (Global Safety)
@@ -225,7 +245,7 @@ const AppContent: React.FC = () => {
           </PageWrapper>
 
           {/* All other pages are rendered conditionally, causing them to remount on navigation. */}
-          {currentPage !== 'Data Management' && <ActivePage page={currentPage} onNavigate={handleNavigate} />}
+          {currentPage !== 'Data Management' && <ActivePage page={currentPage} onNavigate={handleNavigate} navigationMeta={navigationMeta} />}
         </main>
       </div>
     </AuthOverlay>

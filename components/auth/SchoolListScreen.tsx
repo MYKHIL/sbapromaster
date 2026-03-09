@@ -54,6 +54,37 @@ const SchoolListScreen: React.FC<SchoolListScreenProps> = ({ onSelectSchool, onB
             }
 
             const schoolList = await getSchoolList();
+
+            // 1. GATHER LAST ACCESSED School
+            const lastAccessedStr = localStorage.getItem('sba_last_accessed_school');
+            let lastAccessed: SchoolListItem | null = null;
+            if (lastAccessedStr) {
+                try {
+                    lastAccessed = JSON.parse(lastAccessedStr) as SchoolListItem;
+                } catch (e) {
+                    console.error('[SchoolList] Failed to parse last accessed school:', e);
+                }
+            }
+
+            // 2. INJECT if missing (prevents registration race condition)
+            // Skip injection on manual reload click
+            if (!forceRefresh && lastAccessed && !schoolList.find(s => s.docId === lastAccessed?.docId)) {
+                console.log('[SchoolList] Injecting missing last accessed school into list');
+                schoolList.unshift(lastAccessed);
+            }
+
+            // 3. SORT: Prioritize recent selection
+            if (lastAccessed) {
+                const targetId = lastAccessed.docId;
+                schoolList.sort((a, b) => {
+                    const idA = a.docId;
+                    const idB = b.docId;
+                    if (idA === targetId) return -1;
+                    if (idB === targetId) return 1;
+                    return (a.displayName || '').localeCompare(b.displayName || '');
+                });
+            }
+
             setSchools(schoolList);
             setFilteredSchools(schoolList);
         } catch (err) {
@@ -136,67 +167,84 @@ const SchoolListScreen: React.FC<SchoolListScreenProps> = ({ onSelectSchool, onB
                                 </p>
                             </div>
                         ) : (
-                            filteredSchools.map((school) => (
-                                <button
-                                    key={school.docId}
-                                    onClick={async () => {
-                                        // DATABASE SWITCH CHECK
-                                        const { SCHOOL_DATABASE_MAPPING, ACTIVE_DATABASE_INDEX } = await import('../../constants');
+                            filteredSchools.map((school) => {
+                                const isRecent = school.docId === localStorage.getItem('sba_last_accessed_school_id');
 
-                                        // Priority 1: Use the index discovered from global search
-                                        let requiredIndex = school._databaseIndex;
+                                return (
+                                    <button
+                                        key={school.docId}
+                                        onClick={async () => {
+                                            // DATABASE SWITCH CHECK
+                                            const { SCHOOL_DATABASE_MAPPING, ACTIVE_DATABASE_INDEX } = await import('../../constants');
 
-                                        // Priority 2: Fallback to prefix mapping (e.g. for manually added schools or legacy)
-                                        if (typeof requiredIndex !== 'number') {
-                                            const schoolPrefix = school.docId.split('_')[0].toLowerCase();
-                                            requiredIndex = SCHOOL_DATABASE_MAPPING[schoolPrefix];
-                                        }
+                                            // Priority 1: Use the index discovered from global search
+                                            let requiredIndex = school._databaseIndex;
 
-                                        if (typeof requiredIndex === 'number' && requiredIndex !== ACTIVE_DATABASE_INDEX) {
-                                            console.warn(`[SchoolList] Switching to Database Index ${requiredIndex} for ${school.docId}`);
+                                            // Priority 2: Fallback to prefix mapping (e.g. for manually added schools or legacy)
+                                            if (typeof requiredIndex !== 'number') {
+                                                const schoolPrefix = school.docId.split('_')[0].toLowerCase();
+                                                requiredIndex = SCHOOL_DATABASE_MAPPING[schoolPrefix];
+                                            }
 
-                                            // Clear old session data to prevent conflicts
-                                            localStorage.removeItem('sba_school_id');
-                                            localStorage.removeItem('sba_school_password');
-                                            localStorage.removeItem('sba_user_id');
-                                            localStorage.removeItem('sba_user_password');
+                                            if (typeof requiredIndex === 'number' && requiredIndex !== ACTIVE_DATABASE_INDEX) {
+                                                console.warn(`[SchoolList] Switching to Database Index ${requiredIndex} for ${school.docId}`);
 
-                                            // Clear auth caches
-                                            const { clearAuthCaches } = await import('../../services/firebaseService');
-                                            clearAuthCaches();
+                                                // Clear old session data to prevent conflicts
+                                                localStorage.removeItem('sba_school_id');
+                                                localStorage.removeItem('sba_school_password');
+                                                localStorage.removeItem('sba_user_id');
+                                                localStorage.removeItem('sba_user_password');
 
-                                            // Save pending selection to restore after reload
-                                            localStorage.setItem('pending_school_selection', JSON.stringify(school));
-                                            localStorage.setItem('active_database_index', requiredIndex.toString());
+                                                // Clear auth caches
+                                                const { clearAuthCaches } = await import('../../services/firebaseService');
+                                                clearAuthCaches();
 
-                                            window.location.reload();
-                                            return;
-                                        }
+                                                // Save pending selection (full object) to restore after reload
+                                                localStorage.setItem('pending_school_selection', JSON.stringify(school));
+                                                localStorage.setItem('active_database_index', requiredIndex.toString());
+                                                localStorage.setItem('sba_last_accessed_school', JSON.stringify(school));
+                                                localStorage.setItem('sba_last_accessed_school_id', school.docId);
 
-                                        onSelectSchool(school);
-                                    }}
-                                    className="w-full text-left p-4 rounded-xl border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200 group"
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <h3 className="font-semibold text-gray-900 group-hover:text-blue-600">
-                                                {school.displayName}
-                                            </h3>
-                                            <p className="text-sm text-gray-500 mt-1">
-                                                Click to continue
-                                            </p>
+                                                window.location.reload();
+                                                return;
+                                            }
+
+                                            // Track last accessed for sorting
+                                            localStorage.setItem('sba_last_accessed_school_id', school.docId);
+                                            localStorage.setItem('sba_last_accessed_school', JSON.stringify(school));
+
+                                            onSelectSchool(school);
+                                        }}
+                                        className={`w-full text-left p-4 rounded-xl border-2 transition-all duration-200 group ${isRecent ? 'border-blue-500 bg-blue-50/50' : 'border-gray-200 hover:border-blue-500 hover:bg-blue-50'}`}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className="font-semibold text-gray-900 group-hover:text-blue-600">
+                                                        {school.displayName}
+                                                    </h3>
+                                                    {isRecent && (
+                                                        <span className="bg-blue-600 text-white text-[10px] uppercase font-bold px-1.5 py-0.5 rounded shadow-sm">
+                                                            Recent
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className="text-sm text-gray-500 mt-1">
+                                                    {isRecent ? 'Click to login again' : 'Click to continue'}
+                                                </p>
+                                            </div>
+                                            <svg
+                                                className="h-6 w-6 text-gray-400 group-hover:text-blue-600 transition-colors"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                            >
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                            </svg>
                                         </div>
-                                        <svg
-                                            className="h-6 w-6 text-gray-400 group-hover:text-blue-600 transition-colors"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                        >
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                        </svg>
-                                    </div>
-                                </button>
-                            ))
+                                    </button>
+                                );
+                            })
                         )}
                     </div>
 

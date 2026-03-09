@@ -72,10 +72,12 @@ import { activateSchoolSubscriptionLocally } from './firebaseService';
 export const activateSubscription = async (
     reference: string,
     schoolDetails: { id: string, name: string, dbIndex: number },
-    tier: any
+    tier: any,
+    addRemainingTime: boolean = false,
+    registrationData?: { password: string; initialData: any }
 ): Promise<any> => {
     try {
-        return await activateSchoolSubscriptionLocally(reference, schoolDetails, tier);
+        return await activateSchoolSubscriptionLocally(reference, schoolDetails, tier, addRemainingTime, registrationData);
     } catch (error) {
         console.error('Subscription activation failed:', error);
         throw error;

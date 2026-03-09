@@ -13,6 +13,11 @@ import { generateIndexNumber } from '../../utils/indexNumberGenerator';
 import { getNextAvailableCounter } from '../../utils/indexNumberCounter';
 import { sortClassesByName } from '../../utils/classSort';
 import { exportToExcel, exportToPDF } from '../../utils/exportUtils';
+import type { Page, NavigationMeta } from '../../types';
+
+interface StudentsProps {
+    onNavigate?: (page: Page, meta?: NavigationMeta) => void;
+}
 
 const EMPTY_STUDENT_FORM: Omit<Student, 'id'> = {
     name: '',
@@ -40,7 +45,7 @@ const calculateAge = (dobString: string): string => {
 };
 
 
-const Students: React.FC = () => {
+const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
     const { students, classes, addStudent, updateStudent, deleteStudent, saveStudents, isDirty, isItemDirty, isSyncing, isOnline, settings, updateSettings, loadStudents, subscription } = useData();
     const { currentUser, isAuthenticated } = useUser();
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -596,6 +601,25 @@ const Students: React.FC = () => {
                                         <option key={cls.id} value={cls.name}>{cls.name}</option>
                                     ))}
                                 </select>
+                                {availableClasses.length === 0 && (
+                                    <div className="mt-2 text-center">
+                                        <p className="text-xs text-amber-600 mb-2">No classes found. You must add classes and teachers first.</p>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (onNavigate) {
+                                                    onNavigate('Teachers', { openAddModal: true });
+                                                }
+                                            }}
+                                            className="w-full py-2 bg-amber-100 text-amber-800 text-sm font-semibold rounded-md border border-amber-200 hover:bg-amber-200 transition-colors flex items-center justify-center gap-2"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                            </svg>
+                                            Go to Add Class/Teacher
+                                        </button>
+                                    </div>
+                                )}
                             </div>
 
                             <div>

@@ -13,6 +13,11 @@ export type Page =
   | 'Student Progress'
   | 'Firebase Analytics';
 
+export interface NavigationMeta {
+  openAddModal?: boolean;
+  [key: string]: any;
+}
+
 export interface Student {
   id: number;
   name: string;
