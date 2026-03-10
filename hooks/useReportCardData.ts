@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useData, DataContextType } from '../context/DataContext';
 import type { Student, Assessment, Grade, Subject } from '../types';
+import { getNumericGradeMap, calculateAggregateScore } from '../utils/gradingUtils';
 
 export const getGradeAndRemark = (mark: number, grades: Grade[]): { grade: string, remark: string } => {
     const roundedMark = Math.round(mark);
@@ -28,14 +29,7 @@ export const getOrdinal = (n: number) => {
 export const calculateReportData = (student: Student, data: DataContextType) => {
     const { students, subjects, assessments, grades, getStudentScores, scores } = data;
 
-    const numericGradeMap = (() => {
-        const sortedGrades = [...grades].sort((a, b) => b.maxScore - a.maxScore);
-        const map = new Map<string, number>();
-        sortedGrades.forEach((grade, index) => {
-            map.set(grade.name, index + 1);
-        });
-        return map;
-    })();
+    const numericGradeMap = getNumericGradeMap(grades);
 
     const classmates = students.filter(s => s.class === student.class);
     const classmateIds = new Set(classmates.map(c => c.id));
@@ -167,49 +161,24 @@ export const calculateReportData = (student: Student, data: DataContextType) => 
         return { subject: subject.subject, classScore, examScore, totalScore, grade, remark, position };
     });
 
-    // Calculate Aggregate Score
+    // 3. Calculate Aggregate Score using centralized utility
     const leastGradeValue = numericGradeMap.size > 0
-        ? [...numericGradeMap.values()].reduce((max, v) => Math.max(max, v), 0)
-        : 9; // Default to 9 if no grades defined
+        ? Math.max(...numericGradeMap.values())
+        : 9;
 
-    // 1. Identify all core subjects defined in the system
-    const allCoreSubjects = subjects.filter(s => s.type === 'Core');
-
-    // 2. Map student's results for quick lookup
-    const studentGradesMap = new Map<string, number>();
+    const studentGradesMap = new Map<string, string>();
     results.forEach(r => {
-        const numeric = numericGradeMap.get(r.grade);
-        if (numeric !== undefined) {
-            studentGradesMap.set(r.subject, numeric);
+        if (r.grade !== '-' && r.grade !== 'N/A') {
+            studentGradesMap.set(r.subject, r.grade);
         }
     });
 
-    // 3. Sum ALL cores (if missing, use penalty)
-    let coreSum = 0;
-    allCoreSubjects.forEach(core => {
-        const grade = studentGradesMap.get(core.subject);
-        coreSum += (grade !== undefined) ? grade : leastGradeValue;
-    });
-
-    // 4. Find the 2 best electives
-    const electiveGrades: number[] = [];
-    subjects.filter(s => s.type === 'Elective').forEach(elective => {
-        const grade = studentGradesMap.get(elective.subject);
-        if (grade !== undefined) {
-            electiveGrades.push(grade);
-        }
-    });
-
-    // Sort electives: lower grade is better
-    const bestElectives = electiveGrades.sort((a, b) => a - b).slice(0, 2);
-
-    // If fewer than 2 electives taken, fill the remaining with the least grade value
-    let electiveSum = bestElectives.reduce((a, b) => a + b, 0);
-    if (bestElectives.length < 2) {
-        electiveSum += (2 - bestElectives.length) * leastGradeValue;
-    }
-
-    const finalAggregateScore = coreSum + electiveSum;
+    const finalAggregateScore = calculateAggregateScore(
+        studentGradesMap,
+        relevantSubjects, // Only count subjects active in this class
+        numericGradeMap,
+        leastGradeValue
+    );
 
 
     const summary = results

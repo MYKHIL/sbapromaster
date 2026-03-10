@@ -5,7 +5,8 @@ import { sortClassesByName } from '../../utils/classSort';
 import { exportToExcel, exportToPDF, exportSubjectAnalysisExcel } from '../../utils/exportUtils';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import StudentPreviewModal from '../modals/StudentPreviewModal';
-import { Student } from '../../types';
+import { Student, Subject } from '../../types';
+import { getNumericGradeMap, calculateAggregateScore } from '../../utils/gradingUtils';
 
 const SubjectAnalysis: React.FC = () => {
     const data = useData();
@@ -78,11 +79,8 @@ const SubjectAnalysis: React.FC = () => {
         };
 
         // Highly optimized computation to avoid O(N^3)
-        const numericGradeMap = new Map<string, number>();
-        const sortedGrades = [...grades].sort((a, b) => b.maxScore - a.maxScore);
+        const numericGradeMap = getNumericGradeMap(grades);
         const sortedGradesAsc = [...grades].sort((a, b) => b.minScore - a.minScore);
-
-        sortedGrades.forEach((grade, index) => numericGradeMap.set(grade.name, index + 1));
 
         const leastGradeValue = numericGradeMap.size > 0
             ? [...numericGradeMap.values()].reduce((max, v) => Math.max(max, v), 0)
@@ -118,6 +116,61 @@ const SubjectAnalysis: React.FC = () => {
             }
         });
 
+        // Pre-calculate which subjects are "active" in each class
+        const studentIdToClass = new Map<number, string>();
+        classStudents.forEach(s => studentIdToClass.set(s.id, s.class));
+
+        const activeSubjectIdsPerClass = new Map<string, Set<number>>();
+        const activeSubjectIdsTotal = new Set<number>();
+        
+        scores.forEach(score => {
+            const sClass = studentIdToClass.get(score.studentId);
+            if (sClass) {
+                const totalScore = studentSubjectTotalScores.get(score.id);
+                if (totalScore !== undefined && totalScore > 0) {
+                    if (!activeSubjectIdsPerClass.has(sClass)) {
+                        activeSubjectIdsPerClass.set(sClass, new Set<number>());
+                    }
+                    activeSubjectIdsPerClass.get(sClass)!.add(score.subjectId);
+                    activeSubjectIdsTotal.add(score.subjectId);
+                }
+            }
+        });
+
+        // Pre-map active subject objects per class for consistent aggregate calculation
+        const activeSubjectObjectsPerClass = new Map<string, Subject[]>();
+        activeSubjectIdsPerClass.forEach((ids, className) => {
+            activeSubjectObjectsPerClass.set(className, subjects.filter(s => ids.has(s.id)));
+        });
+
+        const activeSubjectObjectsTotal = subjects.filter(s => activeSubjectIdsTotal.has(s.id));
+        const activeSubjectNamesTotal = new Set(activeSubjectObjectsTotal.map(s => s.subject));
+
+        // Initialize subjectGradeCounts for all active subjects
+        activeSubjectNamesTotal.forEach((subjectName: string) => {
+            subjectGradeCounts[subjectName] = {
+                'Male': {},
+                'Female': {},
+                'Total': {}
+            };
+            gradeNames.forEach(g => {
+                subjectGradeCounts[subjectName]['Male'][g] = 0;
+                subjectGradeCounts[subjectName]['Female'][g] = 0;
+                subjectGradeCounts[subjectName]['Total'][g] = 0;
+            });
+
+            subjectGradeStudents[subjectName] = {
+                'Male': {},
+                'Female': {},
+                'Total': {}
+            };
+            gradeNames.forEach(g => {
+                subjectGradeStudents[subjectName]['Male'][g] = [];
+                subjectGradeStudents[subjectName]['Female'][g] = [];
+                subjectGradeStudents[subjectName]['Total'][g] = [];
+            });
+        });
+
         classStudents.forEach(student => {
             const genderKey = student.gender === 'Male' ? 'Male' : 'Female';
             const subjectResults: { subject: string, grade: string }[] = [];
@@ -131,60 +184,30 @@ const SubjectAnalysis: React.FC = () => {
                     subjectResults.push({ subject: subject.subject, grade });
 
                     if (grade !== '-') {
-                        if (!subjectGradeCounts[subject.subject]) {
-                            subjectGradeCounts[subject.subject] = {
-                                'Male': {},
-                                'Female': {},
-                                'Total': {}
-                            };
-                            gradeNames.forEach(g => {
-                                subjectGradeCounts[subject.subject]['Male'][g] = 0;
-                                subjectGradeCounts[subject.subject]['Female'][g] = 0;
-                                subjectGradeCounts[subject.subject]['Total'][g] = 0;
-                            });
-                        }
                         subjectGradeCounts[subject.subject][genderKey][grade]++;
                         subjectGradeCounts[subject.subject]['Total'][grade]++;
 
-                        if (!subjectGradeStudents[subject.subject]) {
-                            subjectGradeStudents[subject.subject] = {
-                                'Male': {},
-                                'Female': {},
-                                'Total': {}
-                            };
-                            gradeNames.forEach(g => {
-                                subjectGradeStudents[subject.subject]['Male'][g] = [];
-                                subjectGradeStudents[subject.subject]['Female'][g] = [];
-                                subjectGradeStudents[subject.subject]['Total'][g] = [];
-                            });
-                        }
                         subjectGradeStudents[subject.subject][genderKey][grade].push(student);
                         subjectGradeStudents[subject.subject]['Total'][grade].push(student);
                     }
                 }
             });
 
-            let coreSum = 0;
-            subjects.filter(s => s.type === 'Core').forEach(core => {
-                const res = subjectResults.find(r => r.subject === core.subject);
-                const gradeVal = res ? numericGradeMap.get(res.grade) : undefined;
-                coreSum += (gradeVal !== undefined) ? gradeVal : leastGradeValue;
+            const classActiveSubjectObjects = activeSubjectObjectsPerClass.get(student.class) || [];
+
+            const studentGradesMap = new Map<string, string>();
+            subjectResults.forEach(r => {
+                if (r.grade !== '-') {
+                    studentGradesMap.set(r.subject, r.grade);
+                }
             });
 
-            const electiveGrades: number[] = [];
-            subjects.filter(s => s.type === 'Elective').forEach(elective => {
-                const res = subjectResults.find(r => r.subject === elective.subject);
-                const gradeVal = res ? numericGradeMap.get(res.grade) : undefined;
-                if (gradeVal !== undefined) electiveGrades.push(gradeVal);
-            });
-
-            const bestElectives = electiveGrades.sort((a, b) => a - b).slice(0, 2);
-            let electiveSum = bestElectives.reduce((a, b) => a + b, 0);
-            if (bestElectives.length < 2) {
-                electiveSum += (2 - bestElectives.length) * leastGradeValue;
-            }
-
-            const aggregateScore = coreSum + electiveSum;
+            const aggregateScore = calculateAggregateScore(
+                studentGradesMap,
+                classActiveSubjectObjects, // Use class-specific active subjects for consistent results
+                numericGradeMap,
+                leastGradeValue
+            );
 
             if (aggregateScore >= 6) {
                 aggregateCountsByGender[genderKey][aggregateScore] = (aggregateCountsByGender[genderKey][aggregateScore] || 0) + 1;
