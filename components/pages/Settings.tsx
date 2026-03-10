@@ -7,6 +7,7 @@ import ReadOnlyWrapper from '../ReadOnlyWrapper';
 import { useUser } from '../../context/UserContext';
 
 import { processImageForUpload, validateImageSize } from '../../utils/imageUtils';
+import { SchoolSettings } from '../../types';
 
 const LOGO_PLACEHOLDER = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgdmlld0JveD0iMCAwIDEyOCAxMjgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiByeD0iOCIgZmlsbD0iI0YzRjRGNyIvPgo8cGF0aCBkPSJNNjQgMzBMMzQgNTBWOTRIOTRWNTBMNjQgMzBaIiBzdHJva2U9IiNEMUQ1REIiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+CjxwYXRoIGQ9Ik03OCA5OFY2OEM3OCA2NC42ODYzIDc1LjMxMzcgNjIgNzIgNjJINTZDNTAuNjg2MyA2MiA1MCA2NC42ODYzIDUwIDY4Vjk4IiBzdHJva2U9IiNEMUQ1REIiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjx0ZXh0IHg9IjY0IiB5PSIxMTQiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEwIiBmaWxsPSIjOUNBM0FGIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5VcGxvYWQgU2Nob29sIExvZ288L3RleHQ+Cjwvc3ZnPg==';
 const SIGNATURE_PLACEHOLDER = 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTUwIDUwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0yIDI1LjVDMiAyNS41IDE1LjUgMTUuNSAyOS41IDI4QzQzLjUgNDAuNSA1MyAyNS41IDY2LjUgMjAuNUM4MCAxNS41IDg4LjUgMjkgMTAwIDI5QzExMS41IDI5IDEyMyAxNS41IDEzNyAyOS41IiBzdHJva2U9IiM5Y2EzYWYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+';
@@ -30,6 +31,12 @@ const EnhanceButton: React.FC<{ isEnhancing: boolean }> = ({ isEnhancing }) => (
       </>
     )}
   </>
+);
+
+const UnsavedBadge = () => (
+  <span className="ml-2 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 bg-yellow-400 text-black leading-none rounded inline-block translate-y-[-1px]">
+    Unsaved
+  </span>
 );
 
 const Settings: React.FC = () => {
@@ -79,14 +86,7 @@ const Settings: React.FC = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    // Only update context if value actually changed from what's currently in context
-    if (settings[name as keyof SchoolSettings] !== value) {
-      updateSettings({ [name]: value });
-    }
+    updateSettings({ [name]: value });
   };
 
 
@@ -174,34 +174,34 @@ const Settings: React.FC = () => {
           <h2 className="text-xl font-bold text-gray-700 border-b pb-2">School Information</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">School Name</label>
-              <input type="text" name="schoolName" value={formData.schoolName} onChange={handleChange} onBlur={handleBlur} className={`${inputStyles} ${isSettingDirty('schoolName') ? 'bg-amber-50 border-amber-500' : ''}`} disabled={!isAdmin} />
+              <label className="block text-sm font-medium text-gray-700 mb-1">School Name {isSettingDirty('schoolName') && <UnsavedBadge />}</label>
+              <input type="text" name="schoolName" value={formData.schoolName} onChange={handleChange} className={`${inputStyles} ${isSettingDirty('schoolName') ? 'bg-amber-50 border-amber-500' : ''}`} disabled={!isAdmin} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">District</label>
-              <input type="text" name="district" value={formData.district} onChange={handleChange} onBlur={handleBlur} className={`${inputStyles} ${isSettingDirty('district') ? 'bg-amber-50 border-amber-500' : ''}`} disabled={!isAdmin} />
+              <label className="block text-sm font-medium text-gray-700 mb-1">District {isSettingDirty('district') && <UnsavedBadge />}</label>
+              <input type="text" name="district" value={formData.district} onChange={handleChange} className={`${inputStyles} ${isSettingDirty('district') ? 'bg-amber-50 border-amber-500' : ''}`} disabled={!isAdmin} />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-            <textarea name="address" value={formData.address} onChange={handleChange} onBlur={handleBlur} className={`${inputStyles} ${isSettingDirty('address') ? 'bg-amber-50 border-amber-500' : ''}`} rows={3} disabled={!isAdmin} />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Address {isSettingDirty('address') && <UnsavedBadge />}</label>
+            <textarea name="address" value={formData.address} onChange={handleChange} className={`${inputStyles} ${isSettingDirty('address') ? 'bg-amber-50 border-amber-500' : ''}`} rows={3} disabled={!isAdmin} />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Academic Year</label>
-              <input type="text" name="academicYear" value={formData.academicYear} onChange={handleChange} onBlur={handleBlur} className={`${inputStyles} ${isSettingDirty('academicYear') ? 'bg-amber-50 border-amber-500' : ''}`} disabled={!isAdmin} />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Academic Year {isSettingDirty('academicYear') && <UnsavedBadge />}</label>
+              <input type="text" name="academicYear" value={formData.academicYear} onChange={handleChange} className={`${inputStyles} ${isSettingDirty('academicYear') ? 'bg-amber-50 border-amber-500' : ''}`} disabled={!isAdmin} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Academic Term</label>
-              <input type="text" name="academicTerm" value={formData.academicTerm} onChange={handleChange} onBlur={handleBlur} className={`${inputStyles} ${isSettingDirty('academicTerm') ? 'bg-amber-50 border-amber-500' : ''}`} disabled={!isAdmin} />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Academic Term {isSettingDirty('academicTerm') && <UnsavedBadge />}</label>
+              <input type="text" name="academicTerm" value={formData.academicTerm} onChange={handleChange} className={`${inputStyles} ${isSettingDirty('academicTerm') ? 'bg-amber-50 border-amber-500' : ''}`} disabled={!isAdmin} />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Vacation Date (This Term)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Vacation Date (This Term) {isSettingDirty('vacationDate') && <UnsavedBadge />}</label>
               <div className="relative">
                 <input
                   ref={vacationRef}
@@ -209,7 +209,6 @@ const Settings: React.FC = () => {
                   name="vacationDate"
                   value={formData.vacationDate}
                   onChange={handleChange}
-                  onBlur={handleBlur}
                   className="absolute opacity-0 pointer-events-none w-0 h-0"
                   tabIndex={-1}
                   disabled={!isAdmin}
@@ -228,7 +227,7 @@ const Settings: React.FC = () => {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Reopening Date (Next Term)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Reopening Date (Next Term) {isSettingDirty('reopeningDate') && <UnsavedBadge />}</label>
               <div className="relative">
                 <input
                   ref={reopeningRef}
@@ -236,7 +235,6 @@ const Settings: React.FC = () => {
                   name="reopeningDate"
                   value={formData.reopeningDate}
                   onChange={handleChange}
-                  onBlur={handleBlur}
                   className="absolute opacity-0 pointer-events-none w-0 h-0"
                   tabIndex={-1}
                   disabled={!isAdmin}
@@ -405,15 +403,15 @@ const Settings: React.FC = () => {
           <h2 className="text-xl font-bold text-gray-700 border-b pb-2">Branding &amp; Signatures</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Headmaster's Name</label>
-              <input type="text" name="headmasterName" value={formData.headmasterName || ''} onChange={handleChange} onBlur={handleBlur} className={`${inputStyles} ${isSettingDirty('headmasterName') ? 'bg-amber-50 border-amber-500' : ''}`} disabled={!isAdmin} />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Headmaster's Name {isSettingDirty('headmasterName') && <UnsavedBadge />}</label>
+              <input type="text" name="headmasterName" value={formData.headmasterName || ''} onChange={handleChange} className={`${inputStyles} ${isSettingDirty('headmasterName') ? 'bg-amber-50 border-amber-500' : ''}`} disabled={!isAdmin} />
             </div>
             <div>
               <div className="flex items-center space-x-4">
                 <div className="relative">
                   <img src={settings.logo || LOGO_PLACEHOLDER} alt="Logo Preview" className={`h-32 w-32 object-contain border p-2 rounded-lg bg-gray-50 transition-colors ${isSettingDirty('logo') ? 'border-amber-500' : ''}`} />
                   {isSettingDirty('logo') && (
-                    <span className="absolute -top-2 -right-2 bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">MODIFIED</span>
+                    <span className="absolute -top-2 -right-2 bg-yellow-400 text-black text-[10px] font-bold px-2 py-0.5 rounded shadow-sm uppercase tracking-wider">UNSAVED</span>
                   )}
                 </div>
                 {isAdmin && (
@@ -449,7 +447,7 @@ const Settings: React.FC = () => {
                 <div className="relative">
                   <img src={settings.headmasterSignature || SIGNATURE_PLACEHOLDER} alt="Signature Preview" className={`h-12 w-36 object-contain border p-1 rounded-md bg-gray-50 transition-colors ${isSettingDirty('headmasterSignature') ? 'border-amber-500' : ''}`} />
                   {isSettingDirty('headmasterSignature') && (
-                    <span className="absolute -top-2 -right-2 bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">MODIFIED</span>
+                    <span className="absolute -top-2 -right-2 bg-yellow-400 text-black text-[10px] font-bold px-2 py-0.5 rounded shadow-sm uppercase tracking-wider">UNSAVED</span>
                   )}
                 </div>
                 {isAdmin && (
