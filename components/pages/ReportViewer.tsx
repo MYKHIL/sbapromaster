@@ -48,8 +48,9 @@ const ReportViewer: React.FC = () => {
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
   const [pdfError, setPdfError] = useState<any>(null);
 
-  // New: Comparison Mode
+  // New: Comparison Mode & Loading
   const [isComparisonMode, setIsComparisonMode] = useState(false);
+  const [isLocalLoading, setIsLocalLoading] = useState(false);
 
   const reportContainerRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -94,30 +95,37 @@ const ReportViewer: React.FC = () => {
   // Main Report Generation Logic
   useEffect(() => {
     // If in comparison mode, we DO NOT auto-generate or clear reports based on selection change
-    // UNLESS it's the specific action of adding a student (handled in handler).
-    // Actually, to keep it simple:
-
     if (isComparisonMode) return;
 
     if (!selectedClassId) {
-      setGeneratedReports([]);
-      setShowPanel(false);
-      return;
-    }
-
-    if (selectedStudentId === 'all') {
-      setGeneratedReports(studentsInClass);
-      setShowPanel(false);
-    } else {
-      const student = students.find(s => s.id === selectedStudentId);
-      if (student) {
-        setGeneratedReports([student]);
-        setShowPanel(true);
-      } else {
         setGeneratedReports([]);
         setShowPanel(false);
-      }
+        setIsLocalLoading(false);
+        return;
     }
+
+    // Set loading and clear current reports to force spinner
+    setIsLocalLoading(true);
+    setGeneratedReports([]);
+
+    const timer = setTimeout(() => {
+        if (selectedStudentId === 'all') {
+            setGeneratedReports(studentsInClass);
+            setShowPanel(false);
+        } else {
+            const student = students.find(s => s.id === selectedStudentId);
+            if (student) {
+                setGeneratedReports([student]);
+                setShowPanel(true);
+            } else {
+                setGeneratedReports([]);
+                setShowPanel(false);
+            }
+        }
+        setIsLocalLoading(false);
+    }, 400); // Artificial delay for visual feedback
+
+    return () => clearTimeout(timer);
   }, [selectedStudentId, selectedClassId, studentsInClass, students, isComparisonMode]);
 
   // Lazy Load Students
@@ -378,7 +386,7 @@ const ReportViewer: React.FC = () => {
             className="flex flex-row gap-12 w-max transition-transform duration-200 ease-in-out origin-top-left"
             style={{ transform: `scale(${zoomLevel})` }}
           >
-            {isFetching ? (
+            {isFetching || isLocalLoading ? (
               <div className="flex flex-col items-center justify-center min-w-[800px] min-h-[600px] bg-white rounded-lg shadow-sm border border-gray-100">
                 <svg className="animate-spin h-16 w-16 text-blue-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
