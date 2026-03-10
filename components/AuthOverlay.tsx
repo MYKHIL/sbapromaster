@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { useUser } from '../context/UserContext';
 import { loginOrRegisterSchool, AppDataType, SchoolListItem, SchoolPeriod, clearAuthCaches, db, loggedSetDoc } from '../services/firebaseService';
@@ -45,6 +45,19 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
 
     // Loading state
     const [restoringSession, setRestoringSession] = useState(true);
+    
+    // Prioritize last logged in user
+    const sortedUsers = useMemo(() => {
+        const lastUserId = localStorage.getItem('sba_last_user_id');
+        if (!lastUserId) return users;
+        const lastId = parseInt(lastUserId);
+        
+        return [...users].sort((a, b) => {
+            if (a.id === lastId) return -1;
+            if (b.id === lastId) return 1;
+            return 0;
+        });
+    }, [users]);
 
     // Initialize SyncLogger
     useEffect(() => {
@@ -775,7 +788,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 {children}
                 {!isAuthenticated && users.length > 0 && (
                     <UserSelection
-                        users={users}
+                        users={sortedUsers}
                         onLogin={handleUserLogin}
                         onSetPassword={handleSetPassword}
                         onBack={handleLogoutSession}
@@ -856,7 +869,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
                     <div className="w-full max-w-md">
                         <UserSelection
-                            users={users}
+                            users={sortedUsers}
                             onLogin={handleUserLogin}
                             onSetPassword={handleSetPassword}
                             onBack={handleLogoutSession}

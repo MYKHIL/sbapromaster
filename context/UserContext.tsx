@@ -100,6 +100,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (isValid) {
             setCurrentUser(user);
             setIsAuthenticated(true);
+            localStorage.setItem('sba_last_user_id', userId.toString());
 
             // Log Activity with error handling
             try {
@@ -134,6 +135,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (user) {
             setCurrentUser(user);
             setIsAuthenticated(true);
+            localStorage.setItem('sba_last_user_id', userId.toString());
         }
     };
 
