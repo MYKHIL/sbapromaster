@@ -37,7 +37,6 @@ const GlobalActionBar: React.FC<GlobalActionBarProps> = ({ onOpenDebugModal, cur
     const isQuotaExceeded = isQuotaExhaustedError(error) && errorContext === 'write';
 
     const [isDebugModalOpen, setIsDebugModalOpen] = useState(false);
-    const [debugData, setDebugData] = useState<any>(null);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
 
@@ -98,14 +97,11 @@ const GlobalActionBar: React.FC<GlobalActionBarProps> = ({ onOpenDebugModal, cur
     const unreadCount = notifications.filter(n => !n.read).length;
 
     const handleShowDebugData = () => {
-        const data = getPendingUploadData();
-        setDebugData(data);
         setIsDebugModalOpen(true);
     };
 
     const handleCloseDebugModal = () => {
         setIsDebugModalOpen(false);
-        setDebugData(null);
     };
 
     // Notification Handlers
@@ -135,7 +131,7 @@ const GlobalActionBar: React.FC<GlobalActionBarProps> = ({ onOpenDebugModal, cur
 
     return (
         <WrappedActionBar
-            {...{ onOpenDebugModal, currentPage, currentUser, isAdmin, handleShowDebugData, notifications, unreadCount, isNotificationOpen, setIsNotificationOpen, saveToCloud, refreshFromCloud, isSyncing, isOnline, pendingCount, isFetching, hasLocalChanges, isDebugModalOpen, handleCloseDebugModal, debugData, onNavigate, isExpanded, setIsExpanded, handleRefresh, isRefreshing, toast, isQuotaExceeded }}
+            {...{ onOpenDebugModal, currentPage, currentUser, isAdmin, handleShowDebugData, notifications, unreadCount, isNotificationOpen, setIsNotificationOpen, saveToCloud, refreshFromCloud, isSyncing, isOnline, pendingCount, isFetching, hasLocalChanges, isDebugModalOpen, handleCloseDebugModal, onNavigate, isExpanded, setIsExpanded, handleRefresh, isRefreshing, toast, isQuotaExceeded }}
         />
     );
 };
@@ -144,7 +140,7 @@ const GlobalActionBar: React.FC<GlobalActionBarProps> = ({ onOpenDebugModal, cur
 const WrappedActionBar: React.FC<any> = ({
     onOpenDebugModal, currentPage, currentUser, isAdmin, handleShowDebugData, notifications, unreadCount,
     isNotificationOpen, setIsNotificationOpen, saveToCloud, refreshFromCloud, isSyncing, isOnline,
-    pendingCount, isFetching, hasLocalChanges, isDebugModalOpen, handleCloseDebugModal, debugData,
+    pendingCount, isFetching, hasLocalChanges, isDebugModalOpen, handleCloseDebugModal,
     onNavigate, isExpanded, setIsExpanded, handleRefresh, isRefreshing, toast, isQuotaExceeded
 }) => {
     const { users, loadImportedData } = useData();
@@ -458,7 +454,6 @@ const WrappedActionBar: React.FC<any> = ({
             <PreviewDataModal
                 isOpen={isDebugModalOpen}
                 onClose={handleCloseDebugModal}
-                debugData={debugData}
                 pendingCount={pendingCount}
                 onSave={() => saveToCloud(true)}
                 isSyncing={isSyncing}

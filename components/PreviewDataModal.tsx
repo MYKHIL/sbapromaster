@@ -4,10 +4,10 @@ import { useData, getItemId } from '../context/DataContext';
 interface PreviewDataModalProps {
     isOpen: boolean;
     onClose: () => void;
-    debugData: any;
     pendingCount: number;
     onSave: () => void;
     isSyncing: boolean;
+    onRefresh?: () => void;
     isOnline: boolean;
     hasLocalChanges: boolean;
 }
@@ -15,7 +15,6 @@ interface PreviewDataModalProps {
 const PreviewDataModal: React.FC<PreviewDataModalProps> = ({
     isOpen,
     onClose,
-    debugData,
     pendingCount,
     onSave,
     isSyncing,
@@ -28,8 +27,12 @@ const PreviewDataModal: React.FC<PreviewDataModalProps> = ({
         assessments,
         classes,
         revertPendingChanges,
-        revertAllPendingChanges
+        revertAllPendingChanges,
+        getPendingUploadData
     } = useData();
+
+    // Compute live data on every render
+    const liveData = getPendingUploadData();
 
     if (!isOpen) return null;
 
@@ -57,13 +60,13 @@ const PreviewDataModal: React.FC<PreviewDataModalProps> = ({
     };
 
     const renderPreviewContent = () => {
-        if (!debugData || Object.keys(debugData).length === 0) {
+        if (!liveData || Object.keys(liveData).length === 0) {
             return <div className="text-gray-500 text-center py-8">No pending changes found.</div>;
         }
 
         return (
             <div className="space-y-6">
-                {Object.entries(debugData).map(([key, value]: [string, any]) => {
+                {Object.entries(liveData).map(([key, value]: [string, any]) => {
                     // Filter out internal/auto-update fields from preview
                     if (key === 'activeSessions' || key === 'userLogs') return null;
 
