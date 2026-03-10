@@ -103,9 +103,9 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             // Log Activity with error handling
             try {
-                console.log('Logging user login activity for:', user.name);
+                0 && console.log('Logging user login activity for:', user.name);
                 await logUserAction(user.id, user.name, user.role, 'Login');
-                console.log('Login activity logged successfully');
+                0 && console.log('Login activity logged successfully');
             } catch (error) {
                 console.error('Failed to log login activity:', error);
             }

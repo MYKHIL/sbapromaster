@@ -97,7 +97,7 @@ const DatabaseErrorModalWrapper: React.FC = () => {
   // We listen for the custom event dispatched by our console.error patch
   React.useEffect(() => {
     const handleQuotaEvent = (event: CustomEvent) => {
-      console.log('Caught Global Quota Error via Event!', event.detail);
+      0 && console.log('Caught Global Quota Error via Event!', event.detail);
       // We categorize this as 'write' to show the gentle Toast
       showError(event.detail, 'write');
     };
@@ -149,10 +149,11 @@ const AppContent: React.FC = () => {
     }
   }, [navigationMeta, currentPage]);
 
-  // Navigation handler with unsaved changes check
+  // Navigation handler with unsaved changes check (disabled per user request)
   const handleNavigate = React.useCallback((page: Page, meta?: NavigationMeta) => {
     if (page === currentPage && !meta) return;
 
+    /* Removed Unsaved Changes Warning
     // Granular Per-Page Check: Only prompt if the CURRENT page has unsaved changes
     if (isPageDirty(currentPage)) {
       setPendingPage(page);
@@ -160,6 +161,7 @@ const AppContent: React.FC = () => {
       setShowConfirmModal(true);
       return;
     }
+    */
 
     setNavigationMeta(meta || null);
     setCurrentPage(page);

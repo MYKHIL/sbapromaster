@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import CameraCapture from '../CameraCapture';
 import { useData } from '../../context/DataContext';
 import { enhanceImage } from '../../services/geminiService';
@@ -38,6 +38,12 @@ const Settings: React.FC = () => {
   const { settings, updateSettings, saveSettings, isDirty, isSettingDirty, isSyncing, isOnline } = useData();
   const [isEnhancingLogo, setIsEnhancingLogo] = useState(false);
   const [isEnhancingSignature, setIsEnhancingSignature] = useState(false);
+  const [formData, setFormData] = useState<SchoolSettings>(settings);
+
+  // Synchronize local form data when settings change (reverts, remote loads, etc.)
+  useEffect(() => {
+    setFormData(settings);
+  }, [settings]);
 
   // Defensive check: if somehow settings is undefined, show loading state
   // This shouldn't normally happen but can occur during hot module reload
@@ -72,7 +78,15 @@ const Settings: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    updateSettings({ [name]: value });
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    // Only update context if value actually changed from what's currently in context
+    if (settings[name as keyof SchoolSettings] !== value) {
+      updateSettings({ [name]: value });
+    }
   };
 
 
@@ -154,9 +168,6 @@ const Settings: React.FC = () => {
       <div className="max-w-4xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold text-gray-800">School Setup</h1>
-
-          {/* Save Button - Only visible to Admins */}
-
         </div>
 
         <div className="bg-white p-8 rounded-xl shadow-md border border-gray-200 space-y-6">
@@ -164,27 +175,27 @@ const Settings: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">School Name</label>
-              <input type="text" name="schoolName" value={settings.schoolName} onChange={handleChange} className={`${inputStyles} ${isSettingDirty('schoolName') ? 'bg-amber-50 border-amber-500' : ''}`} disabled={!isAdmin} />
+              <input type="text" name="schoolName" value={formData.schoolName} onChange={handleChange} onBlur={handleBlur} className={`${inputStyles} ${isSettingDirty('schoolName') ? 'bg-amber-50 border-amber-500' : ''}`} disabled={!isAdmin} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">District</label>
-              <input type="text" name="district" value={settings.district} onChange={handleChange} className={`${inputStyles} ${isSettingDirty('district') ? 'bg-amber-50 border-amber-500' : ''}`} disabled={!isAdmin} />
+              <input type="text" name="district" value={formData.district} onChange={handleChange} onBlur={handleBlur} className={`${inputStyles} ${isSettingDirty('district') ? 'bg-amber-50 border-amber-500' : ''}`} disabled={!isAdmin} />
             </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-            <textarea name="address" value={settings.address} onChange={handleChange} className={`${inputStyles} ${isSettingDirty('address') ? 'bg-amber-50 border-amber-500' : ''}`} rows={3} disabled={!isAdmin} />
+            <textarea name="address" value={formData.address} onChange={handleChange} onBlur={handleBlur} className={`${inputStyles} ${isSettingDirty('address') ? 'bg-amber-50 border-amber-500' : ''}`} rows={3} disabled={!isAdmin} />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Academic Year</label>
-              <input type="text" name="academicYear" value={settings.academicYear} onChange={handleChange} className={`${inputStyles} ${isSettingDirty('academicYear') ? 'bg-amber-50 border-amber-500' : ''}`} disabled={!isAdmin} />
+              <input type="text" name="academicYear" value={formData.academicYear} onChange={handleChange} onBlur={handleBlur} className={`${inputStyles} ${isSettingDirty('academicYear') ? 'bg-amber-50 border-amber-500' : ''}`} disabled={!isAdmin} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Academic Term</label>
-              <input type="text" name="academicTerm" value={settings.academicTerm} onChange={handleChange} className={`${inputStyles} ${isSettingDirty('academicTerm') ? 'bg-amber-50 border-amber-500' : ''}`} disabled={!isAdmin} />
+              <input type="text" name="academicTerm" value={formData.academicTerm} onChange={handleChange} onBlur={handleBlur} className={`${inputStyles} ${isSettingDirty('academicTerm') ? 'bg-amber-50 border-amber-500' : ''}`} disabled={!isAdmin} />
             </div>
           </div>
 
@@ -196,8 +207,9 @@ const Settings: React.FC = () => {
                   ref={vacationRef}
                   type="date"
                   name="vacationDate"
-                  value={settings.vacationDate}
+                  value={formData.vacationDate}
                   onChange={handleChange}
+                  onBlur={handleBlur}
                   className="absolute opacity-0 pointer-events-none w-0 h-0"
                   tabIndex={-1}
                   disabled={!isAdmin}
@@ -206,8 +218,8 @@ const Settings: React.FC = () => {
                   onClick={() => isAdmin && handleDateClick(vacationRef)}
                   className={`${inputStyles} flex items-center justify-between ${!isAdmin ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:border-blue-400 transition-colors'} ${isSettingDirty('vacationDate') ? 'bg-amber-50 border-amber-500' : ''}`}
                 >
-                  <span className={settings.vacationDate ? 'text-gray-900 font-medium' : 'text-gray-400'}>
-                    {settings.vacationDate ? formatDateString(settings.vacationDate) : 'Select vacation date'}
+                  <span className={formData.vacationDate ? 'text-gray-900 font-medium' : 'text-gray-400'}>
+                    {formData.vacationDate ? formatDateString(formData.vacationDate) : 'Select vacation date'}
                   </span>
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
@@ -222,8 +234,9 @@ const Settings: React.FC = () => {
                   ref={reopeningRef}
                   type="date"
                   name="reopeningDate"
-                  value={settings.reopeningDate}
+                  value={formData.reopeningDate}
                   onChange={handleChange}
+                  onBlur={handleBlur}
                   className="absolute opacity-0 pointer-events-none w-0 h-0"
                   tabIndex={-1}
                   disabled={!isAdmin}
@@ -232,8 +245,8 @@ const Settings: React.FC = () => {
                   onClick={() => isAdmin && handleDateClick(reopeningRef)}
                   className={`${inputStyles} flex items-center justify-between ${!isAdmin ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:border-blue-400 transition-colors'} ${isSettingDirty('reopeningDate') ? 'bg-amber-50 border-amber-500' : ''}`}
                 >
-                  <span className={settings.reopeningDate ? 'text-gray-900 font-medium' : 'text-gray-400'}>
-                    {settings.reopeningDate ? formatDateString(settings.reopeningDate) : 'Select reopening date'}
+                  <span className={formData.reopeningDate ? 'text-gray-900 font-medium' : 'text-gray-400'}>
+                    {formData.reopeningDate ? formatDateString(formData.reopeningDate) : 'Select reopening date'}
                   </span>
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
@@ -249,8 +262,8 @@ const Settings: React.FC = () => {
               {(() => {
                 const now = new Date();
                 now.setHours(0, 0, 0, 0);
-                const vacation = settings.vacationDate ? new Date(settings.vacationDate + 'T00:00:00') : null;
-                const reopening = settings.reopeningDate ? new Date(settings.reopeningDate + 'T00:00:00') : null;
+                const vacation = formData.vacationDate ? new Date(formData.vacationDate + 'T00:00:00') : null;
+                const reopening = formData.reopeningDate ? new Date(formData.reopeningDate + 'T00:00:00') : null;
 
                 // Validation: Check if reopening date is before vacation date
                 if (vacation && reopening && reopening < vacation) {
@@ -393,7 +406,7 @@ const Settings: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Headmaster's Name</label>
-              <input type="text" name="headmasterName" value={settings.headmasterName || ''} onChange={handleChange} className={`${inputStyles} ${isSettingDirty('headmasterName') ? 'bg-amber-50 border-amber-500' : ''}`} disabled={!isAdmin} />
+              <input type="text" name="headmasterName" value={formData.headmasterName || ''} onChange={handleChange} onBlur={handleBlur} className={`${inputStyles} ${isSettingDirty('headmasterName') ? 'bg-amber-50 border-amber-500' : ''}`} disabled={!isAdmin} />
             </div>
             <div>
               <div className="flex items-center space-x-4">

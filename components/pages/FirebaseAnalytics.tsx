@@ -345,7 +345,8 @@ const DatabaseMaintenancePanel: React.FC = () => {
             setLogs(prev => [...prev, '[Final Verification] 🔍 Scanning for any remaining base64 images...']);
 
             try {
-                const { fetchSubcollection, updateStudent } = await import('../../services/firebaseService');
+                const { fetchSubcollection, db } = await import('../../services/firebaseService');
+                const { doc, setDoc } = await import('firebase/firestore');
                 const { uploadToImgBB } = await import('../../utils/imageUtils');
 
                 // Fetch all students from subcollection
@@ -378,7 +379,7 @@ const DatabaseMaintenancePanel: React.FC = () => {
                                 if (imgbbUrl) {
                                     // Update student with new URL
                                     const updatedStudent = { ...student, picture: imgbbUrl };
-                                    await updateStudent(schoolId, updatedStudent);
+                                    await setDoc(doc(db, "schools", schoolId, "students", String(updatedStudent.id)), updatedStudent, { merge: true });
                                     uploadedCount++;
                                     setLogs(prev => [...prev, `[Final Verification] ✅ Uploaded: ${student.name || student.indexNumber}`]);
                                 } else {

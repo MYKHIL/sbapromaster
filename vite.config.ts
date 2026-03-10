@@ -56,7 +56,7 @@ export default defineConfig(({ mode }) => {
 
           // Mock Payment Initialization
           server.middlewares.use('/api/initialize-payment', (req, res) => {
-            console.log('[Mock API] Initializing payment...');
+            0 && console.log('[Mock API] Initializing payment...');
             res.setHeader('Content-Type', 'application/json');
             // Return a mock reference. NOTE: Using this in Paystack popup will likely fail validation.
             res.end(JSON.stringify({
@@ -68,7 +68,7 @@ export default defineConfig(({ mode }) => {
 
           // Mock Payment Verification
           server.middlewares.use('/api/verify-payment', (req, res) => {
-            console.log('[Mock API] Verifying payment...');
+            0 && console.log('[Mock API] Verifying payment...');
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({
               status: 'success',
@@ -79,7 +79,7 @@ export default defineConfig(({ mode }) => {
 
           // Mock Subscription Activation
           server.middlewares.use('/api/activate-subscription', (req, res) => {
-            console.log('[Mock API] Activating subscription...');
+            0 && console.log('[Mock API] Activating subscription...');
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({ success: true, message: 'Mock activation successful' }));
           });

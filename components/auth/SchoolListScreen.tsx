@@ -50,7 +50,7 @@ const SchoolListScreen: React.FC<SchoolListScreenProps> = ({ onSelectSchool, onB
             if (forceRefresh) {
                 const { clearAuthCaches } = await import('../../services/firebaseService');
                 clearAuthCaches();
-                console.log('[SchoolList] Cache cleared, fetching fresh data');
+                0 && console.log('[SchoolList] Cache cleared, fetching fresh data');
             }
 
             const schoolList = await getSchoolList();
@@ -69,7 +69,7 @@ const SchoolListScreen: React.FC<SchoolListScreenProps> = ({ onSelectSchool, onB
             // 2. INJECT if missing (prevents registration race condition)
             // Skip injection on manual reload click
             if (!forceRefresh && lastAccessed && !schoolList.find(s => s.docId === lastAccessed?.docId)) {
-                console.log('[SchoolList] Injecting missing last accessed school into list');
+                0 && console.log('[SchoolList] Injecting missing last accessed school into list');
                 schoolList.unshift(lastAccessed);
             }
 

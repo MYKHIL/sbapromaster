@@ -22,12 +22,10 @@ const AssessmentTypes: React.FC = () => {
     const { assessments, setAssessments, addAssessment, updateAssessment, deleteAssessment, saveAssessments, isDirty, isItemDirty, isSyncing, isOnline, loadMetadata } = useData();
     const { currentUser } = useUser();
 
-    // Ensure assessments are loaded
+    // TRIGGER RECONCILIATION: Identify unsaved local items on mount
     React.useEffect(() => {
-        if (assessments.length === 0) {
-            loadMetadata();
-        }
-    }, [assessments, loadMetadata]);
+        loadMetadata();
+    }, [loadMetadata]);
     const isAdmin = currentUser?.role === 'Admin';
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentAssessment, setCurrentAssessment] = useState<Assessment | Omit<Assessment, 'id'> | null>(null);

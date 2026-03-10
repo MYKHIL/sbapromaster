@@ -5,6 +5,8 @@ import ReadOnlyWrapper from '../ReadOnlyWrapper';
 import ConfirmationModal from '../ConfirmationModal';
 import { useUser } from '../../context/UserContext';
 import { DIRTY_INDICATOR_BG, DIRTY_INDICATOR_TEXT, DIRTY_INDICATOR_SECONDARY_TEXT, DIRTY_INDICATOR_HOVER_BG, DIRTY_INDICATOR_BORDER } from '../../constants';
+import { INITIAL_GRADES } from '../../constants';
+import MessageBox from '../MessageBox';
 
 const EMPTY_GRADE_FORM: Omit<Grade, 'id'> = {
     name: '',
@@ -14,12 +16,18 @@ const EMPTY_GRADE_FORM: Omit<Grade, 'id'> = {
 };
 
 const GradingSystem: React.FC = () => {
-    const { grades, addGrade, updateGrade, deleteGrade, blockRemoteUpdates, allowRemoteUpdates, saveGrades, isDirty, isItemDirty, isSyncing, isOnline } = useData();
+    const { grades, addGrade, updateGrade, deleteGrade, blockRemoteUpdates, allowRemoteUpdates, saveGrades, isDirty, isItemDirty, isSyncing, isOnline, restoreDefaultGrades, loadMetadata } = useData();
     const { currentUser } = useUser();
+
+    // TRIGGER RECONCILIATION: Identify unsaved local items on mount
+    React.useEffect(() => {
+        loadMetadata();
+    }, [loadMetadata]);
     const isAdmin = currentUser?.role === 'Admin';
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentGrade, setCurrentGrade] = useState<Grade | Omit<Grade, 'id'> | null>(null);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [isRestoreConfirmOpen, setIsRestoreConfirmOpen] = useState(false);
     const [itemIdToDelete, setItemIdToDelete] = useState<number | null>(null);
     const [modalError, setModalError] = useState('');
 
@@ -134,6 +142,15 @@ const GradingSystem: React.FC = () => {
         handleCloseModal();
     };
 
+    const handleRestoreDefault = () => {
+        setIsRestoreConfirmOpen(true);
+    };
+
+    const confirmRestoreDefault = () => {
+        restoreDefaultGrades();
+        setIsRestoreConfirmOpen(false);
+    };
+
     return (
         <ReadOnlyWrapper allowedRoles={['Admin']}>
             <div className="space-y-6 pb-20">
@@ -142,14 +159,22 @@ const GradingSystem: React.FC = () => {
                 </div>
 
                 <div className="bg-gray-100 py-4">
-                    <div className="flex justify-start">
+                    <div className="flex justify-start gap-4">
                         {isAdmin && (
-                            <button onClick={handleAddNew} className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                                </svg>
-                                Add New Grade
-                            </button>
+                            <>
+                                <button onClick={handleAddNew} className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                    </svg>
+                                    Add New Grade
+                                </button>
+                                <button onClick={handleRestoreDefault} className="flex items-center bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-7.714 2.143L11 21l-2.286-6.857L1 12l7.714-2.143L11 3z" />
+                                    </svg>
+                                    System Default
+                                </button>
+                            </>
                         )}
                     </div>
                 </div>
@@ -286,6 +311,16 @@ const GradingSystem: React.FC = () => {
                     onConfirm={handleConfirmDelete}
                     title="Delete Grade"
                     message="Are you sure you want to delete this grade? This will affect report card generation."
+                />
+
+                <MessageBox
+                    isOpen={isRestoreConfirmOpen}
+                    onConfirm={confirmRestoreDefault}
+                    onCancel={() => setIsRestoreConfirmOpen(false)}
+                    title="Restore System Default Grades"
+                    message={`Are you sure you want to restore the system default grading scale? \n\nThis will replace all your current grades with the standard scale (9 grades). All current grades will be deleted. You will need to save changes to persist this.`}
+                    variant="warning"
+                    confirmText="Restore Defaults"
                 />
             </div>
         </ReadOnlyWrapper>

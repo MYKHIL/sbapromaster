@@ -17,12 +17,12 @@ export const useNetworkStatus = () => {
         if (typeof window === 'undefined') return;
 
         const handleOnline = () => {
-            console.log('Network: Online');
+            0 && console.log('Network: Online');
             setIsOnline(true);
         };
 
         const handleOffline = () => {
-            console.log('Network: Offline');
+            0 && console.log('Network: Offline');
             setIsOnline(false);
         };
 

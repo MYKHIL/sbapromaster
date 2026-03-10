@@ -58,7 +58,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
     // Pause sync during authentication
     useEffect(() => {
         if (currentStep !== 'authenticated' || !isAuthenticated) {
-            console.log('[AuthOverlay] Pausing sync - authentication in progress');
+            0 && console.log('[AuthOverlay] Pausing sync - authentication in progress');
             pauseSync();
         }
     }, [currentStep, isAuthenticated, pauseSync]);
@@ -72,7 +72,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 // -------------------------------------------------------------
                 const pendingSelectionStr = localStorage.getItem('pending_school_selection');
                 if (pendingSelectionStr) {
-                    console.log('[AuthOverlay] 🔄 Found pending school selection (DB Switch)');
+                    0 && console.log('[AuthOverlay] 🔄 Found pending school selection (DB Switch)');
                     try {
                         const pendingSchool = JSON.parse(pendingSelectionStr) as SchoolListItem;
 
@@ -86,7 +86,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
 
                         // Restore selection
                         handleSchoolSelect(pendingSchool);
-                        console.log('[AuthOverlay] ✅ Restored pending selection:', pendingSchool.docId);
+                        0 && console.log('[AuthOverlay] ✅ Restored pending selection:', pendingSchool.docId);
 
                         // Clear the key so we don't loop or reuse
                         localStorage.removeItem('pending_school_selection');
@@ -106,11 +106,11 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 const savedUserPassword = localStorage.getItem('sba_user_password');
 
                 if (!savedSchoolId || !savedSchoolPassword) {
-                    console.log('[AuthOverlay] No saved school session found');
+                    0 && console.log('[AuthOverlay] No saved school session found');
                     return;
                 }
 
-                console.log('[AuthOverlay] Found saved school session, fetching data...');
+                0 && console.log('[AuthOverlay] Found saved school session, fetching data...');
 
                 // ... (Database switch check remains same) ...
                 const { SCHOOL_DATABASE_MAPPING, ACTIVE_DATABASE_INDEX } = await import('../constants');
@@ -156,13 +156,13 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                             academicTerm: result.data.settings?.academicTerm
                         });
                         setShowSessionRestore(true);
-                        console.log('[AuthOverlay] Full session data loaded, showing restore dialog');
+                        0 && console.log('[AuthOverlay] Full session data loaded, showing restore dialog');
                         return;
                     }
                 }
 
                 // CASE B: Only school session exists (e.g. after Switch User) -> Jump to User Selection
-                console.log('[AuthOverlay] School restored, jumping to user selection');
+                0 && console.log('[AuthOverlay] School restored, jumping to user selection');
                 setCurrentStep('user-selection');
             } catch (error) {
                 console.error('[AuthOverlay] Session restore error:', error);
@@ -192,7 +192,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 setShowSessionRestore(false);
                 setCurrentStep('authenticated');
                 resumeSync();
-                console.log('[AuthOverlay] ✅ Session restored successfully');
+                0 && console.log('[AuthOverlay] ✅ Session restored successfully');
             } else {
                 console.error('[AuthOverlay] Failed to login with saved credentials');
                 handleLogoutSession();
@@ -216,7 +216,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
         setSessionInfo(null);
         setCurrentStep('welcome');
 
-        console.log('[AuthOverlay] Session cleared, starting fresh');
+        0 && console.log('[AuthOverlay] Session cleared, starting fresh');
     };
 
     // ========== NAVIGATION HANDLERS ==========
@@ -255,7 +255,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
         docId: string
     ) => {
         try {
-            console.log('[AuthOverlay] 📝 Registering new school:', schoolName);
+            0 && console.log('[AuthOverlay] 📝 Registering new school:', schoolName);
 
             // -------------------------------------------------------------
             // DEBUG AUTOMATION: Pre-create admin for Dummy School
@@ -264,7 +264,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             // @ts-ignore - DEV and VITE_USE_EMULATOR exist in Vite env
             const isBotSchool = schoolName === 'Dummy School' || schoolName === 'SBA Academy Live';
             if ((import.meta as any).env.DEV && isBotSchool) {
-                console.log('[AuthOverlay] 🤖 Bot/Debug Mode: Pre-creating admin...');
+                0 && console.log('[AuthOverlay] 🤖 Bot/Debug Mode: Pre-creating admin...');
                 const { hashPassword } = await import('../services/authService');
                 const hashedPassword = await hashPassword('password');
 
@@ -371,13 +371,13 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                     });
 
                     targetIndex = bestIndex;
-                    console.log(`[AuthOverlay] Least-schools distribution selected DB ${targetIndex}. Final counts:`, dbCounts);
+                    0 && console.log(`[AuthOverlay] Least-schools distribution selected DB ${targetIndex}. Final counts:`, dbCounts);
                 } else {
                     targetIndex = 1; // Fallback to primary
                 }
             }
 
-            console.log(`[AuthOverlay] Targeted Database Index: ${targetIndex} for ${docId}`);
+            0 && console.log(`[AuthOverlay] Targeted Database Index: ${targetIndex} for ${docId}`);
 
             // Pre-calculate full registration data
             const registrationData: AppDataType = {
@@ -389,7 +389,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             // OPTIMIZATION: Defer Registration until Subscription Successful
             // -------------------------------------------------------------
             if (!isBotSchool) {
-                console.log('[AuthOverlay] Deferring registration until subscription is successfull');
+                0 && console.log('[AuthOverlay] Deferring registration until subscription is successfull');
                 setPendingRegistration({
                     docId,
                     password,
@@ -418,7 +418,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                         expiryDate: Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)), // 30 days
                         activationHash: 'c93a215026f36ac783bcac8ba5e4bbea1c3cdb6c79d3824f9712143c44dbb0f3' // Match portal default for debug
                     }, { merge: true }, `AuthOverlay/createBotSubscription/${baseName}`);
-                    console.log(`[AuthOverlay] 🤖 Bot: Trial subscription created for ${baseName}`);
+                    0 && console.log(`[AuthOverlay] 🤖 Bot: Trial subscription created for ${baseName}`);
                 } catch (subError) {
                     console.error('[AuthOverlay] ❌ Failed to create bot subscription:', subError);
                 }
@@ -436,7 +436,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
 
             // SUCCESS HANDLER (Bots)
             if (result.status === 'success' && result.data) {
-                console.log('[AuthOverlay] ✅ School registered successfully (Bot Mode)');
+                0 && console.log('[AuthOverlay] ✅ School registered successfully (Bot Mode)');
                 loadImportedData(result.data, true, (result as any).subscription);
                 setSchoolData(result.data);
                 setCurrentSchoolId(result.docId || docId);
@@ -451,7 +451,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 // @ts-ignore - DEV and VITE_USE_EMULATOR exist in Vite env
                 if (((import.meta as any).env.DEV || (import.meta as any).env.VITE_USE_EMULATOR === 'true') && schoolName === 'Dummy School') {
                     try {
-                        console.log('[AuthOverlay] 🤖 Debug Mode: Auto-logging in as admin...');
+                        0 && console.log('[AuthOverlay] 🤖 Debug Mode: Auto-logging in as admin...');
                         setUsers(usersArray);
                         const loginSuccess = await login(1, 'password', usersArray[0]);
                         if (!loginSuccess) throw new Error('Login returned false');
@@ -485,7 +485,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
     };
 
     const handleRegistrationComplete = (data: AppDataType, docId: string, _password: string, _subscription: any) => {
-        console.log('[AuthOverlay] ✅ Deferred registration successful:', docId);
+        0 && console.log('[AuthOverlay] ✅ Deferred registration successful:', docId);
 
         // 1. Clear modal and registration states
         setShowRegistrationPending(false);
@@ -530,7 +530,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
 
     const executeLogin = async (docId: string) => {
         try {
-            console.log('[AuthOverlay] 🔐 Executing login for:', docId);
+            0 && console.log('[AuthOverlay] 🔐 Executing login for:', docId);
             SyncLogger.log(`Attempting login for: ${docId}`);
 
             // Use the verified password from PasswordScreen
@@ -553,7 +553,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 return;
             }
 
-            console.log('[AuthOverlay] ✅ School data loaded successfully');
+            0 && console.log('[AuthOverlay] ✅ School data loaded successfully');
 
             // Load data into context
             loadImportedData(result.data, true, (result as any).subscription);
@@ -568,10 +568,10 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             // Check if admin setup is needed
             const hasUsers = result.data.users && result.data.users.length > 0;
             if (!hasUsers) {
-                console.log('[AuthOverlay] No users found - proceeding to admin setup');
+                0 && console.log('[AuthOverlay] No users found - proceeding to admin setup');
                 setCurrentStep('admin-setup');
             } else {
-                console.log('[AuthOverlay] Users found - proceeding to user selection');
+                0 && console.log('[AuthOverlay] Users found - proceeding to user selection');
                 setUsers(result.data.users);
                 setCurrentStep('user-selection');
             }
@@ -585,7 +585,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
 
     const handleAdminSetup = async (users: User[], adminPassword?: string) => {
         try {
-            console.log('[AuthOverlay] 👤 Setting up admin user');
+            0 && console.log('[AuthOverlay] 👤 Setting up admin user');
 
             // In setup mode, we expect at least one user (the admin) and a password
             if (users.length === 0 || !adminPassword) {
@@ -601,7 +601,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 // Explicitly save to Firestore first to ensure persistence
                 const { updateUsers } = await import('../services/firebaseService');
                 await updateUsers(currentSchoolId, users);
-                console.log('[AuthOverlay] ✅ Users saved to Firestore');
+                0 && console.log('[AuthOverlay] ✅ Users saved to Firestore');
 
                 // Then update local state which might trigger dirty check but data is already safe
                 loadImportedData({ users: users }, true);
@@ -619,7 +619,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             setCurrentStep('authenticated');
             resumeSync();
 
-            console.log('[AuthOverlay] ✅ Admin setup complete - authenticated');
+            0 && console.log('[AuthOverlay] ✅ Admin setup complete - authenticated');
         } catch (error) {
             console.error('[AuthOverlay] Admin setup error:', error);
             alert('Failed to set up admin user');
@@ -636,7 +636,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 return false;
             }
 
-            console.log('[AuthOverlay] 👤 User logged in:', user.name);
+            0 && console.log('[AuthOverlay] 👤 User logged in:', user.name);
 
             // Verify password hash
             const { hashPassword } = await import('../services/authService');
@@ -663,7 +663,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             setCurrentStep('authenticated');
             resumeSync();
 
-            console.log('[AuthOverlay] ✅ User authentication complete');
+            0 && console.log('[AuthOverlay] ✅ User authentication complete');
             return true;
         } catch (error) {
             console.error('[AuthOverlay] User login error:', error);
@@ -678,7 +678,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 throw new Error('User not found');
             }
 
-            console.log('[AuthOverlay] 🔑 Setting password for user:', user.name);
+            0 && console.log('[AuthOverlay] 🔑 Setting password for user:', user.name);
 
             // Hash the password
             const { hashPassword } = await import('../services/authService');
@@ -707,7 +707,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             setCurrentStep('authenticated');
             resumeSync();
 
-            console.log('[AuthOverlay] ✅ Password set and user authenticated');
+            0 && console.log('[AuthOverlay] ✅ Password set and user authenticated');
         } catch (error) {
             console.error('[AuthOverlay] Set password error:', error);
             throw error;

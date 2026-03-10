@@ -47,16 +47,16 @@ const loadFirebaseConfig = async () => {
     // Load school-to-database mapping from API
     if (data.schoolDatabaseMapping) {
       setSchoolDatabaseMapping(data.schoolDatabaseMapping);
-      console.log('[App] School database mapping loaded from API');
+      0 && console.log('[App] School database mapping loaded from API');
     }
 
     // Capture Activation Hash for security rules
     if (data.activationHash) {
       setActivationHash(data.activationHash);
-      console.log('[App] Activation security hash loaded');
+      0 && console.log('[App] Activation security hash loaded');
     }
 
-    console.log('[App] Firebase configuration loaded from API');
+    0 && console.log('[App] Firebase configuration loaded from API');
   } catch (error) {
     console.error('[App] Failed to load Firebase config:', error);
     // Fallback: If fetch fails (e.g. offline/error), try local storage or default?
@@ -70,12 +70,12 @@ const bootstrap = async () => {
 
   try {
     // 1. Fetch Configuration
-    console.log('[Bootstrap] Environment:', {
+    0 && console.log('[Bootstrap] Environment:', {
       isGitHubPages: window.location.hostname.includes('github.io'),
       hostname: window.location.hostname,
       API_BASE_URL
     });
-    console.log('[Bootstrap] Fetching configuration...');
+    0 && console.log('[Bootstrap] Fetching configuration...');
     // In development (vite), we might not have the API running on localhost:5173 
     // depending on how it's proxying. Vercel dev typically runs on 3000.
     // If running with `python run_server.py`, the API endpoints might fail unless we mock them or proxy.
@@ -88,7 +88,7 @@ const bootstrap = async () => {
     // We will attempt fetch.
 
     await loadFirebaseConfig();
-    console.log('[Bootstrap] Configuration loaded.');
+    0 && console.log('[Bootstrap] Configuration loaded.');
 
     // 2. Dynamic Import App
     // This ensures imports within App (like firebaseService) run AFTER config is set.

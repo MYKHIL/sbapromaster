@@ -135,7 +135,7 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
                 // BUT if we fail to create the new term, we might have locked users prematurely?
                 // Risk is low. Reverting is manual (admin unchecks box).
                 await saveDataTransaction(schoolId, { users: lockedUsers });
-                console.log('Main term users locked.');
+                0 && console.log('Main term users locked.');
             }
 
             // 1.6 Ensure New Term Users are Unlocked

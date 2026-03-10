@@ -45,7 +45,7 @@ export const FirebaseAnalyticsProvider: React.FC<{ children: ReactNode }> = ({ c
             description: description || `Read from ${collection || 'database'}`
         };
         setOperations(prev => [...prev, op]);
-        console.log(`[Firebase Analytics] 📖 READ: ${op.description} (${docCount} doc${docCount !== 1 ? 's' : ''})`);
+        0 && console.log(`[Firebase Analytics] 📖 READ: ${op.description} (${docCount} doc${docCount !== 1 ? 's' : ''})`);
     };
 
     const trackWrite = (operation: string, collection?: string, description?: string) => {
@@ -59,13 +59,13 @@ export const FirebaseAnalyticsProvider: React.FC<{ children: ReactNode }> = ({ c
             description: description || `Write to ${collection || 'database'}`
         };
         setOperations(prev => [...prev, op]);
-        console.log(`[Firebase Analytics] ✍️ WRITE: ${op.description}`);
+        0 && console.log(`[Firebase Analytics] ✍️ WRITE: ${op.description}`);
     };
 
     // Register tracking functions globally so firebaseService can use them
     useEffect(() => {
         registerTracking(trackRead, trackWrite);
-        console.log('[Firebase Analytics] Tracking registered globally');
+        0 && console.log('[Firebase Analytics] Tracking registered globally');
 
         return () => {
             // Unregister on unmount

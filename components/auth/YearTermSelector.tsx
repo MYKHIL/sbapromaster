@@ -33,7 +33,7 @@ const YearTermSelector: React.FC<YearTermSelectorProps> = ({ school, onSelectPer
             const storageKey = `last_accessed_period_${school.docId}`;
             const lastId = localStorage.getItem(storageKey);
 
-            console.log('[YearTermSelector] Determining Last Accessed:', {
+            0 && console.log('[YearTermSelector] Determining Last Accessed:', {
                 schoolId: school.docId,
                 storageKey,
                 lastId,
@@ -41,7 +41,7 @@ const YearTermSelector: React.FC<YearTermSelectorProps> = ({ school, onSelectPer
             });
 
             if (lastId && periods.some(p => p.docId === lastId)) {
-                console.log('[YearTermSelector] Found Last Accessed in periods:', lastId);
+                0 && console.log('[YearTermSelector] Found Last Accessed in periods:', lastId);
                 setMostRecentDocId(lastId);
                 return;
             }
@@ -55,7 +55,7 @@ const YearTermSelector: React.FC<YearTermSelectorProps> = ({ school, onSelectPer
             });
 
             if (sorted.length > 0) {
-                console.log('[YearTermSelector] Defaulting to Chronologically Latest:', sorted[0].docId);
+                0 && console.log('[YearTermSelector] Defaulting to Chronologically Latest:', sorted[0].docId);
                 setMostRecentDocId(sorted[0].docId);
             }
         } catch (e) {
@@ -74,7 +74,7 @@ const YearTermSelector: React.FC<YearTermSelectorProps> = ({ school, onSelectPer
                 const dbSuffix = school._databaseIndex !== undefined ? `_db${school._databaseIndex}` : '';
                 const cacheKey = `auth_periods_${sanitizeSchoolName(school.displayName)}${dbSuffix}`;
                 localStorage.removeItem(cacheKey);
-                console.log('[YearTermSelector] Cache cleared, fetching fresh data');
+                0 && console.log('[YearTermSelector] Cache cleared, fetching fresh data');
             }
 
             // Pass school's database index and precise docId prefix
@@ -93,7 +93,7 @@ const YearTermSelector: React.FC<YearTermSelectorProps> = ({ school, onSelectPer
         // Save to MRU
         try {
             const storageKey = `last_accessed_period_${school.docId}`;
-            console.log('[YearTermSelector] Saving Last Accessed:', { storageKey, docId: period.docId });
+            0 && console.log('[YearTermSelector] Saving Last Accessed:', { storageKey, docId: period.docId });
             localStorage.setItem(storageKey, period.docId);
         } catch (e) {
             console.warn('Failed to save MRU preference:', e);

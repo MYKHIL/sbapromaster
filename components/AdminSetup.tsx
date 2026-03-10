@@ -70,13 +70,13 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         try {
             // Force a fresh fetch from Firebase by temporarily clearing the activity timestamp
             // This allows the Firebase subscription to pull latest data
-            console.log('[AdminSetup] Manually refreshing data from Firebase...');
+            0 && console.log('[AdminSetup] Manually refreshing data from Firebase...');
 
             // The data will update automatically through the DataContext subscription
             // We just need to wait a moment for it to propagate
             await new Promise(resolve => setTimeout(resolve, 1000));
 
-            console.log('[AdminSetup] Data refresh complete');
+            0 && console.log('[AdminSetup] Data refresh complete');
             setError('✅ Data refreshed successfully!');
             setTimeout(() => setError(null), 2000);
         } catch (err) {
@@ -255,7 +255,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                     editingUser.classSubjects[className] = [...editingUser.allowedSubjects];
                 }
             });
-            console.log('[AdminSetup] Auto-populated classSubjects from allowedSubjects for editing:', editingUser.classSubjects);
+            0 && console.log('[AdminSetup] Auto-populated classSubjects from allowedSubjects for editing:', editingUser.classSubjects);
         }
 
         setUsers([editingUser]);
@@ -283,7 +283,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                 : u
         );
 
-        console.log('[AdminSetup] Updating user:', editingUserId, 'Total users after update:', updatedUsers.length, updatedUsers);
+        0 && console.log('[AdminSetup] Updating user:', editingUserId, 'Total users after update:', updatedUsers.length, updatedUsers);
         setExistingUsers(updatedUsers);
         setEditingUserId(null);
         setUsers([]);
@@ -315,7 +315,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         }
 
         const updatedUsers = existingUsers.filter(u => u.id !== userId);
-        console.log('[AdminSetup] Deleting user:', userId, 'Remaining users:', updatedUsers.length, updatedUsers);
+        0 && console.log('[AdminSetup] Deleting user:', userId, 'Remaining users:', updatedUsers.length, updatedUsers);
         setExistingUsers(updatedUsers);
         setDeleteConfirmUserId(null);
         setError(null);
@@ -747,7 +747,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                     {onCancel && mode === 'management' && users.length === 0 && (
                         <button
                             onClick={async () => {
-                                console.log('[AdminSetup] Apply button clicked. Saving users:', existingUsers.length, existingUsers);
+                                0 && console.log('[AdminSetup] Apply button clicked. Saving users:', existingUsers.length, existingUsers);
                                 if (existingUsers.length === 0) {
                                     setError('Cannot save: no users to apply. Please add at least the admin user.');
                                     return;

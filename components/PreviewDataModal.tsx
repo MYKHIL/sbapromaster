@@ -1,5 +1,5 @@
 import React from 'react';
-import { useData } from '../context/DataContext';
+import { useData, getItemId } from '../context/DataContext';
 
 interface PreviewDataModalProps {
     isOpen: boolean;
@@ -36,6 +36,7 @@ const PreviewDataModal: React.FC<PreviewDataModalProps> = ({
     // Helper functions for humanizing data
     const getStudentName = (id: number) => students.find(s => s.id === id)?.name || `Student #${id}`;
     const getSubjectName = (id: number) => subjects.find(s => s.id === id)?.subject || `Subject #${id}`;
+    const getClassName = (id: number) => classes.find(c => c.id === id)?.name || `Class #${id}`;
     const getAssessmentName = (id: number) => {
         const a = assessments.find(x => x.id === id);
         return a ? (a.title || a.name) : `Assessment #${id}`;
@@ -80,23 +81,30 @@ const PreviewDataModal: React.FC<PreviewDataModalProps> = ({
                                             {delField} ({items.length})
                                         </h5>
                                         <ul className="space-y-1 pl-1">
-                                            {items.map((item: any) => (
-                                                <li key={item.id} className="text-sm text-red-700 flex items-center gap-2 justify-between group">
-                                                    <div className="flex items-center gap-2">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                                        <span className="line-through opacity-75">{item.name || item.subject || item.title || (item.class ? `Student: ${item.name}` : `ID: ${item.id}`)}</span>
-                                                    </div>
-                                                    <button
-                                                        onClick={() => handleRevert(delField, item.id)}
-                                                        className="text-gray-400 hover:text-green-600 opacity-0 group-hover:opacity-100 transition-all p-1"
-                                                        title="Restore (Cancel Deletion)"
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                                                        </svg>
-                                                    </button>
-                                                </li>
-                                            ))}
+                                            {items.map((item: any) => {
+                                                const id = getItemId(item);
+                                                const label = item.name || item.subject || item.title ||
+                                                    (item.studentId ? getStudentName(item.studentId) :
+                                                        item.classId ? getClassName(item.classId) : `ID: ${id}`);
+
+                                                return (
+                                                    <li key={id} className="text-sm text-red-700 flex items-center gap-2 justify-between group">
+                                                        <div className="flex items-center gap-2">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                            <span className="line-through opacity-75">{label}</span>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => handleRevert(delField, id)}
+                                                            className="text-gray-400 hover:text-green-600 opacity-0 group-hover:opacity-100 transition-all p-1"
+                                                            title="Restore (Cancel Deletion)"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                                                            </svg>
+                                                        </button>
+                                                    </li>
+                                                );
+                                            })}
                                         </ul>
                                     </div>
                                 ))}
@@ -111,7 +119,7 @@ const PreviewDataModal: React.FC<PreviewDataModalProps> = ({
                     return (
                         <div key={key} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
                             <h4 className="font-bold text-blue-600 text-lg mb-3 capitalize border-b pb-2 flex justify-between items-center">
-                                <span>{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                                <span>{key === 'classes' ? 'Teachers / Classes' : key.replace(/([A-Z])/g, ' $1').trim()}</span>
                                 <div className="flex items-center gap-2">
                                     <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
                                         {Array.isArray(value) ? value.length : 1} items
@@ -173,34 +181,62 @@ const PreviewDataModal: React.FC<PreviewDataModalProps> = ({
                                 {/* GENERIC LIST PREVIEW */}
                                 {Array.isArray(value) && key !== 'scores' && (
                                     <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                        {value.map((item: any) => (
-                                            <li key={item.id} className="text-sm bg-gray-50 p-2 rounded border border-gray-100 flex justify-between items-start group">
-                                                <div>
-                                                    <span className="font-medium block">{item.name || item.subject || item.title || `ID: ${item.id}`}</span>
-                                                </div>
-                                                <button
-                                                    onClick={() => handleRevert(key, item.id)}
-                                                    className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1"
-                                                    title="Revert this change"
-                                                >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                    </svg>
-                                                </button>
-                                            </li>
-                                        ))}
+                                        {value.map((item: any) => {
+                                            const id = getItemId(item);
+                                            const label = item.name || item.subject || item.title ||
+                                                (item.studentId ? getStudentName(item.studentId) :
+                                                    item.classId ? getClassName(item.classId) : `ID: ${id}`);
+
+                                            return (
+                                                <li key={id} className="text-sm bg-gray-50 p-2 rounded border border-gray-100 flex justify-between items-start group">
+                                                    <div>
+                                                        <span className="font-medium block">{label}</span>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => handleRevert(key, id)}
+                                                        className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1"
+                                                        title="Revert this change"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                        </svg>
+                                                    </button>
+                                                </li>
+                                            );
+                                        })}
                                     </ul>
                                 )}
 
                                 {/* SETTINGS PREVIEW */}
                                 {key === 'settings' && (
                                     <ul className="space-y-1">
-                                        {Object.entries(value).map(([k, v]) => (
-                                            <li key={k} className="text-sm bg-gray-50 p-2 rounded border border-gray-100 flex justify-between items-center bg-white">
-                                                <span className="font-medium capitalize text-gray-700">{k.replace(/([A-Z])/g, ' $1').trim()}</span>
-                                                <span className="text-xs text-gray-500 truncate max-w-[150px]" title={String(v)}>{String(v)}</span>
-                                            </li>
-                                        ))}
+                                        {Object.entries(value).map(([k, v]) => {
+                                            const isImage = k === 'logo' || k === 'headmasterSignature' || (typeof v === 'string' && v.startsWith('data:image'));
+                                            const displayValue = isImage ? `[${k.includes('logo') ? 'Logo' : 'Signature'} Image]` : String(v);
+                                            
+                                            return (
+                                                <li key={k} className="text-sm bg-gray-50 p-2 rounded border border-gray-100 flex justify-between items-center group hover:bg-white transition-colors">
+                                                    <span className="font-medium capitalize text-gray-700">{k.replace(/([A-Z])/g, ' $1').trim()}</span>
+                                                    <div className="flex items-center gap-2 overflow-hidden">
+                                                        <span 
+                                                            className={`${isImage ? 'text-blue-600 font-semibold' : 'text-gray-500'} text-xs truncate max-w-[150px]`} 
+                                                            title={isImage ? 'Base64 Image Data' : String(v)}
+                                                        >
+                                                            {displayValue}
+                                                        </span>
+                                                        <button
+                                                            onClick={() => handleRevert('settings', k)}
+                                                            className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1"
+                                                            title="Revert this setting"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                </li>
+                                            );
+                                        })}
                                     </ul>
                                 )}
                             </div>

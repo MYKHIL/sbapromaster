@@ -33,9 +33,9 @@ export const processImageForUpload = (
                 const scale = minDimension / currentMin;
                 width = Math.round(width * scale);
                 height = Math.round(height * scale);
-                console.log(`[Image Processing] Upscaling from ${img.width}x${img.height} to ${width}x${height}`);
+                0 && console.log(`[Image Processing] Upscaling from ${img.width}x${img.height} to ${width}x${height}`);
             } else {
-                console.log(`[Image Processing] Preserving original size ${width}x${height}`);
+                0 && console.log(`[Image Processing] Preserving original size ${width}x${height}`);
             }
 
             canvas.width = width;
@@ -168,12 +168,12 @@ export const uploadToImgBB = async (base64Str: string): Promise<string | null> =
 
         // Only compress if exceeds 5MB (shouldn send happen with client validation)
         if (originalSize > MAX_SIZE) {
-            console.log(`[ImgBB] Image too large (${formatBytes(originalSize)}). Compressing...`);
+            0 && console.log(`[ImgBB] Image too large (${formatBytes(originalSize)}). Compressing...`);
             imageToUpload = await compressImage(base64Str, 1200, 1200, 0.8);
             const newSize = getBase64Size(imageToUpload);
 
             if (newSize > MAX_SIZE) {
-                console.log(`[ImgBB] Still too large (${formatBytes(newSize)}). Using aggressive compression...`);
+                0 && console.log(`[ImgBB] Still too large (${formatBytes(newSize)}). Using aggressive compression...`);
                 imageToUpload = await compressImage(base64Str, 800, 800, 0.7);
                 const finalSize = getBase64Size(imageToUpload);
 
@@ -182,7 +182,7 @@ export const uploadToImgBB = async (base64Str: string): Promise<string | null> =
                     return null;
                 }
             }
-            console.log(`[ImgBB] Compressed to ${formatBytes(getBase64Size(imageToUpload))}.`);
+            0 && console.log(`[ImgBB] Compressed to ${formatBytes(getBase64Size(imageToUpload))}.`);
         }
 
         // Remove data URI prefix if present

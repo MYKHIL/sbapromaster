@@ -90,7 +90,7 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
         const filteredValue = value.replace(/[^0-9/.]/g, '');
         const assessment = assessments.find(a => a.id === assessmentId);
 
-        console.log('[InlineScoreInput] User input:', {
+        0 && console.log('[InlineScoreInput] User input:', {
             studentId: student.id,
             studentName: student.name,
             subjectId,
@@ -136,7 +136,7 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
         const maxScore = isExam ? 100 : assessment.weight;
         const basis = isExam ? 100 : assessment.weight;
 
-        console.log('[InlineScoreInput] handleSave called:', {
+        0 && console.log('[InlineScoreInput] handleSave called:', {
             studentId: student.id,
             studentName: student.name,
             subjectId,
@@ -146,7 +146,7 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
         });
 
         if (!rawScoreInput) {
-            console.log('[InlineScoreInput] Empty score - clearing:', {
+            0 && console.log('[InlineScoreInput] Empty score - clearing:', {
                 studentId: student.id,
                 studentName: student.name,
                 assessmentId,
@@ -177,41 +177,41 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
         if (rawScoreInput.includes('/')) {
             const parts = rawScoreInput.split('/');
             if (parts.length !== 2) {
-                console.log('[InlineScoreInput] Validation error: Invalid fraction format');
+                0 && console.log('[InlineScoreInput] Validation error: Invalid fraction format');
                 setErrors(prev => ({ ...prev, [assessmentId]: "Use 'x' or 'x/y'" }));
                 return;
             }
             const [x, y] = parts.map(Number);
             if (isNaN(x) || isNaN(y)) {
-                console.log('[InlineScoreInput] Validation error: Non-numeric values in fraction');
+                0 && console.log('[InlineScoreInput] Validation error: Non-numeric values in fraction');
                 setErrors(prev => ({ ...prev, [assessmentId]: "Numbers only" }));
                 return;
             }
             if (y === 0) {
-                console.log('[InlineScoreInput] Validation error: Division by zero');
+                0 && console.log('[InlineScoreInput] Validation error: Division by zero');
                 setErrors(prev => ({ ...prev, [assessmentId]: "Base cannot be 0" }));
                 return;
             }
             convertedScore = (x / y) * maxScore;
-            console.log('[InlineScoreInput] Fraction conversion:', { x, y, maxScore, convertedScore });
+            0 && console.log('[InlineScoreInput] Fraction conversion:', { x, y, maxScore, convertedScore });
         } else {
             const z = Number(rawScoreInput);
             if (isNaN(z)) {
-                console.log('[InlineScoreInput] Validation error: Not a number');
+                0 && console.log('[InlineScoreInput] Validation error: Not a number');
                 setErrors(prev => ({ ...prev, [assessmentId]: "Score must be a number" }));
                 return;
             }
             convertedScore = z;
-            console.log('[InlineScoreInput] Direct score:', { rawInput: z, convertedScore });
+            0 && console.log('[InlineScoreInput] Direct score:', { rawInput: z, convertedScore });
         }
 
         if (convertedScore > maxScore) {
-            console.log('[InlineScoreInput] Validation error: Exceeds max score', { convertedScore, maxScore });
+            0 && console.log('[InlineScoreInput] Validation error: Exceeds max score', { convertedScore, maxScore });
             setErrors(prev => ({ ...prev, [assessmentId]: `Max is ${maxScore}` }));
             return;
         }
         if (convertedScore < 0) {
-            console.log('[InlineScoreInput] Validation error: Negative score');
+            0 && console.log('[InlineScoreInput] Validation error: Negative score');
             setErrors(prev => ({ ...prev, [assessmentId]: "Cannot be negative" }));
             return;
         }
@@ -221,7 +221,7 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
         // Update original value to the new saved value
         originalValues.current[assessmentId] = finalScore;
 
-        console.log('[InlineScoreInput] ✅ Score validated and formatted:', {
+        0 && console.log('[InlineScoreInput] ✅ Score validated and formatted:', {
             studentId: student.id,
             studentName: student.name,
             subjectId,
@@ -232,7 +232,7 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
             finalScore
         });
 
-        console.log('[InlineScoreInput] 💾 Calling updateStudentScores (saving to local cache)...');
+        0 && console.log('[InlineScoreInput] 💾 Calling updateStudentScores (saving to local cache)...');
         updateStudentScores(student.id, subjectId, assessment.id, [finalScore]);
 
         // Clear modification flag after successful save
@@ -245,7 +245,7 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
         // Remove from global draft since it's now saved to local state
         removeDraftScore(student.id, subjectId, assessmentId);
 
-        console.log('[InlineScoreInput] ✅ Score committed successfully');
+        0 && console.log('[InlineScoreInput] ✅ Score committed successfully');
     };
 
     const totalWeightedScoreForDisplay = assessments.reduce((total, assessment) => {

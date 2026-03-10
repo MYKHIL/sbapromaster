@@ -28,8 +28,8 @@ export function startNewLog(mode: string): void {
         logBuffer = header;
         isInitialized = true;
 
-        console.log(`[SyncLogger] Log initialized: ${logFilePath}`);
-        console.log(`[SyncLogger] Logs will be saved to browser when you call downloadLog()`);
+        0 && console.log(`[SyncLogger] Log initialized: ${logFilePath}`);
+        0 && console.log(`[SyncLogger] Logs will be saved to browser when you call downloadLog()`);
     } catch (error) {
         console.error('[SyncLogger] Failed to initialize log:', error);
     }
@@ -56,7 +56,7 @@ export function log(message: string): void {
     logBuffer.push(entry);
 
     // Also log to console for immediate visibility
-    console.log(`[SYNC_LOG] ${message}`);
+    0 && console.log(`[SYNC_LOG] ${message}`);
 }
 
 /**
@@ -98,7 +98,7 @@ export function downloadLog(): void {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        console.log(`[SyncLogger] Log downloaded: ${logFilePath}`);
+        0 && console.log(`[SyncLogger] Log downloaded: ${logFilePath}`);
     } catch (error) {
         console.error('[SyncLogger] Failed to download log:', error);
     }

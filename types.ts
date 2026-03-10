@@ -128,6 +128,7 @@ export interface UserLog {
   id: number;
   userId: number;
   userName: string;
+  role: string;
   action: string;
   timestamp: string;
 }

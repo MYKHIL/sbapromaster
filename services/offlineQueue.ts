@@ -57,7 +57,7 @@ class OfflineQueueManager {
 
         this.queue.push(item);
         this.saveQueue();
-        console.log(`Added item to offline queue. Queue size: ${this.queue.length}`);
+        0 && console.log(`Added item to offline queue. Queue size: ${this.queue.length}`);
         return item.id;
     }
 
@@ -83,7 +83,7 @@ class OfflineQueueManager {
     async processQueue(saveFn: (data: any) => Promise<void>): Promise<boolean> {
         if (this.queue.length === 0) return true;
 
-        console.log(`Processing offline queue (${this.queue.length} items)...`);
+        0 && console.log(`Processing offline queue (${this.queue.length} items)...`);
         const itemsToProcess = [...this.queue];
         let allSuccess = true;
 
@@ -92,7 +92,7 @@ class OfflineQueueManager {
                 await saveFn(item.data);
                 // Success - remove from queue
                 this.queue = this.queue.filter(i => i.id !== item.id);
-                console.log(`Successfully processed queue item ${item.id}`);
+                0 && console.log(`Successfully processed queue item ${item.id}`);
             } catch (error) {
                 console.error(`Failed to process queue item ${item.id}:`, error);
 
@@ -100,7 +100,7 @@ class OfflineQueueManager {
                 const queueItem = this.queue.find(i => i.id === item.id);
                 if (queueItem) {
                     queueItem.retryCount++;
-                    console.log(`Item ${item.id} will be retried (attempt ${queueItem.retryCount})`);
+                    0 && console.log(`Item ${item.id} will be retried (attempt ${queueItem.retryCount})`);
                 }
 
                 allSuccess = false;
@@ -108,7 +108,7 @@ class OfflineQueueManager {
         }
 
         this.saveQueue();
-        console.log(`Queue processing complete. Remaining: ${this.queue.length}`);
+        0 && console.log(`Queue processing complete. Remaining: ${this.queue.length}`);
         return allSuccess;
     }
 
@@ -118,7 +118,7 @@ class OfflineQueueManager {
     clearQueue() {
         this.queue = [];
         this.saveQueue();
-        console.log('Offline queue cleared');
+        0 && console.log('Offline queue cleared');
     }
 
     /**

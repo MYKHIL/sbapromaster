@@ -17,12 +17,10 @@ const Subjects: React.FC = () => {
     const { subjects, addSubject, updateSubject, deleteSubject, saveSubjects, isDirty, isItemDirty, isSyncing, isOnline, loadMetadata } = useData();
     const { currentUser } = useUser();
 
-    // Ensure subjects are loaded
+    // TRIGGER RECONCILIATION: Identify unsaved local items on mount
     React.useEffect(() => {
-        if (subjects.length === 0) {
-            loadMetadata();
-        }
-    }, [subjects, loadMetadata]);
+        loadMetadata();
+    }, [loadMetadata]);
     const isAdmin = currentUser?.role === 'Admin';
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentSubject, setCurrentSubject] = useState<Subject | Omit<Subject, 'id'> | null>(null);

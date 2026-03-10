@@ -134,11 +134,11 @@ const StudentProgress: React.FC = () => {
                 // Determine school name prefix from current ID
                 // ID format: schoolname_year_term
                 const prefix = schoolId.split('_')[0];
-                console.log('[StudentProgress] Fetching history list for school prefix:', prefix);
+                0 && console.log('[StudentProgress] Fetching history list for school prefix:', prefix);
                 if (prefix) {
                     // Use new key-only fetcher
                     const ids = await import('../../services/firebaseService').then(m => m.getSchoolTermIds(prefix));
-                    console.log('[StudentProgress] History terms found:', ids.length);
+                    0 && console.log('[StudentProgress] History terms found:', ids.length);
                     // Filter out current term if desired, or keep all. 
                     // Usually we want all to show progress including current? 
                     // Actually getSchoolHistory logic returned all matching prefix.
@@ -166,7 +166,7 @@ const StudentProgress: React.FC = () => {
             }
 
             const termId = termIdsToLoad[loadedTermCount];
-            console.log(`[StudentProgress] ⏳ Loading history detail for term ${loadedTermCount + 1}/${termIdsToLoad.length}: ${termId}`);
+            0 && console.log(`[StudentProgress] ⏳ Loading history detail for term ${loadedTermCount + 1}/${termIdsToLoad.length}: ${termId}`);
 
             try {
                 const termData = await import('../../services/firebaseService').then(m => m.getSchoolTermData(termId));
@@ -203,7 +203,7 @@ const StudentProgress: React.FC = () => {
 
     // Compute history when students are selected
     useEffect(() => {
-        console.log('[StudentProgress] Computing history - students:', selectedStudents.length, 'history terms:', historyData.length);
+        0 && console.log('[StudentProgress] Computing history - students:', selectedStudents.length, 'history terms:', historyData.length);
 
         if (selectedStudents.length === 0 || historyData.length === 0) {
             setHistoriesMap({});
@@ -300,7 +300,7 @@ const StudentProgress: React.FC = () => {
 
         // 2. Build History
         selectedStudents.forEach(student => {
-            console.log('[StudentProgress] Processing student:', student.name, 'ID:', student.id);
+            0 && console.log('[StudentProgress] Processing student:', student.name, 'ID:', student.id);
             const history: StudentHistory[] = [];
 
             historyData.forEach((termData, termIdx) => {

@@ -20,7 +20,7 @@ function getPendingUploadDataSimulation(
         // 1. METADATA GUARD
         const isMetadata = ['subjects', 'classes', 'assessments', 'grades'].includes(field);
         if (isMetadata && !isAdmin) {
-            console.log(`[SIM] 🛡️ Role-Based Guard: Stripping unauthorized metadata change to '${field}'`);
+            0 && console.log(`[SIM] 🛡️ Role-Based Guard: Stripping unauthorized metadata change to '${field}'`);
             return;
         }
 
@@ -43,7 +43,7 @@ function getPendingUploadDataSimulation(
                         return itemClass && allowedClasses.includes(itemClass);
                     });
                     if (deletedIds.length < originalCount) {
-                        console.log(`[SIM] 🛡️ Role-Based Guard: Filtered out ${originalCount - deletedIds.length} unauthorized deletions in '${field}'`);
+                        0 && console.log(`[SIM] 🛡️ Role-Based Guard: Filtered out ${originalCount - deletedIds.length} unauthorized deletions in '${field}'`);
                     }
                 }
 
@@ -51,7 +51,7 @@ function getPendingUploadDataSimulation(
                 // Using 20% threshold as in implementation
                 const isMassDeletion = deletedIds.length > 5 && (deletedIds.length > originalVal.length * 0.2);
                 if (isMassDeletion && !isAdmin) {
-                    console.log(`[SIM] 🚫 SAFETY BLOCK: Preventing mass deletion of ${deletedIds.length} ${field}`);
+                    0 && console.log(`[SIM] 🚫 SAFETY BLOCK: Preventing mass deletion of ${deletedIds.length} ${field}`);
                 } else if (deletedIds.length > 0) {
                     deletions[field] = deletedIds;
                 }
@@ -71,7 +71,7 @@ function getPendingUploadDataSimulation(
 }
 
 // TEST CASE 1: Admin should be able to do anything
-console.log("\n--- TEST CASE 1: Admin Full Access ---");
+0 && console.log("\n--- TEST CASE 1: Admin Full Access ---");
 const original = {
     subjects: [{ id: 1, name: 'Math' }, { id: 2, name: 'Science' }],
     students: [
@@ -98,11 +98,11 @@ const resultAdmin = getPendingUploadDataSimulation(
     new Set(['subjects', 'students'])
 );
 // In this case: subjects has an update, students has no updates (only deletions)
-console.log("Admin Payload Result (Subjects present):", !!resultAdmin.subjects);
-console.log("Admin Deletions Result (Subjects & Students present):", !!(resultAdmin._deletions?.subjects && resultAdmin._deletions?.students));
+0 && console.log("Admin Payload Result (Subjects present):", !!resultAdmin.subjects);
+0 && console.log("Admin Deletions Result (Subjects & Students present):", !!(resultAdmin._deletions?.subjects && resultAdmin._deletions?.students));
 
 // TEST CASE 2: Teacher trying to delete subjects
-console.log("\n--- TEST CASE 2: Teacher Metadata Block ---");
+0 && console.log("\n--- TEST CASE 2: Teacher Metadata Block ---");
 const currentTeacher = {
     ...original,
     subjects: [{ id: 1, name: 'Math' }] // Science deleted
@@ -113,10 +113,10 @@ const resultTeacher = getPendingUploadDataSimulation(
     currentTeacher,
     new Set(['subjects'])
 );
-console.log("Teacher Metadata Payload empty (Blocked):", Object.keys(resultTeacher).length === 0);
+0 && console.log("Teacher Metadata Payload empty (Blocked):", Object.keys(resultTeacher).length === 0);
 
 // TEST CASE 3: Teacher deleting scoped vs unscoped students
-console.log("\n--- TEST CASE 3: Scoped Student Deletion ---");
+0 && console.log("\n--- TEST CASE 3: Scoped Student Deletion ---");
 const cts = {
     ...original,
     students: original.students.filter(s => s.id !== 'S1' && s.id !== 'S3') // S1 (1A) and S3 (1B) deleted
@@ -128,10 +128,10 @@ const resultTeacherScoped = getPendingUploadDataSimulation(
     cts,
     new Set(['students'])
 );
-console.log("Teacher Scoped Deletions (Should only contain S1):", resultTeacherScoped._deletions?.students);
+0 && console.log("Teacher Scoped Deletions (Should only contain S1):", resultTeacherScoped._deletions?.students);
 
 // TEST CASE 4: Mass Deletion Safety
-console.log("\n--- TEST CASE 4: Mass Deletion Block ---");
+0 && console.log("\n--- TEST CASE 4: Mass Deletion Block ---");
 const currentTeacherMass = {
     ...original,
     students: [] // All 6 deleted (> 5 and > 20%)
@@ -142,4 +142,4 @@ const resultTeacherMass = getPendingUploadDataSimulation(
     currentTeacherMass,
     new Set(['students'])
 );
-console.log("Teacher Mass Deletions present (Should be false/undefined):", !!resultTeacherMass._deletions?.students);
+0 && console.log("Teacher Mass Deletions present (Should be false/undefined):", !!resultTeacherMass._deletions?.students);

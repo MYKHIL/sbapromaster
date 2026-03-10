@@ -59,7 +59,7 @@ export const isEmulator = (import.meta as any).env.VITE_USE_EMULATOR === 'true';
 const targetIndex = isEmulator ? 2 : ACTIVE_DATABASE_INDEX;
 
 const selectedConfig = FIREBASE_CONFIGS[targetIndex] || FIREBASE_CONFIGS[1];
-console.log(`[Firebase] Initializing with Database Index: ${targetIndex} (${selectedConfig['projectId']}) ${isEmulator ? '[EMULATOR FORCED]' : ''}`);
+0 && console.log(`[Firebase] Initializing with Database Index: ${targetIndex} (${selectedConfig['projectId']}) ${isEmulator ? '[EMULATOR FORCED]' : ''}`);
 
 import { getApp, getApps } from "firebase/app";
 
@@ -92,7 +92,7 @@ if ((import.meta as any).env.VITE_USE_EMULATOR === 'true') {
     try {
         connectFirestoreEmulator(db, '127.0.0.1', 8080);
         connectAuthEmulator(auth, "http://127.0.0.1:9099");
-        console.log("✅ Main Firestore & Auth connected to emulator");
+        0 && console.log("✅ Main Firestore & Auth connected to emulator");
     } catch (e) {
         console.error("Failed to connect to emulator:", e);
     }
@@ -135,9 +135,9 @@ import { isLoggingEnabled } from './loggingControl';
 
 export const loggedGetDoc = async (ref: any, label: string) => {
     try {
-        if (isLoggingEnabled()) console.log(`[Firestore Read] ${label} -> ${ref.path}`);
+        if (isLoggingEnabled()) 0 && console.log(`[Firestore Read] ${label} -> ${ref.path}`);
         const snap = await getDoc(ref);
-        if (isLoggingEnabled()) console.log(`[Firestore Read] ${label} -> exists=${snap.exists()}`);
+        if (isLoggingEnabled()) 0 && console.log(`[Firestore Read] ${label} -> exists=${snap.exists()}`);
         return snap;
     } catch (e) {
         console.error(`[Firestore Read] ${label} ERROR -> ${ref?.path || '<unknown>'}:`, e);
@@ -147,9 +147,9 @@ export const loggedGetDoc = async (ref: any, label: string) => {
 
 export const loggedGetDocs = async (refOrQuery: any, label: string) => {
     try {
-        if (isLoggingEnabled()) console.log(`[Firestore Read] ${label} -> fetching`);
+        if (isLoggingEnabled()) 0 && console.log(`[Firestore Read] ${label} -> fetching`);
         const snap = await getDocs(refOrQuery);
-        if (isLoggingEnabled()) console.log(`[Firestore Read] ${label} -> docs=${snap.size}`);
+        if (isLoggingEnabled()) 0 && console.log(`[Firestore Read] ${label} -> docs=${snap.size}`);
         return snap;
     } catch (e) {
         console.error(`[Firestore Read] ${label} ERROR:`, e);
@@ -159,9 +159,9 @@ export const loggedGetDocs = async (refOrQuery: any, label: string) => {
 
 export const loggedUpdateDoc = async (docRef: any, data: any, label: string) => {
     try {
-        if (isLoggingEnabled()) console.log(`[Firestore Write] ${label} -> ${docRef.path}`, data);
+        if (isLoggingEnabled()) 0 && console.log(`[Firestore Write] ${label} -> ${docRef.path}`, data);
         await updateDoc(docRef, data);
-        if (isLoggingEnabled()) console.log(`[Firestore Write] ${label} -> completed ${docRef.path}`);
+        if (isLoggingEnabled()) 0 && console.log(`[Firestore Write] ${label} -> completed ${docRef.path}`);
     } catch (e) {
         console.error(`[Firestore Write] ${label} ERROR -> ${docRef?.path || '<unknown>'}:`, e);
         throw e;
@@ -170,13 +170,13 @@ export const loggedUpdateDoc = async (docRef: any, data: any, label: string) => 
 
 export const loggedSetDoc = async (docRef: any, data: any, options: any = undefined, label: string) => {
     try {
-        if (isLoggingEnabled()) console.log(`[Firestore Write] ${label} -> ${docRef.path}`);
+        if (isLoggingEnabled()) 0 && console.log(`[Firestore Write] ${label} -> ${docRef.path}`);
         if (options) {
             await setDoc(docRef, data, options);
         } else {
             await setDoc(docRef, data);
         }
-        if (isLoggingEnabled()) console.log(`[Firestore Write] ${label} -> completed ${docRef.path}`);
+        if (isLoggingEnabled()) 0 && console.log(`[Firestore Write] ${label} -> completed ${docRef.path}`);
     } catch (e) {
         console.error(`[Firestore Write] ${label} ERROR -> ${docRef?.path || '<unknown>'}:`, e);
         throw e;
@@ -247,11 +247,11 @@ const getCachedData = <T>(key: string): T | null => {
     // 1. Check Cache
     const cached = getCachedData<SchoolListItem[]>('cached_school_list');
     if (cached) {
-        console.log('[Firebase] Returning cached school list');
+        0 && console.log('[Firebase] Returning cached school list');
         return cached;
     }
 
-    console.log('[Firebase] Fetching global school list from all databases...');
+    0 && console.log('[Firebase] Fetching global school list from all databases...');
     trackFirebaseRead('global_discovery');
 
     const allSchools: SchoolListItem[] = [];
@@ -340,7 +340,7 @@ export const clearAuthCaches = (): void => {
         }
 
         keysToRemove.forEach(key => {
-            console.log(`[Cache] Clearing auth cache key: ${key}`);
+            0 && console.log(`[Cache] Clearing auth cache key: ${key}`);
             localStorage.removeItem(key);
         });
     } catch (e) {
@@ -382,7 +382,7 @@ const sanitizeForFirestore = (obj: any): any => {
 export const getSchoolData = async (docId: string, keysToFetch?: (keyof AppDataType)[]): Promise<AppDataType | null> => {
     // 1. Check inflight (Clean Up: Prevent dual fetching)
     if (inflightSchoolPromises.has(docId)) {
-        console.log(`[Firebase] Returning inflight promise for school data: ${docId}`);
+        0 && console.log(`[Firebase] Returning inflight promise for school data: ${docId}`);
         return inflightSchoolPromises.get(docId)!;
     }
 
@@ -396,16 +396,16 @@ export const getSchoolData = async (docId: string, keysToFetch?: (keyof AppDataT
                 const data = docSnap.data() as AppDataType;
 
                 // ---------------------------------------------------------
-                // OPTIMIZATION: STRIP LEGACY DATA TO ENFORCE BUCKET USAGE
+                // OPTIMIZATION: STRIP HEAVY COLLECTIONS
                 // ---------------------------------------------------------
                 // We explicitly remove these heavy arrays so DataContext sees them as empty.
-                // This forces the 'lazy load' logic to trigger, which will then use
-                // the optimized 'fetchStudents' (bucket) and 'fetchMetadata' (bundle) paths.
+                // This forces the 'lazy load' logic to trigger for Students and Scores.
+                //
+                // CRITICAL FIX: We NO LONGER strip classes, subjects, assessments, and grades.
+                // These are metadata that act as Source of Truth for schools that haven't
+                // migrated to the 'metadata_bundle' or subcollections yet.
                 if (data.students) delete data.students;
                 if (data.scores) delete data.scores;
-                if (data.classes) delete data.classes;
-                if (data.subjects) delete data.subjects;
-                if (data.assessments) delete data.assessments;
 
                 return data;
             } else {
@@ -440,7 +440,7 @@ export const fetchStudents = async (
     const cacheKey = `${docId}_${pageSize}_${lastVisible ? 'cursor' : 'initial'}`;
 
     if (inflightStudentPromises.has(cacheKey)) {
-        console.log(`[Firebase] 🛡️ Returning inflight promise for fetchStudents: ${cacheKey}`);
+        0 && console.log(`[Firebase] 🛡️ Returning inflight promise for fetchStudents: ${cacheKey}`);
         return inflightStudentPromises.get(cacheKey)!;
     }
 
@@ -457,7 +457,7 @@ export const fetchStudents = async (
                 // CHUNKED STRATEGY
                 const manifest = manifestSnap.data() as any;
                 const totalChunks = manifest?.totalChunks || 0;
-                console.log(`[Firebase] 📦 Found student manifest with ${totalChunks} chunks.`);
+                0 && console.log(`[Firebase] 📦 Found student manifest with ${totalChunks} chunks.`);
 
                 // Fetch all chunks in parallel
                 const chunkPromises = [];
@@ -478,7 +478,7 @@ export const fetchStudents = async (
                     }
                 });
 
-                console.log(`[Firebase] ✅ Reassembled ${allStudents.length} students from chunks.`);
+                0 && console.log(`[Firebase] ✅ Reassembled ${allStudents.length} students from chunks.`);
 
             } else {
                 // BACKWARD COMPATIBILITY: Check for old single bucket
@@ -488,7 +488,7 @@ export const fetchStudents = async (
                     const data = oldBucketSnap.data() as any;
                     if (data.studentsMap) {
                         allStudents = Object.values(data.studentsMap) as Student[];
-                        console.log(`[Firebase] ⚠️ Found legacy single student bucket (${allStudents.length} students). Consider migrating.`);
+                        0 && console.log(`[Firebase] ⚠️ Found legacy single student bucket (${allStudents.length} students). Consider migrating.`);
                     }
                 }
             }
@@ -530,7 +530,7 @@ export const fetchStudents = async (
             // If we had to read X documents, we MUST save them to the bucket 
             // so next time we only read 1 document.
             if (students.length > 0 && !lastVisible) { // Only migrate on initial load (full page 1)
-                console.log(`[Firebase] ⚠️ Fallback triggered. Auto-creating 'student_bucket' with ${students.length} students to fix leak.`);
+                0 && console.log(`[Firebase] ⚠️ Fallback triggered. Auto-creating 'student_bucket' with ${students.length} students to fix leak.`);
 
                 // We fire and forget this promise so we don't block the UI
                 updateStudentBucket(docId, students).catch(e => {
@@ -587,7 +587,7 @@ export const fetchScoresForClass = async (docId: string, classId: number | undef
         if (snap.size > 0) {
             console.warn(`[Firebase] ⚠️ PERF LEAK: Fetched ${snap.size} legacy scores for Subject ${subjectId}. These should be in a bucket!`);
         } else {
-            console.log(`[Firebase] No legacy scores found for Subject ${subjectId} (Clean)`);
+            0 && console.log(`[Firebase] No legacy scores found for Subject ${subjectId} (Clean)`);
         }
 
         snap.forEach(d => scores.push(d.data() as Score));
@@ -633,19 +633,19 @@ export const getSchoolList = async (prefix?: string, includeLocked: boolean = fa
     // 1. Try Memory Cache
     const cached = getCachedData<SchoolListItem[]>(CACHE_KEY);
     if (cached) {
-        console.log(`[Firebase] Returning cached school list${prefix ? ` for "${prefix}"` : ''} (Locked: ${includeLocked})`);
+        0 && console.log(`[Firebase] Returning cached school list${prefix ? ` for "${prefix}"` : ''} (Locked: ${includeLocked})`);
         return cached;
     }
 
     // 2. Check for inflight promise (Clean Up: Prevent dual fetching)
     if (inflightSchoolListPromises.has(CACHE_KEY)) {
-        console.log(`[Firebase] Returning inflight promise for school list: ${CACHE_KEY}`);
+        0 && console.log(`[Firebase] Returning inflight promise for school list: ${CACHE_KEY}`);
         return inflightSchoolListPromises.get(CACHE_KEY)!;
     }
 
     const fetchPromise = (async () => {
         try {
-            console.log(`[Firebase] Fetching global school list from all databases${prefix ? ` (prefix: ${prefix})` : ''} (Locked: ${includeLocked})...`);
+            0 && console.log(`[Firebase] Fetching global school list from all databases${prefix ? ` (prefix: ${prefix})` : ''} (Locked: ${includeLocked})...`);
             trackFirebaseRead('global_discovery', 'schools', 0, prefix ? `Searching schools by prefix: ${prefix}` : 'General discovery');
 
             const allSchools: SchoolListItem[] = [];
@@ -796,7 +796,7 @@ export const activateSchoolSubscriptionLocally = async (
                 experimentalForceLongPolling: true
             });
             targetProjectId = config.projectId;
-            console.log(`[Activation] Targeting Database ${dbIndex} (${targetProjectId}).`);
+            0 && console.log(`[Activation] Targeting Database ${dbIndex} (${targetProjectId}).`);
         }
 
         // 1. Subscription Calculations
@@ -843,7 +843,7 @@ export const activateSchoolSubscriptionLocally = async (
         const batch1 = writeBatch(targetDb);
 
         if (registrationData) {
-            console.log(`[Activation] ✍️ Step 1: Queueing root school creation for ${schoolId}...`);
+            0 && console.log(`[Activation] ✍️ Step 1: Queueing root school creation for ${schoolId}...`);
             const { initialData, password } = registrationData;
             const mainDocRef = doc(targetDb, 'schools', schoolId);
 
@@ -882,17 +882,17 @@ export const activateSchoolSubscriptionLocally = async (
         }
 
         // C. WRITE SUBSCRIPTION RECORD (Crucial for B-G rules)
-        console.log(`[Activation] ✍️ Step 1: Queueing subscription record...`);
+        0 && console.log(`[Activation] ✍️ Step 1: Queueing subscription record...`);
         batch1.set(subDocRef, subscriptionData, { merge: true });
 
         // COMMIT STEP 1: Foundational documents
         await batch1.commit();
-        console.log(`[Activation] ✅ Step 1 complete. Foundation created.`);
+        0 && console.log(`[Activation] ✅ Step 1 complete. Foundation created.`);
 
         // 3. Step 2: Initialize Buckets (Crucially AFTER subscription exists in DB)
         if (registrationData) {
             const { initialData } = registrationData;
-            console.log(`[Activation] 📦 Step 2: Initializing buckets for ${schoolId}...`);
+            0 && console.log(`[Activation] 📦 Step 2: Initializing buckets for ${schoolId}...`);
             const batch2 = writeBatch(targetDb);
 
             // Initialize Subcollections individual docs
@@ -928,7 +928,7 @@ export const activateSchoolSubscriptionLocally = async (
             });
 
             await batch2.commit();
-            console.log(`[Activation] ✅ Step 2: Buckets initialized.`);
+            0 && console.log(`[Activation] ✅ Step 2: Buckets initialized.`);
         }
 
         // 4. POST-COMMIT: Chunked Student Bucketing (Final optimization)
@@ -940,7 +940,7 @@ export const activateSchoolSubscriptionLocally = async (
             }
         }
 
-        console.log(`[Activation] ✅ Success! Activated ${baseName} on ${targetProjectId}.`);
+        0 && console.log(`[Activation] ✅ Success! Activated ${baseName} on ${targetProjectId}.`);
         return { success: true, expiryDate, variantsActivated: variantsCount };
 
     } catch (error: any) {
@@ -964,18 +964,18 @@ export const getSchoolYearsAndTerms = async (schoolName: string, databaseIndex?:
     // Try cache first
     const cached = getCachedData<SchoolPeriod[]>(CACHE_KEY);
     if (cached) {
-        console.log(`[Auth] Using cached periods for ${schoolName}`);
+        0 && console.log(`[Auth] Using cached periods for ${schoolName}`);
         return cached;
     }
 
     // Check inflight (Clean Up: Prevent dual fetching)
     if (inflightPeriodPromises.has(CACHE_KEY)) {
-        console.log(`[Auth] Returning inflight promise for periods: ${schoolName}`);
+        0 && console.log(`[Auth] Returning inflight promise for periods: ${schoolName}`);
         return inflightPeriodPromises.get(CACHE_KEY)!;
     }
 
     const fetchPromise = (async () => {
-        console.log(`[Auth] Fetching periods for ${schoolName}${databaseIndex !== undefined ? ` from DB ${databaseIndex}` : ''}...`);
+        0 && console.log(`[Auth] Fetching periods for ${schoolName}${databaseIndex !== undefined ? ` from DB ${databaseIndex}` : ''}...`);
 
         try {
             // Determine which database to query
@@ -996,7 +996,7 @@ export const getSchoolYearsAndTerms = async (schoolName: string, databaseIndex?:
                     const appName = `temp_periods_${databaseIndex}_${Date.now()}`;
                     tempApp = initializeApp(config, appName);
                     targetDb = getFirestore(tempApp);
-                    console.log(`[Auth] Querying periods from Database ${databaseIndex} (temp app)`);
+                    0 && console.log(`[Auth] Querying periods from Database ${databaseIndex} (temp app)`);
                 }
             }
 
@@ -1037,7 +1037,7 @@ export const getSchoolYearsAndTerms = async (schoolName: string, databaseIndex?:
             });
 
             setCachedData(CACHE_KEY, periods, TTL);
-            console.log(`[Auth] Found ${periods.length} periods for ${schoolName}`);
+            0 && console.log(`[Auth] Found ${periods.length} periods for ${schoolName}`);
 
             return periods;
         } catch (error) {
@@ -1059,7 +1059,7 @@ export const getSchoolYearsAndTerms = async (schoolName: string, databaseIndex?:
  */
 export const verifySchoolPassword = async (docId: string, password: string): Promise<{ isValid: boolean, isExpired: boolean }> => {
     try {
-        console.log(`[Auth] Verifying password and license for ${docId}...`);
+        0 && console.log(`[Auth] Verifying password and license for ${docId}...`);
         const docRef = doc(db, 'schools', docId);
         trackFirebaseRead('verifySchoolPassword', 'schools', 1, 'Verifying password');
         const docSnap = await loggedGetDoc(docRef, `verifySchoolPassword/${docId}`);
@@ -1079,7 +1079,7 @@ export const verifySchoolPassword = async (docId: string, password: string): Pro
 
         const isValid = storedPassword === password;
         if (!isValid) {
-            console.log(`[Auth] Password invalid`);
+            0 && console.log(`[Auth] Password invalid`);
             return { isValid: false, isExpired: false };
         }
 
@@ -1088,7 +1088,7 @@ export const verifySchoolPassword = async (docId: string, password: string): Pro
         const sanitizedBotId = 'sbaacademylive';
 
         if (baseName === sanitizedBotId) {
-            console.log(`[Auth] Bypass detected (Bot School) - Bypassing license check for ${baseName}`);
+            0 && console.log(`[Auth] Bypass detected (Bot School) - Bypassing license check for ${baseName}`);
             return { isValid: true, isExpired: false };
         }
 
@@ -1105,7 +1105,7 @@ export const verifySchoolPassword = async (docId: string, password: string): Pro
         const expiryDate = subData.expiryDate?.toDate();
         const isExpired = !expiryDate || new Date() > expiryDate;
 
-        console.log(`[Auth] License status for ${baseName}: ${isExpired ? 'EXPIRED' : 'ACTIVE'}`);
+        0 && console.log(`[Auth] License status for ${baseName}: ${isExpired ? 'EXPIRED' : 'ACTIVE'}`);
 
         return { isValid: true, isExpired };
 
@@ -1152,19 +1152,42 @@ export const fetchMetadataBundle = async (schoolId: string) => {
 
         if (bundleSnap.exists()) {
             const bundleData = bundleSnap.data() as any;
-            trackFirebaseRead('fetchMetadataBundle', 'config', 1, 'Loaded metadata via Composite Bundle (1 Read)');
-            console.log("[Firebase] 📦 Loaded metadata via Composite Bundle (1 Read)");
 
-            return {
-                classes: (bundleData.classes || []) as Class[],
-                subjects: (bundleData.subjects || []) as Subject[],
-                assessments: (bundleData.assessments || []) as Assessment[],
-                grades: (bundleData.grades || []) as Grade[]
-            };
+            // CRITICAL FIX: To support schools that haven't updated their bundle with 'grades' yet,
+            // we check if all expected fields exist. If any are missing (undefined), 
+            // we fall back to individual reads for those specific fields to merge them.
+            const hasAllFields = bundleData.classes && bundleData.subjects && bundleData.assessments && bundleData.grades;
+
+            if (hasAllFields) {
+                trackFirebaseRead('fetchMetadataBundle', 'config', 1, 'Loaded metadata via Composite Bundle (1 Read)');
+                0 && console.log("[Firebase] 📦 Loaded metadata via Composite Bundle (1 Read)");
+
+                return {
+                    classes: (bundleData.classes || []) as Class[],
+                    subjects: (bundleData.subjects || []) as Subject[],
+                    assessments: (bundleData.assessments || []) as Assessment[],
+                    grades: (bundleData.grades || []) as Grade[]
+                };
+            } else {
+                console.warn("[Firebase] ⚠️ Metadata bundle is partial. Falling back to subcollections for missing fields.");
+                const [fClasses, fSubjects, fAssessments, fGrades] = await Promise.all([
+                    bundleData.classes ? Promise.resolve(bundleData.classes) : fetchSubcollection<Class>(schoolId, "classes"),
+                    bundleData.subjects ? Promise.resolve(bundleData.subjects) : fetchSubcollection<Subject>(schoolId, "subjects"),
+                    bundleData.assessments ? Promise.resolve(bundleData.assessments) : fetchSubcollection<Assessment>(schoolId, "assessments"),
+                    bundleData.grades ? Promise.resolve(bundleData.grades) : fetchSubcollection<Grade>(schoolId, "grades")
+                ]);
+
+                return {
+                    classes: fClasses as Class[],
+                    subjects: fSubjects as Subject[],
+                    assessments: fAssessments as Assessment[],
+                    grades: fGrades as Grade[]
+                };
+            }
         }
 
         // Fallback: Perform the 3 separate reads if bundle is missing
-        console.log("[Firebase] ⚠️ Bundle missing, falling back to individual reads");
+        0 && console.log("[Firebase] ⚠️ Bundle missing, falling back to individual reads");
         trackFirebaseRead('fetchMetadataBundle_fallback', 'classes', 0, 'Bundle missing - fetching classes');
         trackFirebaseRead('fetchMetadataBundle_fallback', 'subjects', 0, 'Bundle missing - fetching subjects');
         trackFirebaseRead('fetchMetadataBundle_fallback', 'assessments', 0, 'Bundle missing - fetching assessments');
@@ -1207,12 +1230,29 @@ export const updateMetadataBundle = async (schoolId: string, options?: { classes
         // We use fetchSubcollection for all fields to ensure we never have a partial set.
         // Even if options are provided, we only use them as a "hint" that a change happened,
         // but we rely on the DB to give us the full state for the bundle.
-        const [fullClasses, fullSubjects, fullAssessments, fullGrades] = await Promise.all([
+        let [fullClasses, fullSubjects, fullAssessments, fullGrades] = await Promise.all([
             fetchSubcollection<Class>(schoolId, 'classes'),
             fetchSubcollection<Subject>(schoolId, 'subjects'),
             fetchSubcollection<Assessment>(schoolId, 'assessments'),
             fetchSubcollection<Grade>(schoolId, 'grades')
         ]);
+
+        // MIGRATION FALLBACK:
+        // If subcollections are empty, check the main document for legacy data.
+        // This ensures the first bundle build after migration actually contains the data.
+        if (fullClasses.length === 0 || fullSubjects.length === 0 || fullAssessments.length === 0 || fullGrades.length === 0) {
+            0 && console.log(`[Firebase] 🔍 checking main doc for legacy metadata (subcollections empty)...`);
+            const schoolRef = doc(db, "schools", schoolId);
+            const schoolSnap = await loggedGetDoc(schoolRef, `updateMetadataBundle/legacyCheck/${schoolId}`);
+
+            if (schoolSnap.exists()) {
+                const legacyData = schoolSnap.data() as any;
+                if (fullClasses.length === 0 && legacyData.classes) fullClasses = legacyData.classes;
+                if (fullSubjects.length === 0 && legacyData.subjects) fullSubjects = legacyData.subjects;
+                if (fullAssessments.length === 0 && legacyData.assessments) fullAssessments = legacyData.assessments;
+                if (fullGrades.length === 0 && legacyData.grades) fullGrades = legacyData.grades;
+            }
+        }
 
         // SAFETY: If the new count is critically lower than the old count, 
         // suspect a race condition or failure and abort unless it's a small dataset.
@@ -1235,7 +1275,7 @@ export const updateMetadataBundle = async (schoolId: string, options?: { classes
 
         trackFirebaseWrite('updateMetadataBundle', 'config', `Rebuilding metadata_bundle for ${schoolId} (Source of Truth Merge)`);
         await loggedSetDoc(bundleRef, bundleData, { merge: true }, `updateMetadataBundle/${schoolId}`);
-        console.log(`[Firebase] 📦 metadata_bundle rebuilt from subcollections for ${schoolId}`);
+        0 && console.log(`[Firebase] 📦 metadata_bundle rebuilt from subcollections for ${schoolId}`);
     } catch (error) {
         console.error('[Firebase] Failed to update metadata bundle:', error);
         throw error;
@@ -1263,7 +1303,7 @@ export const updateStudentBucket = async (schoolId: string, students?: Student[]
         ): Promise<void> => {
             const totalChunks = Math.ceil(studentsData.length / chunkSize);
 
-            console.log(`[Firebase] 🎓 Attempt ${attempt}: Bucketing ${studentsData.length} students into ${totalChunks} chunks (size: ${chunkSize})...`);
+            0 && console.log(`[Firebase] 🎓 Attempt ${attempt}: Bucketing ${studentsData.length} students into ${totalChunks} chunks (size: ${chunkSize})...`);
 
             const batch = writeBatch(dbInstance);
 
@@ -1286,7 +1326,7 @@ export const updateStudentBucket = async (schoolId: string, students?: Student[]
             try {
                 trackFirebaseWrite('updateStudentBucket', 'config', `Writing ${totalChunks} student chunks for ${schoolId}`);
                 await batch.commit();
-                console.log(`[Firebase] ✅ Student bucket updated (${totalChunks} chunks, size: ${chunkSize})`);
+                0 && console.log(`[Firebase] ✅ Student bucket updated (${totalChunks} chunks, size: ${chunkSize})`);
             } catch (error: any) {
                 // Check if error is due to document size
                 const isSizeError = error?.message?.includes('size') &&
@@ -1343,19 +1383,19 @@ export const ensureStudentBucketExists = async (schoolId: string, preloadedStude
             let studentsToSave: Student[] = [];
 
             if (preloadedStudents && preloadedStudents.length > 0) {
-                console.log(`[Firebase] 🚀 Using preloaded students for migration (${preloadedStudents.length} records).`);
+                0 && console.log(`[Firebase] 🚀 Using preloaded students for migration (${preloadedStudents.length} records).`);
                 studentsToSave = preloadedStudents;
             } else {
                 // Fallback: Fetch from subcollection (Costly but necessary for repair)
-                console.log(`[Firebase] 🐢 Fetching students from subcollection for migration...`);
+                0 && console.log(`[Firebase] 🐢 Fetching students from subcollection for migration...`);
                 const fetched = await fetchSubcollection<Student>(schoolId, 'students');
                 if (fetched) studentsToSave = fetched;
             }
 
             if (studentsToSave.length > 0) {
-                console.log(`[Firebase] 💾 Writing ${studentsToSave.length} students to new bucket...`);
+                0 && console.log(`[Firebase] 💾 Writing ${studentsToSave.length} students to new bucket...`);
                 await updateStudentBucket(schoolId, studentsToSave);
-                console.log(`[Firebase] ✅ Auto-migration complete. Student bucket created.`);
+                0 && console.log(`[Firebase] ✅ Auto-migration complete. Student bucket created.`);
             }
         }
     } catch (error) {
@@ -1371,7 +1411,7 @@ export const ensureStudentBucketExists = async (schoolId: string, preloadedStude
  */
 export const repairDatabaseImages = async (schoolId: string): Promise<void> => {
     try {
-        console.log(`[Image Repair] 🔧 Starting comprehensive image repair (ImgBB Migration) for ${schoolId}...`);
+        0 && console.log(`[Image Repair] 🔧 Starting comprehensive image repair (ImgBB Migration) for ${schoolId}...`);
 
         // Dynamically import the upload utility
         const { uploadToImgBB, getBase64Size, formatBytes } = await import('../utils/imageUtils');
@@ -1389,20 +1429,20 @@ export const repairDatabaseImages = async (schoolId: string): Promise<void> => {
 
             // Check Logo
             if (settings.logo && settings.logo.startsWith('data:image')) {
-                console.log(`[Image Repair] 📤 Uploading School Logo...`);
+                0 && console.log(`[Image Repair] 📤 Uploading School Logo...`);
                 const url = await uploadToImgBB(settings.logo);
                 if (url) { settings.logo = url; settingsModified = true; uploadedCount++; }
             }
             // Check Headmaster Signature
             if (settings.headmasterSignature && settings.headmasterSignature.startsWith('data:image')) {
-                console.log(`[Image Repair] 📤 Uploading Headmaster Signature...`);
+                0 && console.log(`[Image Repair] 📤 Uploading Headmaster Signature...`);
                 const url = await uploadToImgBB(settings.headmasterSignature);
                 if (url) { settings.headmasterSignature = url; settingsModified = true; uploadedCount++; }
             }
 
             if (settingsModified) {
                 batch.update(settingsRef, { settings: settings });
-                console.log(`[Image Repair] ✅ Settings images queued for update.`);
+                0 && console.log(`[Image Repair] ✅ Settings images queued for update.`);
             }
         }
 
@@ -1410,7 +1450,7 @@ export const repairDatabaseImages = async (schoolId: string): Promise<void> => {
         const subjects = await fetchSubcollection<Subject>(schoolId, 'subjects');
         for (const subject of subjects) {
             if (subject.signature && subject.signature.startsWith('data:image')) {
-                console.log(`[Image Repair] 📤 Uploading signature for Subject ${subject.subject}...`);
+                0 && console.log(`[Image Repair] 📤 Uploading signature for Subject ${subject.subject}...`);
                 const url = await uploadToImgBB(subject.signature);
                 if (url) {
                     const ref = doc(db, "schools", schoolId, "subjects", String(subject.id));
@@ -1424,7 +1464,7 @@ export const repairDatabaseImages = async (schoolId: string): Promise<void> => {
         const classes = await fetchSubcollection<Class>(schoolId, 'classes');
         for (const cls of classes) {
             if (cls.teacherSignature && cls.teacherSignature.startsWith('data:image')) {
-                console.log(`[Image Repair] 📤 Uploading signature for Class ${cls.name}...`);
+                0 && console.log(`[Image Repair] 📤 Uploading signature for Class ${cls.name}...`);
                 const url = await uploadToImgBB(cls.teacherSignature);
                 if (url) {
                     const ref = doc(db, "schools", schoolId, "classes", String(cls.id));
@@ -1446,7 +1486,7 @@ export const repairDatabaseImages = async (schoolId: string): Promise<void> => {
             totalSize += studentSize;
 
             if (studentSize > 5000) {
-                console.log(`[Image Repair] ⚠️ Large student record found: ${student.name} (${(studentSize / 1024).toFixed(2)} KB)`);
+                0 && console.log(`[Image Repair] ⚠️ Large student record found: ${student.name} (${(studentSize / 1024).toFixed(2)} KB)`);
             }
 
             // Check aliases
@@ -1466,7 +1506,7 @@ export const repairDatabaseImages = async (schoolId: string): Promise<void> => {
                     // But uploadToImgBB might handle it. Let's check. 
                     // Actually, let's just try to upload it.
 
-                    console.log(`[Image Repair] 📤 Uploading student ${field} for ${student.name}...`);
+                    0 && console.log(`[Image Repair] 📤 Uploading student ${field} for ${student.name}...`);
                     const url = await uploadToImgBB(val);
                     if (url) {
                         // @ts-ignore
@@ -1490,24 +1530,24 @@ export const repairDatabaseImages = async (schoolId: string): Promise<void> => {
             }
         }
 
-        console.log(`[Image Repair] 📊 Total Students Size: ${(totalSize / 1024 / 1024).toFixed(2)} MB`);
-        console.log(`[Image Repair] 📊 Avg Student Size: ${(totalSize / students.length / 1024).toFixed(2)} KB`);
+        0 && console.log(`[Image Repair] 📊 Total Students Size: ${(totalSize / 1024 / 1024).toFixed(2)} MB`);
+        0 && console.log(`[Image Repair] 📊 Avg Student Size: ${(totalSize / students.length / 1024).toFixed(2)} KB`);
 
         if (uploadedCount > 0) {
-            console.log(`[Image Repair] 💾 Committing ${uploadedCount} image migrations...`);
+            0 && console.log(`[Image Repair] 💾 Committing ${uploadedCount} image migrations...`);
             trackFirebaseWrite('repairDatabaseImages', 'multi', `Migrated ${uploadedCount} images to ImgBB`);
             await batch.commit();
-            console.log(`[Image Repair] ✅ Migration complete.`);
+            0 && console.log(`[Image Repair] ✅ Migration complete.`);
         } else {
-            console.log(`[Image Repair] ✅ No images needing migration found.`);
+            0 && console.log(`[Image Repair] ✅ No images needing migration found.`);
         }
 
         // Always ensure bucket is healthy with chunk size 10000
-        console.log(`[Image Repair] 🔄 Rebuilding student buckets with chunk size 10000...`);
+        0 && console.log(`[Image Repair] 🔄 Rebuilding student buckets with chunk size 10000...`);
         await updateStudentBucket(schoolId, students, 10000);
 
         // 5. Repair Metadata Bundle (Classes, Subjects, Assessments cached copy)
-        console.log(`[Image Repair] 📦 Repairing metadata_bundle...`);
+        0 && console.log(`[Image Repair] 📦 Repairing metadata_bundle...`);
         const bundleRef = doc(db, "schools", schoolId, "config", "metadata_bundle");
         const bundleSnap = await getDoc(bundleRef);
 
@@ -1519,7 +1559,7 @@ export const repairDatabaseImages = async (schoolId: string): Promise<void> => {
             if (bundleData.subjects && Array.isArray(bundleData.subjects)) {
                 for (const subject of bundleData.subjects) {
                     if (subject.signature && subject.signature.startsWith('data:image')) {
-                        console.log(`[Image Repair] 📤 Uploading bundle subject signature for ${subject.subject}...`);
+                        0 && console.log(`[Image Repair] 📤 Uploading bundle subject signature for ${subject.subject}...`);
                         const url = await uploadToImgBB(subject.signature);
                         if (url) {
                             subject.signature = url;
@@ -1533,7 +1573,7 @@ export const repairDatabaseImages = async (schoolId: string): Promise<void> => {
             if (bundleData.classes && Array.isArray(bundleData.classes)) {
                 for (const cls of bundleData.classes) {
                     if (cls.teacherSignature && cls.teacherSignature.startsWith('data:image')) {
-                        console.log(`[Image Repair] 📤 Uploading bundle class signature for ${cls.name}...`);
+                        0 && console.log(`[Image Repair] 📤 Uploading bundle class signature for ${cls.name}...`);
                         const url = await uploadToImgBB(cls.teacherSignature);
                         if (url) {
                             cls.teacherSignature = url;
@@ -1545,14 +1585,14 @@ export const repairDatabaseImages = async (schoolId: string): Promise<void> => {
 
             if (bundleModified) {
                 await loggedUpdateDoc(bundleRef, bundleData, 'repairDatabaseImages/metadata_bundle');
-                console.log(`[Image Repair] ✅ Metadata bundle repaired.`);
+                0 && console.log(`[Image Repair] ✅ Metadata bundle repaired.`);
             } else {
-                console.log(`[Image Repair] ✅ Metadata bundle already clean.`);
+                0 && console.log(`[Image Repair] ✅ Metadata bundle already clean.`);
             }
         }
 
         // 6. Repair Score Buckets (Migrate Legacy Scores)
-        console.log(`[Image Repair] 🍱 Checking for legacy scores to bucket...`);
+        0 && console.log(`[Image Repair] 🍱 Checking for legacy scores to bucket...`);
         let bucketsCreated = 0;
 
         for (const subject of subjects) {
@@ -1567,7 +1607,7 @@ export const repairDatabaseImages = async (schoolId: string): Promise<void> => {
                 const snap = await loggedGetDocs(q, `repairScores/legacy/${subject.id}`);
 
                 if (snap.size > 0) {
-                    console.log(`[Image Repair] ⚠️ Found ${snap.size} legacy scores for ${subject.subject}. Creating bucket...`);
+                    0 && console.log(`[Image Repair] ⚠️ Found ${snap.size} legacy scores for ${subject.subject}. Creating bucket...`);
                     const scoresMap: Record<string, any> = {};
                     snap.forEach(d => {
                         scoresMap[d.id] = d.data();
@@ -1575,15 +1615,15 @@ export const repairDatabaseImages = async (schoolId: string): Promise<void> => {
 
                     await loggedSetDoc(bucketRef, { scoresMap }, { merge: true }, `repairScores/createBucket/${subject.id}`);
                     bucketsCreated++;
-                    console.log(`[Image Repair] ✅ Created bucket for Subject ${subject.id}`);
+                    0 && console.log(`[Image Repair] ✅ Created bucket for Subject ${subject.id}`);
                 }
             }
         }
 
         if (bucketsCreated > 0) {
-            console.log(`[Image Repair] ✅ Created ${bucketsCreated} score buckets from legacy data.`);
+            0 && console.log(`[Image Repair] ✅ Created ${bucketsCreated} score buckets from legacy data.`);
         } else {
-            console.log(`[Image Repair] ✅ Score buckets are up to date.`);
+            0 && console.log(`[Image Repair] ✅ Score buckets are up to date.`);
         }
 
     } catch (error) {
@@ -1615,11 +1655,11 @@ export const saveDataTransaction = async (
             if (!obj) return;
             for (const field of fields) {
                 if (obj[field] && typeof obj[field] === 'string' && obj[field].startsWith('data:image')) {
-                    console.log(`[Auto-Upload] 📤 Intercepted base64 for ${field}. Uploading to ImgBB...`);
+                    0 && console.log(`[Auto-Upload] 📤 Intercepted base64 for ${field}. Uploading to ImgBB...`);
                     const url = await uploadToImgBB(obj[field]);
                     if (url) {
                         obj[field] = url;
-                        console.log(`[Auto-Upload] ✅ Replaced ${field} with URL.`);
+                        0 && console.log(`[Auto-Upload] ✅ Replaced ${field} with URL.`);
                     }
                 }
             }
@@ -1661,14 +1701,14 @@ export const saveDataTransaction = async (
 
         // DEBUG: Check auth state before batch
         const currentUser = auth.currentUser;
-        console.log(`[Firebase] Batch Save Starting. Auth UID: ${currentUser?.uid || 'NONE (Unauthenticated)'}`);
+        0 && console.log(`[Firebase] Batch Save Starting. Auth UID: ${currentUser?.uid || 'NONE (Unauthenticated)'}`);
 
         for (let i = 0; i < operations.length; i += BATCH_SIZE) {
             const batch = writeBatch(db);
             const chunk = operations.slice(i, i + BATCH_SIZE);
             chunk.forEach(op => op(batch));
             await batch.commit();
-            console.log(`[Optimization] ✅ Committed batch chunk ${i / BATCH_SIZE + 1} (${chunk.length} ops)`);
+            0 && console.log(`[Optimization] ✅ Committed batch chunk ${i / BATCH_SIZE + 1} (${chunk.length} ops)`);
         }
     };
 
@@ -1679,7 +1719,7 @@ export const saveDataTransaction = async (
 
         // --- HANDLE SCORES (Subject Bucketing) ---
         if (updates.scores && Array.isArray(updates.scores)) {
-            console.log(`[Optimization] 🍱 Bucketing ${updates.scores.length} scores...`);
+            0 && console.log(`[Optimization] 🍱 Bucketing ${updates.scores.length} scores...`);
 
             const subjectBuckets: Record<number, Record<string, Score>> = {};
 
@@ -1724,7 +1764,7 @@ export const saveDataTransaction = async (
 
         if (hasMetadataUpdates) {
             // ... (Metadata bundle logic remains)
-            console.log(`[Optimization] 📦 Updating metadata bundle for composite storage...`);
+            0 && console.log(`[Optimization] 📦 Updating metadata bundle for composite storage...`);
 
             // Collect current/updated metadata
             const bundleData: any = {
@@ -1793,7 +1833,7 @@ export const saveDataTransaction = async (
         // a bucket rebuild if students were modified. This reads the full list
         // and re-chunks it.
         if (hasStudentUpdates) {
-            console.log(`[Optimization] 🔄 Student changes detected. Rebuilding bucket chunks...`);
+            0 && console.log(`[Optimization] 🔄 Student changes detected. Rebuilding bucket chunks...`);
             await updateStudentBucket(docId);
         }
 
@@ -1807,7 +1847,7 @@ export const saveDataTransaction = async (
             (deletions?.grades && deletions.grades.length > 0);
 
         if (metadataNeedsRebuild) {
-            console.log(`[Optimization] 📦 Metadata changes detected. Rebuilding bundle...`);
+            0 && console.log(`[Optimization] 📦 Metadata changes detected. Rebuilding bundle...`);
             await updateMetadataBundle(docId);
         }
 
@@ -1905,7 +1945,7 @@ export const initializeNewTermDatabase = async (docId: string, data: AppDataType
 
     // OPTIMIZATION: Also create the student bucket if students are provided
     if (data.students && data.students.length > 0) {
-        console.log(`[Firebase] Creating student bucket during term initialization...`);
+        0 && console.log(`[Firebase] Creating student bucket during term initialization...`);
         await updateStudentBucket(docId, data.students).catch(e => {
             console.error('[Firebase] Warning: Failed to create student bucket during init (non-critical)', e);
         });
@@ -1916,7 +1956,7 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
     // 1. OPTIMIZATION: Check Inflight Promises FIRST to prevent double-reads (Race Condition Fix)
     const cacheKey = `${docId}_${createIfMissing}`;
     if (inflightLoginPromises.has(cacheKey)) {
-        console.log(`[Firebase] 🛡️ Returning inflight promise for login/register: ${docId}`);
+        0 && console.log(`[Firebase] 🛡️ Returning inflight promise for login/register: ${docId}`);
         return inflightLoginPromises.get(cacheKey);
     }
 
@@ -1925,7 +1965,7 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
 
         // 1. OPTIMIZATION: Check Inflight Promises FIRST to prevent double-reads (Race Condition Fix)
         if (inflightSchoolPromises.has(docId)) {
-            console.log(`[Firebase] 🛡️ Returning inflight promise for school login: ${docId}`);
+            0 && console.log(`[Firebase] 🛡️ Returning inflight promise for school login: ${docId}`);
             // We cast the result to match the expected return type of loginOrRegisterSchool
             // Note: inflightSchoolPromises stores Promise<AppDataType | null>, but we need a complex object here.
             // This is a bit tricky. The inflight promise is for *fetching data*, not the whole login flow.
@@ -1962,7 +2002,7 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
         if (typeof targetDatabaseIndex === 'number' && !isEmulator) {
             const { ACTIVE_DATABASE_INDEX } = await import('../constants');
             if (targetDatabaseIndex !== ACTIVE_DATABASE_INDEX) {
-                console.log(`[Firebase] Cross-database operation detected. Target: ${targetDatabaseIndex}, Active: ${ACTIVE_DATABASE_INDEX}`);
+                0 && console.log(`[Firebase] Cross-database operation detected. Target: ${targetDatabaseIndex}, Active: ${ACTIVE_DATABASE_INDEX}`);
 
                 const config = FIREBASE_CONFIGS[targetDatabaseIndex];
                 if (!config) return { status: 'error', message: 'Invalid database configuration' };
@@ -1988,7 +2028,7 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
                     } else {
                         if (!createIfMissing) return { status: 'not_found' };
 
-                        console.log(`[Firebase] Creating new school on Database ${targetDatabaseIndex}...`);
+                        0 && console.log(`[Firebase] Creating new school on Database ${targetDatabaseIndex}...`);
                         const newData = { ...initialData, password, Access: initialData.Access ?? false };
                         await setDoc(docRef, newData);
 
@@ -2010,38 +2050,38 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
             }
         }
 
-        console.log(`[FIREBASE_DEBUG] loginOrRegisterSchool called for docId: ${docId}, createIfMissing: ${createIfMissing}`);
+        0 && console.log(`[FIREBASE_DEBUG] loginOrRegisterSchool called for docId: ${docId}, createIfMissing: ${createIfMissing}`);
         try {
             let targetDocId = docId;
             let docRef = doc(db, "schools", targetDocId);
 
-            console.log(`[FIREBASE_DEBUG] Fetching document: schools/${targetDocId}`);
+            0 && console.log(`[FIREBASE_DEBUG] Fetching document: schools/${targetDocId}`);
             trackFirebaseRead('loginOrRegisterSchool', 'schools', 1, `Checking school existence: ${targetDocId}`);
             let docSnap = await loggedGetDoc(docRef, `loginOrRegisterSchool/${targetDocId}`);
-            console.log(`[FIREBASE_DEBUG] Document exists? ${docSnap.exists()}`);
+            0 && console.log(`[FIREBASE_DEBUG] Document exists? ${docSnap.exists()}`);
 
             if (!docSnap.exists()) {
-                console.log(`[FIREBASE_DEBUG] Document not found. Attempting case-insensitive fallback search...`);
+                0 && console.log(`[FIREBASE_DEBUG] Document not found. Attempting case-insensitive fallback search...`);
                 // Case-insensitive fallback
                 const schoolsRef = collection(db, "schools");
                 const q = query(schoolsRef, where(documentId(), '>=', targetDocId.toLowerCase()), limit(5)); // Optimize fallback
                 trackFirebaseRead('loginOrRegisterSchool (fallback)', 'schools', 5, 'Fallback case-insensitive search');
                 const snap = await loggedGetDocs(q, `loginOrRegisterSchool/fallback/${targetDocId}`);
-                console.log(`[FIREBASE_DEBUG] Fallback search found ${snap.size} documents.`);
+                0 && console.log(`[FIREBASE_DEBUG] Fallback search found ${snap.size} documents.`);
 
                 const match = snap.docs.find(d => d.id.toLowerCase() === docId.toLowerCase());
                 if (match) {
-                    console.log(`[FIREBASE_DEBUG] Fallback match found: ${match.id}`);
+                    0 && console.log(`[FIREBASE_DEBUG] Fallback match found: ${match.id}`);
                     targetDocId = match.id;
                     docRef = doc(db, "schools", targetDocId);
                     docSnap = match;
                 } else {
-                    console.log(`[FIREBASE_DEBUG] No matching document found in fallback.`);
+                    0 && console.log(`[FIREBASE_DEBUG] No matching document found in fallback.`);
                 }
             }
 
             if (docSnap.exists()) {
-                console.log(`[FIREBASE_DEBUG] Processing existing document...`);
+                0 && console.log(`[FIREBASE_DEBUG] Processing existing document...`);
                 const data = docSnap.data() as AppDataType;
 
                 // Debug logs for password comparison (be careful with real passwords in logs, but for debug it's ok)
@@ -2066,7 +2106,7 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
                 const baseName = targetDocId.split('_')[0].toLowerCase();
 
                 if (isEmulator || baseName === sanitizedBotId) {
-                    console.log(`[FIREBASE_DEBUG] Bypass detected (${isEmulator ? 'Emulator' : 'Bot School'}) - Bypassing license check.`);
+                    0 && console.log(`[FIREBASE_DEBUG] Bypass detected (${isEmulator ? 'Emulator' : 'Bot School'}) - Bypassing license check.`);
                 } else {
                     const subRef = doc(db, 'subscriptions', baseName);
                     trackFirebaseRead('loginOrRegisterSchool (license)', 'subscriptions', 1, 'Checking license status');
@@ -2089,7 +2129,7 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
                 const subSnap = await loggedGetDoc(subRef, `loginOrRegisterSchool_sub/${baseName}`);
                 const subscription = subSnap.exists() ? (subSnap.data() as any) : null;
 
-                console.log(`[FIREBASE_DEBUG] Login successful. Returning data.`);
+                0 && console.log(`[FIREBASE_DEBUG] Login successful. Returning data.`);
 
                 // OPTIMIZATION: Ensure student bucket exists (create if missing but students exist)
                 ensureStudentBucketExists(targetDocId).catch(e => {
@@ -2104,28 +2144,28 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
                 if (data.subjects) delete data.subjects;
                 if (data.assessments) delete data.assessments;
 
-                console.log(`[FIREBASE_DEBUG] Login successful. Returning data.`);
+                0 && console.log(`[FIREBASE_DEBUG] Login successful. Returning data.`);
 
                 return { status: 'success', data: data, docId: targetDocId, subscription };
             } else {
                 if (!createIfMissing) {
-                    console.log(`[FIREBASE_DEBUG] Document not found and createIfMissing is false.`);
+                    0 && console.log(`[FIREBASE_DEBUG] Document not found and createIfMissing is false.`);
                     return { status: 'not_found' };
                 }
-                console.log(`[FIREBASE_DEBUG] Creating new school document: ${docId}`);
+                0 && console.log(`[FIREBASE_DEBUG] Creating new school document: ${docId}`);
                 // Respect Access from initialData (allows debug mode to set Access: true)
                 const newData = { ...initialData, password, Access: initialData.Access ?? false };
                 await loggedSetDoc(doc(db, "schools", docId), newData, undefined, `loginOrRegisterSchool/create/${docId}`);
 
                 // If Access is true, return success (debug mode). Otherwise, pending.
                 if (newData.Access === true) {
-                    console.log(`[FIREBASE_DEBUG] New document created with Access=true. Returning 'success'.`);
+                    0 && console.log(`[FIREBASE_DEBUG] New document created with Access=true. Returning 'success'.`);
                     const subRef = doc(db, 'subscriptions', docId.split('_')[0]);
                     const subSnap = await loggedGetDoc(subRef, `loginOrRegisterSchool_create_sub/${docId}`);
                     const subscription = subSnap.exists() ? subSnap.data() : null;
                     return { status: 'success', data: newData, docId: docId, subscription };
                 } else {
-                    console.log(`[FIREBASE_DEBUG] New document created with Access=false. Returning 'created_pending_access'.`);
+                    0 && console.log(`[FIREBASE_DEBUG] New document created with Access=false. Returning 'created_pending_access'.`);
                     return { status: 'created_pending_access' };
                 }
             }
@@ -2200,7 +2240,7 @@ export const getSchoolTermIds = async (schoolNamePrefix: string): Promise<string
         const snapshot = await loggedGetDocs(q, `getSchoolHistory/list/${schoolNamePrefix}`);
         trackFirebaseRead('getSchoolTermIds', 'schools', snapshot.size, 'Fetched school history list');
 
-        console.log(`[getSchoolTermIds] Found ${snapshot.size} historical terms for ${schoolNamePrefix}`);
+        0 && console.log(`[getSchoolTermIds] Found ${snapshot.size} historical terms for ${schoolNamePrefix}`);
         return snapshot.docs.map(d => d.id);
     } catch (error) {
         console.error("Error fetching school term IDs:", error);
@@ -2221,7 +2261,7 @@ export const getSchoolTermData = async (docId: string): Promise<AppDataType | nu
         if (!docSnap.exists()) return null;
 
         const mainData = docSnap.data() as AppDataType;
-        console.log(`[getSchoolTermData] Processing term: ${docId}`);
+        0 && console.log(`[getSchoolTermData] Processing term: ${docId}`);
 
         // Parallelize subcollection fetches for this specific term
         const [studentsSnap, subjectsSnap, classesSnap, assessmentsSnap, scoreBucketsSnap, scoresLegacySnap] = await Promise.all([

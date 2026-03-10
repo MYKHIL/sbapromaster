@@ -313,7 +313,7 @@ const ScoreEntry: React.FC = () => {
         const assessment = assessments.find(a => a.id === selectedAssessmentId);
         if (!assessment) return;
 
-        console.log('[ScoreEntry - Mobile] commitScore called:', {
+        0 && console.log('[ScoreEntry - Mobile] commitScore called:', {
             studentId: student.id,
             studentName: student.name,
             subjectId: selectedSubjectId,
@@ -330,7 +330,7 @@ const ScoreEntry: React.FC = () => {
         setMobileScoreError('');
 
         if (!rawScoreInput) {
-            console.log('[ScoreEntry - Mobile] Empty score - clearing:', {
+            0 && console.log('[ScoreEntry - Mobile] Empty score - clearing:', {
                 studentId: student.id,
                 studentName: student.name
             });
@@ -345,47 +345,47 @@ const ScoreEntry: React.FC = () => {
         if (rawScoreInput.includes('/')) {
             const parts = rawScoreInput.split('/');
             if (parts.length !== 2) {
-                console.log('[ScoreEntry - Mobile] Validation error: Invalid fraction format');
+                0 && console.log('[ScoreEntry - Mobile] Validation error: Invalid fraction format');
                 setMobileScoreError("Use 'x' or 'x/y'");
                 return;
             }
             const [x, y] = parts.map(Number);
             if (isNaN(x) || isNaN(y)) {
-                console.log('[ScoreEntry - Mobile] Validation error: Non-numeric values in fraction');
+                0 && console.log('[ScoreEntry - Mobile] Validation error: Non-numeric values in fraction');
                 setMobileScoreError("Numbers only");
                 return;
             }
             if (y === 0) {
-                console.log('[ScoreEntry - Mobile] Validation error: Division by zero');
+                0 && console.log('[ScoreEntry - Mobile] Validation error: Division by zero');
                 setMobileScoreError("Base cannot be 0");
                 return;
             }
             convertedScore = (x / y) * maxScore;
-            console.log('[ScoreEntry - Mobile] Fraction conversion:', { x, y, maxScore, convertedScore });
+            0 && console.log('[ScoreEntry - Mobile] Fraction conversion:', { x, y, maxScore, convertedScore });
         } else {
             const z = Number(rawScoreInput);
             if (isNaN(z)) {
-                console.log('[ScoreEntry - Mobile] Validation error: Not a number');
+                0 && console.log('[ScoreEntry - Mobile] Validation error: Not a number');
                 setMobileScoreError("Score must be a number");
                 return;
             }
             convertedScore = z;
-            console.log('[ScoreEntry - Mobile] Direct score:', { rawInput: z, convertedScore });
+            0 && console.log('[ScoreEntry - Mobile] Direct score:', { rawInput: z, convertedScore });
         }
 
         if (convertedScore > maxScore) {
-            console.log('[ScoreEntry - Mobile] Validation error: Exceeds max score', { convertedScore, maxScore });
+            0 && console.log('[ScoreEntry - Mobile] Validation error: Exceeds max score', { convertedScore, maxScore });
             setMobileScoreError(`Max is ${maxScore}`);
             return;
         }
         if (convertedScore < 0) {
-            console.log('[ScoreEntry - Mobile] Validation error: Negative score');
+            0 && console.log('[ScoreEntry - Mobile] Validation error: Negative score');
             setMobileScoreError("Cannot be negative");
             return;
         }
 
         const finalScore = `${Number(convertedScore.toFixed(1))}/${basis}`;
-        console.log('[ScoreEntry - Mobile] ✅ Score validated and formatted:', {
+        0 && console.log('[ScoreEntry - Mobile] ✅ Score validated and formatted:', {
             studentId: student.id,
             studentName: student.name,
             subjectId: selectedSubjectId,
@@ -396,7 +396,7 @@ const ScoreEntry: React.FC = () => {
             finalScore
         });
 
-        console.log('[ScoreEntry - Mobile] 💾 Calling updateStudentScores (saving to local cache)...');
+        0 && console.log('[ScoreEntry - Mobile] 💾 Calling updateStudentScores (saving to local cache)...');
         updateStudentScores(student.id, selectedSubjectId, assessment.id, [finalScore]);
 
         // Update local score to formatted version and clear modification flag
@@ -406,7 +406,7 @@ const ScoreEntry: React.FC = () => {
         // Unregister pending change / remove from draft
         removeDraftScore(student.id, selectedSubjectId, assessment.id);
 
-        console.log('[ScoreEntry - Mobile] ✅ Score committed successfully');
+        0 && console.log('[ScoreEntry - Mobile] ✅ Score committed successfully');
     };
 
     const getPlaceholder = () => {
@@ -779,7 +779,7 @@ const ScoreEntry: React.FC = () => {
                                                                     // commitScore() skips empty strings, so we must manually trigger the update here.
                                                                     const student = filteredStudents[selectedStudentIndex];
                                                                     if (student) {
-                                                                        console.log('[ScoreEntry] 🧹 Clearing score for:', student.name);
+                                                                        0 && console.log('[ScoreEntry] 🧹 Clearing score for:', student.name);
                                                                         // Send [''] to signify cleared/empty. DataContext treats this as a change against []
                                                                         updateStudentScores(student.id, selectedSubjectId, selectedAssessmentId, ['']);
 
