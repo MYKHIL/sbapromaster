@@ -229,7 +229,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Force hard reload on version mismatch to clear ghost listeners after update
     useEffect(() => {
-        const LATEST_VERSION = "1.0.89";
+        const LATEST_VERSION = "1.0.90";
         const currentVersion = localStorage.getItem("app_version");
 
         if (currentVersion !== LATEST_VERSION) {
@@ -403,11 +403,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
 
         const importedSettings = data.settings;
-        const currentCtx = `${settings.schoolName || ''}-${settings.academicYear || ''}-${settings.academicTerm || ''}`;
-        const newCtx = `${importedSettings?.schoolName || ''}-${importedSettings?.academicYear || ''}-${importedSettings?.academicTerm || ''}`;
+        // IMPORTANT: Context is determined by academicYear and academicTerm ONLY.
+        // schoolName is intentionally excluded because it is a user-editable field.
+        // Including it would incorrectly flag a school name edit as a school context shift,
+        // causing all local data to be discarded. Actual school-level switching is handled
+        // by the schoolId-based context reset in the useEffect below.
+        const currentCtx = `${settings.academicYear || ''}-${settings.academicTerm || ''}`;
+        const newCtx = `${importedSettings?.academicYear || ''}-${importedSettings?.academicTerm || ''}`;
 
-        // CRITICAL: If context (School/Year/Term) changed, we skip preservation
-        const isContextShift = currentCtx !== newCtx && settings.schoolName !== '';
+        // CRITICAL: If context (Year/Term) changed, we skip preservation
+        const isContextShift = currentCtx !== newCtx && settings.academicYear !== '';
         if (isContextShift) {
             console.log(`[DataContext] 🔄 Context shift detected (${currentCtx} -> ${newCtx}). Skipping preservation.`);
         }
@@ -473,6 +478,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         // Continue to setter(imported) below...
                     }
                 }
+            }
+
+            // PROTECTION: If this is a remote sync (not initial launch) and the field
+            // already has local pending changes, DO NOT overwrite local state.
+            // originalData will be updated to the cloud version below, so recheckAllDirtyStatus
+            // will correctly detect and retain the dirty flag on the next run.
+            if (isRemote && !isInitialLaunch && dirtyFields.current.has(field)) {
+                console.log(`[DataContext] 🛡️ Remote Sync: Preserving local changes to '${String(field)}' — field is dirty. Skipping overwrite.`);
+                return;
             }
 
             // Regular update or remote sync
