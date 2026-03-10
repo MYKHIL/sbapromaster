@@ -26,7 +26,7 @@ interface AuthOverlayProps {
 }
 
 const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
-    const { loadImportedData, setSchoolId, pauseSync, resumeSync } = useData();
+    const { loadImportedData, setSchoolId, pauseSync, resumeSync, isFetching } = useData();
     const { setUsers, users, login, setPassword: setUserPassword, checkAutoLogin, isAuthenticated } = useUser();
 
     // Navigation state
@@ -845,6 +845,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                             mode="setup"
                             users={[]}
                             onComplete={handleAdminSetup}
+                            isFetching={isFetching}
                         />
                     </div>
                 </div>

@@ -4,6 +4,8 @@ import { useUser } from '../../context/UserContext';
 import { sortClassesByName } from '../../utils/classSort';
 import { exportToExcel, exportToPDF, exportSubjectAnalysisExcel } from '../../utils/exportUtils';
 import useLocalStorage from '../../hooks/useLocalStorage';
+import StudentPreviewModal from '../modals/StudentPreviewModal';
+import { Student } from '../../types';
 
 const SubjectAnalysis: React.FC = () => {
     const data = useData();
@@ -15,6 +17,12 @@ const SubjectAnalysis: React.FC = () => {
     const [freezeHeader, setFreezeHeader] = useLocalStorage<boolean>('subject-analysis-freeze-header', true);
     const [freezeSubjects, setFreezeSubjects] = useLocalStorage<boolean>('subject-analysis-freeze-subjects', true);
     const [freezeGender, setFreezeGender] = useLocalStorage<boolean>('subject-analysis-freeze-gender', true);
+
+    const [previewData, setPreviewData] = useState<{
+        isOpen: boolean;
+        title: string;
+        students: Student[];
+    }>({ isOpen: false, title: '', students: [] });
 
     // Initialize default class
     React.useEffect(() => {
@@ -61,6 +69,13 @@ const SubjectAnalysis: React.FC = () => {
         const allAggregates = new Set<number>();
 
         const gradeNames = [...grades].sort((a, b) => b.minScore - a.minScore).map(g => g.name);
+
+        // Track student lists for each category
+        const subjectGradeStudents: Record<string, Record<string, Record<string, Student[]>>> = {};
+        const aggregateStudentsByGender: Record<string, Record<number, Student[]>> = {
+            'Male': {},
+            'Female': {}
+        };
 
         // Highly optimized computation to avoid O(N^3)
         const numericGradeMap = new Map<string, number>();
@@ -130,6 +145,21 @@ const SubjectAnalysis: React.FC = () => {
                         }
                         subjectGradeCounts[subject.subject][genderKey][grade]++;
                         subjectGradeCounts[subject.subject]['Total'][grade]++;
+
+                        if (!subjectGradeStudents[subject.subject]) {
+                            subjectGradeStudents[subject.subject] = {
+                                'Male': {},
+                                'Female': {},
+                                'Total': {}
+                            };
+                            gradeNames.forEach(g => {
+                                subjectGradeStudents[subject.subject]['Male'][g] = [];
+                                subjectGradeStudents[subject.subject]['Female'][g] = [];
+                                subjectGradeStudents[subject.subject]['Total'][g] = [];
+                            });
+                        }
+                        subjectGradeStudents[subject.subject][genderKey][grade].push(student);
+                        subjectGradeStudents[subject.subject]['Total'][grade].push(student);
                     }
                 }
             });
@@ -158,6 +188,10 @@ const SubjectAnalysis: React.FC = () => {
 
             if (aggregateScore >= 6) {
                 aggregateCountsByGender[genderKey][aggregateScore] = (aggregateCountsByGender[genderKey][aggregateScore] || 0) + 1;
+                
+                if (!aggregateStudentsByGender[genderKey][aggregateScore]) aggregateStudentsByGender[genderKey][aggregateScore] = [];
+                aggregateStudentsByGender[genderKey][aggregateScore].push(student);
+                
                 allAggregates.add(aggregateScore);
             }
         });
@@ -206,7 +240,9 @@ const SubjectAnalysis: React.FC = () => {
             activeSubjects,
             totalStudents: classStudents.length,
             averageAggregate,
-            passStats
+            passStats,
+            subjectGradeStudents,
+            aggregateStudentsByGender
         };
     }, [activeClass, students, scores, assessments, subjects, grades, selectedClassId, passMark]);
 
@@ -493,13 +529,38 @@ const SubjectAnalysis: React.FC = () => {
                                                         </td>
                                                         {analysisData.gradeNames.map(grade => {
                                                             const count = analysisData.subjectGradeCounts[subject][gender][grade];
+                                                            const studentsList = analysisData.subjectGradeStudents[subject]?.[gender]?.[grade] || [];
                                                             return (
-                                                                <td key={grade} className={`p-3 text-center text-sm ${count > 0 ? (gender === 'Total' ? 'text-gray-900 font-bold' : 'text-blue-600') : 'text-gray-200'}`}>
+                                                                <td 
+                                                                    key={grade} 
+                                                                    className={`p-3 text-center text-sm ${count > 0 ? (gender === 'Total' ? 'text-gray-900 font-bold hover:bg-blue-100 cursor-pointer' : 'text-blue-600 hover:bg-blue-50 cursor-pointer') : 'text-gray-200'} transition-colors`}
+                                                                    onClick={() => {
+                                                                        if (count > 0) {
+                                                                            setPreviewData({
+                                                                                isOpen: true,
+                                                                                title: `${subject} - Grade ${grade} (${gender})`,
+                                                                                students: studentsList
+                                                                            });
+                                                                        }
+                                                                    }}
+                                                                >
                                                                     {count || 0}
                                                                 </td>
                                                             );
                                                         })}
-                                                        <td className={`p-3 text-center font-bold text-sm border-l ${gender === 'Total' ? 'bg-blue-100 text-blue-900' : 'bg-blue-50/20 text-blue-800'}`}>
+                                                        <td 
+                                                            className={`p-3 text-center font-bold text-sm border-l ${gender === 'Total' ? 'bg-blue-100 text-blue-900 hover:bg-blue-200' : 'bg-blue-50/20 text-blue-800 hover:bg-blue-100'} cursor-pointer transition-colors`}
+                                                            onClick={() => {
+                                                                const allSubjectStudents = Object.values(analysisData.subjectGradeStudents[subject]?.[gender] || {}).flat();
+                                                                if (allSubjectStudents.length > 0) {
+                                                                    setPreviewData({
+                                                                        isOpen: true,
+                                                                        title: `${subject} - All ${gender} Graded`,
+                                                                        students: allSubjectStudents
+                                                                    });
+                                                                }
+                                                            }}
+                                                        >
                                                             {Object.values(analysisData.subjectGradeCounts[subject][gender]).reduce((a: number, b: number) => a + b, 0)}
                                                         </td>
                                                     </tr>
@@ -539,8 +600,21 @@ const SubjectAnalysis: React.FC = () => {
                                         <td className={`p-4 font-bold text-blue-600 border-r text-sm bg-white ${freezeSubjects ? 'sticky left-0 z-10' : ''}`}>Male</td>
                                         {analysisData.sortedAggregates.map(agg => {
                                             const count = (analysisData.aggregateCountsByGender['Male'][agg] || 0) as number;
+                                            const studentsList = (analysisData.aggregateStudentsByGender['Male'][agg] || []);
                                             return (
-                                                <td key={agg} className={`p-4 text-center text-sm ${count > 0 ? 'text-gray-900 font-bold' : 'text-gray-300'}`}>
+                                                <td 
+                                                    key={agg} 
+                                                    className={`p-4 text-center text-sm ${count > 0 ? 'text-gray-900 font-bold hover:bg-blue-100 cursor-pointer' : 'text-gray-300'} transition-colors`}
+                                                    onClick={() => {
+                                                        if (count > 0) {
+                                                            setPreviewData({
+                                                                isOpen: true,
+                                                                title: `Aggregate ${agg} - Male Students`,
+                                                                students: studentsList
+                                                            });
+                                                        }
+                                                    }}
+                                                >
                                                     {count}
                                                 </td>
                                             );
@@ -560,8 +634,21 @@ const SubjectAnalysis: React.FC = () => {
                                         <td className={`p-4 font-bold text-rose-600 border-r text-sm bg-white ${freezeSubjects ? 'sticky left-0 z-10' : ''}`}>Female</td>
                                         {analysisData.sortedAggregates.map(agg => {
                                             const count = (analysisData.aggregateCountsByGender['Female'][agg] || 0) as number;
+                                            const studentsList = (analysisData.aggregateStudentsByGender['Female'][agg] || []);
                                             return (
-                                                <td key={agg} className={`p-4 text-center text-sm ${count > 0 ? 'text-gray-900 font-bold' : 'text-gray-300'}`}>
+                                                <td 
+                                                    key={agg} 
+                                                    className={`p-4 text-center text-sm ${count > 0 ? 'text-gray-900 font-bold hover:bg-rose-100 cursor-pointer' : 'text-gray-300'} transition-colors`}
+                                                    onClick={() => {
+                                                        if (count > 0) {
+                                                            setPreviewData({
+                                                                isOpen: true,
+                                                                title: `Aggregate ${agg} - Female Students`,
+                                                                students: studentsList
+                                                            });
+                                                        }
+                                                    }}
+                                                >
                                                     {count}
                                                 </td>
                                             );
@@ -583,8 +670,24 @@ const SubjectAnalysis: React.FC = () => {
                                             const maleCount = (analysisData.aggregateCountsByGender['Male'][agg] || 0) as number;
                                             const femaleCount = (analysisData.aggregateCountsByGender['Female'][agg] || 0) as number;
                                             const total = maleCount + femaleCount;
+                                            const studentsList = [
+                                                ...(analysisData.aggregateStudentsByGender['Male'][agg] || []),
+                                                ...(analysisData.aggregateStudentsByGender['Female'][agg] || [])
+                                            ];
                                             return (
-                                                <td key={agg} className="p-4 text-center text-gray-900 text-sm">
+                                                <td 
+                                                    key={agg} 
+                                                    className={`p-4 text-center text-gray-900 text-sm hover:bg-blue-100 cursor-pointer transition-colors font-bold`}
+                                                    onClick={() => {
+                                                        if (total > 0) {
+                                                            setPreviewData({
+                                                                isOpen: true,
+                                                                title: `Aggregate ${agg} - All Students`,
+                                                                students: studentsList
+                                                            });
+                                                        }
+                                                    }}
+                                                >
                                                     {total}
                                                 </td>
                                             );
@@ -595,7 +698,19 @@ const SubjectAnalysis: React.FC = () => {
                                         <td className="p-4 text-center text-emerald-900 bg-emerald-100 border-l text-sm">
                                             {analysisData.passStats.Total.percentage.toFixed(1)}%
                                         </td>
-                                        <td className="p-4 text-center text-blue-900 bg-blue-100 border-l text-sm">
+                                        <td 
+                                            className="p-4 text-center text-blue-900 bg-blue-100 border-l text-sm hover:bg-blue-200 cursor-pointer transition-colors"
+                                            onClick={() => {
+                                                const allAggStudents = Object.values(analysisData.aggregateStudentsByGender).flatMap(genderMap => Object.values(genderMap)).flat();
+                                                if (allAggStudents.length > 0) {
+                                                    setPreviewData({
+                                                        isOpen: true,
+                                                        title: `All Graded Students`,
+                                                        students: allAggStudents
+                                                    });
+                                                }
+                                            }}
+                                        >
                                             {analysisData.totalStudents}
                                         </td>
                                     </tr>
@@ -647,6 +762,13 @@ const SubjectAnalysis: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            <StudentPreviewModal
+                isOpen={previewData.isOpen}
+                onClose={() => setPreviewData(prev => ({ ...prev, isOpen: false }))}
+                title={previewData.title}
+                students={previewData.students}
+            />
         </div>
     );
 };

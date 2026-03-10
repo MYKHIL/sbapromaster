@@ -229,7 +229,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Force hard reload on version mismatch to clear ghost listeners after update
     useEffect(() => {
-        const LATEST_VERSION = "1.0.92";
+        const LATEST_VERSION = "1.0.93";
         const currentVersion = localStorage.getItem("app_version");
 
         if (currentVersion !== LATEST_VERSION) {
@@ -597,13 +597,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             SyncLogger.log(`loadImportedData: Loading users from document. Count: ${importedUsers.length}`);
             if (isInitialLaunch && !isDataEqual(importedUsers, users)) {
                 console.log(`[DataContext] 🛡️ Preservation: Discrepancy in users. Keeping local.`);
-                markDirty('users', true);
+                // markDirty('users', true);
                 // nextState.users remains current
             } else if (!isDataEqual(importedUsers, users)) {
                 console.log('[DataContext] ✅ Updating users:', importedUsers.length);
                 setUsers(importedUsers);
                 nextState.users = importedUsers; // Track next state
-                if (!isRemote) markDirty('users');
+                // if (!isRemote) markDirty('users');
             }
         }
 
@@ -994,7 +994,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const rebuildItemDirtyMap = React.useCallback((dataOverride?: Partial<AppDataType>) => {
         console.log('[DataContext] ⚒️ Rebuilding item-level dirty map...');
         const collections: (keyof AppDataType)[] = [
-            'students', 'subjects', 'classes', 'grades', 'assessments', 'users', 'reportData', 'classData'
+            'students', 'subjects', 'classes', 'grades', 'assessments', 'reportData', 'classData'
         ];
 
         let anyItemDirty = false;
@@ -1047,7 +1047,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.log('[DataContext] 🔍 Performing full dirty recheck against cloud baseline...');
         const fieldsToCheck: (keyof AppDataType)[] = [
             'settings', 'students', 'subjects', 'classes', 'grades', 'assessments',
-            'scores', 'reportData', 'classData', 'users', 'userLogs', 'activeSessions'
+            'scores', 'reportData', 'classData', 'userLogs', 'activeSessions'
         ];
 
         for (const field of fieldsToCheck) {

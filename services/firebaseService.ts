@@ -31,6 +31,7 @@ import {
     Firestore
 } from "firebase/firestore";
 import type { SchoolSettings, Student, Subject, Class, Grade, Assessment, Score, ReportSpecificData, ClassSpecificData, User, DeviceCredential, UserLog, OnlineUser, AppDataType } from '../types';
+import * as SyncLogger from './syncLogger';
 
 // CACHE STORAGE
 // @ts-ignore
@@ -1753,6 +1754,10 @@ export const saveDataTransaction = async (
                 }
             } else if (MAIN_KEYS.includes(key) || key === 'userLogs' || key === 'activeSessions') {
                 const val = (updates as any)[key];
+                if (key === 'users' && Array.isArray(val) && val.length === 0) {
+                    console.warn(`[Firebase] ⚠️ CRITICAL: Attempting to save EMPTY users array for ${docId}. This could cause data loss!`);
+                    SyncLogger.log(`⚠️ CRITICAL: Empty users array save attempted for school ${docId}`);
+                }
                 mainUpdates[key] = val;
             }
         }

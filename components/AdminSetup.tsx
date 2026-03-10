@@ -13,9 +13,10 @@ interface AdminSetupProps {
     onUpdate?: (users: User[]) => void;
     onCancel?: () => void;
     externalError?: string | null; // Error from parent component
+    isFetching?: boolean; // New prop to track background data loading
 }
 
-const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, currentUser, onComplete, onUpdate, onCancel, externalError }) => {
+const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, currentUser, onComplete, onUpdate, onCancel, externalError, isFetching }) => {
     const [showCloseWarning, setShowCloseWarning] = useState(false);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const { classes, subjects } = useData();
@@ -26,7 +27,12 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
 
     // Update local state when prop changes (e.g. after data load)
     useEffect(() => {
-        setExistingUsers(initialUsers);
+        // PROTECTION: Only pull from props if we don't have local unsaved changes
+        // OR if the list was previously empty (initial load completion).
+        // This prevents remote updates from wiping out work-in-progress deletions/toggles.
+        if (!hasUnsavedChanges || (existingUsers.length === 0 && initialUsers.length > 0)) {
+            setExistingUsers(initialUsers);
+        }
     }, [initialUsers]);
     // Track unsaved changes
     useEffect(() => {
@@ -747,7 +753,10 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                     {onCancel && mode === 'management' && users.length === 0 && (
                         <button
                             onClick={async () => {
-                                0 && console.log('[AdminSetup] Apply button clicked. Saving users:', existingUsers.length, existingUsers);
+                                if (isFetching && existingUsers.length === 0) {
+                                    setError('⏳ Still fetching users from cloud. Please wait...');
+                                    return;
+                                }
                                 if (existingUsers.length === 0) {
                                     setError('Cannot save: no users to apply. Please add at least the admin user.');
                                     return;
@@ -755,9 +764,10 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                 await onComplete(existingUsers);
                                 setError('✅ User changes saved to cloud. You may now close this window.');
                             }}
-                            className="flex-1 py-3 px-4 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition"
+                            disabled={isFetching && existingUsers.length === 0}
+                            className={`flex-1 py-3 px-4 text-white rounded-md transition ${isFetching && existingUsers.length === 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-gray-600 hover:bg-gray-700'}`}
                         >
-                            Apply Changes
+                            {isFetching && existingUsers.length === 0 ? 'Loading Users...' : 'Apply Changes'}
                         </button>
                     )}
                     {mode === 'management' && users.length > 0 && (

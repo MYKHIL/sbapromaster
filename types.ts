@@ -87,13 +87,16 @@ export interface Assessment {
   type: 'Class' | 'Exam';
 }
 
+export type UserRole = 'Admin' | 'Teacher' | 'Guest';
+
 export interface User {
   id: number;
   name: string;
-  role: 'Admin' | 'Teacher' | 'Guest';
+  role: UserRole;
   isReadOnly?: boolean;
   allowedClasses?: string[];
   allowedSubjects?: number[];
+  classSubjects?: Record<string, number[]>; // Maps class name to list of subject IDs
   passwordHash?: string;
 }
 

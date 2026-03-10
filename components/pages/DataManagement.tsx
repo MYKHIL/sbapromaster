@@ -726,7 +726,7 @@ const PasswordScopeModal: React.FC<{
 
 const DataManagement: React.FC = () => {
     const dataContext = useData();
-    const { settings, loadImportedData, saveToCloud, schoolId, updateSettings } = dataContext;
+    const { settings, loadImportedData, saveToCloud, schoolId, updateSettings, isFetching } = dataContext;
     const { currentUser, users, setUsers } = useUser();
     const [processingAction, setProcessingAction] = useState<'import' | 'export' | 'generate_wpf' | 'share' | null>(null);
     const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' | 'info' | 'warning'; details?: string[]; detailsTitle?: string; } | null>(null);
@@ -1712,6 +1712,7 @@ const DataManagement: React.FC = () => {
                         onComplete={(users) => handleUserManagementSave(users, true)} // Complete/Close
                         onUpdate={(users) => handleUserManagementSave(users, false)} // Update/Keep Open
                         onCancel={() => setIsUserManagementOpen(false)}
+                        isFetching={isFetching}
                     />
                 )
             }
