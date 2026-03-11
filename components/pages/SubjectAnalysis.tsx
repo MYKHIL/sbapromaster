@@ -98,8 +98,8 @@ const SubjectAnalysis: React.FC = () => {
                 const classScore = classAssessments.reduce((total, assessment) => {
                     const vals = score.assessmentScores?.[assessment.id];
                     if (!vals || vals.length === 0) return total;
-                    const totalScore = vals.reduce((sum, scoreStr) => sum + (Number(scoreStr.split('/')[0]) || 0), 0);
-                    const totalMaxPossibleScore = vals.reduce((sum, scoreStr) => sum + (Number(scoreStr.split('/')[1]) || assessment.weight), 0);
+                    const totalScore = vals.reduce((sum, scoreStr) => sum + (Number((scoreStr || '').split('/')[0]) || 0), 0);
+                    const totalMaxPossibleScore = vals.reduce((sum, scoreStr) => sum + (Number((scoreStr || '').split('/')[1]) || assessment.weight), 0);
                     if (totalMaxPossibleScore === 0) return total;
                     return total + (totalScore / totalMaxPossibleScore) * assessment.weight;
                 }, 0);
@@ -107,7 +107,7 @@ const SubjectAnalysis: React.FC = () => {
                 const examScore = examAssessment ? [examAssessment].reduce((total, assessment) => {
                     const vals = score.assessmentScores?.[assessment.id];
                     if (!vals || vals.length === 0) return total;
-                    const sumOfScores = vals.reduce((sum, scoreStr) => sum + (Number(scoreStr.split('/')[0]) || 0), 0);
+                    const sumOfScores = vals.reduce((sum, scoreStr) => sum + (Number((scoreStr || '').split('/')[0]) || 0), 0);
                     const averageScoreOutOf100 = sumOfScores / vals.length;
                     return total + (averageScoreOutOf100 / 100) * assessment.weight;
                 }, 0) : 0;
@@ -209,7 +209,7 @@ const SubjectAnalysis: React.FC = () => {
                 leastGradeValue
             );
 
-            if (aggregateScore >= 6) {
+            if (aggregateScore > 0) {
                 aggregateCountsByGender[genderKey][aggregateScore] = (aggregateCountsByGender[genderKey][aggregateScore] || 0) + 1;
                 
                 if (!aggregateStudentsByGender[genderKey][aggregateScore]) aggregateStudentsByGender[genderKey][aggregateScore] = [];
@@ -220,7 +220,15 @@ const SubjectAnalysis: React.FC = () => {
         });
 
         const activeSubjects = Object.keys(subjectGradeCounts).sort();
-        const sortedAggregates = Array.from(allAggregates).sort((a, b) => a - b);
+        
+        let sortedAggregates: number[] = [];
+        if (allAggregates.size > 0) {
+            const minAgg = Math.min(...allAggregates);
+            const maxAgg = Math.max(...allAggregates);
+            for (let i = minAgg; i <= maxAgg; i++) {
+                sortedAggregates.push(i);
+            }
+        }
 
         // Calculate Pass stats
         const passStats = {
@@ -452,7 +460,7 @@ const SubjectAnalysis: React.FC = () => {
                         <input
                             type="number"
                             value={passMark}
-                            onChange={(e) => setPassMark(Math.max(6, Math.min(72, Number(e.target.value) || 0)))}
+                            onChange={(e) => setPassMark(Math.max(1, Math.min(108, Number(e.target.value) || 0)))}
                             className="w-20 px-3 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-lg border bg-white shadow-sm font-medium text-center"
                         />
                         <div className="flex items-center gap-4 ml-4">
@@ -742,7 +750,7 @@ const SubjectAnalysis: React.FC = () => {
                         </div>
                         {analysisData.sortedAggregates.length === 0 && (
                             <div className="p-10 text-center text-gray-400 italic">
-                                No valid aggregates (Agg 6-54) found for this class.
+                                No valid aggregates found for this class.
                             </div>
                         )}
                     </div>
