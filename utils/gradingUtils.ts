@@ -41,7 +41,7 @@ export const calculateAggregateScore = (
         coreSum += (numericValue !== undefined) ? numericValue : leastGradeValue;
     });
 
-    // 3. Find 2 Best Electives
+    // 3. Find Best Electives (up to 2, or fewer if the class offers fewer)
     const electiveValues: number[] = [];
     electiveSubjects.forEach(subject => {
         const gradeName = studentGrades.get(subject.subject);
@@ -54,13 +54,16 @@ export const calculateAggregateScore = (
 
     // Sort: lower numeric value = better grade
     const sortedElectives = electiveValues.sort((a, b) => a - b);
-    const bestTwo = sortedElectives.slice(0, 2);
+    
+    // Dynamic target: either 2 or the number of electives offered by the class
+    const electiveTarget = Math.min(2, electiveSubjects.length);
+    const bestElectives = sortedElectives.slice(0, electiveTarget);
 
-    let electiveSum = bestTwo.reduce((sum, val) => sum + val, 0);
+    let electiveSum = bestElectives.reduce((sum, val) => sum + val, 0);
 
-    // 4. Fill in penalties if fewer than 2 electives were found
-    if (bestTwo.length < 2) {
-        electiveSum += (2 - bestTwo.length) * leastGradeValue;
+    // 4. Fill in penalties if fewer than the target number of electives were found
+    if (bestElectives.length < electiveTarget) {
+        electiveSum += (electiveTarget - bestElectives.length) * leastGradeValue;
     }
 
     return coreSum + electiveSum;
