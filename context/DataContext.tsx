@@ -229,7 +229,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Force hard reload on version mismatch to clear ghost listeners after update
     useEffect(() => {
-        const LATEST_VERSION = "1.0.99";
+        const LATEST_VERSION = "1.0.100";
         const currentVersion = localStorage.getItem("app_version");
 
         if (currentVersion !== LATEST_VERSION) {
@@ -1147,6 +1147,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Remove _deletions from payload
         const { _deletions, ...transactionPayload } = pendingData;
 
+        // FIX: Arrays on the main document are completely overwritten by Firebase merge.
+        // If they are in the payload (meaning they have changes), we MUST send the FULL array.
+        const MAIN_ARRAY_KEYS = ['reportData', 'classData', 'users', 'userLogs'];
+        MAIN_ARRAY_KEYS.forEach(k => {
+            if (transactionPayload[k] !== undefined) {
+                transactionPayload[k] = currentData[k as keyof AppDataType];
+            }
+        });
+
         // Check network status
         if (!isOnline) {
             console.log("Offline - adding to queue");
@@ -1830,6 +1839,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // This prevents "Bleeding Saves" and correctly handles deletions for this field.
             // We include 'userLogs' and 'activeSessions' to ensure they sync often.
             const { _deletions, ...updates } = getPendingUploadData([field, 'userLogs', 'activeSessions']);
+
+            // FIX: Arrays on the main document are completely overwritten by Firebase merge.
+            // If they are in the payload (meaning they have changes), we MUST send the FULL array.
+            const MAIN_ARRAY_KEYS = ['reportData', 'classData', 'users', 'userLogs'];
+            MAIN_ARRAY_KEYS.forEach(k => {
+                if (updates[k] !== undefined) {
+                    updates[k] = stateRef.current[k as keyof AppDataType];
+                }
+            });
 
             // Use transaction for all saves to ensure consistency
             await saveDataTransaction(schoolId, updates, _deletions);
