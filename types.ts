@@ -69,6 +69,7 @@ export interface Student {
   age: string;
   picture?: string;
   indexNumber?: string;
+  dateOfBirth?: string;
   guardianName?: string;
   guardianPhone?: string;
 }

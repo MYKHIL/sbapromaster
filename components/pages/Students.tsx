@@ -193,7 +193,10 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
     };
 
     const handleAddNew = () => {
-        setCurrentStudent(EMPTY_STUDENT_FORM);
+        setCurrentStudent({
+            ...EMPTY_STUDENT_FORM,
+            class: selectedClass || ''
+        });
         setIsModalOpen(true);
     };
 
