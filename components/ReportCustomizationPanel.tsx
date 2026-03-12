@@ -617,7 +617,7 @@ const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ stu
                                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'}
                         `}
                     >
-                        {hasUnsavedChanges ? 'Save Changes' : 'Saved'}
+                        {hasUnsavedChanges ? 'Queue Changes' : 'Queued'}
                     </button>
                 </div>
 

@@ -13,8 +13,16 @@ const SubjectAnalysis: React.FC = () => {
     const { classes, students, subjects, grades, scores, assessments, refreshFromCloud, loadScores, loadStudents, isFetching, isSyncing, isOnline } = data;
     const { currentUser } = useUser();
 
-    const [selectedClassId, setSelectedClassId] = useState<number | 'all' | ''>('');
-    const [passMark, setPassMark] = useState<number>(36);
+    const [selectedClassId, setSelectedClassId] = useLocalStorage<number | 'all' | ''>(
+        'subject-analysis-selected-class',
+        ''
+    );
+    //const [selectedClassId, setSelectedClassId] = useState<number | 'all' | ''>('');
+    const [passMark, setPassMark] = useLocalStorage<number>(
+        'subject-analysis-pass-aggregate',
+        36
+    );
+    //const [passMark, setPassMark] = useState<number>(36);
     const [freezeHeader, setFreezeHeader] = useLocalStorage<boolean>('subject-analysis-freeze-header', true);
     const [freezeSubjects, setFreezeSubjects] = useLocalStorage<boolean>('subject-analysis-freeze-subjects', true);
     const [freezeGender, setFreezeGender] = useLocalStorage<boolean>('subject-analysis-freeze-gender', true);
