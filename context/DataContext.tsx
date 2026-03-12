@@ -229,7 +229,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Force hard reload on version mismatch to clear ghost listeners after update
     useEffect(() => {
-        const LATEST_VERSION = "1.0.102";
+        const LATEST_VERSION = "1.0.103";
         const currentVersion = localStorage.getItem("app_version");
 
         if (currentVersion !== LATEST_VERSION) {
@@ -1207,33 +1207,23 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 // CRITICAL: Update originalData to match the new server state
                 // This prevents the "Preview" from showing these items as changed in future saves
                 const key = field as keyof AppDataType;
-                if (transactionPayload[key]) {
-                    // For scores, we need to merge because we only sent a partial update
-                    if (key === 'scores' && Array.isArray(transactionPayload.scores)) {
-                        const updatedScores = transactionPayload.scores as Score[];
-                        const currentOriginal = (originalData.current.scores as Score[]) || [];
+                // CRITICAL: Update originalData to match the new server state.
+                // We MUST check transactionDeletions as well, because if a field has ONLY deletions,
+                // transactionPayload[key] will be undefined, but we still need to update the baseline.
+                const hasUpdates = transactionPayload[key] !== undefined;
+                const hasDeletions = transactionDeletions[key] !== undefined;
 
-                        // Merge strategy: Replace items with matching IDs, add new ones
-                        const newOriginalScores = [...currentOriginal];
-                        updatedScores.forEach(update => {
-                            const updateId = getItemId(update);
-                            const index = newOriginalScores.findIndex(s => getItemId(s) === updateId);
-                            if (index > -1) {
-                                newOriginalScores[index] = update;
-                            } else {
-                                newOriginalScores.push(update);
-                            }
-                        });
-                        // Handle deletes if any
-                        if (transactionDeletions.scores) {
-                            const deletedIds = new Set(transactionDeletions.scores);
-                            originalData.current.scores = newOriginalScores.filter(s => !deletedIds.has(String(getItemId(s))));
-                        } else {
-                            originalData.current.scores = newOriginalScores;
-                        }
+                if (hasUpdates || hasDeletions) {
+                    const dataToClone = currentData[key];
+                    if (Array.isArray(dataToClone)) {
+                        // For arrays (collections)
+                        originalData.current[key] = [...dataToClone] as any;
+                    } else if (dataToClone && typeof dataToClone === 'object') {
+                        // For objects (settings, activeSessions)
+                        originalData.current[key] = { ...dataToClone as any } as any;
                     } else {
-                        // For other fields, we sent the FULL data
-                        originalData.current[key] = currentData[key] as any;
+                        // For primitives (if any)
+                        originalData.current[key] = dataToClone as any;
                     }
 
                     // CRITICAL: Update the "Last Loaded" metadata timestamp to match the new server state.
@@ -1869,14 +1859,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (field === 'settings') {
                 originalData.current.settings = { ...settings };
             } else if (Array.isArray(data)) {
-                // For collections, we merge the new items into the baseline
-                const existing = (originalData.current[field] as any[]) || [];
-                const map = new Map(existing.map((item: any) => [getItemId(item) || 'unknown', item]));
-                data.forEach(item => {
-                    const id = getItemId(item);
-                    if (id) map.set(id, item);
-                });
-                originalData.current[field] = Array.from(map.values()) as any;
+                // Replace the baseline with the current live state after a successful save.
+                // CRITICAL: We must NOT use a merge-only Map here because deleted items would
+                // remain in originalData, causing them to re-appear on the next remote sync
+                // (the smart merge would see them as "local-only unsaved items" and re-add them).
+                // stateRef.current[field] reflects the true post-deletion state.
+                originalData.current[field] = [...(stateRef.current[field] as any[])] as any;
             }
 
             // Clear granular dirty map for this field

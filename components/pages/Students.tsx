@@ -13,6 +13,7 @@ import { generateIndexNumber } from '../../utils/indexNumberGenerator';
 import { getNextAvailableCounter } from '../../utils/indexNumberCounter';
 import { sortClassesByName } from '../../utils/classSort';
 import { exportToExcel, exportToPDF } from '../../utils/exportUtils';
+import useLocalStorage from '../../hooks/useLocalStorage';
 import type { Page, NavigationMeta } from '../../types';
 
 interface StudentsProps {
@@ -53,7 +54,8 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [itemIdToDelete, setItemIdToDelete] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedClass, setSelectedClass] = useState<string>('');
+    // Preserve selected class filter
+    const [selectedClass, setSelectedClass] = useLocalStorage<string>(`selected_class_${settings.schoolName || 'default'}`, '');
     const [isEnhancing, setIsEnhancing] = useState(false);
     const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
     const hasSetDefaultClass = useRef(false);
@@ -79,13 +81,15 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
         return sortClassesByName(unique);
     }, [currentUser, classes]);
 
-    // Initialize default class selection to first available class (only once on mount)
+    // Initialize default class selection to first available class (only if none stored)
     useEffect(() => {
         if (availableClasses.length > 0 && !hasSetDefaultClass.current) {
-            setSelectedClass(availableClasses[0].name);
+            if (!selectedClass) {
+                setSelectedClass(availableClasses[0].name);
+            }
             hasSetDefaultClass.current = true;
         }
-    }, [availableClasses]);
+    }, [availableClasses, selectedClass, setSelectedClass]);
 
     // Lazy Load Students on Mount
     useEffect(() => {

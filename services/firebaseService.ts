@@ -1837,7 +1837,8 @@ export const saveDataTransaction = async (
         // Since we cannot easily "merge" into chunks atomically, we trigger
         // a bucket rebuild if students were modified. This reads the full list
         // and re-chunks it.
-        if (hasStudentUpdates) {
+        const hasStudentDeletions = deletions?.students && deletions.students.length > 0;
+        if (hasStudentUpdates || hasStudentDeletions) {
             0 && console.log(`[Optimization] 🔄 Student changes detected. Rebuilding bucket chunks...`);
             await updateStudentBucket(docId);
         }
