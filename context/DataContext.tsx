@@ -229,7 +229,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Force hard reload on version mismatch to clear ghost listeners after update
     useEffect(() => {
-        const LATEST_VERSION = "1.0.106";
+        const LATEST_VERSION = "1.0.107";
         const currentVersion = localStorage.getItem("app_version");
 
         if (currentVersion !== LATEST_VERSION) {
@@ -645,11 +645,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // SECURITY: Deep clone/Immutable merge for arrays to prevent reference sharing
             const mergeArrays = (field: keyof AppDataType, incoming: any[]) => {
                 if (!incoming) return;
-                const existing = (originalData.current[field] as any[]) || [];
-                const map = new Map(existing.map((item: any) => {
-                    const id = getItemId(item);
-                    return [id || 'unknown', item];
-                }));
+                // Since this is called when loading remote data, the cloud is the source of truth.
+                // We should NOT merge with the existing local baseline, because that preserves items deleted from the cloud.
+                const map = new Map();
                 incoming.forEach(item => {
                     const id = getItemId(item);
                     if (id) map.set(id, item);
