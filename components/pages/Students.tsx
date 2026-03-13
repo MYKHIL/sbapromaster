@@ -81,13 +81,17 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
         return sortClassesByName(unique);
     }, [currentUser, classes]);
 
-    // Initialize default class selection to first available class (only if none stored)
+    // Initialize default class selection to first available class (only if none stored or stored is invalid)
     useEffect(() => {
-        if (availableClasses.length > 0 && !hasSetDefaultClass.current) {
-            if (!selectedClass) {
-                setSelectedClass(availableClasses[0].name);
+        if (availableClasses.length > 0) {
+            const isCurrentValid = selectedClass && availableClasses.some(c => c.name === selectedClass);
+            if (!selectedClass || !isCurrentValid) {
+                const fallback = availableClasses[0].name;
+                setSelectedClass(fallback);
+                hasSetDefaultClass.current = true;
+            } else if (!hasSetDefaultClass.current) {
+                hasSetDefaultClass.current = true;
             }
-            hasSetDefaultClass.current = true;
         }
     }, [availableClasses, selectedClass, setSelectedClass]);
 

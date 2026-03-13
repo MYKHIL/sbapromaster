@@ -30,8 +30,11 @@ const ReportViewer: React.FC = () => {
 
   // State
   const [selectedClassId, setSelectedClassId] = useState<number | ''>(() => {
+    const available = getAvailableClasses(currentUser, classes);
     const saved = localStorage.getItem('reportViewer_selectedClassId');
-    return saved ? Number(saved) : '';
+    const savedId = saved ? Number(saved) : '';
+    if (savedId && available.some(c => c.id === savedId)) return savedId;
+    return available.length > 0 ? available[0].id : '';
   });
 
   const [selectedStudentId, setSelectedStudentId] = useState<number | 'all'>(() => {
@@ -78,7 +81,7 @@ const ReportViewer: React.FC = () => {
     const available = getAvailableClasses(currentUser, classes);
     // De-duplicate by class name to prevent redundant entries in the dropdown
     const unique = available.filter((cls, index, self) =>
-      index === self.findIndex((t) => t.name.trim() === cls.name.trim())
+      index === self.findIndex((t) => (t.name || '').trim() === (cls.name || '').trim())
     );
     return sortClassesByName(unique);
   }, [classes, currentUser]);

@@ -103,7 +103,7 @@ const ScoreEntry: React.FC = () => {
         const available = getAvailableClasses(currentUser, allClasses);
         // De-duplicate by class name to prevent redundant entries in the dropdown
         const unique = available.filter((cls, index, self) =>
-            index === self.findIndex((t) => t.name.trim() === cls.name.trim())
+            index === self.findIndex((t) => (t.name || '').trim() === (cls.name || '').trim())
         );
         return sortClassesByName(unique);
     }, [currentUser, allClasses]);
@@ -111,13 +111,25 @@ const ScoreEntry: React.FC = () => {
     // Safe initialization for selectedClass (must be before subjects useMemo)
     const [selectedClass, setSelectedClass] = useState<string>(() => {
         try {
+            const availableNames = getAvailableClasses(currentUser, allClasses).map(c => c.name);
             const saved = localStorage.getItem('scoreEntry_selectedClass');
-            if (saved && allClasses.find(c => c.name === saved)) return saved;
-            return allClasses.length > 0 ? allClasses[0].name : '';
+            if (saved && availableNames.includes(saved)) return saved;
+            return availableNames.length > 0 ? availableNames[0] : '';
         } catch (e) {
             return '';
         }
     });
+
+    // Validation Effect: If currentUser or allClasses changes, ensure current selection is still valid
+    useEffect(() => {
+        const availableNames = getAvailableClasses(currentUser, allClasses).map(c => c.name);
+        if (selectedClass && !availableNames.includes(selectedClass)) {
+            const fallback = availableNames.length > 0 ? availableNames[0] : '';
+            setSelectedClass(fallback);
+            if (fallback) localStorage.setItem('scoreEntry_selectedClass', fallback);
+            else localStorage.removeItem('scoreEntry_selectedClass');
+        }
+    }, [currentUser, allClasses, selectedClass]);
 
     // Filter subjects based on selected class (per-class mapping)
     const subjects = useMemo(() => {
@@ -322,7 +334,7 @@ const ScoreEntry: React.FC = () => {
             rawInput: localScore
         });
 
-        const rawScoreInput = localScore.trim();
+        const rawScoreInput = (localScore || '').trim();
         const isExam = assessment.name.toLowerCase().includes('exam');
         const maxScore = isExam ? 100 : assessment.weight;
         const basis = isExam ? 100 : assessment.weight;
@@ -514,7 +526,7 @@ const ScoreEntry: React.FC = () => {
                     const basis = isExam ? 100 : ass.weight;
 
                     let rawVal = 0;
-                    const rawInput = localScore.trim();
+                    const rawInput = (localScore || '').trim();
                     if (rawInput) {
                         if (rawInput.includes('/')) {
                             const p = rawInput.split('/');

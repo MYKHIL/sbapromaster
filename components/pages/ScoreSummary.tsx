@@ -67,8 +67,13 @@ const ScoreSummary: React.FC = () => {
     const summaryData = useMemo(() => {
         if (!classes || !students || !assessments || !subjects) return [];
 
+        // Filter classes by permissions (Admins see all, others see allowedClasses)
+        const available = currentUser?.role === 'Admin' 
+            ? classes 
+            : classes.filter(c => (currentUser?.allowedClasses || []).includes(c.name));
+
         // De-duplicate classes by name to avoid duplicate summary cards
-        const uniqueClasses = classes.filter((cls, index, self) =>
+        const uniqueClasses = available.filter((cls, index, self) =>
             index === self.findIndex((t) => (t.name || '').trim() === (cls.name || '').trim())
         );
 
@@ -106,16 +111,16 @@ const ScoreSummary: React.FC = () => {
                         if (classSpecificSubjects && classSpecificSubjects.length > 0) {
                             // Detailed Mapping: User has specific subjects for this specific class
                             classSpecificSubjects.forEach(subjectName => {
-                                const subNameLower = subjectName.trim().toLowerCase();
-                                const subject = subjects.find(s => s.subject.trim().toLowerCase() === subNameLower);
+                                const subNameLower = (subjectName || '').trim().toLowerCase();
+                                const subject = subjects.find(s => (s.subject || '').trim().toLowerCase() === subNameLower);
                                 if (subject) mappedSubjects.add(subject.id);
                             });
-                        } else if (!hasDetailedAssignments && user.role === 'Teacher' && (user.allowedClasses || []).some(cn => cn.trim() === cls.name.trim())) {
+                        } else if (!hasDetailedAssignments && user.role === 'Teacher' && (user.allowedClasses || []).some(cn => (cn || '').trim() === (cls.name || '').trim())) {
                             // Legacy Fallback: ONLY IF they haven't started using the specific assignment system AT ALL.
                             // If they are assigned to this class broadly, we assume all their 'allowedSubjects' are for this class.
                             (user.allowedSubjects || []).forEach(subjectName => {
-                                const subNameLower = subjectName.trim().toLowerCase();
-                                const subject = subjects.find(s => s.subject.trim().toLowerCase() === subNameLower);
+                                const subNameLower = (subjectName || '').trim().toLowerCase();
+                                const subject = subjects.find(s => (s.subject || '').trim().toLowerCase() === subNameLower);
                                 if (subject) mappedSubjects.add(subject.id);
                             });
                         }

@@ -99,6 +99,28 @@ export interface User {
   allowedSubjects?: number[];
   classSubjects?: Record<string, number[]>; // Maps class name to list of subject IDs
   passwordHash?: string;
+  notifications?: Notification[];
+}
+
+export interface Notification {
+  id: string;
+  senderId: number;
+  senderName: string;
+  type: 'missing_data_alert' | 'feedback' | string;
+  context?: {
+    classId?: number;
+    dataType?: 'scores' | 'remarks' | string;
+  };
+  message: string;
+  link?: string;
+  read: boolean;
+  date: string;
+  replies?: {
+    senderId: number;
+    senderName: string;
+    message: string;
+    date: string;
+  }[];
 }
 
 export interface SchoolPeriod {
