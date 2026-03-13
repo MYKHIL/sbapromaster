@@ -229,7 +229,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Force hard reload on version mismatch to clear ghost listeners after update
     useEffect(() => {
-        const LATEST_VERSION = "1.0.107";
+        const LATEST_VERSION = "1.0.108";
         const currentVersion = localStorage.getItem("app_version");
 
         if (currentVersion !== LATEST_VERSION) {
@@ -462,23 +462,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         const processField = (field: keyof AppDataType, imported: any, current: any, setter: any) => {
             if (imported === undefined) return; // Only process if imported data is provided
-
-            // For initial launch, we PREFER local uncommitted changes IF they are meaningful
-            // EXCEPTION: If the context (School/Term) has shifted, we NEVER preserve.
-            if (isInitialLaunch && !isContextShift) {
-                if (!isDataEqual(imported, current)) {
-                    // Check if the local discrepancy is "meaningful" (i.e. not just default initial state)
-                    if (isMeaningfulDiscrepancy(field, current)) {
-                        console.log(`[DataContext] 🛡️ Preservation: Meaningful discrepancy in ${String(field)} on initial load. Keeping local version.`);
-                        markDirty(field, true);
-                        // nextState[field] remains as current
-                        return; // Keep local state
-                    } else {
-                        console.log(`[DataContext] 🔄 Initial Load: Local ${String(field)} is just default state. Adopting cloud version.`);
-                        // Continue to setter(imported) below...
-                    }
-                }
-            }
 
             // PROTECTION: If this is a remote sync (not initial launch) and the field
             // already has local pending changes, DO NOT overwrite local state.
