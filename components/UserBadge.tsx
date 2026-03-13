@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useUser } from '../context/UserContext';
 import { useData } from '../context/DataContext';
 import ConfirmationModal from './ConfirmationModal';
@@ -10,13 +10,15 @@ const UserBadge: React.FC = () => {
     // Early return BEFORE other hooks to avoid React error #300
     if (!currentUser) return null;
 
-    const { isOnline, isSyncing, queuedCount, onlineUsers, settings } = useData();
+    const { isOnline, isSyncing, queuedCount, onlineUsers, settings, subjects } = useData();
     const [showConfirm, setShowConfirm] = useState(false);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [showOnlineUsers, setShowOnlineUsers] = useState(false);
     const [showTermInfo, setShowTermInfo] = useState(false);
+    const [showUserInfo, setShowUserInfo] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
     const termInfoRef = React.useRef<HTMLDivElement>(null);
+    const userInfoRef = React.useRef<HTMLDivElement>(null);
 
     // Close on click outside
     useEffect(() => {
@@ -24,16 +26,19 @@ const UserBadge: React.FC = () => {
             if (showTermInfo && termInfoRef.current && !termInfoRef.current.contains(event.target as Node)) {
                 setShowTermInfo(false);
             }
+            if (showUserInfo && userInfoRef.current && !userInfoRef.current.contains(event.target as Node)) {
+                setShowUserInfo(false);
+            }
         };
 
-        if (showTermInfo) {
+        if (showTermInfo || showUserInfo) {
             document.addEventListener('mousedown', handleClickOutside);
         }
 
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [showTermInfo]);
+    }, [showTermInfo, showUserInfo]);
 
     // Switch Account (Same School)
     const handleSwitchUser = () => {
@@ -71,6 +76,36 @@ const UserBadge: React.FC = () => {
 
     const isLocked = settings?.isDataEntryLocked;
     const isAdmin = currentUser.role === 'Admin';
+
+    // Aggregate all unique assigned subjects across global and class-specific settings
+    const assignedSubjects = useMemo(() => {
+        if (!currentUser) return [];
+        const set = new Set<string>();
+
+        // 1. Add from global allowedSubjects
+        (currentUser.allowedSubjects || []).forEach(sub => {
+            if (typeof sub === 'string') set.add(sub);
+            else if (typeof sub === 'number') {
+                const s = (subjects || []).find(x => x.id === sub);
+                if (s) set.add(s.subject);
+            }
+        });
+
+        // 2. Add from classSubjects mapping { "Class Name": [sub1, sub2] }
+        if (currentUser.classSubjects) {
+            Object.values(currentUser.classSubjects).forEach((subList: any) => {
+                (subList || []).forEach((sub: any) => {
+                    if (typeof sub === 'string') set.add(sub);
+                    else if (typeof sub === 'number') {
+                        const s = (subjects || []).find(x => x.id === sub);
+                        if (s) set.add(s.subject);
+                    }
+                });
+            });
+        }
+
+        return Array.from(set).sort();
+    }, [currentUser, subjects]);
 
     // Auto-collapse after 10 seconds when expanded
     useEffect(() => {
@@ -115,12 +150,97 @@ const UserBadge: React.FC = () => {
                                 </div>
                             </>
                         ) : (
-                            <>
-                                {/* Initials Display */}
-                                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-white bg-opacity-30 font-bold text-base">
+                            <div className="relative" ref={userInfoRef}>
+                                {/* Initials Display - Clickable */}
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setShowUserInfo(!showUserInfo);
+                                        setShowTermInfo(false); // Mutually exclusive for better UX
+                                    }}
+                                    className="flex items-center justify-center w-8 h-8 rounded-full bg-white bg-opacity-30 font-bold text-base hover:bg-opacity-50 transition-all border border-transparent active:scale-95"
+                                    title="View My Information"
+                                >
                                     {getInitials(currentUser.name)}
-                                </div>
-                            </>
+                                </button>
+
+                                {/* User Info Popup */}
+                                {showUserInfo && (
+                                    <div
+                                        className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-2xl border border-gray-100 p-5 z-[70] animate-in fade-in zoom-in-95 duration-200"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        <div className="flex flex-col items-center mb-4 pb-4 border-b border-gray-50">
+                                            <div className={`p-4 rounded-full mb-3 shadow-inner ${getRoleColor(currentUser.role)} bg-opacity-30`}>
+                                                <svg
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    className="h-10 w-10"
+                                                    viewBox="0 0 20 20"
+                                                    fill="currentColor"
+                                                >
+                                                    <path
+                                                        fillRule="evenodd"
+                                                        d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                                                        clipRule="evenodd"
+                                                    />
+                                                </svg>
+                                            </div>
+                                            <h3 className="font-bold text-gray-800 text-lg leading-tight text-center">{currentUser.name}</h3>
+                                            <span className={`mt-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${getRoleColor(currentUser.role)}`}>
+                                                {currentUser.role}
+                                            </span>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            {/* Assigned Classes */}
+                                            <div>
+                                                <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                                                    Class Access
+                                                </p>
+                                                {isAdmin ? (
+                                                    <p className="text-sm font-medium text-green-600 bg-green-50 px-2 py-1 rounded-lg inline-block">Full Institution Access</p>
+                                                ) : (currentUser.allowedClasses || []).length > 0 ? (
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {(currentUser.allowedClasses || []).map((cls, idx) => (
+                                                            <span key={idx} className="text-xs font-semibold bg-gray-100 text-gray-700 px-2.5 py-1 rounded-md border border-gray-200">
+                                                                {cls}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-xs italic text-gray-400">No classes assigned</p>
+                                                )}
+                                            </div>
+
+                                            {/* Assigned Subjects */}
+                                            <div>
+                                                <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                                                    Subject Access
+                                                </p>
+                                                {isAdmin ? (
+                                                    <p className="text-sm font-medium text-green-600 bg-green-50 px-2 py-1 rounded-lg inline-block">All Registered Subjects</p>
+                                                ) : assignedSubjects.length > 0 ? (
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {assignedSubjects.map((sub, idx) => (
+                                                            <span key={idx} className="text-xs font-semibold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md border border-blue-100">
+                                                                {sub}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-xs italic text-gray-400">No subjects assigned</p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-5 pt-4 text-[10px] text-center text-gray-400 border-t border-gray-50 italic">
+                                            Contact Admin to update your account permissions
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         )}
 
                         {/* Online Users Count (Admin only) - Commented out per user request */}
@@ -157,6 +277,7 @@ const UserBadge: React.FC = () => {
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     setShowTermInfo(!showTermInfo);
+                                    setShowUserInfo(false); // Mutually exclusive for better UX
                                 }}
                                 className="flex flex-col items-center gap-0.5 ml-2 cursor-pointer group"
                                 title="View Term Information"

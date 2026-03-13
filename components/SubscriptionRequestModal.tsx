@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SUBSCRIPTION_TIERS, ADMIN_EMAIL } from '../constants';
-import { getExistingSubscription, loginOrRegisterSchool, AppDataType, getSchoolList, SchoolListItem } from '../services/firebaseService';
+import { AppDataType, getSchoolList, SchoolListItem } from '../services/firebaseService';
 import { initializePayment, loadPaystackScript, activateSubscription } from '../services/paystackService';
 import MessageBox from './MessageBox';
 
@@ -17,7 +17,6 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
     const [searchTerm, setSearchTerm] = useState(initialSchoolName || '');
     const [allSchools, setAllSchools] = useState<SchoolListItem[]>([]);
     const [filteredSchools, setFilteredSchools] = useState<SchoolListItem[]>([]);
-    // Transaction ID removed as it's handled automatically
     const [isLoadingSchools, setIsLoadingSchools] = useState(false);
     const [showSchoolDropdown, setShowSchoolDropdown] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -26,6 +25,10 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
     const [isProcessingPayment, setIsProcessingPayment] = useState(false);
     const [paymentError, setPaymentError] = useState<string | null>(null);
     const [paymentEmail, setPaymentEmail] = useState('');
+
+    // Duration State
+    const [durationValue, setDurationValue] = useState(1);
+    const [durationUnit, setDurationUnit] = useState<'Month' | 'Year'>('Year');
 
     // MessageBox State
     const [messageBox, setMessageBox] = useState<{
@@ -179,6 +182,14 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
         );
     }
 
+    // --- Derived pricing values ---
+    const currentTier = SUBSCRIPTION_TIERS.find(t => t.name === selectedTier) || SUBSCRIPTION_TIERS[1];
+    const basePrice = parseFloat(currentTier.price.replace(/[^0-9.]/g, ''));
+    const totalMonths = durationUnit === 'Year' ? durationValue * 12 : durationValue;
+    // All paid tiers use per-year pricing (12 months base)
+    const calculatedAmount = isNaN(basePrice) ? 0 : (basePrice / 12) * totalMonths;
+    const customDurationStr = `${durationValue} ${durationUnit}${durationValue > 1 ? 's' : ''}`;
+
     const handlePayment = async () => {
         setPaymentError(null);
         if (!selectedSchool || !paymentEmail) {
@@ -186,20 +197,14 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
             return;
         }
 
-        const tier = SUBSCRIPTION_TIERS.find(t => t.name === selectedTier) || SUBSCRIPTION_TIERS[1];
-
-        // Parse amount from price string (e.g., "GHS 100")
-        const priceString = tier.price.replace(/[^0-9.]/g, '');
-        const amount = parseFloat(priceString);
-
-        if (isNaN(amount) || amount <= 0) {
+        if (isNaN(basePrice) || basePrice <= 0) {
             // Free tier or Request Quote
-            if (tier.price.toLowerCase().includes('free')) {
+            if (currentTier.price.toLowerCase().includes('free')) {
                 // Handle free tier activation directly
                 activateFreeTier();
                 return;
             }
-            if (tier.price.toLowerCase().includes('quote')) {
+            if (currentTier.price.toLowerCase().includes('quote')) {
                 window.location.href = `mailto:${ADMIN_EMAIL}?subject=Enterprise Quote Request&body=Requesting quote for ${selectedSchool.displayName}`;
                 return;
             }
@@ -208,11 +213,12 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
         setIsProcessingPayment(true);
 
         try {
-            // 1. Initialize Transaction
-            const initResponse = await initializePayment(paymentEmail, amount, {
+            // 1. Initialize Transaction with calculated amount
+            const initResponse = await initializePayment(paymentEmail, calculatedAmount, {
                 schoolId: selectedSchool.docId,
                 schoolName: selectedSchool.displayName,
-                tierName: tier.name,
+                tierName: currentTier.name,
+                duration: customDurationStr
             });
 
             // 2. Open Paystack Popup
@@ -228,8 +234,8 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
             const handler = PaystackPop.setup({
                 key: 'pk_live_1018c988f6aa654f737092f2a09ec6cc6ca1065f', // Paystack Public Key
                 email: paymentEmail,
-                amount: amount * 100, // in kobo/pesewas
-                ref: initResponse.reference, // Use backend/mock reference
+                amount: Math.round(calculatedAmount * 100), // in kobo/pesewas
+                ref: initResponse.reference,
                 currency: 'GHS',
                 metadata: {
                     custom_fields: [
@@ -237,27 +243,28 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                             display_name: "School",
                             variable_name: "school",
                             value: selectedSchool.displayName
+                        },
+                        {
+                            display_name: "Duration",
+                            variable_name: "duration",
+                            value: customDurationStr
                         }
                     ]
                 },
                 callback: (response: any) => {
                     const handleSuccess = async () => {
                         try {
-                            // Check for existing expiry to choose accumulation
-                            const existingExpiry = await getExistingSubscription(selectedSchool.docId, selectedSchool._databaseIndex || 1);
-                            let addTime = false;
+                            // Activation is always cumulative by default:
+                            // - If school has an unexpired period, the new duration is ADDED to it.
+                            // - If expired (or no subscription), a new session starts from today.
+                            const addTime = true;
 
-                            if (existingExpiry && existingExpiry > new Date()) {
-                                addTime = await showMsg({
-                                    title: "Active Subscription Found",
-                                    message: `This school has an active subscription until ${existingExpiry.toLocaleDateString()}. \n\nWould you like to ADD the new duration to the existing time?`,
-                                    confirmText: "Accumulate Time",
-                                    cancelText: "Start Fresh",
-                                    variant: "info"
-                                });
-                            }
+                            // Activate with the user-selected custom duration
+                            const tierWithCustomDuration = {
+                                ...currentTier,
+                                duration: customDurationStr
+                            };
 
-                            // 1. ACTIVATE SUBSCRIPTION (Atomic creation if pendingRegistration exists)
                             const subResult = await activateSubscription(
                                 response.reference,
                                 {
@@ -265,7 +272,7 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                                     name: selectedSchool.displayName,
                                     dbIndex: selectedSchool._databaseIndex || 1
                                 },
-                                tier,
+                                tierWithCustomDuration,
                                 addTime,
                                 pendingRegistration ? {
                                     password: pendingRegistration.password,
@@ -275,7 +282,7 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
 
                             await showMsg({
                                 title: "Activation Successful",
-                                message: `Success! ${tier.name} activated for ${selectedSchool.displayName}.`,
+                                message: `Success! ${currentTier.name} activated for ${selectedSchool.displayName} for ${customDurationStr}.`,
                                 confirmText: "Excellent",
                                 hideCancel: true,
                                 variant: "success"
@@ -428,11 +435,11 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
-                    <h2 className="text-2xl font-bold">Secure Payment & Activation</h2>
+                    <h2 className="text-2xl font-bold">Secure Payment &amp; Activation</h2>
                     <p className="text-indigo-100 mt-1">Select your plan and activate instantly</p>
                 </div>
 
-                <div className="p-6 space-y-6 overflow-y-auto">
+                <div className="p-6 space-y-5 overflow-y-auto">
                     {/* 1. School Selection (Combobox) */}
                     <div className="space-y-2 relative" ref={dropdownRef}>
                         <label className="block text-sm font-semibold text-gray-700">Select Your School</label>
@@ -501,43 +508,99 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                         )}
                     </div>
 
-                    {/* 2. Payment Details */}
-                    <div className="space-y-2">
-                        <label className="block text-sm font-semibold text-gray-700">Billing Email</label>
-                        <input
-                            type="email"
-                            placeholder="Enter email for receipt..."
-                            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-100 outline-none transition-all"
-                            value={paymentEmail}
-                            onChange={(e) => setPaymentEmail(e.target.value)}
-                        />
-                        <p className="text-xs text-gray-500">We'll send the receipt to this email.</p>
+                    {/* 2. Billing Email + Duration — same row */}
+                    <div className="flex gap-3 items-end">
+                        {/* Email */}
+                        <div className="flex-1 space-y-1">
+                            <label className="block text-sm font-semibold text-gray-700">
+                                Billing Email <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="email"
+                                required
+                                placeholder="Email for receipt..."
+                                className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-all text-sm"
+                                value={paymentEmail}
+                                onChange={(e) => setPaymentEmail(e.target.value)}
+                            />
+                        </div>
+
+                        {/* Duration — hidden for free/quote tiers */}
+                        {!isNaN(basePrice) && basePrice > 0 && (
+                            <div className="space-y-1">
+                                <label className="block text-sm font-semibold text-gray-700">Duration</label>
+                                <div className="flex items-center gap-1.5">
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max={durationUnit === 'Month' ? 60 : 10}
+                                        value={durationValue}
+                                        onChange={(e) => setDurationValue(Math.max(1, parseInt(e.target.value) || 1))}
+                                        className="w-14 px-2 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-400 outline-none transition-all text-center font-bold text-indigo-900"
+                                    />
+                                    <div className="flex bg-gray-100 p-0.5 rounded-lg">
+                                        <button
+                                            onClick={() => setDurationUnit('Month')}
+                                            className={`py-2 px-2.5 rounded-md text-xs font-bold transition-all ${durationUnit === 'Month' ? 'bg-indigo-600 text-white shadow' : 'text-gray-500 hover:text-gray-700'}`}
+                                        >
+                                            Mo
+                                        </button>
+                                        <button
+                                            onClick={() => setDurationUnit('Year')}
+                                            className={`py-2 px-2.5 rounded-md text-xs font-bold transition-all ${durationUnit === 'Year' ? 'bg-indigo-600 text-white shadow' : 'text-gray-500 hover:text-gray-700'}`}
+                                        >
+                                            Yr
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* 3. Tier Selection */}
                     <div className="space-y-2">
                         <label className="block text-sm font-semibold text-gray-700">Select Subscription Tier</label>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
                             {SUBSCRIPTION_TIERS.map((tier) => (
                                 <button
                                     key={tier.name}
                                     onClick={() => setSelectedTier(tier.name)}
-                                    className={`p-4 rounded-xl border-2 text-left transition-all ${selectedTier === tier.name
+                                    className={`p-3 rounded-xl border-2 text-left transition-all ${selectedTier === tier.name
                                         ? 'border-indigo-600 bg-indigo-50 ring-2 ring-indigo-200'
                                         : 'border-gray-100 bg-gray-50 hover:border-indigo-200'
                                         }`}
                                 >
-                                    <div className="flex justify-between items-start">
-                                        <p className="font-bold text-gray-900">{tier.name}</p>
-                                        <p className="text-indigo-600 font-bold text-sm text-right">{tier.price}</p>
+                                    <div className="flex justify-between items-center">
+                                        <p className="font-bold text-gray-900 text-sm">{tier.name}</p>
+                                        <p className="text-indigo-600 font-bold text-xs">
+                                            {tier.price}
+                                            {!isNaN(parseFloat(tier.price.replace(/[^0-9.]/g, ''))) && parseFloat(tier.price.replace(/[^0-9.]/g, '')) > 0
+                                                ? <span className="text-gray-400 font-normal">/yr</span>
+                                                : <span className="text-gray-400 font-normal text-[10px]"> &bull; {tier.duration}</span>
+                                            }
+                                        </p>
                                     </div>
-                                    <p className="text-xs text-gray-600 mt-1">
-                                        {tier.maxStudents} Students • {tier.maxClass} Classes
+                                    <p className="text-xs text-gray-500 mt-0.5">
+                                        {tier.maxStudents} students &bull; {tier.maxClass} classes
                                     </p>
                                 </button>
                             ))}
                         </div>
                     </div>
+
+                    {/* 4. Total Cost Summary */}
+                    {!isNaN(basePrice) && basePrice > 0 && (
+                        <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl border border-indigo-100">
+                            <div>
+                                <p className="text-xs text-indigo-500 font-medium">Total to pay</p>
+                                <p className="text-xs text-indigo-400">{customDurationStr} &bull; {currentTier.name}</p>
+                                <p className="text-[10px] text-indigo-300 mt-0.5">Cumulative if unexpired time remains</p>
+                            </div>
+                            <p className="text-2xl font-black text-indigo-900">
+                                GHS {calculatedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </p>
+                        </div>
+                    )}
 
                     {paymentError && (
                         <div className="p-3 bg-red-50 text-red-700 rounded-xl text-sm border border-red-200">
@@ -546,8 +609,9 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                     )}
                 </div>
 
+
                 {/* Footer Actions */}
-                <div className="p-6 bg-gray-50 flex flex-col gap-3 flex-shrink-0">
+                <div className="p-6 bg-gray-50 flex flex-col gap-3 flex-shrink-0 border-t border-gray-100">
                     {(!selectedSchool && searchTerm) && (
                         <p className="text-sm text-red-500 text-center">
                             Please select a school from the dropdown list above.
@@ -579,7 +643,7 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                     </svg>
-                                    <span>Pay & Activate</span>
+                                    <span>Pay {!isNaN(basePrice) && basePrice > 0 ? `GHS ${calculatedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '& Activate'}</span>
                                 </>
                             )}
                         </button>
