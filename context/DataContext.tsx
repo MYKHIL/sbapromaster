@@ -134,6 +134,7 @@ export interface DataContextType {
     isDraftScore: (studentId: number, subjectId: number, assessmentId: number) => boolean;
     refreshVersion: number;
     restoreDefaultGrades: () => void;
+    getOriginalItem: (field: keyof AppDataType, id: string | number) => any;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -229,7 +230,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Force hard reload on version mismatch to clear ghost listeners after update
     useEffect(() => {
-        const LATEST_VERSION = "1.0.112";
+        const LATEST_VERSION = "1.0.113";
         const currentVersion = localStorage.getItem("app_version");
 
         if (currentVersion !== LATEST_VERSION) {
@@ -3146,6 +3147,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isDraftScore,
         restoreDefaultGrades,
         refreshVersion,
+        getOriginalItem: (field: keyof AppDataType, id: string | number) => {
+            const collection = originalData.current[field];
+            if (!Array.isArray(collection)) return null;
+            return collection.find((item: any) => String(getItemId(item)) === String(id)) || null;
+        }
     };
 
     // Initialize originalData from local storage on load/schoolId change

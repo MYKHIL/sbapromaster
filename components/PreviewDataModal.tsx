@@ -26,9 +26,11 @@ const PreviewDataModal: React.FC<PreviewDataModalProps> = ({
         subjects,
         assessments,
         classes,
+        grades,
         revertPendingChanges,
         revertAllPendingChanges,
-        getPendingUploadData
+        getPendingUploadData,
+        getOriginalItem
     } = useData();
 
     // Compute live data on every render
@@ -37,11 +39,25 @@ const PreviewDataModal: React.FC<PreviewDataModalProps> = ({
     if (!isOpen) return null;
 
     // Helper functions for humanizing data
-    const getStudentName = (id: number) => students.find(s => s.id === id)?.name || `Student #${id}`;
-    const getSubjectName = (id: number) => subjects.find(s => s.id === id)?.subject || `Subject #${id}`;
-    const getClassName = (id: number) => classes.find(c => c.id === id)?.name || `Class #${id}`;
-    const getAssessmentName = (id: number) => {
-        const a = assessments.find(x => x.id === id);
+    const getStudentName = (id: number) => {
+        const s = students.find(s => s.id === id) || getOriginalItem('students', id);
+        if (!s) return `Student #${id}`;
+        return `${s.name} | ${s.class || 'No Class'} | #${id}`;
+    };
+    const getSubjectName = (id: number | string) => {
+        const s = subjects.find(s => String(s.id) === String(id)) || getOriginalItem('subjects', id);
+        return s ? s.subject : `Subject #${id}`;
+    };
+    const getClassName = (id: number | string) => {
+        const c = classes.find(c => String(c.id) === String(id)) || getOriginalItem('classes', id);
+        return c ? c.name : `Class #${id}`;
+    };
+    const getGradeName = (id: number | string) => {
+        const g = grades.find(g => String(g.id) === String(id)) || getOriginalItem('grades', id);
+        return g ? `${g.name} (${g.minScore}% - ${g.maxScore}%)` : `Grade #${id}`;
+    };
+    const getAssessmentName = (id: number | string) => {
+        const a = assessments.find(x => String(x.id) === String(id)) || getOriginalItem('assessments', id);
         return a ? (a.title || a.name) : `Assessment #${id}`;
     };
 
@@ -90,14 +106,16 @@ const PreviewDataModal: React.FC<PreviewDataModalProps> = ({
                                                 // Look up the friendly name from each collection by ID
                                                 let label = `ID: ${id}`;
                                                 if (delField === 'students') {
-                                                    const s = students.find(s => String(s.id) === id);
-                                                    label = s ? `${s.name} (${s.class || 'No Class'})` : `Student #${id}`;
+                                                    const s = students.find(s => String(s.id) === id) || getOriginalItem('students', id);
+                                                    label = s ? `${s.name} | ${s.class || 'No Class'} | #${id}` : `Student #${id}`;
                                                 } else if (delField === 'classes') {
-                                                    label = classes.find(c => String(c.id) === id)?.name || `Class #${id}`;
+                                                    label = getClassName(id);
                                                 } else if (delField === 'subjects') {
-                                                    label = subjects.find(s => String(s.id) === id)?.subject || `Subject #${id}`;
+                                                    label = getSubjectName(id);
                                                 } else if (delField === 'assessments') {
-                                                    label = getAssessmentName(Number(id));
+                                                    label = getAssessmentName(id);
+                                                } else if (delField === 'grades') {
+                                                    label = getGradeName(id);
                                                 }
 
                                                 return (
@@ -198,6 +216,7 @@ const PreviewDataModal: React.FC<PreviewDataModalProps> = ({
                                             const id = getItemId(item);
                                             const label = item.name || item.subject || item.title ||
                                                 (item.studentId ? getStudentName(item.studentId) :
+                                                    item?._isLocallyCreated && key === 'students' ? `${item.name} | ${item.class || 'No Class'} | #${id}` :
                                                     item.classId ? getClassName(item.classId) : `ID: ${id}`);
 
                                             return (
