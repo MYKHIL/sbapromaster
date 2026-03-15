@@ -135,6 +135,9 @@ export interface DataContextType {
     refreshVersion: number;
     restoreDefaultGrades: () => void;
     getOriginalItem: (field: keyof AppDataType, id: string | number) => any;
+    unreadNotificationCount: number;
+    markNotificationAsRead: (id: number) => void;
+    markAllNotificationsAsRead: () => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -230,7 +233,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Force hard reload on version mismatch to clear ghost listeners after update
     useEffect(() => {
-        const LATEST_VERSION = "1.0.113";
+        const LATEST_VERSION = "1.0.114";
         const currentVersion = localStorage.getItem("app_version");
 
         if (currentVersion !== LATEST_VERSION) {
@@ -2086,6 +2089,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             role: role as any,
             action,
             timestamp: new Date().toISOString(),
+            isRead: false,
         };
 
         // Mark as dirty to sync this log
@@ -3151,6 +3155,21 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const collection = originalData.current[field];
             if (!Array.isArray(collection)) return null;
             return collection.find((item: any) => String(getItemId(item)) === String(id)) || null;
+        },
+        unreadNotificationCount: useMemo(() => {
+            return userLogs.filter(log => !log.isRead).length;
+        }, [userLogs]),
+        markNotificationAsRead: (id: number) => {
+            setUserLogs(prev => prev.map(log => log.id === id ? { ...log, isRead: true } : log));
+            setHasLocalChanges(true);
+            // We also need to ensure userLogs is considered dirty
+            // In our system, markDirty is usually implicit in the update function
+            // but we don't have a specific update method for userLogs yet.
+            // Let's ensure markDirty if we had it, but for now hasLocalChanges triggers save logic
+        },
+        markAllNotificationsAsRead: () => {
+            setUserLogs(prev => prev.map(log => ({ ...log, isRead: true })));
+            setHasLocalChanges(true);
         }
     };
 

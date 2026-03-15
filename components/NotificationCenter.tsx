@@ -9,6 +9,7 @@ interface NotificationCenterProps {
     onMarkRead: (id: string) => void;
     onReply: (notificationId: string, message: string) => void;
     onNavigate: (page: Page) => void;
+    onMarkAllRead?: () => void;
 }
 
 const NotificationItem: React.FC<{
@@ -163,7 +164,7 @@ const NotificationItem: React.FC<{
     );
 };
 
-const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose, notifications, onMarkRead, onReply, onNavigate }) => {
+const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose, notifications, onMarkRead, onReply, onNavigate, onMarkAllRead }) => {
     const unreadCount = notifications.filter(n => !n.read).length;
 
     if (!isOpen) return null;
@@ -186,7 +187,13 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
                         {unreadCount > 0 && (
                             <button
                                 className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                                onClick={() => notifications.forEach(n => !n.read && onMarkRead(n.id))}
+                                onClick={() => {
+                                    if (onMarkAllRead) {
+                                        onMarkAllRead();
+                                    } else {
+                                        notifications.forEach(n => !n.read && onMarkRead(n.id));
+                                    }
+                                }}
                             >
                                 Mark all read
                             </button>

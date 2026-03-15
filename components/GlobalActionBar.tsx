@@ -27,7 +27,11 @@ const GlobalActionBar: React.FC<GlobalActionBarProps> = ({ onOpenDebugModal, cur
         students,
         subjects,
         assessments,
-        classes
+        classes,
+        userLogs,
+        unreadNotificationCount,
+        markNotificationAsRead,
+        markAllNotificationsAsRead
     } = useData();
     const { currentUser } = useUser();
     const { loadImportedData } = useData();
@@ -93,8 +97,21 @@ const GlobalActionBar: React.FC<GlobalActionBarProps> = ({ onOpenDebugModal, cur
     if (!currentUser) return null;
 
     const isAdmin = currentUser.role === 'Admin';
-    const notifications = currentUser.notifications || [];
-    const unreadCount = notifications.filter(n => !n.read).length;
+    
+    // Map UserLogs to Notification objects for the NotificationCenter
+    const notifications = (userLogs || [])
+        .filter(log => !log.isRead)
+        .map(log => ({
+            id: String(log.id),
+            senderId: log.userId,
+            senderName: log.userName,
+            type: 'system',
+            message: `${log.action} by ${log.userName} (${log.role})`,
+            read: !!log.isRead,
+            date: log.timestamp,
+        }));
+
+    const unreadCount = unreadNotificationCount;
 
     const handleShowDebugData = () => {
         setIsDebugModalOpen(true);
@@ -143,7 +160,7 @@ const WrappedActionBar: React.FC<any> = ({
     pendingCount, isFetching, hasLocalChanges, isDebugModalOpen, handleCloseDebugModal,
     onNavigate, isExpanded, setIsExpanded, handleRefresh, isRefreshing, toast, isQuotaExceeded
 }) => {
-    const { users, loadImportedData } = useData();
+    const { users, loadImportedData, markNotificationAsRead, markAllNotificationsAsRead } = useData();
 
     const persistUsersToCloud = (updatedUsers: any[]) => {
         import('../services/firebaseService').then(({ saveDataTransaction }) => {
@@ -166,46 +183,7 @@ const WrappedActionBar: React.FC<any> = ({
     };
 
     const handleMarkRead = (id: string) => {
-        // Find notification before marking it
-        const notification = currentUser.notifications?.find((n: any) => n.id === id);
-
-        // Update local state
-        const updated = (currentUser.notifications || []).map((n: any) => n.id === id ? { ...n, read: true } : n);
-
-        let usersCopy = users ? [...users] : [];
-        if (usersCopy.length > 0) {
-            // 1. Update current user notifications
-            usersCopy = usersCopy.map(u => u.id === currentUser.id ? { ...u, notifications: updated } : u);
-
-            // 2. Dispatch Read Receipt if it's a direct message (has sender) and wasn't already read
-            if (notification && !notification.read && notification.senderId && notification.senderId !== currentUser.id) {
-                const readReceipt = {
-                    id: Date.now().toString(),
-                    senderId: currentUser.id,
-                    senderName: currentUser.name,
-                    type: 'system',
-                    message: `Read Receipt: ${currentUser.name} read your message: "${notification.message.substring(0, 30)}${notification.message.length > 30 ? '...' : ''}"`,
-                    read: false,
-                    date: new Date().toISOString()
-                };
-
-                usersCopy = usersCopy.map(u => {
-                    if (u.id === notification.senderId) {
-                        return {
-                            ...u,
-                            notifications: [...(u.notifications || []), readReceipt]
-                        };
-                    }
-                    return u;
-                });
-            }
-
-            loadImportedData({ users: usersCopy }, false);
-            persistUsersToCloud(usersCopy);
-        } else {
-            updateNotifications(updated);
-        }
-
+        markNotificationAsRead(Number(id));
         // Close the panel as requested
         setIsNotificationOpen(false);
     };
@@ -366,7 +344,8 @@ const WrappedActionBar: React.FC<any> = ({
                                     notifications={notifications}
                                     onMarkRead={handleMarkRead}
                                     onReply={handleReply}
-                                    onNavigate={handleNavigate}
+                                    onNavigate={onNavigate || (() => {})}
+                                    onMarkAllRead={markAllNotificationsAsRead}
                                 />
                             </div>
 

@@ -166,6 +166,7 @@ export interface UserLog {
   role: string;
   action: string;
   timestamp: string;
+  isRead?: boolean;
   _isLocallyCreated?: boolean;
 }
 
