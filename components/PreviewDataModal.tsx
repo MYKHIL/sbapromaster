@@ -84,11 +84,20 @@ const PreviewDataModal: React.FC<PreviewDataModalProps> = ({
                                             {delField} ({items.length})
                                         </h5>
                                         <ul className="space-y-1 pl-1">
-                                            {items.map((item: any) => {
-                                                const id = getItemId(item);
-                                                const label = item.name || item.subject || item.title ||
-                                                    (item.studentId ? getStudentName(item.studentId) :
-                                                        item.classId ? getClassName(item.classId) : `ID: ${id}`);
+                                            {items.map((rawId: any) => {
+                                                // Deletions are stored as string IDs, not objects
+                                                const id = String(rawId);
+                                                // Look up the friendly name from each collection by ID
+                                                let label = `ID: ${id}`;
+                                                if (delField === 'students') {
+                                                    label = students.find(s => String(s.id) === id)?.name || `Student #${id}`;
+                                                } else if (delField === 'classes') {
+                                                    label = classes.find(c => String(c.id) === id)?.name || `Class #${id}`;
+                                                } else if (delField === 'subjects') {
+                                                    label = subjects.find(s => String(s.id) === id)?.subject || `Subject #${id}`;
+                                                } else if (delField === 'assessments') {
+                                                    label = getAssessmentName(Number(id));
+                                                }
 
                                                 return (
                                                     <li key={id} className="text-sm text-red-700 flex items-center gap-2 justify-between group">

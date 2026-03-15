@@ -1643,7 +1643,8 @@ export const repairDatabaseImages = async (schoolId: string): Promise<void> => {
 export const saveDataTransaction = async (
     docId: string,
     updates: Partial<AppDataType>,
-    deletions?: Record<string, string[]>
+    deletions?: Record<string, string[]>,
+    fullStudentsArray?: any[]
 ) => {
     // -------------------------------------------------------------------------
     // AUTO-UPLOAD INTERCEPTOR (ImgBB)
@@ -1799,6 +1800,7 @@ export const saveDataTransaction = async (
             for (const [key, ids] of Object.entries(deletions)) {
                 if (SUBCOLLECTION_KEYS.includes(key)) {
                     ids.forEach(id => {
+                        if (key === 'students') console.log(`[DELETE DEBUG] saveDataTransaction queuing deletion for student doc ID: ${id}`);
                         const ref = doc(db, "schools", docId, key, String(id));
                         operations.push((batch) => batch.delete(ref));
                     });
@@ -1840,7 +1842,8 @@ export const saveDataTransaction = async (
         const hasStudentDeletions = deletions?.students && deletions.students.length > 0;
         if (hasStudentUpdates || hasStudentDeletions) {
             0 && console.log(`[Optimization] 🔄 Student changes detected. Rebuilding bucket chunks...`);
-            await updateStudentBucket(docId);
+            if (hasStudentDeletions && !fullStudentsArray) console.log(`[DELETE DEBUG] updateStudentBucket(docId) called with NO array args! Will re-fetch from potentially stale subcollection!`);
+            await updateStudentBucket(docId, fullStudentsArray);
         }
 
         // ---------------------------------------------------------------------

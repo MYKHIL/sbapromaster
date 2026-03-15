@@ -122,6 +122,8 @@ const ScoreEntry: React.FC = () => {
 
     // Validation Effect: If currentUser or allClasses changes, ensure current selection is still valid
     useEffect(() => {
+        // Allow empty string for Admins ("All Classes" mode) - it is a valid selection
+        if (selectedClass === '' && currentUser?.role === 'Admin') return;
         const availableNames = getAvailableClasses(currentUser, allClasses).map(c => c.name);
         if (selectedClass && !availableNames.includes(selectedClass)) {
             const fallback = availableNames.length > 0 ? availableNames[0] : '';

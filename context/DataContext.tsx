@@ -229,7 +229,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Force hard reload on version mismatch to clear ghost listeners after update
     useEffect(() => {
-        const LATEST_VERSION = "1.0.108";
+        const LATEST_VERSION = "1.0.109";
         const currentVersion = localStorage.getItem("app_version");
 
         if (currentVersion !== LATEST_VERSION) {
@@ -1161,7 +1161,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (Object.keys(transactionPayload).length > 0 || (transactionDeletions && Object.keys(transactionDeletions).length > 0)) {
                 console.log('[DataContext] ☁️ Performing Universal Transactional Save...');
                 // Uses the new generalized transaction helper
-                await saveDataTransaction(schoolId, transactionPayload, transactionDeletions);
+                await saveDataTransaction(schoolId, transactionPayload, transactionDeletions, stateRef.current.students);
             } else {
                 console.log('[DataContext] ℹ️ No actionable updates or deletions found for transaction.');
             }
@@ -1525,10 +1525,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const deleteStudent = (id: number) => {
+        console.log(`[DELETE DEBUG] deleteStudent called for ID: ${id}`);
         markDirty('students', true);
         markItemDirty('students', id);
         setStudents(prev => {
             const next = prev.filter(item => item.id !== id);
+            console.log(`[DELETE DEBUG] students array length changed from ${prev.length} to ${next.length}`);
             return next;
         });
     };
@@ -1810,6 +1812,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // This prevents "Bleeding Saves" and correctly handles deletions for this field.
             // We include 'userLogs' and 'activeSessions' to ensure they sync often.
             const { _deletions, ...updates } = getPendingUploadData([field, 'userLogs', 'activeSessions']);
+            if (field === 'students' && _deletions?.students) {
+                console.log(`[DELETE DEBUG] savePageData sending students deletions:`, _deletions.students);
+            }
 
             // FIX: Arrays on the main document are completely overwritten by Firebase merge.
             // If they are in the payload (meaning they have changes), we MUST send the FULL array.
@@ -1821,7 +1826,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             });
 
             // Use transaction for all saves to ensure consistency
-            await saveDataTransaction(schoolId, updates, _deletions);
+            await saveDataTransaction(schoolId, updates, _deletions, stateRef.current.students);
 
             // COMPOSITE STORAGE: If we just saved metadata, trigger a bundle rebuild
             // This ensures the optimized 'fetchMetadataBundle' has the latest data.
@@ -1958,7 +1963,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             // Use the transactional save to perform a SMART MERGE of the offline state
             // This prevents overwriting server data (like the "Data Wipe" bug caused by setDoc/merge:true on arrays)
-            saveDataTransaction(schoolId, currentData, deletions)
+            saveDataTransaction(schoolId, currentData, deletions, stateRef.current.students)
                 .then(() => {
                     // Success - clear the entire queue since we just synced current state
                     offlineQueue.clearQueue();
@@ -2385,6 +2390,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         // Do not add to deletions map
                     } else if (deletedIds.length > 0) {
                         console.log(`[DataContext] 🗑️ Detected Deletions for ${String(field)}:`, deletedIds);
+                        if (field === 'students') {
+                            console.log(`[DELETE DEBUG] getPendingUploadData detected student deletions:`, deletedIds);
+                        }
                         deletions[field] = deletedIds;
                     }
                 }
@@ -2676,6 +2684,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
                         if (localOnlyStudents.length > 0) {
                             console.log(`[DataContext] 🔍 Detected ${localOnlyStudents.length} local-only (unsaved) students. Marking dirty.`);
+                            console.log(`[DELETE DEBUG] loadStudents is re-adding local-only (unsaved) students! Wait, are these deleted students? IDs:`, localOnlyStudents.map(s => s.id));
                             markDirty('students', true);
                             localOnlyStudents.forEach(s => {
                                 const sid = getItemId(s);
