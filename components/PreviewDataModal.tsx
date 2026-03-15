@@ -90,7 +90,8 @@ const PreviewDataModal: React.FC<PreviewDataModalProps> = ({
                                                 // Look up the friendly name from each collection by ID
                                                 let label = `ID: ${id}`;
                                                 if (delField === 'students') {
-                                                    label = students.find(s => String(s.id) === id)?.name || `Student #${id}`;
+                                                    const s = students.find(s => String(s.id) === id);
+                                                    label = s ? `${s.name} (${s.class || 'No Class'})` : `Student #${id}`;
                                                 } else if (delField === 'classes') {
                                                     label = classes.find(c => String(c.id) === id)?.name || `Class #${id}`;
                                                 } else if (delField === 'subjects') {

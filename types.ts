@@ -38,12 +38,14 @@ export interface Subject {
   subject: string;
   type: 'Core' | 'Elective';
   signature?: string;
+  _isLocallyCreated?: boolean;
 }
 
 export interface Class {
   id: number;
   name: string;
   teacherSignature?: string;
+  _isLocallyCreated?: boolean;
 }
 
 export interface Teacher {
@@ -51,6 +53,7 @@ export interface Teacher {
   name: string;
   gender: 'Male' | 'Female';
   class: string;
+  _isLocallyCreated?: boolean;
 }
 
 export interface Grade {
@@ -59,6 +62,7 @@ export interface Grade {
   minScore: number;
   maxScore: number;
   remark: string;
+  _isLocallyCreated?: boolean;
 }
 
 export interface Student {
@@ -72,6 +76,7 @@ export interface Student {
   dateOfBirth?: string;
   guardianName?: string;
   guardianPhone?: string;
+  _isLocallyCreated?: boolean;
 }
 
 export interface Score {
@@ -79,6 +84,7 @@ export interface Score {
   studentId: number;
   subjectId: number;
   assessmentScores: { [assessmentId: number]: string[] };
+  _isLocallyCreated?: boolean;
 }
 
 export interface Assessment {
@@ -86,6 +92,7 @@ export interface Assessment {
   name: string;
   weight: number;
   type: 'Class' | 'Exam';
+  _isLocallyCreated?: boolean;
 }
 
 export type UserRole = 'Admin' | 'Teacher' | 'Guest';
@@ -137,11 +144,13 @@ export interface ReportSpecificData {
   attitude?: string;
   teacherRemark?: string;
   promotedTo?: string;
+  _isLocallyCreated?: boolean;
 }
 
 export interface ClassSpecificData {
   classId: number;
   totalSchoolDays?: string;
+  _isLocallyCreated?: boolean;
 }
 
 export interface DeviceCredential {
@@ -157,6 +166,7 @@ export interface UserLog {
   role: string;
   action: string;
   timestamp: string;
+  _isLocallyCreated?: boolean;
 }
 
 export interface OnlineUser {

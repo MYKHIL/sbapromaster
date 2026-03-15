@@ -141,7 +141,7 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 // Helper to extract primary key from collection items (handles id, studentId, classId)
 export const getItemId = (item: any): string | undefined => {
     if (!item || typeof item !== 'object') return undefined;
-    const id = item.id ?? item.studentId ?? item.classId;
+    const id = item.id ?? item.studentId ?? item.subjectId ?? item.classId;
     return id !== undefined ? String(id) : undefined;
 };
 
@@ -229,7 +229,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Force hard reload on version mismatch to clear ghost listeners after update
     useEffect(() => {
-        const LATEST_VERSION = "1.0.109";
+        const LATEST_VERSION = "1.0.110";
         const currentVersion = localStorage.getItem("app_version");
 
         if (currentVersion !== LATEST_VERSION) {
@@ -475,8 +475,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // Regular update or remote sync
             if (!isDataEqual(imported, current)) {
                 console.log(`[DataContext] ✅ Updating ${String(field)}`);
-                setter(imported);
-                (nextState as any)[field] = imported; // Track next state for recheck
+                let dataToSet = imported;
+                // If it's a local import, tag all items with _isLocallyCreated so they get uploaded
+                if (!isRemote && Array.isArray(imported)) {
+                    dataToSet = imported.map((item: any) => ({ ...item, _isLocallyCreated: true }));
+                }
+                setter(dataToSet);
+                (nextState as any)[field] = dataToSet; // Track next state for recheck
 
                 // CRITICAL: Only mark dirty if it's NOT a remote sync.
                 // Remote syncs are the baseline, not "new local changes".
@@ -1482,7 +1487,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const maxId = sequentialIds.length > 0 ? Math.max(...sequentialIds) : 0;
             const newId = maxId + 1;
             markItemDirty(fieldKey as string, newId);
-            setItems(prev => [...prev, { ...item, id: newId } as T]);
+            setItems(prev => [...prev, { ...item, id: newId, _isLocallyCreated: true } as unknown as T]);
         },
         update: (updatedItem: T) => {
             markDirty(fieldKey, true);
@@ -1509,7 +1514,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const maxId = sequentialIds.length > 0 ? Math.max(...sequentialIds) : 0;
             const newId = maxId + 1;
             markItemDirty('students', newId);
-            const newItem = { ...student, id: newId } as Student;
+            const newItem = { ...student, id: newId, _isLocallyCreated: true } as Student;
             const next = [...prev, newItem];
             return next;
         });
@@ -1540,7 +1545,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         markDirty('assessments', true);
         const newId = Date.now();
         markItemDirty('assessments', newId);
-        const newAssessment = { ...assessment, id: newId };
+        const newAssessment = { ...assessment, id: newId, _isLocallyCreated: true } as Assessment;
         setAssessments(prev => {
             const examIndex = prev.findIndex(a => a.name.toLowerCase().includes('exam'));
             if (examIndex !== -1) {
@@ -1570,7 +1575,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const maxId = sequentialIds.length > 0 ? Math.max(...sequentialIds) : 0;
             const newId = maxId + 1;
             markItemDirty('subjects', newId);
-            const newItem = { ...subject, id: newId } as Subject;
+            const newItem = { ...subject, id: newId, _isLocallyCreated: true } as Subject;
             const next = [...prev, newItem];
             return next;
         });
@@ -1602,7 +1607,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const maxId = sequentialIds.length > 0 ? Math.max(...sequentialIds) : 0;
             const newId = maxId + 1;
             markItemDirty('classes', newId);
-            const newItem = { ...cls, id: newId } as Class;
+            const newItem = { ...cls, id: newId, _isLocallyCreated: true } as Class;
             const next = [...prev, newItem];
             return next;
         });
@@ -1635,7 +1640,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setGrades(INITIAL_GRADES);
 
         // Mark all as dirty so they show as "Add/Update" in preview
-        INITIAL_GRADES.forEach(g => markItemDirty('grades', String(g.id)));
+        INITIAL_GRADES.forEach(g => {
+            // Tag with _isLocallyCreated so they pass the zombie check if they were deleted on server
+            (g as any)._isLocallyCreated = true;
+            markItemDirty('grades', String(g.id));
+        });
 
         console.log(`[DataContext] ♻️ Restored ${INITIAL_GRADES.length} system default grades`);
     };
@@ -1700,6 +1709,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     assessmentScores: {
                         [assessmentId]: newScores.filter(s => s !== null && s !== undefined),
                     },
+                    _isLocallyCreated: true
                 };
                 updatedScores = [...prevScores, newScoreEntry];
             }
@@ -1738,6 +1748,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     attitude: '',
                     teacherRemark: '',
                     ...data,
+                    _isLocallyCreated: true
                 };
                 return [...prev, newEntry];
             }
@@ -1762,6 +1773,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     classId,
                     totalSchoolDays: '',
                     ...data,
+                    _isLocallyCreated: true
                 };
                 return [...prev, newEntry];
             }
@@ -2410,6 +2422,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         const originalItem = originalVal.find((o: any) => getItemId(o) === itemId);
 
                         if (!originalItem) {
+                            // Zombie Data Prevention: If it wasn't created locally in this session, drop it!
+                            if (!(item as any)._isLocallyCreated) {
+                                console.log(`[DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record ${itemId} for ${String(field)}`);
+                                return false;
+                            }
                             return pendingSet && pendingSet.has(itemId);
                         }
 

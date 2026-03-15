@@ -113,7 +113,8 @@ const ScoreEntry: React.FC = () => {
         try {
             const availableNames = getAvailableClasses(currentUser, allClasses).map(c => c.name);
             const saved = localStorage.getItem('scoreEntry_selectedClass');
-            if (saved && availableNames.includes(saved)) return saved;
+            if (saved === '' && currentUser?.role === 'Admin') return '';
+            if (saved !== null && availableNames.includes(saved)) return saved;
             return availableNames.length > 0 ? availableNames[0] : '';
         } catch (e) {
             return '';

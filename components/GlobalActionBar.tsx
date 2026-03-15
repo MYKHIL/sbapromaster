@@ -145,6 +145,14 @@ const WrappedActionBar: React.FC<any> = ({
 }) => {
     const { users, loadImportedData } = useData();
 
+    const persistUsersToCloud = (updatedUsers: any[]) => {
+        import('../services/firebaseService').then(({ saveDataTransaction }) => {
+            if (currentUser?.schoolId) {
+                saveDataTransaction(currentUser.schoolId, { users: updatedUsers }).catch(console.error);
+            }
+        });
+    };
+
     const updateNotifications = (newNotifications: any[]) => {
         if (!users) return;
         const updatedUsers = users.map(u => {
@@ -154,6 +162,7 @@ const WrappedActionBar: React.FC<any> = ({
             return u;
         });
         loadImportedData({ users: updatedUsers }, false);
+        persistUsersToCloud(updatedUsers);
     };
 
     const handleMarkRead = (id: string) => {
@@ -192,6 +201,7 @@ const WrappedActionBar: React.FC<any> = ({
             }
 
             loadImportedData({ users: usersCopy }, false);
+            persistUsersToCloud(usersCopy);
         } else {
             updateNotifications(updated);
         }
@@ -248,6 +258,7 @@ const WrappedActionBar: React.FC<any> = ({
         });
 
         loadImportedData({ users: usersCopy }, false);
+        persistUsersToCloud(usersCopy);
     };
 
     // Assuming we need a way to navigate. 
