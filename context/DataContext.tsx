@@ -171,16 +171,43 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // All data uses schoolId-namespaced keys
     const [settings, setSettings] = useLocalStorage<SchoolSettings>(getKey('settings'), INITIAL_SETTINGS);
-    const [students, setStudents] = useLocalStorage<Student[]>(getKey('students'), INITIAL_STUDENTS);
+    const isPersistenceEnabled = settings.allowPersistence ?? true;
+
+    // SENSITIVE DATA: Respects allowPersistence flag
+    const [students, setStudents] = useLocalStorage<Student[]>(getKey('students'), INITIAL_STUDENTS, isPersistenceEnabled);
+    const [scores, setScores] = useLocalStorage<Score[]>(getKey('scores'), INITIAL_SCORES, isPersistenceEnabled);
+    const [reportData, setReportData] = useLocalStorage<ReportSpecificData[]>(getKey('report-data'), INITIAL_REPORT_DATA, isPersistenceEnabled);
+    const [classData, setClassData] = useLocalStorage<ClassSpecificData[]>(getKey('class-data'), INITIAL_CLASS_DATA, isPersistenceEnabled);
+
+    // STRUCTURAL DATA & SELECTIONS: Always persisted for smooth UI (not considered sensitive)
     const [subjects, setSubjects] = useLocalStorage<Subject[]>(getKey('subjects'), INITIAL_SUBJECTS);
     const [classes, setClasses] = useLocalStorage<Class[]>(getKey('classes'), INITIAL_CLASSES);
     const [grades, setGrades] = useLocalStorage<Grade[]>(getKey('grades'), INITIAL_GRADES);
     const [assessments, setAssessments] = useLocalStorage<Assessment[]>(getKey('assessments'), INITIAL_ASSESSMENTS);
-    const [scores, setScores] = useLocalStorage<Score[]>(getKey('scores'), INITIAL_SCORES);
-    const [reportData, setReportData] = useLocalStorage<ReportSpecificData[]>(getKey('report-data'), INITIAL_REPORT_DATA);
-    const [classData, setClassData] = useLocalStorage<ClassSpecificData[]>(getKey('class-data'), INITIAL_CLASS_DATA);
+
     const isRemoteUpdate = React.useRef(false);
     const lastLocalUpdate = React.useRef(Date.now());
+
+    // CACHE CLEARING LOGIC for Non-Persistence Mode
+    // If persistence is disabled, clear local DISK cache on app launch or when flag is toggled to false.
+    // We only clear SENSITIVE RECORD data (students, scores, etc.) and keep structural data (classes, subjects).
+    useEffect(() => {
+        if (!schoolId || settings.allowPersistence !== false) return;
+
+        console.log(`[DataContext] 🧹 Persistence disabled for ${schoolId}. Clearing sensitive DISK cache...`);
+
+        // Keys to clear (must match getKey(base) in useLocalStorage hooks)
+        const keysToClear = ['students', 'scores', 'report-data', 'class-data'];
+
+        keysToClear.forEach(base => {
+            const fullKey = getKey(base);
+            localStorage.removeItem(fullKey);
+        });
+
+        // We do NOT clear 'settings' or structural data to preserve the 'allowPersistence' flag
+        // and ensure "control selections" (which depend on classes/subjects) remain functional.
+
+    }, [schoolId, settings.allowPersistence]);
 
 
 
@@ -233,7 +260,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Force hard reload on version mismatch to clear ghost listeners after update
     useEffect(() => {
-        const LATEST_VERSION = "1.0.119";
+        const LATEST_VERSION = "1.0.120";
         const currentVersion = localStorage.getItem("app_version");
 
         if (currentVersion !== LATEST_VERSION) {
@@ -2941,9 +2968,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     fieldKey: keyof AppDataType
                 ) => {
                     const hasFetched = fetched && fetched.length > 0;
-                    // Source of Truth for "Legacy" is the baseline (ref), which is updated synchronously
-                    const legacyItems = (originalData.current[fieldKey] as T[]) || [];
-                    const hasLegacy = legacyItems.length > 0;
+                    const hasLocal = currentLocal && currentLocal.length > 0;
+
+                    // PROTECTION: If cloud data for a structural field is empty, but local state already has valid data 
+                    // (likely loaded during initial launch via loadImportedData from legacy fields), 
+                    // PRESERVE the local data instead of wiping it with empty.
+                    if (fetched !== undefined && !hasFetched && hasLocal) {
+                        // Check if local data is meaningful (not just the initial state/default)
+                        const isMeaningful = currentLocal.some(item => isMeaningfulDiscrepancy(fieldKey, item));
+                        if (isMeaningful) {
+                            console.log(`[DataContext] 🛡️ Metadata Preservation: Cloud returned 0 ${fieldName}, but local state has ${currentLocal.length} valid items. Aborting overwrite to prevent data loss.`);
+                            return;
+                        }
+                    }
 
                     if (hasFetched) {
                         // DISCARD LOCAL CHANGES if ignorePreservation is set (Global Refresh)

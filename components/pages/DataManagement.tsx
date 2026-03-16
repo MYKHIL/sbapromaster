@@ -1478,6 +1478,27 @@ const DataManagement: React.FC = () => {
                                 </div>
                             )}
 
+                            {/* Data Persistence Toggle */}
+                            {currentUser?.role === 'Admin' && (
+                                <div className="pb-6 border-b border-gray-100">
+                                    <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50">
+                                        <div>
+                                            <h3 className="font-semibold text-gray-800 text-sm">Allow Data Persistence</h3>
+                                            <p className="text-xs text-gray-500 mt-1">If disabled, local cache will be cleared upon app launch.</p>
+                                        </div>
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={settings.allowPersistence ?? true}
+                                                onChange={(e) => updateSettings({ allowPersistence: e.target.checked })}
+                                                className="sr-only peer"
+                                            />
+                                            <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                                        </label>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Data Operations */}
                             {/* Admin Controls: School Password & Logging */}
                             {currentUser?.role === 'Admin' && (

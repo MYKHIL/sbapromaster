@@ -31,6 +31,7 @@ export interface SchoolSettings {
   reopeningDate: string;
   allowStudentProgressView?: boolean;
   isPromotionTerm?: boolean;
+  allowPersistence?: boolean;
 }
 
 export interface Subject {

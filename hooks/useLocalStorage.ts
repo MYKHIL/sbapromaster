@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import * as LZ from 'lz-string';
 
-function useLocalStorage<T,>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
+function useLocalStorage<T,>(key: string, initialValue: T, persistenceEnabled: boolean = true): [T, React.Dispatch<React.SetStateAction<T>>] {
   // 1. State to store our value. The logic inside useState runs only once on initial render.
   const [storedValue, setStoredValue] = useState<T>(() => {
     if (typeof window === 'undefined') {
@@ -28,6 +28,8 @@ function useLocalStorage<T,>(key: string, initialValue: T): [T, React.Dispatch<R
 
   // 2. useEffect to automatically update localStorage whenever the state changes.
   useEffect(() => {
+    if (!persistenceEnabled) return;
+
     try {
       if (typeof window !== 'undefined') {
         const jsonString = JSON.stringify(storedValue);
@@ -41,7 +43,7 @@ function useLocalStorage<T,>(key: string, initialValue: T): [T, React.Dispatch<R
         console.error(`[useLocalStorage] Error setting key "${key}":`, error);
       }
     }
-  }, [key, storedValue]);
+  }, [key, storedValue, persistenceEnabled]);
 
   // 3. useEffect to listen for changes to the same localStorage key from other tabs.
   useEffect(() => {

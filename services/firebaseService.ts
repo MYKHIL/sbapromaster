@@ -1187,23 +1187,33 @@ export const fetchMetadataBundle = async (schoolId: string) => {
             }
         }
 
-        // Fallback: Perform the 3 separate reads if bundle is missing
-        0 && console.log("[Firebase] ⚠️ Bundle missing, falling back to individual reads");
-        trackFirebaseRead('fetchMetadataBundle_fallback', 'classes', 0, 'Bundle missing - fetching classes');
-        trackFirebaseRead('fetchMetadataBundle_fallback', 'subjects', 0, 'Bundle missing - fetching subjects');
-        trackFirebaseRead('fetchMetadataBundle_fallback', 'assessments', 0, 'Bundle missing - fetching assessments');
+        // Fallback: Perform separate reads if bundle is missing or partial
+        trackFirebaseRead('fetchMetadataBundle_fallback', 'collections', 0, 'Bundle missing/partial - fetching subcollections');
 
-        const [classes, subjects, assessments, grades] = await Promise.all([
+        let [classes, subjects, assessments, grades] = await Promise.all([
             fetchSubcollection<Class>(schoolId, "classes"),
             fetchSubcollection<Subject>(schoolId, "subjects"),
             fetchSubcollection<Assessment>(schoolId, "assessments"),
             fetchSubcollection<Grade>(schoolId, "grades")
         ]);
 
-        trackFirebaseRead('fetchMetadataBundle_fallback', 'classes', classes.length, `Fallback fetched ${classes.length} classes`);
-        trackFirebaseRead('fetchMetadataBundle_fallback', 'subjects', subjects.length, `Fallback fetched ${subjects.length} subjects`);
-        trackFirebaseRead('fetchMetadataBundle_fallback', 'assessments', assessments.length, `Fallback fetched ${assessments.length} assessments`);
-        trackFirebaseRead('fetchMetadataBundle_fallback', 'grades', grades.length, `Fallback fetched ${grades.length} grades`);
+        // CRITICAL MIGRATION FALLBACK:
+        // If subcollections are empty, check the main document for legacy data.
+        // This ensures "Legacy" schools that haven't migrated to subcollections yet
+        // successfully load their metadata.
+        if (classes.length === 0 || subjects.length === 0 || assessments.length === 0 || grades.length === 0) {
+            0 && console.log(`[Firebase] 🔍 checking main doc for legacy metadata (subcollections empty)...`);
+            const schoolRef = doc(db, "schools", schoolId);
+            const schoolSnap = await loggedGetDoc(schoolRef, `fetchMetadataBundle/legacyCheck/${schoolId}`);
+
+            if (schoolSnap.exists()) {
+                const legacyData = schoolSnap.data() as any;
+                if (classes.length === 0 && legacyData.classes) classes = legacyData.classes;
+                if (subjects.length === 0 && legacyData.subjects) subjects = legacyData.subjects;
+                if (assessments.length === 0 && legacyData.assessments) assessments = legacyData.assessments;
+                if (grades.length === 0 && legacyData.grades) grades = legacyData.grades;
+            }
+        }
 
         return { classes, subjects, assessments, grades };
     } catch (error) {

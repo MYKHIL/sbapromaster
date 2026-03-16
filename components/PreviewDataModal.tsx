@@ -62,6 +62,13 @@ const PreviewDataModal: React.FC<PreviewDataModalProps> = ({
     };
 
     const handleRevert = (field: string, id?: number | string) => {
+        // Skip confirmation for single setting items or if user explicitly wants to clear a section
+        if (id === undefined || field === 'settings') {
+             // @ts-ignore
+             revertPendingChanges(field, id);
+             return;
+        }
+
         if (confirm('Discard this change?')) {
             // @ts-ignore
             revertPendingChanges(field, id);
@@ -155,17 +162,16 @@ const PreviewDataModal: React.FC<PreviewDataModalProps> = ({
                                     <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
                                         {Array.isArray(value) ? value.length : 1} items
                                     </span>
-                                    {!Array.isArray(value) && (
-                                        <button
-                                            onClick={() => handleRevert(key)}
-                                            className="text-gray-400 hover:text-red-500 p-1 transition-colors"
-                                            title="Revert Changes"
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                            </svg>
-                                        </button>
-                                    )}
+                                    <button
+                                        onClick={() => handleRevert(key)}
+                                        className="text-gray-400 hover:text-red-500 p-1 transition-colors flex items-center gap-1 group/btn"
+                                        title={`Clear all ${key} changes`}
+                                    >
+                                        <span className="text-[10px] font-bold opacity-0 group-hover/btn:opacity-100 transition-opacity uppercase tracking-wider">Clear Section</span>
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
                                 </div>
                             </h4>
 
