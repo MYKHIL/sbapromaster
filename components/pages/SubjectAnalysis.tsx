@@ -497,11 +497,11 @@ const SubjectAnalysis: React.FC = () => {
                 </div>
             ) : (
                 <div className="space-y-12">
-                    {/* Subject-wise Grade Analysis Table */}
+                    {/* Subject-wise Grade Analysis */}
                     <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
                         <div className="p-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center flex-wrap gap-4">
                             <h2 className="text-lg font-bold text-gray-800 uppercase tracking-wider">Subject-wise Grade Analysis</h2>
-                            <div className="flex items-center gap-4">
+                            <div className="hidden md:flex items-center gap-4">
                                 <label className="flex items-center gap-2 text-sm font-medium text-gray-600 cursor-pointer select-none">
                                     <input
                                         type="checkbox"
@@ -537,7 +537,9 @@ const SubjectAnalysis: React.FC = () => {
                                 )}
                             </div>
                         </div>
-                        <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
+
+                        {/* Desktop Table View */}
+                        <div className="hidden md:block overflow-x-auto overflow-y-auto max-h-[600px]">
                             <table className="w-full text-left border-collapse">
                                 <thead className={freezeHeader ? "sticky top-0 z-20 shadow-sm" : ""}>
                                     <tr className="bg-gray-100 border-b">
@@ -604,21 +606,72 @@ const SubjectAnalysis: React.FC = () => {
                                                         </td>
                                                     </tr>
                                                 ))}
-                                                <tr className="h-2 bg-gray-50/30"></tr> {/* Tiny spacer between subjects */}
+                                                <tr className="h-2 bg-gray-50/30"></tr>
                                             </React.Fragment>
                                         );
                                     })}
                                 </tbody>
                             </table>
                         </div>
+
+                        {/* Mobile Card View */}
+                        <div className="md:hidden p-4 space-y-4 max-h-[600px] overflow-y-auto bg-gray-50">
+                            {analysisData.activeSubjects.map(subject => (
+                                <div key={subject} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                                    <div className="bg-blue-600 px-4 py-2">
+                                        <h3 className="text-white font-bold text-sm uppercase tracking-wider">{subject}</h3>
+                                    </div>
+                                    <div className="p-3 space-y-3">
+                                        {(['Male', 'Female', 'Total'] as const).map(gender => (
+                                            <div key={gender} className={`rounded-lg p-2 ${gender === 'Total' ? 'bg-blue-50/50' : 'bg-gray-50'}`}>
+                                                <div className="flex justify-between items-center mb-2 px-1">
+                                                    <span className={`text-[10px] font-black uppercase tracking-widest ${gender === 'Male' ? 'text-blue-600' : gender === 'Female' ? 'text-rose-600' : 'text-gray-700'}`}>
+                                                        {gender}
+                                                    </span>
+                                                    <span className="text-[10px] bg-white px-2 py-0.5 rounded-full border border-gray-200 font-bold text-gray-500 shadow-sm">
+                                                        Total: {Object.values(analysisData.subjectGradeCounts[subject][gender]).reduce((a: number, b: number) => a + b, 0)}
+                                                    </span>
+                                                </div>
+                                                <div className="grid grid-cols-3 gap-2">
+                                                    {analysisData.gradeNames.map(grade => {
+                                                        const count = analysisData.subjectGradeCounts[subject][gender][grade];
+                                                        const studentsList = analysisData.subjectGradeStudents[subject]?.[gender]?.[grade] || [];
+                                                        return (
+                                                            <div 
+                                                                key={grade}
+                                                                onClick={() => {
+                                                                    if (count > 0) {
+                                                                        setPreviewData({
+                                                                            isOpen: true,
+                                                                            title: `${subject} - Grade ${grade} (${gender})`,
+                                                                            students: studentsList
+                                                                        });
+                                                                    }
+                                                                }}
+                                                                className={`flex flex-col items-center justify-center p-1.5 rounded-md border transition-all ${count > 0 ? 'bg-white border-blue-200 shadow-sm active:scale-95' : 'bg-gray-50/50 border-gray-100 opacity-40'}`}
+                                                            >
+                                                                <span className="text-[9px] text-gray-400 font-bold">G{grade}</span>
+                                                                <span className={`text-sm font-black ${count > 0 ? 'text-blue-600' : 'text-gray-300'}`}>{count || 0}</span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
 
-                    {/* Aggregate Performance Analysis (Gender Breakdown) */}
+                    {/* Aggregate Performance Analysis */}
                     <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
                         <div className="p-4 bg-gray-50 border-b border-gray-100">
                             <h2 className="text-lg font-bold text-gray-800 uppercase tracking-wider">Aggregate Performance Analysis</h2>
                         </div>
-                        <div className="overflow-x-auto overflow-y-auto max-h-[400px]">
+
+                        {/* Desktop Table View */}
+                        <div className="hidden md:block overflow-x-auto overflow-y-auto max-h-[400px]">
                             <table className="w-full text-left border-collapse">
                                 <thead className={freezeHeader ? "sticky top-0 z-20 shadow-sm" : ""}>
                                     <tr className="bg-gray-100 border-b">
@@ -634,7 +687,6 @@ const SubjectAnalysis: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {/* Male Row */}
                                     <tr className="border-b hover:bg-gray-50 transition-colors">
                                         <td className={`p-4 font-bold text-blue-600 border-r text-sm bg-white ${freezeSubjects ? 'sticky left-0 z-10' : ''}`}>Male</td>
                                         {analysisData.sortedAggregates.map(agg => {
@@ -646,11 +698,7 @@ const SubjectAnalysis: React.FC = () => {
                                                     className={`p-4 text-center text-sm ${count > 0 ? 'text-gray-900 font-bold hover:bg-blue-100 cursor-pointer' : 'text-gray-300'} transition-colors`}
                                                     onClick={() => {
                                                         if (count > 0) {
-                                                            setPreviewData({
-                                                                isOpen: true,
-                                                                title: `Aggregate ${agg} - Male Students`,
-                                                                students: studentsList
-                                                            });
+                                                            setPreviewData({ isOpen: true, title: `Aggregate ${agg} - Male Students`, students: studentsList });
                                                         }
                                                     }}
                                                 >
@@ -658,17 +706,10 @@ const SubjectAnalysis: React.FC = () => {
                                                 </td>
                                             );
                                         })}
-                                        <td className="p-4 text-center font-bold text-emerald-700 bg-emerald-50 border-l text-sm">
-                                            {analysisData.passStats.Male.count}
-                                        </td>
-                                        <td className="p-4 text-center font-bold text-emerald-700 bg-emerald-50 border-l text-sm">
-                                            {analysisData.passStats.Male.percentage.toFixed(1)}%
-                                        </td>
-                                        <td className="p-4 text-center font-bold text-blue-800 bg-blue-50 border-l text-sm">
-                                            {Object.values(analysisData.aggregateCountsByGender['Male']).reduce((a: number, b: number) => a + b, 0)}
-                                        </td>
+                                        <td className="p-4 text-center font-bold text-emerald-700 bg-emerald-50 border-l text-sm">{analysisData.passStats.Male.count}</td>
+                                        <td className="p-4 text-center font-bold text-emerald-700 bg-emerald-50 border-l text-sm">{analysisData.passStats.Male.percentage.toFixed(1)}%</td>
+                                        <td className="p-4 text-center font-bold text-blue-800 bg-blue-50 border-l text-sm">{Object.values(analysisData.aggregateCountsByGender['Male']).reduce((a: number, b: number) => a + b, 0)}</td>
                                     </tr>
-                                    {/* Female Row */}
                                     <tr className="border-b hover:bg-gray-50 transition-colors">
                                         <td className={`p-4 font-bold text-rose-600 border-r text-sm bg-white ${freezeSubjects ? 'sticky left-0 z-10' : ''}`}>Female</td>
                                         {analysisData.sortedAggregates.map(agg => {
@@ -680,11 +721,7 @@ const SubjectAnalysis: React.FC = () => {
                                                     className={`p-4 text-center text-sm ${count > 0 ? 'text-gray-900 font-bold hover:bg-rose-100 cursor-pointer' : 'text-gray-300'} transition-colors`}
                                                     onClick={() => {
                                                         if (count > 0) {
-                                                            setPreviewData({
-                                                                isOpen: true,
-                                                                title: `Aggregate ${agg} - Female Students`,
-                                                                students: studentsList
-                                                            });
+                                                            setPreviewData({ isOpen: true, title: `Aggregate ${agg} - Female Students`, students: studentsList });
                                                         }
                                                     }}
                                                 >
@@ -692,38 +729,24 @@ const SubjectAnalysis: React.FC = () => {
                                                 </td>
                                             );
                                         })}
-                                        <td className="p-4 text-center font-bold text-emerald-700 bg-emerald-50 border-l text-sm">
-                                            {analysisData.passStats.Female.count}
-                                        </td>
-                                        <td className="p-4 text-center font-bold text-emerald-700 bg-emerald-50 border-l text-sm">
-                                            {analysisData.passStats.Female.percentage.toFixed(1)}%
-                                        </td>
-                                        <td className="p-4 text-center font-bold text-rose-800 bg-rose-50 border-l text-sm">
-                                            {Object.values(analysisData.aggregateCountsByGender['Female']).reduce((a: number, b: number) => a + b, 0)}
-                                        </td>
+                                        <td className="p-4 text-center font-bold text-emerald-700 bg-emerald-50 border-l text-sm">{analysisData.passStats.Female.count}</td>
+                                        <td className="p-4 text-center font-bold text-emerald-700 bg-emerald-50 border-l text-sm">{analysisData.passStats.Female.percentage.toFixed(1)}%</td>
+                                        <td className="p-4 text-center font-bold text-rose-800 bg-rose-50 border-l text-sm">{Object.values(analysisData.aggregateCountsByGender['Female']).reduce((a: number, b: number) => a + b, 0)}</td>
                                     </tr>
-                                    {/* Total Row */}
                                     <tr className="bg-gray-200/50 font-bold border-t-2 border-gray-300">
                                         <td className={`p-4 text-gray-800 border-r text-sm italic bg-gray-200/50 ${freezeSubjects ? 'sticky left-0 z-10' : ''}`}>TOTAL</td>
                                         {analysisData.sortedAggregates.map(agg => {
                                             const maleCount = (analysisData.aggregateCountsByGender['Male'][agg] || 0) as number;
                                             const femaleCount = (analysisData.aggregateCountsByGender['Female'][agg] || 0) as number;
                                             const total = maleCount + femaleCount;
-                                            const studentsList = [
-                                                ...(analysisData.aggregateStudentsByGender['Male'][agg] || []),
-                                                ...(analysisData.aggregateStudentsByGender['Female'][agg] || [])
-                                            ];
+                                            const studentsList = [...(analysisData.aggregateStudentsByGender['Male'][agg] || []), ...(analysisData.aggregateStudentsByGender['Female'][agg] || [])];
                                             return (
                                                 <td 
                                                     key={agg} 
                                                     className={`p-4 text-center text-gray-900 text-sm hover:bg-blue-100 cursor-pointer transition-colors font-bold`}
                                                     onClick={() => {
                                                         if (total > 0) {
-                                                            setPreviewData({
-                                                                isOpen: true,
-                                                                title: `Aggregate ${agg} - All Students`,
-                                                                students: studentsList
-                                                            });
+                                                            setPreviewData({ isOpen: true, title: `Aggregate ${agg} - All Students`, students: studentsList });
                                                         }
                                                     }}
                                                 >
@@ -731,22 +754,13 @@ const SubjectAnalysis: React.FC = () => {
                                                 </td>
                                             );
                                         })}
-                                        <td className="p-4 text-center text-emerald-900 bg-emerald-100 border-l text-sm">
-                                            {analysisData.passStats.Total.count}
-                                        </td>
-                                        <td className="p-4 text-center text-emerald-900 bg-emerald-100 border-l text-sm">
-                                            {analysisData.passStats.Total.percentage.toFixed(1)}%
-                                        </td>
-                                        <td 
-                                            className="p-4 text-center text-blue-900 bg-blue-100 border-l text-sm hover:bg-blue-200 cursor-pointer transition-colors"
+                                        <td className="p-4 text-center text-emerald-900 bg-emerald-100 border-l text-sm">{analysisData.passStats.Total.count}</td>
+                                        <td className="p-4 text-center text-emerald-900 bg-emerald-100 border-l text-sm">{analysisData.passStats.Total.percentage.toFixed(1)}%</td>
+                                        <td className="p-4 text-center text-blue-900 bg-blue-100 border-l text-sm hover:bg-blue-200 cursor-pointer transition-colors"
                                             onClick={() => {
                                                 const allAggStudents = Object.values(analysisData.aggregateStudentsByGender).flatMap(genderMap => Object.values(genderMap)).flat();
                                                 if (allAggStudents.length > 0) {
-                                                    setPreviewData({
-                                                        isOpen: true,
-                                                        title: `All Graded Students`,
-                                                        students: allAggStudents
-                                                    });
+                                                    setPreviewData({ isOpen: true, title: `All Graded Students`, students: allAggStudents });
                                                 }
                                             }}
                                         >
@@ -755,6 +769,68 @@ const SubjectAnalysis: React.FC = () => {
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+
+                        {/* Mobile Card View */}
+                        <div className="md:hidden p-4 space-y-6 bg-gray-50">
+                            {(['Male', 'Female', 'Total'] as const).map(gender => (
+                                <div key={gender} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                                    <div className={`px-4 py-3 flex justify-between items-center ${gender === 'Male' ? 'bg-blue-600' : gender === 'Female' ? 'bg-rose-600' : 'bg-gray-800'}`}>
+                                        <h3 className="text-white font-bold uppercase tracking-widest">{gender}</h3>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[10px] text-white/70 uppercase font-bold">Total:</span>
+                                            <span className="text-white font-black">{gender === 'Total' ? analysisData.totalStudents : Object.values(analysisData.aggregateCountsByGender[gender]).reduce((a: number, b: number) => a + b, 0)}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="p-4 space-y-4">
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-100">
+                                                <p className="text-[10px] text-emerald-600 font-black uppercase mb-1">Passed</p>
+                                                <p className="text-xl font-black text-emerald-700">{gender === 'Total' ? analysisData.passStats.Total.count : analysisData.passStats[gender].count}</p>
+                                            </div>
+                                            <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-100">
+                                                <p className="text-[10px] text-emerald-600 font-black uppercase mb-1">Pass %</p>
+                                                <p className="text-xl font-black text-emerald-700">{gender === 'Total' ? analysisData.passStats.Total.percentage.toFixed(1) : analysisData.passStats[gender].percentage.toFixed(1)}%</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="border-t border-gray-100 pt-3">
+                                            <p className="text-[10px] text-gray-400 font-black uppercase mb-2">Aggregate Breakdown</p>
+                                            <div className="grid grid-cols-4 gap-2">
+                                                {analysisData.sortedAggregates.map(agg => {
+                                                    const count = gender === 'Total' 
+                                                        ? (analysisData.aggregateCountsByGender['Male'][agg] || 0) + (analysisData.aggregateCountsByGender['Female'][agg] || 0)
+                                                        : (analysisData.aggregateCountsByGender[gender][agg] || 0) as number;
+                                                    
+                                                    const studentsList = gender === 'Total'
+                                                        ? [...(analysisData.aggregateStudentsByGender['Male'][agg] || []), ...(analysisData.aggregateStudentsByGender['Female'][agg] || [])]
+                                                        : (analysisData.aggregateStudentsByGender[gender][agg] || []);
+
+                                                    return (
+                                                        <div 
+                                                            key={agg}
+                                                            onClick={() => {
+                                                                if (count > 0) {
+                                                                    setPreviewData({
+                                                                        isOpen: true,
+                                                                        title: `Agg ${agg} - ${gender}`,
+                                                                        students: studentsList
+                                                                    });
+                                                                }
+                                                            }}
+                                                            className={`flex flex-col items-center justify-center p-2 rounded-lg border transition-all ${count > 0 ? 'bg-white border-blue-100 shadow-sm active:scale-95' : 'bg-gray-50/50 border-gray-50 opacity-30'}`}
+                                                        >
+                                                            <span className="text-[9px] text-gray-400 font-bold">{agg}</span>
+                                                            <span className={`text-xs font-black ${count > 0 ? 'text-blue-600' : 'text-gray-300'}`}>{count || 0}</span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                         {analysisData.sortedAggregates.length === 0 && (
                             <div className="p-10 text-center text-gray-400 italic">
