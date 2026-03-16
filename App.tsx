@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import BottomNavigation from './components/BottomNavigation';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/pages/Dashboard';
 import ScoreEntry from './components/pages/ScoreEntry';
@@ -240,9 +241,12 @@ const AppContent: React.FC = () => {
           <GlobalActionBar currentPage={currentPage} onNavigate={handleNavigate} />
         </div>
       </div>
+
+      <BottomNavigation currentPage={currentPage} onNavigate={handleNavigate} />
+
       <div className="flex h-screen overflow-hidden bg-gray-50">
         <Sidebar currentPage={currentPage} setCurrentPage={handleNavigate} />
-        <main className="flex-1 p-4 pt-20 md:p-6 md:pt-20 lg:p-10 overflow-auto">
+        <main className="flex-1 p-4 pt-20 pb-28 md:p-6 md:pt-20 md:pb-32 lg:p-10 overflow-auto">
           {/* Settings is always rendered but its visibility is toggled to preserve state. */}
           <PageWrapper name="Settings" currentPage={currentPage}>
             <DataManagement />
