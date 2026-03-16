@@ -49,10 +49,10 @@ export const calculateReportData = (student: Student, data: DataContextType) => 
     });
     const relevantSubjects = subjects.filter(subject => relevantSubjectIds.has(subject.id));
 
-    const examAssessment = assessments.find(a => a.name.toLowerCase().includes('exam'));
-    const classAssessments = assessments.filter(a => !examAssessment || a.id !== examAssessment.id);
+    const examAssessments = assessments.filter(a => a.name.toLowerCase().includes('exam'));
+    const classAssessments = assessments.filter(a => !a.name.toLowerCase().includes('exam'));
     const totalClassWeight = classAssessments.reduce((sum, a) => sum + a.weight, 0);
-    const examWeightValue = examAssessment?.weight || 0;
+    const examWeightValue = examAssessments.reduce((sum, a) => sum + a.weight, 0);
 
     const calculateAssessmentTypeScore = (studentId: number, subjectId: number, specificAssessments: Assessment[]) => {
         return specificAssessments.reduce((total, assessment) => {
@@ -96,7 +96,7 @@ export const calculateReportData = (student: Student, data: DataContextType) => 
     relevantSubjects.forEach(subject => {
         allStudentSubjectScores[subject.id] = classmates.map(classmate => {
             const classScore = calculateAssessmentTypeScore(classmate.id, subject.id, classAssessments);
-            const examScore = examAssessment ? calculateAssessmentTypeScore(classmate.id, subject.id, [examAssessment]) : 0;
+            const examScore = calculateAssessmentTypeScore(classmate.id, subject.id, examAssessments);
             return { studentId: classmate.id, totalScore: classScore + examScore };
         }).sort((a, b) => b.totalScore - a.totalScore);
     });
@@ -128,7 +128,7 @@ export const calculateReportData = (student: Student, data: DataContextType) => 
 
     const results = relevantSubjects.map(subject => {
         const classScore = calculateAssessmentTypeScore(student.id, subject.id, classAssessments);
-        const examScore = examAssessment ? calculateAssessmentTypeScore(student.id, subject.id, [examAssessment]) : 0;
+        const examScore = calculateAssessmentTypeScore(student.id, subject.id, examAssessments);
         const totalScore = classScore + examScore;
 
         if (totalScore === 0) {

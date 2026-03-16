@@ -94,8 +94,8 @@ const SubjectAnalysis: React.FC = () => {
             ? [...numericGradeMap.values()].reduce((max, v) => Math.max(max, v), 0)
             : 9;
 
-        const examAssessment = assessments.find(a => a.name.toLowerCase().includes('exam'));
-        const classAssessments = assessments.filter(a => !examAssessment || a.id !== examAssessment.id);
+        const examAssessments = assessments.filter(a => a.name.toLowerCase().includes('exam'));
+        const classAssessments = assessments.filter(a => !a.name.toLowerCase().includes('exam'));
 
         const studentSubjectTotalScores = new Map<string, number>();
 
@@ -112,13 +112,13 @@ const SubjectAnalysis: React.FC = () => {
                     return total + (totalScore / totalMaxPossibleScore) * assessment.weight;
                 }, 0);
 
-                const examScore = examAssessment ? [examAssessment].reduce((total, assessment) => {
+                const examScore = examAssessments.reduce((total, assessment) => {
                     const vals = score.assessmentScores?.[assessment.id];
                     if (!vals || vals.length === 0) return total;
                     const sumOfScores = vals.reduce((sum, scoreStr) => sum + (Number((scoreStr || '').split('/')[0]) || 0), 0);
                     const averageScoreOutOf100 = sumOfScores / vals.length;
                     return total + (averageScoreOutOf100 / 100) * assessment.weight;
-                }, 0) : 0;
+                }, 0);
 
                 studentSubjectTotalScores.set(score.id, classScore + examScore);
             }

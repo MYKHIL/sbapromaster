@@ -9,6 +9,7 @@ import { DIRTY_INDICATOR_BG, DIRTY_INDICATOR_TEXT, DIRTY_INDICATOR_SECONDARY_TEX
 const EMPTY_ASSESSMENT_FORM: Omit<Assessment, 'id'> = {
     name: '',
     weight: 10,
+    type: 'Class',
 };
 
 const DragHandleIcon: React.FC = () => (
@@ -40,8 +41,27 @@ const AssessmentTypes: React.FC = () => {
 
     const isExam = (assessment: Assessment | Omit<Assessment, 'id'>) => assessment.name.toLowerCase().includes('exam');
 
-    const examAssessment = useMemo(() => assessments.find(a => isExam(a)), [assessments]);
-    const reorderableAssessments = useMemo(() => assessments.filter(a => a.id !== examAssessment?.id), [assessments, examAssessment]);
+    const examAssessments = useMemo(() => assessments.filter(a => isExam(a)), [assessments]);
+    const lockedExamId = useMemo(() => {
+        if (examAssessments.length === 0) return null;
+        return Math.min(...examAssessments.map(a => a.id));
+    }, [examAssessments]);
+
+    const lockedExam = useMemo(() => assessments.find(a => a.id === lockedExamId), [assessments, lockedExamId]);
+    
+    // Non-exam assessments and other exams that are not locked
+    const reorderableAssessments = useMemo(() => {
+        // First, get all assessments except the locked one
+        const others = assessments.filter(a => a.id !== lockedExamId);
+        // Sort them: Non-exams first, then other exams
+        return others.sort((a, b) => {
+            const isAExam = isExam(a);
+            const isBExam = isExam(b);
+            if (isAExam && !isBExam) return 1;
+            if (!isAExam && isBExam) return -1;
+            return 0; // Maintain relative order for same type
+        });
+    }, [assessments, lockedExamId]);
 
     const totalWeight = useMemo(() => {
         return assessments.reduce((acc, curr) => acc + curr.weight, 0);
@@ -68,16 +88,25 @@ const AssessmentTypes: React.FC = () => {
             return;
         }
 
-        const currentIndex = reorderableAssessments.findIndex(item => item.id === draggedItem.id);
-        const targetIndex = reorderableAssessments.findIndex(item => item.id === dragOverItem.id);
+        const currentIndex = assessments.findIndex(item => item.id === draggedItem.id);
+        const targetIndex = assessments.findIndex(item => item.id === dragOverItem.id);
 
-        let newReorderableList = [...reorderableAssessments];
-        const [removed] = newReorderableList.splice(currentIndex, 1);
-        newReorderableList.splice(targetIndex, 0, removed);
+        let newAssessmentsList = [...assessments];
+        const [removed] = newAssessmentsList.splice(currentIndex, 1);
+        newAssessmentsList.splice(targetIndex, 0, removed);
 
-        const finalAssessments = examAssessment ? [...newReorderableList, examAssessment] : newReorderableList;
-        setAssessments(finalAssessments);
+        // RE-SORT to ensure exams are always last and locked is at the very bottom
+        const sortedList = newAssessmentsList.sort((a, b) => {
+            if (a.id === lockedExamId) return 1;
+            if (b.id === lockedExamId) return -1;
+            const isAExam = isExam(a);
+            const isBExam = isExam(b);
+            if (isAExam && !isBExam) return 1;
+            if (!isAExam && isBExam) return -1;
+            return 0;
+        });
 
+        setAssessments(sortedList);
         handleDragEnd();
     };
 
@@ -131,10 +160,15 @@ const AssessmentTypes: React.FC = () => {
             }
         }
 
-        if ('id' in currentAssessment) {
-            updateAssessment(currentAssessment);
+        const assessmentToSave = {
+            ...currentAssessment,
+            type: (isExam(currentAssessment) ? 'Exam' : 'Class') as 'Class' | 'Exam'
+        };
+
+        if ('id' in assessmentToSave) {
+            updateAssessment(assessmentToSave as Assessment);
         } else {
-            addAssessment(currentAssessment);
+            addAssessment(assessmentToSave);
         }
         handleCloseModal();
     };
@@ -230,10 +264,10 @@ const AssessmentTypes: React.FC = () => {
                                         </tr>
                                     );
                                 })}
-                                {examAssessment && (() => {
-                                    const isDirtyRow = isItemDirty('assessments', examAssessment.id);
+                                {lockedExam && (() => {
+                                    const isDirtyRow = isItemDirty('assessments', lockedExam.id);
                                     return (
-                                        <tr key={examAssessment.id} className={`border-b transition-colors ${isDirtyRow ? `${DIRTY_INDICATOR_BG} ${DIRTY_INDICATOR_TEXT} ${DIRTY_INDICATOR_HOVER_BG}` : 'bg-gray-50 hover:bg-gray-50'}`}>
+                                        <tr key={lockedExam.id} className={`border-b transition-colors ${isDirtyRow ? `${DIRTY_INDICATOR_BG} ${DIRTY_INDICATOR_TEXT} ${DIRTY_INDICATOR_HOVER_BG}` : 'bg-gray-50 hover:bg-gray-50'}`}>
                                             <td className="p-4 relative">
                                                 {reorderableAssessments.length + 1}
                                                 {isDirtyRow && (
@@ -244,19 +278,19 @@ const AssessmentTypes: React.FC = () => {
                                             </td>
                                             <td className="p-4 font-medium flex items-center">
                                                 <span className="w-5 mr-3"></span> {/* Spacer for alignment */}
-                                                {examAssessment.name} <span className={`ml-2 text-xs font-normal ${isDirtyRow ? DIRTY_INDICATOR_SECONDARY_TEXT : 'text-gray-500'}`}>(Locked)</span>
+                                                {lockedExam.name} <span className={`ml-2 text-xs font-normal ${isDirtyRow ? DIRTY_INDICATOR_SECONDARY_TEXT : 'text-gray-500'}`}>(Locked)</span>
                                             </td>
-                                            <td className={`p-4 ${isDirtyRow ? DIRTY_INDICATOR_SECONDARY_TEXT : 'text-gray-900'}`}>{examAssessment.weight}%</td>
+                                            <td className={`p-4 ${isDirtyRow ? DIRTY_INDICATOR_SECONDARY_TEXT : 'text-gray-900'}`}>{lockedExam.weight}%</td>
                                             <td className="p-4 space-x-4 flex items-center">
                                                 {isAdmin && (
                                                     <>
-                                                        <button onClick={() => handleEdit(examAssessment)} className={`${isDirtyRow ? `${DIRTY_INDICATOR_SECONDARY_TEXT} hover:text-white` : 'text-blue-600 hover:text-blue-800'}`} title="Edit">
+                                                        <button onClick={() => handleEdit(lockedExam)} className={`${isDirtyRow ? `${DIRTY_INDICATOR_SECONDARY_TEXT} hover:text-white` : 'text-blue-600 hover:text-blue-800'}`} title="Edit">
                                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
                                                         </button>
                                                         <button
                                                             disabled
                                                             className={`${isDirtyRow ? 'text-blue-800' : 'text-gray-400'} cursor-not-allowed`}
-                                                            title="Assessments with 'Exam' in the name cannot be deleted or reordered."
+                                                            title="The exam with the minimum ID is locked and cannot be deleted."
                                                         >
                                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                                         </button>
@@ -295,9 +329,9 @@ const AssessmentTypes: React.FC = () => {
                                             </button>
                                             <button
                                                 onClick={() => handleDeleteClick(assessment.id)}
-                                                disabled={assessment.id === examAssessment?.id}
-                                                className={`p-2 rounded-full ${isDirtyRow ? (assessment.id === examAssessment?.id ? 'text-blue-800 cursor-not-allowed' : 'text-red-300 hover:bg-red-900/50') : (assessment.id === examAssessment?.id ? 'text-gray-400 cursor-not-allowed' : 'text-red-600 hover:bg-red-100')}`}
-                                                title={assessment.id === examAssessment?.id ? "Cannot delete exam assessment" : "Delete"}
+                                                disabled={assessment.id === lockedExamId}
+                                                className={`p-2 rounded-full ${isDirtyRow ? (assessment.id === lockedExamId ? 'text-blue-800 cursor-not-allowed' : 'text-red-300 hover:bg-red-900/50') : (assessment.id === lockedExamId ? 'text-gray-400 cursor-not-allowed' : 'text-red-600 hover:bg-red-100')}`}
+                                                title={assessment.id === lockedExamId ? "Cannot delete locked exam assessment" : "Delete"}
                                             >
                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                             </button>

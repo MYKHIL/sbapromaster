@@ -193,6 +193,16 @@ const ScoreEntry: React.FC = () => {
         }
     });
 
+    const sortedAssessments = useMemo(() => {
+        return [...assessments].sort((a, b) => {
+            const isAExam = a.name.toLowerCase().includes('exam');
+            const isBExam = b.name.toLowerCase().includes('exam');
+            if (isAExam && !isBExam) return 1;
+            if (!isAExam && isBExam) return -1;
+            return 0;
+        });
+    }, [assessments]);
+
     // PERSISTENCE: Save assessment selection on change
     useEffect(() => {
         if (selectedAssessmentId) {
@@ -475,7 +485,7 @@ const ScoreEntry: React.FC = () => {
 
     const totalWeight = useMemo(() => {
         return assessments.reduce((acc, curr) => acc + curr.weight, 0);
-    }, [assessments]);
+    }, [sortedAssessments]);
 
     const selectStyles = "w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500";
 
@@ -518,7 +528,7 @@ const ScoreEntry: React.FC = () => {
         // 1. Calculate stats for ALL students
         const studentTotals = filteredStudents.map(student => {
             let total = 0;
-            assessments.forEach(ass => {
+            sortedAssessments.forEach(ass => {
                 // Get existing scores
                 let scores = [...(getStudentScores(student.id, selectedSubjectId, ass.id) || [])];
 
@@ -596,7 +606,7 @@ const ScoreEntry: React.FC = () => {
             totalStudents: studentTotals.length
         };
 
-    }, [selectedClass, selectedSubjectId, selectedAssessmentId, filteredStudents, assessments, selectedStudentIndex, localScore, getStudentScores]);
+    }, [selectedClass, selectedSubjectId, selectedAssessmentId, filteredStudents, sortedAssessments, selectedStudentIndex, localScore, getStudentScores]);
 
 
     return (
@@ -714,7 +724,7 @@ const ScoreEntry: React.FC = () => {
                                                 onChange={(e) => setSelectedAssessmentId(Number(e.target.value))}
                                                 className={selectStyles}
                                             >
-                                                {assessments.map(assessment => (
+                                                {sortedAssessments.map(assessment => (
                                                     <option key={assessment.id} value={assessment.id}>
                                                         {assessment.name} ({assessment.name.toLowerCase().includes('exam') ? 100 : assessment.weight}%)
                                                     </option>
@@ -878,7 +888,7 @@ const ScoreEntry: React.FC = () => {
                                 <tr className="border-b">
                                     <th className="p-4 font-semibold text-gray-600 w-12 text-center">#</th>
                                     <th className="p-4 font-semibold text-gray-600 w-1/4">Student Name</th>
-                                    {assessments.map(assessment => (
+                                    {sortedAssessments.map(assessment => (
                                         <th key={assessment.id} className="p-4 font-semibold text-gray-600 text-center">
                                             {assessment.name} <br /> <span className="font-normal text-sm">({assessment.name.toLowerCase().includes('exam') ? 100 : assessment.weight}%)</span>
                                         </th>
@@ -894,14 +904,14 @@ const ScoreEntry: React.FC = () => {
                                             index={index + 1}
                                             student={student}
                                             subjectId={selectedSubjectId}
-                                            assessments={assessments}
+                                            assessments={sortedAssessments}
                                             onOpenModal={handleOpenModal}
                                             readOnly={isReadOnly}
                                         />
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan={assessments.length + 3} className="text-center p-8 text-gray-500">
+                                        <td colSpan={sortedAssessments.length + 3} className="text-center p-8 text-gray-500">
                                             No students in the selected class.
                                         </td>
                                     </tr>
