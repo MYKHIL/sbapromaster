@@ -100,7 +100,7 @@ const GlobalActionBar: React.FC<GlobalActionBarProps> = ({ onOpenDebugModal, cur
     
     // Map UserLogs to Notification objects for the NotificationCenter
     const notifications = (userLogs || [])
-        .filter(log => !log.isRead)
+        .filter(log => !log.isRead && log.action !== 'Login')
         .map(log => ({
             id: String(log.id),
             senderId: log.userId,

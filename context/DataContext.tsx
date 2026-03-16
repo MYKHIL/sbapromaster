@@ -233,7 +233,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Force hard reload on version mismatch to clear ghost listeners after update
     useEffect(() => {
-        const LATEST_VERSION = "1.0.116";
+        const LATEST_VERSION = "1.0.117";
         const currentVersion = localStorage.getItem("app_version");
 
         if (currentVersion !== LATEST_VERSION) {
@@ -3157,7 +3157,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return collection.find((item: any) => String(getItemId(item)) === String(id)) || null;
         },
         unreadNotificationCount: useMemo(() => {
-            return userLogs.filter(log => !log.isRead).length;
+            return userLogs.filter(log => !log.isRead && log.action !== 'Login').length;
         }, [userLogs]),
         markNotificationAsRead: (id: number) => {
             setUserLogs(prev => prev.map(log => log.id === id ? { ...log, isRead: true } : log));
