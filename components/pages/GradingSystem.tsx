@@ -153,7 +153,7 @@ const GradingSystem: React.FC = () => {
 
     return (
         <ReadOnlyWrapper allowedRoles={['Admin']}>
-            <div className="space-y-6 pb-20">
+            <div className="space-y-6 pb-24 lg:pb-0">
                 <div className="flex items-center justify-between">
                     <h1 className="text-3xl font-bold text-gray-800">Manage Grading System</h1>
                 </div>

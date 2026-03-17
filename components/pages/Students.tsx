@@ -542,7 +542,7 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
 
             {isModalOpen && currentStudent && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                    <div className="bg-white p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-lg m-4 overflow-y-auto max-h-[90vh] relative pt-12">
+                    <div className="bg-white p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-lg m-4 overflow-y-auto max-h-[90vh] relative pt-12 pb-24 lg:pb-8">
                         {/* Vanishing Feedback Header */}
                         {saveFeedback && (
                             <div className="absolute top-0 left-0 right-0 bg-green-500 text-white py-2 px-4 text-center font-bold animate-fade-in-down z-10 rounded-t-xl text-sm">

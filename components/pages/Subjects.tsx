@@ -86,7 +86,7 @@ const Subjects: React.FC = () => {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 pb-24 lg:pb-0">
             <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold text-gray-800">Manage Subjects</h1>
                 {/* Save Button Removed - Using Global Action Bar */}

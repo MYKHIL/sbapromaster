@@ -151,7 +151,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage }) => {
           </button>
         </div>
 
-        <nav className="overflow-y-auto overflow-x-hidden flex-grow">
+        <nav className="overflow-y-auto overflow-x-hidden flex-grow pb-20 lg:pb-0">
           <ul>
             {pages.map(({ name, icon }) => (
               <NavItem
