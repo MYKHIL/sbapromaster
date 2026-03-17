@@ -879,12 +879,12 @@ const ScoreEntry: React.FC = () => {
                 )
             }
 
-            {/* Desktop View: Grid Table */}
+            {/* Desktop View: Grid Table & Mobile Card View */}
             <ReadOnlyWrapper allowedRoles={['Admin', 'Teacher']}>
-                <div className={`bg-white rounded-xl shadow-md border border-gray-200 ${useMobileView ? 'hidden lg:block' : 'block'}`}>
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full text-left">
-                            <thead className="bg-gray-50">
+                <div className={`lg:bg-white lg:rounded-xl lg:shadow-md lg:border lg:border-gray-200 ${useMobileView ? 'hidden lg:block' : 'block'}`}>
+                    <div className="overflow-x-visible lg:overflow-x-auto pb-4 lg:pb-0">
+                        <table className="min-w-full text-left block lg:table">
+                            <thead className="bg-gray-50 hidden lg:table-header-group">
                                 <tr className="border-b">
                                     <th className="p-4 font-semibold text-gray-600 w-12 text-center">#</th>
                                     <th className="p-4 font-semibold text-gray-600 w-1/4">Student Name</th>
@@ -896,7 +896,7 @@ const ScoreEntry: React.FC = () => {
                                     <th className="p-4 font-semibold text-gray-600 text-center">Total (100%)</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="block lg:table-row-group space-y-4 lg:space-y-0">
                                 {filteredStudents.length > 0 ? (
                                     filteredStudents.map((student, index) => (
                                         <InlineScoreInput
@@ -910,8 +910,8 @@ const ScoreEntry: React.FC = () => {
                                         />
                                     ))
                                 ) : (
-                                    <tr>
-                                        <td colSpan={sortedAssessments.length + 3} className="text-center p-8 text-gray-500">
+                                    <tr className="block lg:table-row bg-white rounded-xl shadow-sm border border-gray-200 lg:border-none lg:shadow-none lg:bg-transparent">
+                                        <td colSpan={sortedAssessments.length + 3} className="block lg:table-cell text-center p-8 text-gray-500">
                                             No students in the selected class.
                                         </td>
                                     </tr>

@@ -263,9 +263,14 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
     }, 0);
 
     return (
-        <tr className="border-b hover:bg-gray-50">
-            <td className="p-4 text-center text-gray-500 font-medium">{index}</td>
-            <td className="p-4 font-medium text-gray-900">{student.name}</td>
+        <tr className="block lg:table-row bg-white lg:bg-transparent border lg:border-b border-gray-200 lg:border-x-0 lg:border-t-0 rounded-xl lg:rounded-none mb-4 lg:mb-0 shadow-sm lg:shadow-none hover:bg-gray-50 overflow-hidden">
+            <td className="hidden lg:table-cell p-4 text-center text-gray-500 font-medium">{index}</td>
+            <td className="block lg:table-cell p-4 font-bold lg:font-medium text-gray-900 border-b lg:border-none bg-gray-50 lg:bg-transparent flex justify-between items-center lg:items-start text-lg lg:text-base">
+                <div className="flex items-center gap-3 lg:block">
+                    <span className="lg:hidden w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-sm shadow-sm">{index}</span>
+                    <span>{student.name}</span>
+                </div>
+            </td>
             {assessments.map(assessment => {
                 const scores = getStudentScores(student.id, subjectId, assessment.id);
 
@@ -275,16 +280,20 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
                 if (scores.length > 1) {
                     const displayScore = calculateDisplayScore(scores, assessment);
                     return (
-                        <td key={assessment.id} className={`p-4 text-center transition-colors relative ${isDirty ? `${DIRTY_INDICATOR_BG} ${DIRTY_INDICATOR_TEXT}` : ''}`}>
+                    <td key={assessment.id} className={`block lg:table-cell flex lg:table-cell justify-between items-center p-4 lg:p-4 border-b lg:border-none last:border-0 transition-colors relative ${isDirty ? `${DIRTY_INDICATOR_BG} ${DIRTY_INDICATOR_TEXT}` : ''}`}>
                             {isDirty && (
-                                <span className="absolute left-0 top-0 text-[8px] font-bold uppercase px-0.5 bg-yellow-400 text-black leading-none rounded-br z-10">
+                                <span className="absolute left-0 top-0 lg:left-0 lg:top-0 text-[8px] font-bold uppercase px-0.5 bg-yellow-400 text-black leading-none rounded-br z-10">
                                     Unsaved
                                 </span>
                             )}
+                            <div className="lg:hidden text-left flex-1 font-medium text-gray-700 text-sm">
+                                {assessment.name} <span className="font-normal text-xs text-gray-400 block">({assessment.name.toLowerCase().includes('exam') ? 100 : assessment.weight}%)</span>
+                            </div>
+                            <div className="flex flex-col items-end lg:items-center">
                             {MULTI_SCORE_ENTRY_ENABLED ? (
                                 <button
                                     onClick={() => onOpenModal(student, assessment)}
-                                    className={`w-full text-center px-2 py-1 rounded-md hover:bg-black/10 focus:outline-none focus:ring-2 focus:ring-blue-400 ${isDirty ? `ring-1 ${DIRTY_INDICATOR_BORDER}` : ''}`}
+                                    className={`w-full lg:w-auto text-center px-3 py-1.5 lg:px-2 lg:py-1 rounded-md hover:bg-black/10 focus:outline-none focus:ring-2 focus:ring-blue-400 ${isDirty ? `ring-1 ${DIRTY_INDICATOR_BORDER}` : 'border border-gray-200 lg:border-none'}`}
                                 >
                                     <span className={`font-mono ${isDirty ? 'font-bold' : 'text-blue-700'}`}>{formatScore(displayScore)}</span>
                                     <div className={`text-xs ${isDirty ? DIRTY_INDICATOR_SECONDARY_TEXT : 'text-gray-500'}`}>{scores.length} score(s)</div>
@@ -295,18 +304,22 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
                                     <div className={`text-xs ${isDirty ? DIRTY_INDICATOR_SECONDARY_TEXT : 'text-gray-500'}`}>{scores.length} score(s)</div>
                                 </div>
                             )}
+                            </div>
                         </td>
                     );
                 }
 
                 return (
-                    <td key={assessment.id} className={`p-2 text-center align-top transition-colors relative ${isDirty ? `${DIRTY_INDICATOR_BG} ${DIRTY_INDICATOR_TEXT}` : ''}`}>
+                    <td key={assessment.id} className={`block lg:table-cell flex lg:table-cell justify-between items-center p-3 lg:p-2 align-top lg:align-middle transition-colors relative border-b lg:border-none border-gray-100 ${isDirty ? `${DIRTY_INDICATOR_BG} ${DIRTY_INDICATOR_TEXT}` : ''}`}>
                         {isDirty && (
-                            <span className="absolute left-0 top-0 text-[8px] font-bold uppercase px-0.5 bg-yellow-400 text-black leading-none rounded-br z-10">
+                            <span className="absolute left-0 top-0 lg:left-0 lg:top-0 text-[8px] font-bold uppercase px-0.5 bg-yellow-400 text-black leading-none rounded-br z-10">
                                 Unsaved
                             </span>
                         )}
-                        <div className="flex flex-col items-center">
+                        <div className="lg:hidden text-left flex-1 font-medium text-gray-700 text-sm pr-2">
+                            {assessment.name} <span className="font-normal text-xs text-gray-400 block">({assessment.name.toLowerCase().includes('exam') ? 100 : assessment.weight}%)</span>
+                        </div>
+                        <div className="flex flex-col items-end lg:items-center shrink-0">
                             <div className="flex items-center space-x-1">
                                 <input
                                     type="text"
@@ -339,8 +352,9 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
                     </td>
                 );
             })}
-            <td className="p-4 text-center font-bold text-gray-800">
-                {formatScore(totalWeightedScoreForDisplay)}
+            <td className="block lg:table-cell flex justify-between items-center p-4 text-right lg:text-center font-bold text-gray-800 bg-gray-50 lg:bg-transparent mt-1 lg:mt-0">
+                <span className="lg:hidden text-sm text-gray-500 uppercase font-bold tracking-wider">Total (100%)</span>
+                <span className="text-xl lg:text-base text-blue-700 lg:text-gray-800">{formatScore(totalWeightedScoreForDisplay)}{!totalWeightedScoreForDisplay && totalWeightedScoreForDisplay !== 0 ? '' : '%'}</span>
             </td>
         </tr>
     );
