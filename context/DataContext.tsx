@@ -138,6 +138,7 @@ export interface DataContextType {
     unreadNotificationCount: number;
     markNotificationAsRead: (id: number) => void;
     markAllNotificationsAsRead: () => void;
+    restoreItem: (field: keyof AppDataType, id: number) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -260,7 +261,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Force hard reload on version mismatch to clear ghost listeners after update
     useEffect(() => {
-        const LATEST_VERSION = "1.0.120";
+        const LATEST_VERSION = "1.0.121";
         const currentVersion = localStorage.getItem("app_version");
 
         if (currentVersion !== LATEST_VERSION) {
@@ -1528,7 +1529,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         delete: (id: number) => {
             markDirty(fieldKey, true);
             markItemDirty(fieldKey as string, id);
-            setItems(prev => prev.filter(item => item.id !== id));
+            // SOFT DELETE: Mark as deleted instead of filtering
+            setItems(prev => prev.map(item => item.id === id ? { 
+                ...item, 
+                deleted: true, 
+                deletedAt: new Date().toISOString(),
+                deletedBy: Number(localStorage.getItem('sba_user_id') || localStorage.getItem('emulator-sba_user_id'))
+            } as unknown as T : item));
         },
     });
 
@@ -1565,8 +1572,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         markDirty('students', true);
         markItemDirty('students', id);
         setStudents(prev => {
-            const next = prev.filter(item => item.id !== id);
-            console.log(`[DELETE DEBUG] students array length changed from ${prev.length} to ${next.length}`);
+            // SOFT DELETE: Mark as deleted instead of filtering
+            const next = prev.map(item => item.id === id ? { 
+                ...item, 
+                deleted: true, 
+                deletedAt: new Date().toISOString(),
+                deletedBy: Number(localStorage.getItem('sba_user_id') || localStorage.getItem('emulator-sba_user_id'))
+            } : item);
+            console.log(`[DELETE DEBUG] student ${id} marked as deleted. Total count (including deleted): ${next.length}`);
             return next;
         });
     };
@@ -1595,7 +1608,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const deleteAssessment = (id: number) => {
         markDirty('assessments', true);
         markItemDirty('assessments', id);
-        setAssessments(prev => prev.filter(item => item.id !== id));
+        setAssessments(prev => prev.map(item => item.id === id ? { 
+            ...item, 
+            deleted: true, 
+            deletedAt: new Date().toISOString(),
+            deletedBy: Number(localStorage.getItem('sba_user_id') || localStorage.getItem('emulator-sba_user_id'))
+        } : item));
     };
 
     // Wrapped subject CRUD that also updates the metadata bundle on changes
@@ -1624,10 +1642,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const deleteSubject = (id: number) => {
         markDirty('subjects', true);
         markItemDirty('subjects', id);
-        setSubjects(prev => {
-            const next = prev.filter(item => item.id !== id);
-            return next;
-        });
+        setSubjects(prev => prev.map(item => item.id === id ? { 
+            ...item, 
+            deleted: true, 
+            deletedAt: new Date().toISOString(),
+            deletedBy: Number(localStorage.getItem('sba_user_id') || localStorage.getItem('emulator-sba_user_id'))
+        } : item));
     };
 
     // Wrapped class CRUD that also updates the metadata bundle on changes
@@ -1656,10 +1676,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const deleteClass = (id: number) => {
         markDirty('classes', true);
         markItemDirty('classes', id);
-        setClasses(prev => {
-            const next = prev.filter(item => item.id !== id);
-            return next;
-        });
+        setClasses(prev => prev.map(item => item.id === id ? { 
+            ...item, 
+            deleted: true, 
+            deletedAt: new Date().toISOString(),
+            deletedBy: Number(localStorage.getItem('sba_user_id') || localStorage.getItem('emulator-sba_user_id'))
+        } : item));
     };
 
     const restoreDefaultGrades = () => {
@@ -1869,7 +1891,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             });
 
             // Use transaction for all saves to ensure consistency
-            await saveDataTransaction(schoolId, updates, _deletions, stateRef.current.students);
+            const storedUserId = Number(localStorage.getItem('sba_user_id') || localStorage.getItem('emulator-sba_user_id'));
+            const user = users?.find(u => u.id === storedUserId);
+            const userRole = user?.role || 'Guest';
+
+            await saveDataTransaction(schoolId, updates, _deletions, stateRef.current.students, storedUserId, userRole);
 
             // COMPOSITE STORAGE: If we just saved metadata, trigger a bundle rebuild
             // This ensures the optimized 'fetchMetadataBundle' has the latest data.
@@ -3107,11 +3133,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         settings, setSettings, updateSettings,
         revertPendingChanges,
         revertAllPendingChanges,
-        students,
-        subjects,
-        classes,
-        grades,
-        assessments,
+        students: useMemo(() => students.filter(s => !s.deleted), [students]),
+        subjects: useMemo(() => subjects.filter(s => !s.deleted), [subjects]),
+        classes: useMemo(() => classes.filter(c => !c.deleted), [classes]),
+        grades: useMemo(() => grades.filter(g => !g.deleted), [grades]),
+        assessments: useMemo(() => assessments.filter(a => !a.deleted), [assessments]),
         scores,
         reportData,
         classData,
@@ -3207,6 +3233,34 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         markAllNotificationsAsRead: () => {
             setUserLogs(prev => prev.map(log => ({ ...log, isRead: true })));
             setHasLocalChanges(true);
+        },
+        restoreItem: (field: keyof AppDataType, id: number) => {
+            const userId = Number(localStorage.getItem('sba_user_id') || localStorage.getItem('emulator-sba_user_id'));
+            const user = users?.find(u => u.id === userId);
+            const isAdmin = user?.role === 'Admin';
+
+            // Generic restoration logic
+            const restore = (prev: any[]) => prev.map(item => {
+                if (item.id === id) {
+                    // Permission check
+                    if (!isAdmin && item.deletedBy !== userId) {
+                        console.error(`[DataContext] 🚫 Restoration blocked: User ${userId} is not an admin nor the original deleter of item ${id}`);
+                        return item;
+                    }
+                    return { ...item, deleted: false, deletedAt: null, deletedBy: null };
+                }
+                return item;
+            });
+
+            if (field === 'students') setStudents(restore);
+            else if (field === 'subjects') setSubjects(restore);
+            else if (field === 'classes') setClasses(restore);
+            else if (field === 'grades') setGrades(restore);
+            else if (field === 'assessments') setAssessments(restore);
+            else return;
+
+            markDirty(field, true);
+            markItemDirty(field as string, id);
         }
     };
 

@@ -1654,7 +1654,9 @@ export const saveDataTransaction = async (
     docId: string,
     updates: Partial<AppDataType>,
     deletions?: Record<string, string[]>,
-    fullStudentsArray?: any[]
+    fullStudentsArray?: any[],
+    requesterId?: number,
+    requesterRole?: string
 ) => {
     // -------------------------------------------------------------------------
     // AUTO-UPLOAD INTERCEPTOR (ImgBB)
@@ -1759,7 +1761,13 @@ export const saveDataTransaction = async (
                     items.forEach(item => {
                         if (item.id) {
                             const ref = doc(db, "schools", docId, key, String(item.id));
-                            operations.push((batch) => batch.set(ref, sanitizeForFirestore(item), { merge: true }));
+                            const sanitizedItem = sanitizeForFirestore(item);
+                            
+                            // Inject requester info for security rules to see
+                            if (requesterId !== undefined) (sanitizedItem as any).requesterId = requesterId;
+                            if (requesterRole !== undefined) (sanitizedItem as any).requesterRole = requesterRole;
+                            
+                            operations.push((batch) => batch.set(ref, sanitizedItem, { merge: true }));
                         }
                     });
                 }

@@ -40,6 +40,9 @@ export interface Subject {
   type: 'Core' | 'Elective';
   signature?: string;
   _isLocallyCreated?: boolean;
+  deleted?: boolean;
+  deletedAt?: string;
+  deletedBy?: number;
 }
 
 export interface Class {
@@ -47,6 +50,9 @@ export interface Class {
   name: string;
   teacherSignature?: string;
   _isLocallyCreated?: boolean;
+  deleted?: boolean;
+  deletedAt?: string;
+  deletedBy?: number;
 }
 
 export interface Teacher {
@@ -64,6 +70,9 @@ export interface Grade {
   maxScore: number;
   remark: string;
   _isLocallyCreated?: boolean;
+  deleted?: boolean;
+  deletedAt?: string;
+  deletedBy?: number;
 }
 
 export interface Student {
@@ -78,6 +87,9 @@ export interface Student {
   guardianName?: string;
   guardianPhone?: string;
   _isLocallyCreated?: boolean;
+  deleted?: boolean;
+  deletedAt?: string;
+  deletedBy?: number;
 }
 
 export interface Score {
@@ -94,6 +106,9 @@ export interface Assessment {
   weight: number;
   type: 'Class' | 'Exam';
   _isLocallyCreated?: boolean;
+  deleted?: boolean;
+  deletedAt?: string;
+  deletedBy?: number;
 }
 
 export type UserRole = 'Admin' | 'Teacher' | 'Guest';
