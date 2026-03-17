@@ -5,6 +5,7 @@ import SaveButton from '../SaveButton';
 import type { Class } from '../../types';
 import ConfirmationModal from '../ConfirmationModal';
 import { enhanceImage } from '../../services/geminiService';
+import RestoreModal from '../modals/RestoreModal';
 import { AI_FEATURES_ENABLED, AUTO_SANITIZE_TEACHERS, DIRTY_INDICATOR_BG, DIRTY_INDICATOR_TEXT, DIRTY_INDICATOR_SECONDARY_TEXT, DIRTY_INDICATOR_HOVER_BG, DIRTY_INDICATOR_BORDER } from '../../constants';
 import ReadOnlyWrapper from '../ReadOnlyWrapper';
 import { useUser } from '../../context/UserContext';
@@ -25,10 +26,11 @@ const EMPTY_TEACHER_FORM: Omit<Class, 'id'> = {
 const SIGNATURE_PLACEHOLDER = 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTUwIDUwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0yIDI1LjVDMiAyNS41IDE1LjUgMTUuNSAyOS41IDI4QzQzLjUgNDAuNSA1MyAyNS41IDY2LjUgMjAuNUM4MCAxNS41IDg4LjUgMjkgMTAwIDI5QzExMS41IDI5IDEyMyAxNS41IDEzNyAyOS41IiBzdHJva2U9IiM5Y2EzYWYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+';
 
 const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
-    const { classes, addClass, updateClass, deleteClass, saveClasses, isDirty, isItemDirty, isSyncing, isOnline, subscription, loadMetadata } = useData();
+    const { classes, deletedClasses, restoreItem, addClass, updateClass, deleteClass, saveClasses, isDirty, isItemDirty, isSyncing, isOnline, subscription, loadMetadata } = useData();
     const { currentUser } = useUser();
     const isAdmin = currentUser?.role === 'Admin';
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
     const [currentClassData, setCurrentClassData] = useState<Class | Omit<Class, 'id'> | null>(null);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [itemIdToDelete, setItemIdToDelete] = useState<number | null>(null);
@@ -62,6 +64,12 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
 
         return result;
     }, [classes, searchQuery]);
+
+    const visibleDeletedClasses = useMemo(() => {
+        if (!currentUser) return [];
+        if (currentUser.role === 'Admin') return deletedClasses;
+        return deletedClasses.filter(c => c.deletedBy === currentUser.id);
+    }, [deletedClasses, currentUser]);
 
     // AUTO-SANITIZATION: Remove duplicate Class+Teacher entries
     React.useEffect(() => {
@@ -280,6 +288,18 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
                                     </svg>
                                     <span>Add New Teacher/Class</span>
                                 </button>
+                                {visibleDeletedClasses.length > 0 && (
+                                    <button
+                                        onClick={() => setIsRestoreModalOpen(true)}
+                                        className="flex items-center space-x-2 px-3 py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition shadow-sm font-semibold border border-red-200"
+                                        title="Restore Deleted Classes"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                                        </svg>
+                                        <span className="hidden sm:inline">Restore</span>
+                                    </button>
+                                )}
                                 <button
                                     onClick={handleExportExcel}
                                     className="p-2 hover:bg-gray-100 rounded-full transition-colors group"
@@ -491,10 +511,22 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
             )}
             <ConfirmationModal
                 isOpen={isConfirmOpen}
-                onClose={() => setIsConfirmOpen(false)}
+                message="Are you sure you want to delete this entry? Its records will be hidden."
                 onConfirm={handleConfirmDelete}
+                onClose={() => {
+                    setIsConfirmOpen(false);
+                    setItemIdToDelete(null);
+                }}
                 title="Delete Teacher/Class"
-                message="Are you sure you want to delete this entry? This action cannot be undone."
+            />
+
+            <RestoreModal
+                isOpen={isRestoreModalOpen}
+                onClose={() => setIsRestoreModalOpen(false)}
+                title="Restore Deleted Classes"
+                items={deletedClasses}
+                onRestore={(id) => restoreItem('classes', id)}
+                itemNameKey="name"
             />
         </div>
     );

@@ -4,6 +4,7 @@ import type { Grade } from '../../types';
 import ReadOnlyWrapper from '../ReadOnlyWrapper';
 import ConfirmationModal from '../ConfirmationModal';
 import { useUser } from '../../context/UserContext';
+import RestoreModal from '../modals/RestoreModal';
 import { DIRTY_INDICATOR_BG, DIRTY_INDICATOR_TEXT, DIRTY_INDICATOR_SECONDARY_TEXT, DIRTY_INDICATOR_HOVER_BG, DIRTY_INDICATOR_BORDER } from '../../constants';
 import { INITIAL_GRADES } from '../../constants';
 import MessageBox from '../MessageBox';
@@ -16,7 +17,7 @@ const EMPTY_GRADE_FORM: Omit<Grade, 'id'> = {
 };
 
 const GradingSystem: React.FC = () => {
-    const { grades, addGrade, updateGrade, deleteGrade, blockRemoteUpdates, allowRemoteUpdates, saveGrades, isDirty, isItemDirty, isSyncing, isOnline, restoreDefaultGrades, loadMetadata } = useData();
+    const { grades, deletedGrades, restoreItem, addGrade, updateGrade, deleteGrade, blockRemoteUpdates, allowRemoteUpdates, saveGrades, isDirty, isItemDirty, isSyncing, isOnline, restoreDefaultGrades, loadMetadata } = useData();
     const { currentUser } = useUser();
 
     // TRIGGER RECONCILIATION: Identify unsaved local items on mount
@@ -25,6 +26,7 @@ const GradingSystem: React.FC = () => {
     }, [loadMetadata]);
     const isAdmin = currentUser?.role === 'Admin';
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
     const [currentGrade, setCurrentGrade] = useState<Grade | Omit<Grade, 'id'> | null>(null);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [isRestoreConfirmOpen, setIsRestoreConfirmOpen] = useState(false);
@@ -74,6 +76,12 @@ const GradingSystem: React.FC = () => {
             message: 'The grading scale is complete and covers 0% to 100% without gaps.',
         };
     }, [grades]);
+
+    const visibleDeletedGrades = useMemo(() => {
+        if (!currentUser) return [];
+        if (currentUser.role === 'Admin') return deletedGrades;
+        return deletedGrades.filter(g => g.deletedBy === currentUser.id);
+    }, [deletedGrades, currentUser]);
 
     const handleAddNew = () => {
         blockRemoteUpdates();
@@ -174,6 +182,18 @@ const GradingSystem: React.FC = () => {
                                     </svg>
                                     System Default
                                 </button>
+                                {visibleDeletedGrades.length > 0 && (
+                                    <button
+                                        onClick={() => setIsRestoreModalOpen(true)}
+                                        className="flex items-center space-x-2 px-3 py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition shadow-sm font-semibold border border-red-200 ml-auto"
+                                        title="Restore Deleted Grades"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                                        </svg>
+                                        <span className="hidden sm:inline">Restore</span>
+                                    </button>
+                                )}
                             </>
                         )}
                     </div>
@@ -310,7 +330,7 @@ const GradingSystem: React.FC = () => {
                     onClose={() => setIsConfirmOpen(false)}
                     onConfirm={handleConfirmDelete}
                     title="Delete Grade"
-                    message="Are you sure you want to delete this grade? This will affect report card generation."
+                    message="Are you sure you want to delete this grade? Its records will be hidden."
                 />
 
                 <MessageBox
@@ -321,6 +341,15 @@ const GradingSystem: React.FC = () => {
                     message={`Are you sure you want to restore the system default grading scale? \n\nThis will replace all your current grades with the standard scale (9 grades). All current grades will be deleted. You will need to save changes to persist this.`}
                     variant="warning"
                     confirmText="Restore Defaults"
+                />
+
+                <RestoreModal
+                    isOpen={isRestoreModalOpen}
+                    onClose={() => setIsRestoreModalOpen(false)}
+                    title="Restore Deleted Grades"
+                    items={deletedGrades}
+                    onRestore={(id) => restoreItem('grades', id)}
+                    itemNameKey="name"
                 />
             </div>
         </ReadOnlyWrapper>

@@ -4,6 +4,7 @@ import type { Assessment } from '../../types';
 import ReadOnlyWrapper from '../ReadOnlyWrapper';
 import ConfirmationModal from '../ConfirmationModal';
 import { useUser } from '../../context/UserContext';
+import RestoreModal from '../modals/RestoreModal';
 import { DIRTY_INDICATOR_BG, DIRTY_INDICATOR_TEXT, DIRTY_INDICATOR_SECONDARY_TEXT, DIRTY_INDICATOR_HOVER_BG, DIRTY_INDICATOR_BORDER } from '../../constants';
 
 const EMPTY_ASSESSMENT_FORM: Omit<Assessment, 'id'> = {
@@ -20,7 +21,7 @@ const DragHandleIcon: React.FC = () => (
 
 
 const AssessmentTypes: React.FC = () => {
-    const { assessments, setAssessments, addAssessment, updateAssessment, deleteAssessment, saveAssessments, isDirty, isItemDirty, isSyncing, isOnline, loadMetadata } = useData();
+    const { assessments, deletedAssessments, restoreItem, setAssessments, addAssessment, updateAssessment, deleteAssessment, saveAssessments, isDirty, isItemDirty, isSyncing, isOnline, loadMetadata } = useData();
     const { currentUser } = useUser();
 
     // TRIGGER RECONCILIATION: Identify unsaved local items on mount
@@ -29,6 +30,7 @@ const AssessmentTypes: React.FC = () => {
     }, [loadMetadata]);
     const isAdmin = currentUser?.role === 'Admin';
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
     const [currentAssessment, setCurrentAssessment] = useState<Assessment | Omit<Assessment, 'id'> | null>(null);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [itemIdToDelete, setItemIdToDelete] = useState<number | null>(null);
@@ -66,6 +68,12 @@ const AssessmentTypes: React.FC = () => {
     const totalWeight = useMemo(() => {
         return assessments.reduce((acc, curr) => acc + curr.weight, 0);
     }, [assessments]);
+
+    const visibleDeletedAssessments = useMemo(() => {
+        if (!currentUser) return [];
+        if (currentUser.role === 'Admin') return deletedAssessments;
+        return deletedAssessments.filter(a => a.deletedBy === currentUser.id);
+    }, [deletedAssessments, currentUser]);
 
     const handleDragStart = (item: Assessment) => {
         setDraggedItem(item);
@@ -182,14 +190,28 @@ const AssessmentTypes: React.FC = () => {
                 </div>
 
                 <div className="bg-gray-100 py-4">
-                    <div className="flex justify-start">
+                    <div className="flex justify-start gap-3">
                         {isAdmin && (
-                            <button onClick={handleAddNew} className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                                </svg>
-                                Add New Assessment
-                            </button>
+                            <>
+                                <button onClick={handleAddNew} className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                    </svg>
+                                    Add New Assessment
+                                </button>
+                                {visibleDeletedAssessments.length > 0 && (
+                                    <button
+                                        onClick={() => setIsRestoreModalOpen(true)}
+                                        className="flex items-center space-x-2 px-3 py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition shadow-sm font-semibold border border-red-200"
+                                        title="Restore Deleted Assessments"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                                        </svg>
+                                        <span className="hidden sm:inline">Restore</span>
+                                    </button>
+                                )}
+                            </>
                         )}
                     </div>
                 </div>
@@ -366,13 +388,22 @@ const AssessmentTypes: React.FC = () => {
                     </div>
                 )}
                 <ConfirmationModal
-                    isOpen={isConfirmOpen}
-                    onClose={() => setIsConfirmOpen(false)}
-                    onConfirm={handleConfirmDelete}
-                    title="Delete Assessment"
-                    message="Are you sure you want to delete this assessment? All related scores will also be removed."
-                />
-            </div>
+                isOpen={isConfirmOpen}
+                onClose={() => setIsConfirmOpen(false)}
+                onConfirm={handleConfirmDelete}
+                title="Delete Assessment Type"
+                message="Are you sure you want to delete this assessment type? Its records will be hidden."
+            />
+
+            <RestoreModal
+                isOpen={isRestoreModalOpen}
+                onClose={() => setIsRestoreModalOpen(false)}
+                title="Restore Deleted Assessments"
+                items={deletedAssessments}
+                onRestore={(id) => restoreItem('assessments', id)}
+                itemNameKey="name"
+            />
+        </div>
         </ReadOnlyWrapper>
     );
 };

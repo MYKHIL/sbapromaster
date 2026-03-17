@@ -4,6 +4,7 @@ import type { Subject } from '../../types';
 import ConfirmationModal from '../ConfirmationModal';
 import ReadOnlyWrapper from '../ReadOnlyWrapper';
 import { useUser } from '../../context/UserContext';
+import RestoreModal from '../modals/RestoreModal';
 import { DIRTY_INDICATOR_BG, DIRTY_INDICATOR_TEXT, DIRTY_INDICATOR_SECONDARY_TEXT, DIRTY_INDICATOR_HOVER_BG, DIRTY_INDICATOR_BORDER } from '../../constants';
 
 const EMPTY_SUBJECT_FORM: Omit<Subject, 'id'> = {
@@ -14,7 +15,7 @@ const EMPTY_SUBJECT_FORM: Omit<Subject, 'id'> = {
 };
 
 const Subjects: React.FC = () => {
-    const { subjects, addSubject, updateSubject, deleteSubject, saveSubjects, isDirty, isItemDirty, isSyncing, isOnline, loadMetadata } = useData();
+    const { subjects, deletedSubjects, restoreItem, addSubject, updateSubject, deleteSubject, saveSubjects, isDirty, isItemDirty, isSyncing, isOnline, loadMetadata } = useData();
     const { currentUser } = useUser();
 
     // TRIGGER RECONCILIATION: Identify unsaved local items on mount
@@ -23,6 +24,7 @@ const Subjects: React.FC = () => {
     }, [loadMetadata]);
     const isAdmin = currentUser?.role === 'Admin';
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
     const [currentSubject, setCurrentSubject] = useState<Subject | Omit<Subject, 'id'> | null>(null);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [itemIdToDelete, setItemIdToDelete] = useState<number | null>(null);
@@ -39,6 +41,12 @@ const Subjects: React.FC = () => {
             subject.type.toLowerCase().includes(query)
         );
     }, [subjects, searchQuery]);
+
+    const visibleDeletedSubjects = useMemo(() => {
+        if (!currentUser) return [];
+        if (currentUser.role === 'Admin') return deletedSubjects;
+        return deletedSubjects.filter(s => s.deletedBy === currentUser.id);
+    }, [deletedSubjects, currentUser]);
 
     const handleAddNew = () => {
         setCurrentSubject(EMPTY_SUBJECT_FORM);
@@ -109,12 +117,26 @@ const Subjects: React.FC = () => {
 
                     <ReadOnlyWrapper allowedRoles={['Admin']}>
                         {isAdmin && (
-                            <button onClick={handleAddNew} className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors w-full md:w-auto justify-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                                </svg>
-                                Add New Subject
-                            </button>
+                            <div className="flex items-center gap-3">
+                                <button onClick={handleAddNew} className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors w-full md:w-auto justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                    </svg>
+                                    Add New Subject
+                                </button>
+                                {visibleDeletedSubjects.length > 0 && (
+                                    <button
+                                        onClick={() => setIsRestoreModalOpen(true)}
+                                        className="flex items-center space-x-2 px-3 py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition shadow-sm font-semibold border border-red-200"
+                                        title="Restore Deleted Subjects"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                                        </svg>
+                                        <span className="hidden sm:inline">Restore</span>
+                                    </button>
+                                )}
+                            </div>
                         )}
                     </ReadOnlyWrapper>
                 </div>
@@ -258,10 +280,22 @@ const Subjects: React.FC = () => {
             )}
             <ConfirmationModal
                 isOpen={isConfirmOpen}
-                onClose={() => setIsConfirmOpen(false)}
+                message="Are you sure you want to delete this subject? Its records will be hidden."
                 onConfirm={handleConfirmDelete}
+                onClose={() => {
+                    setIsConfirmOpen(false);
+                    setItemIdToDelete(null);
+                }}
                 title="Delete Subject"
-                message="Are you sure you want to delete this subject? This action cannot be undone."
+            />
+
+            <RestoreModal
+                isOpen={isRestoreModalOpen}
+                onClose={() => setIsRestoreModalOpen(false)}
+                title="Restore Deleted Subjects"
+                items={deletedSubjects}
+                onRestore={(id) => restoreItem('subjects', id)}
+                itemNameKey="subject"
             />
         </div>
     );

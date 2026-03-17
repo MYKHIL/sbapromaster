@@ -1,4 +1,4 @@
-export type Page =
+﻿export type Page =
   | 'Dashboard'
   | 'Students'
   | 'Subjects'
@@ -32,12 +32,6 @@ export interface SchoolSettings {
   allowStudentProgressView?: boolean;
   isPromotionTerm?: boolean;
   allowPersistence?: boolean;
-  isDataEntryLocked?: boolean;
-  indexNumberGlobalPrefix?: string;
-  indexNumberGlobalSuffix?: string;
-  indexNumberPerClass?: boolean;
-  indexNumberGlobalCounter?: number;
-  indexNumberCounterDigits?: number;
 }
 
 export interface Subject {
@@ -45,7 +39,6 @@ export interface Subject {
   subject: string;
   type: 'Core' | 'Elective';
   signature?: string;
-  facilitator?: string;
   _isLocallyCreated?: boolean;
   deleted?: boolean;
   deletedAt?: string;
@@ -55,11 +48,7 @@ export interface Subject {
 export interface Class {
   id: number;
   name: string;
-  teacherName?: string;
   teacherSignature?: string;
-  indexNumberPrefix?: string;
-  indexNumberSuffix?: string;
-  indexNumberCounter?: number;
   _isLocallyCreated?: boolean;
   deleted?: boolean;
   deletedAt?: string;
@@ -183,7 +172,6 @@ export interface ClassSpecificData {
 export interface DeviceCredential {
   schoolId: string;
   userId: number;
-  deviceId?: string;
   lastLogin: string;
 }
 

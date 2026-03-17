@@ -3,6 +3,8 @@ import CameraCapture from '../CameraCapture';
 import { useData } from '../../context/DataContext';
 import type { Student } from '../../types';
 import ConfirmationModal from '../ConfirmationModal';
+import { useFirebaseAnalytics } from '../../context/FirebaseAnalyticsContext';
+import RestoreModal from '../modals/RestoreModal';
 import { enhanceImage } from '../../services/geminiService';
 import { AI_FEATURES_ENABLED, DIRTY_INDICATOR_BG, DIRTY_INDICATOR_TEXT, DIRTY_INDICATOR_SECONDARY_TEXT, DIRTY_INDICATOR_HOVER_BG, DIRTY_INDICATOR_BORDER } from '../../constants';
 import { useUser } from '../../context/UserContext';
@@ -47,9 +49,10 @@ const calculateAge = (dobString: string): string => {
 
 
 const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
-    const { students, classes, addStudent, updateStudent, deleteStudent, saveStudents, isDirty, isItemDirty, isSyncing, isOnline, settings, updateSettings, loadStudents, subscription } = useData();
+    const { students, deletedStudents, restoreItem, classes, addStudent, updateStudent, deleteStudent, saveStudents, isDirty, isItemDirty, isSyncing, isOnline, settings, updateSettings, loadStudents, subscription } = useData();
     const { currentUser, isAuthenticated } = useUser();
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
     const [currentStudent, setCurrentStudent] = useState<Student | Omit<Student, 'id'> | null>(null);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [itemIdToDelete, setItemIdToDelete] = useState<number | null>(null);
@@ -123,6 +126,12 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
     }, [accessibleStudents, selectedClass, searchQuery]);
 
 
+
+    const visibleDeletedStudents = useMemo(() => {
+        if (!currentUser) return [];
+        if (currentUser.role === 'Admin') return deletedStudents;
+        return deletedStudents.filter(s => s.deletedBy === currentUser.id);
+    }, [deletedStudents, currentUser]);
 
     const handleExportExcel = () => {
         const headers = ['Name', 'Index Number', 'Gender', 'Class', 'Date of Birth', 'Age'];
@@ -417,6 +426,18 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
                                         <path d="M20 2H8c-1.1 0-2 .9-2 2v12H4v5c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5v1.5H19v2h-1.5V7h2V8.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z" />
                                     </svg>
                                 </button>
+                                {visibleDeletedStudents.length > 0 && (
+                                    <button
+                                        onClick={() => setIsRestoreModalOpen(true)}
+                                        className="flex items-center space-x-2 px-3 py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition shadow-sm font-semibold ml-2 border border-red-200"
+                                        title="Restore Deleted Students"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                                        </svg>
+                                        <span className="hidden sm:inline">Restore</span>
+                                    </button>
+                                )}
                             </div>
                         )}
                     </ReadOnlyWrapper>
@@ -663,10 +684,22 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
 
             <ConfirmationModal
                 isOpen={isConfirmOpen}
-                onClose={() => setIsConfirmOpen(false)}
+                message="Are you sure you want to delete this student? Its records will be hidden."
                 onConfirm={handleConfirmDelete}
+                onClose={() => {
+                    setIsConfirmOpen(false);
+                    setItemIdToDelete(null);
+                }}
                 title="Delete Student"
-                message="Are you sure you want to delete this student? This action cannot be undone."
+            />
+
+            <RestoreModal
+                isOpen={isRestoreModalOpen}
+                onClose={() => setIsRestoreModalOpen(false)}
+                title="Restore Deleted Students"
+                items={deletedStudents}
+                onRestore={(id) => restoreItem('students', id)}
+                itemNameKey="name"
             />
         </div>
     );

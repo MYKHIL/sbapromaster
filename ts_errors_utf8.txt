@@ -1,0 +1,94 @@
+﻿components/IndexNumberConfig.tsx(337,69): error TS2339: Property 'indexNumberPrefix' does not exist on type 'Class'.
+components/IndexNumberConfig.tsx(338,132): error TS2339: Property 'indexNumberSuffix' does not exist on type 'Class'.
+components/IndexNumberConfig.tsx(349,69): error TS2339: Property 'indexNumberSuffix' does not exist on type 'Class'.
+components/IndexNumberConfig.tsx(350,116): error TS2339: Property 'indexNumberPrefix' does not exist on type 'Class'.
+components/pages/Subjects.tsx(13,5): error TS2353: Object literal may only specify known properties, and 'facilitator' does not exist in type 'Omit<Subject, "id">'.
+components/pages/Teachers.tsx(22,5): error TS2353: Object literal may only specify known properties, and 'teacherName' does not exist in type 'Omit<Class, "id">'.
+constants.backup.ts(105,3): error TS2353: Object literal may only specify known properties, and 'isDataEntryLocked' does not exist in type 'SchoolSettings'.
+constants.backup.ts(118,55): error TS2353: Object literal may only specify known properties, and 'facilitator' does not exist in type 'Subject'.
+constants.backup.ts(119,46): error TS2353: Object literal may only specify known properties, and 'facilitator' does not exist in type 'Subject'.
+constants.backup.ts(120,50): error TS2353: Object literal may only specify known properties, and 'facilitator' does not exist in type 'Subject'.
+constants.backup.ts(121,53): error TS2353: Object literal may only specify known properties, and 'facilitator' does not exist in type 'Subject'.
+constants.backup.ts(122,52): error TS2353: Object literal may only specify known properties, and 'facilitator' does not exist in type 'Subject'.
+constants.backup.ts(123,60): error TS2353: Object literal may only specify known properties, and 'facilitator' does not exist in type 'Subject'.
+constants.backup.ts(124,65): error TS2353: Object literal may only specify known properties, and 'facilitator' does not exist in type 'Subject'.
+constants.backup.ts(125,70): error TS2353: Object literal may only specify known properties, and 'facilitator' does not exist in type 'Subject'.
+constants.backup.ts(126,60): error TS2353: Object literal may only specify known properties, and 'facilitator' does not exist in type 'Subject'.
+constants.backup.ts(127,57): error TS2353: Object literal may only specify known properties, and 'facilitator' does not exist in type 'Subject'.
+constants.backup.ts(128,48): error TS2353: Object literal may only specify known properties, and 'facilitator' does not exist in type 'Subject'.
+constants.backup.ts(129,48): error TS2353: Object literal may only specify known properties, and 'facilitator' does not exist in type 'Subject'.
+constants.backup.ts(130,59): error TS2353: Object literal may only specify known properties, and 'facilitator' does not exist in type 'Subject'.
+constants.backup.ts(148,3): error TS2741: Property 'type' is missing in type '{ id: number; name: string; weight: number; }' but required in type 'Assessment'.
+constants.backup.ts(149,3): error TS2741: Property 'type' is missing in type '{ id: number; name: string; weight: number; }' but required in type 'Assessment'.
+constants.backup.ts(150,3): error TS2741: Property 'type' is missing in type '{ id: number; name: string; weight: number; }' but required in type 'Assessment'.
+constants.backup.ts(151,3): error TS2741: Property 'type' is missing in type '{ id: number; name: string; weight: number; }' but required in type 'Assessment'.
+constants.backup.ts(152,3): error TS2741: Property 'type' is missing in type '{ id: number; name: string; weight: number; }' but required in type 'Assessment'.
+constants.ts(104,3): error TS2353: Object literal may only specify known properties, and 'isDataEntryLocked' does not exist in type 'SchoolSettings'.
+constants.ts(118,55): error TS2353: Object literal may only specify known properties, and 'facilitator' does not exist in type 'Subject'.
+constants.ts(119,46): error TS2353: Object literal may only specify known properties, and 'facilitator' does not exist in type 'Subject'.
+constants.ts(120,50): error TS2353: Object literal may only specify known properties, and 'facilitator' does not exist in type 'Subject'.
+constants.ts(121,53): error TS2353: Object literal may only specify known properties, and 'facilitator' does not exist in type 'Subject'.
+constants.ts(122,52): error TS2353: Object literal may only specify known properties, and 'facilitator' does not exist in type 'Subject'.
+constants.ts(123,60): error TS2353: Object literal may only specify known properties, and 'facilitator' does not exist in type 'Subject'.
+constants.ts(124,65): error TS2353: Object literal may only specify known properties, and 'facilitator' does not exist in type 'Subject'.
+constants.ts(125,70): error TS2353: Object literal may only specify known properties, and 'facilitator' does not exist in type 'Subject'.
+constants.ts(126,60): error TS2353: Object literal may only specify known properties, and 'facilitator' does not exist in type 'Subject'.
+constants.ts(127,57): error TS2353: Object literal may only specify known properties, and 'facilitator' does not exist in type 'Subject'.
+constants.ts(128,48): error TS2353: Object literal may only specify known properties, and 'facilitator' does not exist in type 'Subject'.
+constants.ts(129,48): error TS2353: Object literal may only specify known properties, and 'facilitator' does not exist in type 'Subject'.
+constants.ts(130,59): error TS2353: Object literal may only specify known properties, and 'facilitator' does not exist in type 'Subject'.
+constants.ts(148,3): error TS2741: Property 'type' is missing in type '{ id: number; name: string; weight: number; }' but required in type 'Assessment'.
+constants.ts(149,3): error TS2741: Property 'type' is missing in type '{ id: number; name: string; weight: number; }' but required in type 'Assessment'.
+constants.ts(150,3): error TS2741: Property 'type' is missing in type '{ id: number; name: string; weight: number; }' but required in type 'Assessment'.
+constants.ts(151,3): error TS2741: Property 'type' is missing in type '{ id: number; name: string; weight: number; }' but required in type 'Assessment'.
+constants.ts(152,3): error TS2741: Property 'type' is missing in type '{ id: number; name: string; weight: number; }' but required in type 'Assessment'.
+Load Testing/src/SimulationEngine.ts(83,60): error TS2353: Object literal may only specify known properties, and 'facilitator' does not exist in type 'Subject'.
+Load Testing/src/SimulationEngine.ts(84,57): error TS2353: Object literal may only specify known properties, and 'facilitator' does not exist in type 'Subject'.
+Load Testing/src/SimulationEngine.ts(85,60): error TS2353: Object literal may only specify known properties, and 'facilitator' does not exist in type 'Subject'.
+Load Testing/src/SimulationEngine.ts(88,41): error TS2353: Object literal may only specify known properties, and 'teacherName' does not exist in type 'Class'.
+Load Testing/src/SimulationEngine.ts(89,41): error TS2353: Object literal may only specify known properties, and 'teacherName' does not exist in type 'Class'.
+Load Testing/src/SimulationEngine.ts(96,17): error TS2741: Property 'type' is missing in type '{ id: number; name: string; weight: number; }' but required in type 'Assessment'.
+Load Testing/src/SimulationEngine.ts(97,17): error TS2741: Property 'type' is missing in type '{ id: number; name: string; weight: number; }' but required in type 'Assessment'.
+Load Testing/src/SimulationEngine.ts(154,35): error TS2322: Type 'string' is not assignable to type 'number'.
+Load Testing/src/SimulationEngine.ts(154,46): error TS2322: Type 'string' is not assignable to type 'number'.
+Load Testing/src/SimulationEngine.ts(154,54): error TS2322: Type 'string' is not assignable to type 'number'.
+services/authService.ts(66,46): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+services/authService.ts(83,9): error TS2353: Object literal may only specify known properties, and 'deviceId' does not exist in type 'DeviceCredential'.
+services/authService.ts(107,24): error TS2339: Property 'deviceId' does not exist on type 'DeviceCredential'.
+services/authService.ts(143,76): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+services/databaseService.ts(210,186): error TS2339: Property 'facilitator' does not exist on type 'Subject'.
+services/databaseService.ts(211,206): error TS2339: Property 'teacherName' does not exist on type 'Class'.
+services/databaseService.ts(304,17): error TS2353: Object literal may only specify known properties, and 'isDataEntryLocked' does not exist in type 'SchoolSettings'.
+services/databaseService.ts(330,137): error TS2353: Object literal may only specify known properties, and 'facilitator' does not exist in type 'Subject'.
+services/databaseService.ts(336,13): error TS2353: Object literal may only specify known properties, and 'teacherName' does not exist in type 'Class'.
+services/databaseService.ts(342,99): error TS2741: Property 'type' is missing in type '{ id: any; name: any; weight: number; }' but required in type 'Assessment'.
+services/pdfGenerator.ts(499,24): error TS2339: Property 'teacherName' does not exist on type 'Class'.
+services/pdfGenerator.ts(501,36): error TS2339: Property 'teacherName' does not exist on type 'Class'.
+utils/exportUtils.ts(144,32): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+utils/exportUtils.ts(147,28): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+utils/exportUtils.ts(203,28): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+utils/exportUtils.ts(209,24): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+utils/exportUtils.ts(212,24): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+utils/indexNumberCounter.ts(12,35): error TS2339: Property 'indexNumberGlobalPrefix' does not exist on type 'SchoolSettings'.
+utils/indexNumberCounter.ts(13,35): error TS2339: Property 'indexNumberGlobalSuffix' does not exist on type 'SchoolSettings'.
+utils/indexNumberCounter.ts(14,35): error TS2339: Property 'indexNumberPrefix' does not exist on type 'Class'.
+utils/indexNumberCounter.ts(15,35): error TS2339: Property 'indexNumberSuffix' does not exist on type 'Class'.
+utils/indexNumberCounter.ts(59,18): error TS2339: Property 'indexNumberPerClass' does not exist on type 'SchoolSettings'.
+utils/indexNumberCounter.ts(81,40): error TS2339: Property 'indexNumberPerClass' does not exist on type 'SchoolSettings'.
+utils/indexNumberCounter.ts(82,22): error TS2339: Property 'indexNumberCounter' does not exist on type 'Class'.
+utils/indexNumberCounter.ts(83,21): error TS2339: Property 'indexNumberGlobalCounter' does not exist on type 'SchoolSettings'.
+utils/indexNumberGenerator.ts(13,35): error TS2339: Property 'indexNumberGlobalPrefix' does not exist on type 'SchoolSettings'.
+utils/indexNumberGenerator.ts(14,35): error TS2339: Property 'indexNumberGlobalSuffix' does not exist on type 'SchoolSettings'.
+utils/indexNumberGenerator.ts(15,35): error TS2339: Property 'indexNumberPrefix' does not exist on type 'Class'.
+utils/indexNumberGenerator.ts(16,35): error TS2339: Property 'indexNumberSuffix' does not exist on type 'Class'.
+utils/indexNumberGenerator.ts(17,29): error TS2339: Property 'indexNumberCounterDigits' does not exist on type 'SchoolSettings'.
+utils/indexNumberGenerator.ts(21,19): error TS2339: Property 'indexNumberPerClass' does not exist on type 'SchoolSettings'.
+utils/indexNumberGenerator.ts(21,52): error TS2339: Property 'indexNumberCounter' does not exist on type 'Class'.
+utils/indexNumberGenerator.ts(21,89): error TS2339: Property 'indexNumberGlobalCounter' does not exist on type 'SchoolSettings'.
+utils/indexNumberReassign.ts(23,18): error TS2339: Property 'indexNumberPerClass' does not exist on type 'SchoolSettings'.
+utils/indexNumberReassign.ts(29,43): error TS2339: Property 'indexNumberCounter' does not exist on type 'Class'.
+utils/indexNumberReassign.ts(48,35): error TS2339: Property 'indexNumberCounter' does not exist on type 'Class'.
+utils/indexNumberReassign.ts(74,32): error TS2339: Property 'indexNumberGlobalCounter' does not exist on type 'SchoolSettings'.
+utils/permissions.ts(25,66): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+utils/permissions.ts(47,63): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+utils/permissions.ts(51,66): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.

@@ -1,0 +1,30 @@
+﻿constants.backup.ts(106,3): error TS2353: Object literal may only specify known properties, and 'autoAssignIndexNumbers' does not exist in type 'SchoolSettings'.
+constants.backup.ts(148,3): error TS2741: Property 'type' is missing in type '{ id: number; name: string; weight: number; }' but required in type 'Assessment'.
+constants.backup.ts(149,3): error TS2741: Property 'type' is missing in type '{ id: number; name: string; weight: number; }' but required in type 'Assessment'.
+constants.backup.ts(150,3): error TS2741: Property 'type' is missing in type '{ id: number; name: string; weight: number; }' but required in type 'Assessment'.
+constants.backup.ts(151,3): error TS2741: Property 'type' is missing in type '{ id: number; name: string; weight: number; }' but required in type 'Assessment'.
+constants.backup.ts(152,3): error TS2741: Property 'type' is missing in type '{ id: number; name: string; weight: number; }' but required in type 'Assessment'.
+constants.ts(105,3): error TS2353: Object literal may only specify known properties, and 'autoAssignIndexNumbers' does not exist in type 'SchoolSettings'.
+constants.ts(148,3): error TS2741: Property 'type' is missing in type '{ id: number; name: string; weight: number; }' but required in type 'Assessment'.
+constants.ts(149,3): error TS2741: Property 'type' is missing in type '{ id: number; name: string; weight: number; }' but required in type 'Assessment'.
+constants.ts(150,3): error TS2741: Property 'type' is missing in type '{ id: number; name: string; weight: number; }' but required in type 'Assessment'.
+constants.ts(151,3): error TS2741: Property 'type' is missing in type '{ id: number; name: string; weight: number; }' but required in type 'Assessment'.
+constants.ts(152,3): error TS2741: Property 'type' is missing in type '{ id: number; name: string; weight: number; }' but required in type 'Assessment'.
+Load Testing/src/SimulationEngine.ts(96,17): error TS2741: Property 'type' is missing in type '{ id: number; name: string; weight: number; }' but required in type 'Assessment'.
+Load Testing/src/SimulationEngine.ts(97,17): error TS2741: Property 'type' is missing in type '{ id: number; name: string; weight: number; }' but required in type 'Assessment'.
+Load Testing/src/SimulationEngine.ts(154,35): error TS2322: Type 'string' is not assignable to type 'number'.
+Load Testing/src/SimulationEngine.ts(154,46): error TS2322: Type 'string' is not assignable to type 'number'.
+Load Testing/src/SimulationEngine.ts(154,54): error TS2322: Type 'string' is not assignable to type 'number'.
+services/authService.ts(66,46): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+services/authService.ts(82,11): error TS2741: Property 'schoolId' is missing in type '{ deviceId: string; userId: number; lastLogin: string; }' but required in type 'DeviceCredential'.
+services/authService.ts(143,76): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+services/databaseService.ts(305,17): error TS2353: Object literal may only specify known properties, and 'autoAssignIndexNumbers' does not exist in type 'SchoolSettings'.
+services/databaseService.ts(342,99): error TS2741: Property 'type' is missing in type '{ id: any; name: any; weight: number; }' but required in type 'Assessment'.
+utils/exportUtils.ts(144,32): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+utils/exportUtils.ts(147,28): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+utils/exportUtils.ts(203,28): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+utils/exportUtils.ts(209,24): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+utils/exportUtils.ts(212,24): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+utils/permissions.ts(25,66): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+utils/permissions.ts(47,63): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+utils/permissions.ts(51,66): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.

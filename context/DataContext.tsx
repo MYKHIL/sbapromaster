@@ -29,10 +29,15 @@ export interface DataContextType {
     // State
     settings: SchoolSettings;
     students: Student[];
+    deletedStudents: Student[];
     subjects: Subject[];
+    deletedSubjects: Subject[];
     classes: Class[];
+    deletedClasses: Class[];
     grades: Grade[];
+    deletedGrades: Grade[];
     assessments: Assessment[];
+    deletedAssessments: Assessment[];
     scores: Score[];
     reportData: ReportSpecificData[];
     classData: ClassSpecificData[];
@@ -261,7 +266,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Force hard reload on version mismatch to clear ghost listeners after update
     useEffect(() => {
-        const LATEST_VERSION = "1.0.122";
+        const LATEST_VERSION = "1.0.123";
         const currentVersion = localStorage.getItem("app_version");
 
         if (currentVersion !== LATEST_VERSION) {
@@ -3134,10 +3139,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         revertPendingChanges,
         revertAllPendingChanges,
         students: useMemo(() => students.filter(s => !s.deleted), [students]),
+        deletedStudents: useMemo(() => students.filter(s => s.deleted), [students]),
         subjects: useMemo(() => subjects.filter(s => !s.deleted), [subjects]),
+        deletedSubjects: useMemo(() => subjects.filter(s => s.deleted), [subjects]),
         classes: useMemo(() => classes.filter(c => !c.deleted), [classes]),
+        deletedClasses: useMemo(() => classes.filter(c => c.deleted), [classes]),
         grades: useMemo(() => grades.filter(g => !g.deleted), [grades]),
+        deletedGrades: useMemo(() => grades.filter(g => g.deleted), [grades]),
         assessments: useMemo(() => assessments.filter(a => !a.deleted), [assessments]),
+        deletedAssessments: useMemo(() => assessments.filter(a => a.deleted), [assessments]),
         scores,
         reportData,
         classData,
