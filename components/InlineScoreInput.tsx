@@ -267,15 +267,15 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
     return (
         <tr className="grid grid-cols-2 lg:table-row bg-white lg:bg-transparent border lg:border-b border-gray-200 lg:border-x-0 lg:border-t-0 rounded-xl lg:rounded-none mb-4 lg:mb-0 shadow-sm lg:shadow-none hover:bg-gray-50 overflow-hidden">
             <td className="hidden lg:table-cell p-4 text-center text-gray-500 font-medium">{index}</td>
-            <td className="col-span-2 block lg:table-cell p-4 font-bold lg:font-medium text-gray-900 border-b lg:border-none bg-gray-50 lg:bg-transparent flex justify-between items-center lg:items-start text-lg lg:text-base">
-                <div className="flex items-center gap-3 lg:block">
-                    <span className="lg:hidden w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-sm shadow-sm">{index}</span>
-                    <span>{student.name}</span>
+            <td className="col-span-2 block lg:table-cell p-2 lg:p-4 font-bold lg:font-medium text-gray-900 border-b lg:border-none bg-gray-50 lg:bg-transparent flex justify-between items-center lg:items-start text-base lg:text-base">
+                <div className="flex items-center gap-2 lg:block">
+                    <span className="lg:hidden w-7 h-7 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-xs shadow-sm">{index}</span>
+                    <span className="text-base font-bold lg:text-base lg:font-medium">{student.name}</span>
                 </div>
                 {!readOnly && studentRank !== '-' && (
-                    <div className="lg:hidden flex flex-col items-end leading-tight">
-                        <span className="text-[10px] uppercase text-blue-400 font-bold tracking-wider">Total / Position</span>
-                        <span className="text-sm font-bold text-blue-700">{studentTotal}% • {studentRank}</span>
+                    <div className="lg:hidden flex flex-col items-end leading-none gap-0.5">
+                        <span className="text-[9px] text-gray-400 font-medium">Total Score: <span className="text-blue-600 font-bold">{studentTotal}%</span></span>
+                        <span className="text-[9px] text-gray-400 font-medium">Position: <span className="text-blue-600 font-bold">{studentRank}</span></span>
                     </div>
                 )}
             </td>
@@ -285,7 +285,7 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
                 const isDirty = isScoreDirty(student.id, subjectId, assessment.id);
 
                 // SHARED CARD STYLE for mobile
-                const mobileCardStyles = "flex flex-col bg-blue-50/30 border border-blue-100 rounded-lg p-2 m-2 lg:m-0 lg:p-4 lg:bg-transparent lg:border-none lg:rounded-none";
+                const mobileCardStyles = "flex flex-col bg-blue-50/30 border border-blue-100 rounded-lg p-1.5 m-1.5 lg:m-0 lg:p-4 lg:bg-transparent lg:border-none lg:rounded-none";
 
                 if (scores.length > 1) {
                     const displayScore = calculateDisplayScore(scores, assessment);
@@ -298,12 +298,12 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
                             )}
                             
                             {/* Card Header (Mobile Only) */}
-                            <div className="lg:hidden flex justify-between items-start mb-2">
-                                <span className="text-[10px] font-bold text-blue-600 uppercase tracking-tight leading-tight flex-1 pr-1">
+                            <div className="lg:hidden flex justify-between items-start mb-1.5">
+                                <span className="text-[9px] font-bold text-blue-600 uppercase tracking-tight leading-tight flex-1 pr-1">
                                     {assessment.name}
                                 </span>
-                                <span className="text-[10px] font-bold text-blue-400 bg-white px-1 rounded shadow-sm">
-                                    {studentRank}
+                                <span className="text-[9px] font-bold text-blue-400/80 italic">
+                                    Weight: {assessment.weight}
                                 </span>
                             </div>
 
@@ -336,12 +336,12 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
                         )}
 
                         {/* Card Header (Mobile Only) */}
-                        <div className="lg:hidden flex justify-between items-start mb-2">
-                            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-tight leading-tight flex-1 pr-1">
+                        <div className="lg:hidden flex justify-between items-start mb-1.5">
+                            <span className="text-[9px] font-bold text-blue-600 uppercase tracking-tight leading-tight flex-1 pr-1">
                                 {assessment.name}
                             </span>
-                            <span className="text-[10px] font-bold text-blue-400 bg-white px-1 rounded shadow-sm">
-                                {studentRank}
+                            <span className="text-[9px] font-bold text-blue-400/80 italic">
+                                Weight: {assessment.weight}
                             </span>
                         </div>
 
@@ -355,7 +355,7 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
                                     onBlur={() => handleSave(assessment.id)}
                                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSave(assessment.id); (e.target as HTMLInputElement).blur(); } }}
                                     placeholder={assessment.name.toLowerCase().includes('exam') ? 'e.g., 85' : 'Score'}
-                                    className={`w-full p-2 text-center text-lg lg:text-base font-mono border rounded-md shadow-sm transition-all focus:outline-none focus:ring-2 
+                                    className={`w-full p-1.5 text-center text-base lg:text-base font-mono border rounded-md shadow-sm transition-all focus:outline-none focus:ring-2 
                                         ${isDirty ? `bg-white border-yellow-500 text-red-600 font-bold focus:ring-yellow-500` : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500'}
                                     `}
                                     aria-label={`Score for ${student.name} in ${assessment.name}`}
@@ -378,9 +378,9 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
                     </td>
                 );
             })}
-            <td className="col-span-2 block lg:table-cell flex justify-between items-center p-4 text-right lg:text-center font-bold text-gray-800 bg-gray-50 lg:bg-transparent mt-1 lg:mt-0 shadow-inner lg:shadow-none">
-                <span className="lg:hidden text-sm text-gray-500 uppercase font-bold tracking-wider">Overall Total (100%)</span>
-                <span className="text-xl lg:text-base text-blue-700 lg:text-gray-800">{formatScore(totalWeightedScoreForDisplay)}{!totalWeightedScoreForDisplay && totalWeightedScoreForDisplay !== 0 ? '' : '%'}</span>
+            <td className="col-span-2 block lg:table-cell flex justify-between items-center p-2 text-right lg:text-center font-bold text-gray-800 bg-gray-50 lg:bg-transparent mt-1 lg:mt-0 shadow-inner lg:shadow-none">
+                <span className="lg:hidden text-[10px] text-gray-500 uppercase font-bold tracking-wider">Overall Total (100%)</span>
+                <span className="text-lg lg:text-base text-blue-700 lg:text-gray-800">{formatScore(totalWeightedScoreForDisplay)}{!totalWeightedScoreForDisplay && totalWeightedScoreForDisplay !== 0 ? '' : '%'}</span>
             </td>
         </tr>
     );
