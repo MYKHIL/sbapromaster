@@ -74,20 +74,6 @@ service cloud.firestore {
       }
     }
 
-    match /document_status/{docId} {
-      allow read: if true;
-      allow write: if isSubscriptionActive(request.resource.data.get('schoolId', '')) && (
-                   isAdmin(request.resource.data) || 
-                   request.resource.data.get('deletedBy', -1) == request.resource.data.get('requesterId', -2) ||
-                   // Allow "Unlock" (Restore) if unauthorized by service, but we catch it in TS anyway.
-                   // The rule checks if the requester is the Admin or the one who deleted it.
-                   (resource != null && (
-                     isAdmin(request.resource.data) || 
-                     resource.data.get('deletedBy', -1) == request.resource.data.get('requesterId', -2)
-                   ))
-      );
-    }
-
     match /{document=**} {
       allow read, write: if false;
     }

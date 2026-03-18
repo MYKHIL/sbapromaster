@@ -1648,38 +1648,13 @@ export const repairDatabaseImages = async (schoolId: string): Promise<void> => {
 // -----------------------------------------------------------------------------
 
 /**
- * Real-time Listener for Locked/Deleted Documents (Midway Strategy)
- */
-export const subscribeToDocumentStatus = (schoolId: string, onUpdate: (statusMap: Record<string, { deleted: boolean, deletedBy: number }>) => void): Unsubscribe => {
-    const statusRef = collection(db, "document_status");
-    const q = query(statusRef, where("schoolId", "==", schoolId));
-
-    return onSnapshot(q, (snapshot) => {
-        const statusMap: Record<string, { deleted: boolean, deletedBy: number }> = {};
-        snapshot.forEach((doc) => {
-            const data = doc.data();
-            statusMap[doc.id] = {
-                deleted: data.deleted ?? false,
-                deletedBy: data.deletedBy
-            };
-        });
-        onUpdate(statusMap);
-    }, (error) => {
-        console.error("[Firebase] Document Status Subscription Error:", error);
-    });
-};
-
-/**
  * Optimized Write with Batching and Buckets
  */
 export const saveDataTransaction = async (
     docId: string,
     updates: Partial<AppDataType>,
     deletions?: Record<string, string[]>,
-    fullStudentsArray?: any[],
-    requesterId?: number,
-    requesterRole?: string,
-    globalStatusMap?: Record<string, { deleted: boolean, deletedBy: number }>
+    fullStudentsArray?: any[]
 ) => {
     // -------------------------------------------------------------------------
     // AUTO-UPLOAD INTERCEPTOR (ImgBB)
@@ -1752,7 +1727,6 @@ export const saveDataTransaction = async (
     try {
         const operations: ((batch: WriteBatch) => void)[] = [];
         const mainUpdates: any = {};
-        const skippedItems: string[] = []; // Track filtered items for logging
         const MAIN_KEYS = ['settings', 'userLogs', 'activeSessions', 'access', 'password', 'users', 'reportData', 'classData'];
 
         // --- HANDLE SCORES (Subject Bucketing) ---
@@ -1762,19 +1736,6 @@ export const saveDataTransaction = async (
             const subjectBuckets: Record<number, Record<string, Score>> = {};
 
             updates.scores.forEach(s => {
-                const subDocId = String(s.id);
-                
-                // --- MIDWAY STRATEGY: INTERCEPT UNAUTHORIZED WRITES ---
-                if (globalStatusMap && globalStatusMap[subDocId]?.deleted) {
-                    const isAdmin = requesterRole === 'Admin';
-                    const isOwner = globalStatusMap[subDocId].deletedBy === requesterId;
-                    
-                    if (!isAdmin && !isOwner) {
-                        skippedItems.push(`scores/${subDocId}`);
-                        return; // SKIP
-                    }
-                }
-
                 if (!subjectBuckets[s.subjectId]) subjectBuckets[s.subjectId] = {};
                 subjectBuckets[s.subjectId][s.id] = s;
             });
@@ -1798,53 +1759,10 @@ export const saveDataTransaction = async (
                     items.forEach(item => {
                         if (item.id) {
                             const subDocId = String(item.id);
-                            
-                            // --- MIDWAY STRATEGY: INTERCEPT UNAUTHORIZED WRITES ---
-                            if (globalStatusMap && globalStatusMap[subDocId]?.deleted) {
-                                const isAdmin = requesterRole === 'Admin';
-                                const isOwner = globalStatusMap[subDocId].deletedBy === requesterId;
-                                const isRestoring = item.deleted === false;
-
-                                // Action: If not authorized, skip
-                                if (!isAdmin && !isOwner) {
-                                    skippedItems.push(`${key}/${subDocId}`);
-                                    return;
-                                }
-                                
-                                // Authorized users can restore or update
-                            }
-
                             const ref = doc(db, "schools", docId, key, subDocId);
                             const sanitizedItem = sanitizeForFirestore(item);
                             
-                            // Inject requester info for security rules to see
-                            if (requesterId !== undefined) (sanitizedItem as any).requesterId = requesterId;
-                            if (requesterRole !== undefined) (sanitizedItem as any).requesterRole = requesterRole;
-                            
                             operations.push((batch) => batch.set(ref, sanitizedItem, { merge: true }));
-
-                            // --- MANAGE DOCUMENT STATUS (LOCKED STATE) ---
-                            if (item.deleted === true) {
-                                const statusRef = doc(db, "document_status", subDocId);
-                                operations.push((batch) => batch.set(statusRef, {
-                                    deleted: true,
-                                    deletedBy: requesterId,
-                                    schoolId: docId,
-                                    requesterId: requesterId,
-                                    requesterRole: requesterRole,
-                                    lastUpdated: serverTimestamp()
-                                }, { merge: true }));
-                            } else if (item.deleted === false) {
-                                // Restore: Set status to false instead of deleting (allows rule verification via payload)
-                                const statusRef = doc(db, "document_status", subDocId);
-                                operations.push((batch) => batch.set(statusRef, {
-                                    deleted: false,
-                                    schoolId: docId,
-                                    requesterId: requesterId,
-                                    requesterRole: requesterRole,
-                                    lastUpdated: serverTimestamp()
-                                }, { merge: true }));
-                            }
                         }
                     });
                 }
@@ -1896,20 +1814,6 @@ export const saveDataTransaction = async (
                 if (SUBCOLLECTION_KEYS.includes(key)) {
                     ids.forEach(id => {
                         const subDocId = String(id);
-
-                        // --- MIDWAY STRATEGY: INTERCEPT UNAUTHORIZED DELETIONS ---
-                        // Note: Here we check if the item is ALREADY soft-deleted by someone else.
-                        // If it is, and we're not the owner/admin, we can't hard-delete it.
-                        if (globalStatusMap && globalStatusMap[subDocId]?.deleted) {
-                            const isAdmin = requesterRole === 'Admin';
-                            const isOwner = globalStatusMap[subDocId].deletedBy === requesterId;
-                            
-                            if (!isAdmin && !isOwner) {
-                                skippedItems.push(`delete/${key}/${subDocId}`);
-                                return; // SKIP
-                            }
-                        }
-
                         if (key === 'students') console.log(`[DELETE DEBUG] saveDataTransaction queuing deletion for student doc ID: ${id}`);
                         const ref = doc(db, "schools", docId, key, subDocId);
                         operations.push((batch) => batch.delete(ref));
@@ -1943,10 +1847,6 @@ export const saveDataTransaction = async (
             await executeBatch(operations);
         }
 
-        // Feedback for skipped items
-        if (skippedItems.length > 0) {
-            console.warn(`[Midway Filter] 🛡️ Skipped ${skippedItems.length} unauthorized writes to archived/deleted records:`, skippedItems);
-        }
 
         // ---------------------------------------------------------------------
         // POST-TRANSACTION: REBUILD STUDENT BUCKET (CHUNKS)

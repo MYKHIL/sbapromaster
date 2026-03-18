@@ -1,5 +1,6 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect, useRef, useMemo } from 'react';
-import { updateHeartbeat, logUserActivity, getSchoolData, saveDataTransaction, fetchStudents, fetchScoresForClass, fetchSubcollection, fetchMetadataBundle, updateMetadataBundle, updateStudentBucket, ensureStudentBucketExists, subscribeToDocumentStatus } from '../services/firebaseService';
+import { updateHeartbeat, logUserActivity, getSchoolData, saveDataTransaction, fetchStudents, fetchScoresForClass, fetchSubcollection, fetchMetadataBundle, updateMetadataBundle, updateStudentBucket, ensureStudentBucketExists, db } from '../services/firebaseService';
+import { onSnapshot, doc, collection, Unsubscribe } from 'firebase/firestore';
 import { getDeviceCredential } from '../services/authService';
 import * as SyncLogger from '../services/syncLogger';
 import useLocalStorage from '../hooks/useLocalStorage';
@@ -144,7 +145,6 @@ export interface DataContextType {
     markNotificationAsRead: (id: number) => void;
     markAllNotificationsAsRead: () => void;
     restoreItem: (field: keyof AppDataType, id: number) => void;
-    globalStatusMap: Record<string, { deleted: boolean, deletedBy: number }>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -238,8 +238,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [userLogs, setUserLogs] = useState<UserLog[]>([]);
     const [activeSessions, setActiveSessions] = useState<Record<string, string>>({});
     const [subscription, setSubscription] = useState<any | null>(null);
-    const [globalStatusMap, setGlobalStatusMap] = useState<Record<string, { deleted: boolean, deletedBy: number }>>({});
-    const [isStatusMapLoaded, setIsStatusMapLoaded] = useState(false);
 
     // GATING: Track if the session is "unlocked" (password verified)
     const [isSessionUnlocked, setIsSessionUnlocked] = useState(false);
@@ -269,7 +267,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Force hard reload on version mismatch to clear ghost listeners after update
     useEffect(() => {
-        const LATEST_VERSION = "1.0.125";
+        const LATEST_VERSION = "1.0.126";
         const currentVersion = localStorage.getItem("app_version");
 
         if (currentVersion !== LATEST_VERSION) {
@@ -1098,33 +1096,93 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // AUTO-SYNC REMOVED: All saves are now manual and page-specific
 
-    // Midway Soft-Delete Listener
+    // Listeners state to prevent double-subscription
+    const activeListeners = React.useRef<Record<string, () => void>>({});
+
     useEffect(() => {
         if (!schoolId || !isSessionUnlocked) {
-            setGlobalStatusMap({});
+            // Cleanup on school change or logout
+            Object.values(activeListeners.current).forEach((unsub: any) => unsub());
+            activeListeners.current = {};
             return;
         }
 
-        console.log(`[DataContext] 🛡️ Subscribing to document status for ${schoolId}...`);
-        const unsubscribe = subscribeToDocumentStatus(schoolId, (statusMap) => {
-            console.log(`[DataContext] 🛡️ Received status map update: ${Object.keys(statusMap).length} items locked.`);
-            setGlobalStatusMap(statusMap);
-            setIsStatusMapLoaded(true);
+        console.log(`[DataContext] 🛰️ Setting up True Listeners for ${schoolId}...`);
+
+        const setupListener = (key: string, collectionRef: any, stateSetter: (data: any) => void) => {
+            if (activeListeners.current[key]) return;
+
+            activeListeners.current[key] = onSnapshot(collectionRef, (snapshot) => {
+                // Ignore local optimistic updates to prevent jitter/loops
+                if (snapshot.metadata.hasPendingWrites) return;
+
+                const data = snapshot.docs ? snapshot.docs.map(doc => doc.data()) : snapshot.data();
+                if (!data) return;
+
+                console.log(`[DataContext] 📥 Real-time update for ${key}`);
+                
+                // Mark as remote update to prevent loopback marking it dirty
+                isRemoteUpdate.current = true;
+                stateSetter(data);
+                
+                // Update baseline for dirty tracking
+                if (originalData.current) {
+                    originalData.current[key as keyof AppDataType] = Array.isArray(data) ? [...data] : {...data} as any;
+                }
+                
+                setTimeout(() => { isRemoteUpdate.current = false; }, 100);
+            }, (error) => {
+                console.error(`[DataContext] ❌ Listener error for ${key}:`, error);
+            });
+        };
+
+        // 1. School Main Doc (Settings, Access, etc.)
+        const schoolRef = doc(db, "schools", schoolId);
+        activeListeners.current['main'] = onSnapshot(schoolRef, (snapshot) => {
+            if (snapshot.metadata.hasPendingWrites) return;
+            const data = snapshot.data();
+            if (data) {
+                console.log(`[DataContext] 📥 Real-time update for School Main Doc`);
+                isRemoteUpdate.current = true;
+                loadImportedData(data, true);
+                if (data.metadata?.lastUpdated) {
+                    lastLoadedTimestamps.current = { ...data.metadata.lastUpdated };
+                }
+                setTimeout(() => { isRemoteUpdate.current = false; }, 100);
+            }
+        });
+
+        // 2. Subcollections
+        const SUBCOLLECTIONS = [
+            { key: 'students', ref: collection(db, "schools", schoolId, "students") },
+            { key: 'classes', ref: collection(db, "schools", schoolId, "classes") },
+            { key: 'subjects', ref: collection(db, "schools", schoolId, "subjects") },
+            { key: 'assessments', ref: collection(db, "schools", schoolId, "assessments") },
+            { key: 'grades', ref: collection(db, "schools", schoolId, "grades") }
+        ];
+
+        SUBCOLLECTIONS.forEach(sub => {
+            setupListener(sub.key, sub.ref, (data) => {
+                const setterMap: Record<string, any> = {
+                    students: setStudents,
+                    classes: setClasses,
+                    subjects: setSubjects,
+                    assessments: setAssessments,
+                    grades: setGrades
+                };
+                if (setterMap[sub.key]) setterMap[sub.key](data);
+            });
         });
 
         return () => {
-            console.log(`[DataContext] 🛡️ Unsubscribing from document status for ${schoolId}`);
-            unsubscribe();
+            console.log(`[DataContext] 🛑 Cleaning up listeners for ${schoolId}`);
+            Object.values(activeListeners.current).forEach((unsub: any) => unsub());
+            activeListeners.current = {};
         };
     }, [schoolId, isSessionUnlocked]);
 
     const saveToCloud = async (isManualSave: boolean = false, skipRefresh: boolean = false) => {
         // Manual save triggered
-        if (!isStatusMapLoaded) {
-            console.warn("[DataContext] 🛡️ Save blocked: Document status map not yet loaded from cloud.");
-            // Optionally show a toast or alert to the user
-            return;
-        }
 
         // CRITICAL: Don't sync if user was active very recently (within last 500ms)
         // This prevents syncing mid-keystroke or mid-interaction
@@ -1214,12 +1272,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (Object.keys(transactionPayload).length > 0 || (transactionDeletions && Object.keys(transactionDeletions).length > 0)) {
                 console.log('[DataContext] ☁️ Performing Universal Transactional Save...');
                 
-                const storedUserId = Number(localStorage.getItem('sba_user_id') || localStorage.getItem('emulator-sba_user_id'));
-                const user = users?.find(u => u.id === storedUserId);
-                const userRole = user?.role || 'Guest';
-
                 // Uses the new generalized transaction helper
-                await saveDataTransaction(schoolId, transactionPayload, transactionDeletions, stateRef.current.students, storedUserId, userRole, globalStatusMap);
+                await saveDataTransaction(schoolId, transactionPayload, transactionDeletions, stateRef.current.students);
             } else {
                 console.log('[DataContext] ℹ️ No actionable updates or deletions found for transaction.');
             }
@@ -1442,85 +1496,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             isSyncingRef.current = false;
         }
     };
-
-    // Real-time sync listener
-    // INITIAL DATA LOAD ONLY (Auto-Sync Disabled by User Request)
-    // We fetch data once when the school loads, but do NOT listen for real-time updates.
-    useEffect(() => {
-        if (!schoolId) return;
-
-        // OPTIMIZATION: Prevention of Double-Fetch on Login
-        // Gate 1: Session must be unlocked (Login completed)
-        if (!isSessionUnlocked) {
-            console.log(`[DataContext] 🔒 Session locked. Deferring initial data fetch for ${schoolId}...`);
-            return;
-        }
-
-        // Gate 2: If we already have data (already loaded or offline persistence), 
-        // we should NOT fetch again.
-        // We check 'settings.schoolName' as a proxy for valid loaded data.
-        if (settings.schoolName && users.length > 0) {
-            console.log(`[DataContext] 🛑 Initial data already present (School: ${settings.schoolName}). Triggering background baseline sync.`);
-
-            // FIX: DO NOT seed originalData from localStorage here!
-            // localStorage may contain genuinely unsaved changes. Settings and Users must
-            // get their originalData baseline from 'getSchoolData', which will then correctly 
-            // diff vs cache to detect any local-only (unsaved) edits across sessions.
-
-            // CRITICAL: Trigger main doc, metadata and students lazy-load to establish baselines
-            // even if we have local data, because we need that true cloud baseline in memory 
-            // once per session to accurately identify unsaved local items.
-            setTimeout(() => {
-                getSchoolData(schoolId).then(data => {
-                    if (data) {
-                        // Store metadata timestamps for lazy loading
-                        if (data.metadata?.lastUpdated) {
-                            lastLoadedTimestamps.current = { ...data.metadata.lastUpdated };
-                        }
-                        return loadImportedData(data, true);
-                    }
-                });
-                loadMetadata();
-                loadStudents(); // FIX: Background-load students on login to establish baseline
-            }, 1000);
-            return;
-        }
-
-        const fetchInitialData = async () => {
-            try {
-                console.log('[DataContext] 📥 Fetching initial data from cloud (Auto-Sync Disabled)...');
-                const data = await getSchoolData(schoolId);
-                if (data) {
-                    console.log('[DataContext] ✅ Initial data received via one-time fetch');
-                    SyncLogger.log(`Initial data loaded. Users: ${data.users?.length || 0}, Scores: ${data.scores?.length || 0}`);
-
-                    // Mark as remote update to allow processing (IsRemote = true)
-                    loadImportedData(data, true);
-
-                    // Store metadata timestamps for lazy loading
-                    if (data.metadata?.lastUpdated) {
-                        lastLoadedTimestamps.current = { ...data.metadata.lastUpdated };
-                    }
-
-                    // -----------------------------------------------------------------
-                    // OPTIMIZED: Metadata is light, fetch it. Students are heavy, WAIT.
-                    // -----------------------------------------------------------------
-                    console.log('[DataContext] 🚀 Eagerly loading Metadata for app initialization...');
-                    loadMetadata();
-
-                    // Students are now TRULY Lazy Loaded ONLY when the page is visited.
-                    // loadStudents(); // REMOVED
-                } else {
-                    console.log('[DataContext] ⚠️ No initial data found for school');
-                }
-            } catch (error) {
-                console.error('[DataContext] ❌ Failed to fetch initial data:', error);
-                showDatabaseError(error, 'read');
-            }
-        };
-
-        fetchInitialData();
-    }, [schoolId, isSessionUnlocked]);
 
     // Track initial mount to prevent auto-save before data is loaded from cloud
     const isInitialMount = React.useRef(true);
@@ -1879,11 +1854,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return;
         }
 
-        if (!isStatusMapLoaded) {
-            console.warn(`[savePageData] 🛡️ Save blocked: Document status map not yet loaded from cloud.`);
-            return;
-        }
-
         if (!isDirty(field)) {
             console.log(`[savePageData] No changes to ${String(field)}, skipping save.`);
             return;
@@ -1917,11 +1887,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             });
 
             // Use transaction for all saves to ensure consistency
-            const storedUserId = Number(localStorage.getItem('sba_user_id') || localStorage.getItem('emulator-sba_user_id'));
-            const user = users?.find(u => u.id === storedUserId);
-            const userRole = user?.role || 'Guest';
 
-            await saveDataTransaction(schoolId, updates, _deletions, stateRef.current.students, storedUserId, userRole, globalStatusMap);
+            await saveDataTransaction(schoolId, updates, _deletions, stateRef.current.students);
 
             // COMPOSITE STORAGE: If we just saved metadata, trigger a bundle rebuild
             // This ensures the optimized 'fetchMetadataBundle' has the latest data.
@@ -1993,7 +1960,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Process offline queue when coming back online
     useEffect(() => {
-        if (isOnline && queuedCount > 0 && schoolId && isStatusMapLoaded) {
+        if (isOnline && queuedCount > 0 && schoolId) {
             console.log('Network restored - syncing current state and clearing queue');
             setIsSyncing(true);
 
@@ -2058,11 +2025,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             // Use the transactional save to perform a SMART MERGE of the offline state
             // This prevents overwriting server data (like the "Data Wipe" bug caused by setDoc/merge:true on arrays)
-            const storedUserId = Number(localStorage.getItem('sba_user_id') || localStorage.getItem('emulator-sba_user_id'));
-            const user = users?.find(u => u.id === storedUserId);
-            const userRole = user?.role || 'Guest';
 
-            saveDataTransaction(schoolId, currentData, deletions, stateRef.current.students, storedUserId, userRole, globalStatusMap)
+            saveDataTransaction(schoolId, currentData, deletions, stateRef.current.students)
                 .then(() => {
                     // Success - clear the entire queue since we just synced current state
                     offlineQueue.clearQueue();
@@ -2088,7 +2052,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     setIsSyncing(false);
                 });
         }
-    }, [isOnline, schoolId, queuedCount, users, globalStatusMap, isStatusMapLoaded]);
+    }, [isOnline, schoolId, queuedCount, users]);
 
 
     useEffect(() => {
@@ -3297,7 +3261,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             markDirty(field, true);
             markItemDirty(field as string, id);
         },
-        globalStatusMap
     };
 
     // Initialize originalData from local storage on load/schoolId change
