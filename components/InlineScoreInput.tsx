@@ -10,6 +10,8 @@ interface InlineScoreInputProps {
     onOpenModal: (student: Student, assessment: Assessment) => void;
     readOnly?: boolean;
     index: number;
+    studentRank?: string;
+    studentTotal?: string;
 }
 
 const calculateDisplayScore = (scores: string[], assessment: Assessment): number => {
@@ -44,7 +46,7 @@ const formatScore = (score: number): string => {
 };
 
 
-const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId, assessments, onOpenModal, readOnly, index }) => {
+const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId, assessments, onOpenModal, readOnly, index, studentRank = '-', studentTotal = '0' }) => {
     const { scores, getStudentScores, updateStudentScores, setHasLocalChanges, updateDraftScore, removeDraftScore, getComputedScore, draftVersion, isScoreDirty, isDraftScore, refreshVersion } = useData();
 
     const [inlineValues, setInlineValues] = useState<{ [key: number]: string }>({});
@@ -263,64 +265,88 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
     }, 0);
 
     return (
-        <tr className="block lg:table-row bg-white lg:bg-transparent border lg:border-b border-gray-200 lg:border-x-0 lg:border-t-0 rounded-xl lg:rounded-none mb-4 lg:mb-0 shadow-sm lg:shadow-none hover:bg-gray-50 overflow-hidden">
+        <tr className="grid grid-cols-2 lg:table-row bg-white lg:bg-transparent border lg:border-b border-gray-200 lg:border-x-0 lg:border-t-0 rounded-xl lg:rounded-none mb-4 lg:mb-0 shadow-sm lg:shadow-none hover:bg-gray-50 overflow-hidden">
             <td className="hidden lg:table-cell p-4 text-center text-gray-500 font-medium">{index}</td>
-            <td className="block lg:table-cell p-4 font-bold lg:font-medium text-gray-900 border-b lg:border-none bg-gray-50 lg:bg-transparent flex justify-between items-center lg:items-start text-lg lg:text-base">
+            <td className="col-span-2 block lg:table-cell p-4 font-bold lg:font-medium text-gray-900 border-b lg:border-none bg-gray-50 lg:bg-transparent flex justify-between items-center lg:items-start text-lg lg:text-base">
                 <div className="flex items-center gap-3 lg:block">
                     <span className="lg:hidden w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-sm shadow-sm">{index}</span>
                     <span>{student.name}</span>
                 </div>
+                {!readOnly && studentRank !== '-' && (
+                    <div className="lg:hidden flex flex-col items-end leading-tight">
+                        <span className="text-[10px] uppercase text-blue-400 font-bold tracking-wider">Total / Position</span>
+                        <span className="text-sm font-bold text-blue-700">{studentTotal}% • {studentRank}</span>
+                    </div>
+                )}
             </td>
+
             {assessments.map(assessment => {
                 const scores = getStudentScores(student.id, subjectId, assessment.id);
-
                 const isDirty = isScoreDirty(student.id, subjectId, assessment.id);
-                const isDraft = isDraftScore(student.id, subjectId, assessment.id);
+
+                // SHARED CARD STYLE for mobile
+                const mobileCardStyles = "flex flex-col bg-blue-50/30 border border-blue-100 rounded-lg p-2 m-2 lg:m-0 lg:p-4 lg:bg-transparent lg:border-none lg:rounded-none";
 
                 if (scores.length > 1) {
                     const displayScore = calculateDisplayScore(scores, assessment);
                     return (
-                    <td key={assessment.id} className={`block lg:table-cell flex lg:table-cell justify-between items-center p-4 lg:p-4 border-b lg:border-none last:border-0 transition-colors relative ${isDirty ? `${DIRTY_INDICATOR_BG} ${DIRTY_INDICATOR_TEXT}` : ''}`}>
+                        <td key={assessment.id} className={`block lg:table-cell transition-colors relative ${mobileCardStyles} ${isDirty ? `${DIRTY_INDICATOR_BG} ${DIRTY_INDICATOR_TEXT}` : ''}`}>
                             {isDirty && (
-                                <span className="absolute left-0 top-0 lg:left-0 lg:top-0 text-[8px] font-bold uppercase px-0.5 bg-yellow-400 text-black leading-none rounded-br z-10">
+                                <span className="absolute left-0 top-0 text-[8px] font-bold uppercase px-1 bg-yellow-400 text-black leading-none rounded-br z-10">
                                     Unsaved
                                 </span>
                             )}
-                            <div className="lg:hidden text-left flex-1 font-medium text-gray-700 text-sm">
-                                {assessment.name} <span className="font-normal text-xs text-gray-400 block">({assessment.name.toLowerCase().includes('exam') ? 100 : assessment.weight}%)</span>
+                            
+                            {/* Card Header (Mobile Only) */}
+                            <div className="lg:hidden flex justify-between items-start mb-2">
+                                <span className="text-[10px] font-bold text-blue-600 uppercase tracking-tight leading-tight flex-1 pr-1">
+                                    {assessment.name}
+                                </span>
+                                <span className="text-[10px] font-bold text-blue-400 bg-white px-1 rounded shadow-sm">
+                                    {studentRank}
+                                </span>
                             </div>
-                            <div className="flex flex-col items-end lg:items-center">
-                            {MULTI_SCORE_ENTRY_ENABLED ? (
-                                <button
-                                    onClick={() => onOpenModal(student, assessment)}
-                                    className={`w-full lg:w-auto text-center px-3 py-1.5 lg:px-2 lg:py-1 rounded-md hover:bg-black/10 focus:outline-none focus:ring-2 focus:ring-blue-400 ${isDirty ? `ring-1 ${DIRTY_INDICATOR_BORDER}` : 'border border-gray-200 lg:border-none'}`}
-                                >
-                                    <span className={`font-mono ${isDirty ? 'font-bold' : 'text-blue-700'}`}>{formatScore(displayScore)}</span>
-                                    <div className={`text-xs ${isDirty ? DIRTY_INDICATOR_SECONDARY_TEXT : 'text-gray-500'}`}>{scores.length} score(s)</div>
-                                </button>
-                            ) : (
-                                <div className="w-full text-center px-2 py-1 rounded-md">
-                                    <span className={`font-mono ${isDirty ? 'font-bold' : 'text-gray-700'}`}>{formatScore(displayScore)}</span>
-                                    <div className={`text-xs ${isDirty ? DIRTY_INDICATOR_SECONDARY_TEXT : 'text-gray-500'}`}>{scores.length} score(s)</div>
-                                </div>
-                            )}
+
+                            <div className="flex flex-col items-center justify-center lg:items-center">
+                                {MULTI_SCORE_ENTRY_ENABLED ? (
+                                    <button
+                                        onClick={() => onOpenModal(student, assessment)}
+                                        className={`w-full text-center px-1 py-1 rounded-md hover:bg-black/10 focus:outline-none focus:ring-2 focus:ring-blue-400 ${isDirty ? `ring-1 ${DIRTY_INDICATOR_BORDER}` : 'border border-gray-200 lg:border-none'}`}
+                                    >
+                                        <span className={`text-xl lg:text-base font-mono ${isDirty ? 'font-bold' : 'text-blue-700'}`}>{formatScore(displayScore)}</span>
+                                        <div className={`text-[9px] ${isDirty ? DIRTY_INDICATOR_SECONDARY_TEXT : 'text-gray-500'}`}>{scores.length} score(s)</div>
+                                    </button>
+                                ) : (
+                                    <div className="w-full text-center px-1 py-1 rounded-md">
+                                        <span className={`text-xl lg:text-base font-mono ${isDirty ? 'font-bold' : 'text-gray-700'}`}>{formatScore(displayScore)}</span>
+                                        <div className={`text-[9px] ${isDirty ? DIRTY_INDICATOR_SECONDARY_TEXT : 'text-gray-500'}`}>{scores.length} score(s)</div>
+                                    </div>
+                                )}
                             </div>
                         </td>
                     );
                 }
 
                 return (
-                    <td key={assessment.id} className={`block lg:table-cell flex lg:table-cell justify-between items-center p-3 lg:p-2 align-top lg:align-middle transition-colors relative border-b lg:border-none border-gray-100 ${isDirty ? `${DIRTY_INDICATOR_BG} ${DIRTY_INDICATOR_TEXT}` : ''}`}>
+                    <td key={assessment.id} className={`block lg:table-cell transition-colors relative ${mobileCardStyles} ${isDirty ? `${DIRTY_INDICATOR_BG} ${DIRTY_INDICATOR_TEXT}` : ''}`}>
                         {isDirty && (
-                            <span className="absolute left-0 top-0 lg:left-0 lg:top-0 text-[8px] font-bold uppercase px-0.5 bg-yellow-400 text-black leading-none rounded-br z-10">
+                            <span className="absolute left-0 top-0 text-[8px] font-bold uppercase px-1 bg-yellow-400 text-black leading-none rounded-br z-10">
                                 Unsaved
                             </span>
                         )}
-                        <div className="lg:hidden text-left flex-1 font-medium text-gray-700 text-sm pr-2">
-                            {assessment.name} <span className="font-normal text-xs text-gray-400 block">({assessment.name.toLowerCase().includes('exam') ? 100 : assessment.weight}%)</span>
+
+                        {/* Card Header (Mobile Only) */}
+                        <div className="lg:hidden flex justify-between items-start mb-2">
+                            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-tight leading-tight flex-1 pr-1">
+                                {assessment.name}
+                            </span>
+                            <span className="text-[10px] font-bold text-blue-400 bg-white px-1 rounded shadow-sm">
+                                {studentRank}
+                            </span>
                         </div>
-                        <div className="flex flex-col items-end lg:items-center shrink-0">
-                            <div className="flex items-center space-x-1">
+
+                        <div className="flex flex-col items-center justify-center shrink-0">
+                            <div className="flex items-center w-full">
                                 <input
                                     type="text"
                                     inputMode="decimal"
@@ -328,8 +354,8 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
                                     onChange={(e) => handleValueChange(assessment.id, e.target.value)}
                                     onBlur={() => handleSave(assessment.id)}
                                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSave(assessment.id); (e.target as HTMLInputElement).blur(); } }}
-                                    placeholder={assessment.name.toLowerCase().includes('exam') ? 'e.g., 85' : '-'}
-                                    className={`w-24 p-1 text-center font-mono border rounded-md shadow-sm transition-all focus:outline-none focus:ring-2 
+                                    placeholder={assessment.name.toLowerCase().includes('exam') ? 'e.g., 85' : 'Score'}
+                                    className={`w-full p-2 text-center text-lg lg:text-base font-mono border rounded-md shadow-sm transition-all focus:outline-none focus:ring-2 
                                         ${isDirty ? `bg-white border-yellow-500 text-red-600 font-bold focus:ring-yellow-500` : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500'}
                                     `}
                                     aria-label={`Score for ${student.name} in ${assessment.name}`}
@@ -338,22 +364,22 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
                                 {MULTI_SCORE_ENTRY_ENABLED && !readOnly && (
                                     <button
                                         onClick={() => onOpenModal(student, assessment)}
-                                        className={`p-1 border rounded-full transition-colors ${isDirty ? `text-white border-white/50 hover:bg-white/20` : 'text-gray-500 border-gray-300 hover:bg-blue-100 hover:text-blue-600 hover:border-blue-400'}`}
+                                        className={`ml-1 p-1 border rounded-full transition-colors ${isDirty ? `text-white border-white/50 hover:bg-white/20` : 'text-gray-500 border-gray-300 hover:bg-blue-100 hover:text-blue-600 hover:border-blue-400'}`}
                                         title="Add multiple scores"
                                     >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                                         </svg>
                                     </button>
                                 )}
                             </div>
-                            {errors[assessment.id] && <p className="text-red-500 text-xs mt-1 w-full">{errors[assessment.id]}</p>}
+                            {errors[assessment.id] && <p className="text-red-500 text-[10px] mt-0.5 w-full text-center">{errors[assessment.id]}</p>}
                         </div>
                     </td>
                 );
             })}
-            <td className="block lg:table-cell flex justify-between items-center p-4 text-right lg:text-center font-bold text-gray-800 bg-gray-50 lg:bg-transparent mt-1 lg:mt-0">
-                <span className="lg:hidden text-sm text-gray-500 uppercase font-bold tracking-wider">Total (100%)</span>
+            <td className="col-span-2 block lg:table-cell flex justify-between items-center p-4 text-right lg:text-center font-bold text-gray-800 bg-gray-50 lg:bg-transparent mt-1 lg:mt-0 shadow-inner lg:shadow-none">
+                <span className="lg:hidden text-sm text-gray-500 uppercase font-bold tracking-wider">Overall Total (100%)</span>
                 <span className="text-xl lg:text-base text-blue-700 lg:text-gray-800">{formatScore(totalWeightedScoreForDisplay)}{!totalWeightedScoreForDisplay && totalWeightedScoreForDisplay !== 0 ? '' : '%'}</span>
             </td>
         </tr>

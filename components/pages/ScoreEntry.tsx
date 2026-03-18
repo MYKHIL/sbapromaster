@@ -33,17 +33,17 @@ const ScoreEntry: React.FC = () => {
         setDebugData(null);
     };
 
-    const MobileControls = ({ className = "" }: { className?: string }) => (
+    const MobileControls = ({ className = "", compact = false }: { className?: string, compact?: boolean }) => (
         <div className="flex flex-col items-end">
-            <div className={`flex items-center gap-2 ${className}`}>
+            <div className={`flex items-center ${compact ? 'gap-1' : 'gap-2'} ${className}`}>
                 {/* Preview Button */}
                 {pendingCount > 0 && (
                     <button
                         onClick={handleShowDebugData}
-                        className="p-1.5 text-gray-500 hover:text-blue-600 bg-gray-100 hover:bg-blue-50 rounded-lg transition-colors border border-gray-200"
+                        className={`${compact ? 'p-1' : 'p-1.5'} text-gray-500 hover:text-blue-600 bg-gray-100 hover:bg-blue-50 rounded-lg transition-colors border border-gray-200`}
                         title="Preview changes"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" className={`${compact ? 'h-4 w-4' : 'h-5 w-5'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                         </svg>
@@ -54,10 +54,10 @@ const ScoreEntry: React.FC = () => {
                 <button
                     onClick={() => refreshFromCloud()}
                     disabled={isSyncing || !isOnline}
-                    className={`p-1.5 text-gray-500 hover:text-green-600 bg-gray-100 hover:bg-green-50 rounded-lg transition-colors border border-gray-200 ${(isSyncing || !isOnline) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={`${compact ? 'p-1' : 'p-1.5'} text-gray-500 hover:text-green-600 bg-gray-100 hover:bg-green-50 rounded-lg transition-colors border border-gray-200 ${(isSyncing || !isOnline) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     title="Refresh"
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${isSyncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" className={`${compact ? 'h-4 w-4' : 'h-5 w-5'} ${isSyncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
                 </button>
@@ -66,7 +66,7 @@ const ScoreEntry: React.FC = () => {
                 <button
                     onClick={() => saveToCloud(true)}
                     disabled={pendingCount === 0 || isSyncing || !isOnline}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all shadow-sm ${(pendingCount === 0 || isSyncing || !isOnline)
+                    className={`flex items-center ${compact ? 'gap-1 px-2 py-1' : 'gap-2 px-3 py-1.5'} rounded-lg transition-all shadow-sm ${(pendingCount === 0 || isSyncing || !isOnline)
                         ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                         : 'bg-blue-600 text-white hover:bg-blue-700'
                         }`}
@@ -74,18 +74,18 @@ const ScoreEntry: React.FC = () => {
                 >
                     {isSyncing ? (
                         <>
-                            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <svg className={`animate-spin ${compact ? 'h-4 w-4' : 'h-5 w-5'}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
-                            <span className="text-sm font-bold">{isFetching ? 'Fetching...' : 'Saving...'}</span>
+                            <span className={`${compact ? 'text-[10px]' : 'text-sm'} font-bold`}>{isFetching ? 'Fetching...' : 'Saving...'}</span>
                         </>
                     ) : (
                         <>
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg xmlns="http://www.w3.org/2000/svg" className={`${compact ? 'h-4 w-4' : 'h-5 w-5'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                             </svg>
-                            <span className="text-sm font-bold">Save {pendingCount > 0 ? `(${pendingCount})` : ''}</span>
+                            <span className={`${compact ? 'text-[10px]' : 'text-sm'} font-bold`}>Save {pendingCount > 0 ? `(${pendingCount})` : ''}</span>
                         </>
                     )}
                 </button>
@@ -211,7 +211,19 @@ const ScoreEntry: React.FC = () => {
     }, [selectedAssessmentId]);
 
     const [mobileScoreError, setMobileScoreError] = useState<string>('');
-    const [useMobileView, setUseMobileView] = useState(true);
+    const [useMobileView, setUseMobileView] = useState(() => {
+        try {
+            const saved = localStorage.getItem('scoreEntry_compactView');
+            // Default to true (compact) if not set
+            return saved !== null ? saved === 'true' : true;
+        } catch (e) {
+            return true;
+        }
+    });
+
+    useEffect(() => {
+        localStorage.setItem('scoreEntry_compactView', String(useMobileView));
+    }, [useMobileView]);
 
     // Ensure selectedAssessmentId is valid when assessments change
     useEffect(() => {
@@ -250,202 +262,66 @@ const ScoreEntry: React.FC = () => {
             const scores = getStudentScores(s.id, selectedSubjectId, selectedAssessmentId);
             return !scores || scores.length === 0 || scores[0] === '';
         }).length;
-    }, [filteredStudents, selectedSubjectId, selectedAssessmentId, getStudentScores]);
+    }, [filteredStudents, selectedSubjectId, selectedAssessmentId, getStudentScores, refreshVersion]);
 
+    // NEW: Calculate rankings for all students in the filtered list
+    // This allows us to display ranks even in non-compact mode
+    const allStudentsRankings = useMemo(() => {
+        if (!filteredStudents.length || !selectedSubjectId || !assessments.length) return {};
 
-    const handleNextStudent = () => {
-        if (selectedStudentIndex < filteredStudents.length - 1) {
-            setSelectedStudentIndex(prev => prev + 1);
-            setMobileScoreError('');
-        }
-    };
+        const studentStats = filteredStudents.map(student => {
+            const total = assessments.reduce((acc, assessment) => {
+                const scores = getStudentScores(student.id, selectedSubjectId, assessment.id);
+                // We use calculateDisplayScore from InlineScoreInput if we wanted to be identical,
+                // but for ranking we just need the weighted sum.
+                if (!scores || scores.length === 0 || scores[0] === '') return acc;
 
-    const handlePrevStudent = () => {
-        if (selectedStudentIndex > 0) {
-            setSelectedStudentIndex(prev => prev - 1);
-            setMobileScoreError('');
-        }
-    };
+                const scoreStr = scores[0];
+                const [numerator, denominator] = scoreStr.split('/').map(Number);
+                const weight = assessment.weight;
 
-    const scoreInputRef = useRef<HTMLInputElement>(null);
-
-    // Auto-focus score input when student changes in mobile view
-    useEffect(() => {
-        if (useMobileView && scoreInputRef.current) {
-            scoreInputRef.current.focus();
-        }
-    }, [selectedStudentIndex, useMobileView]);
-
-    // BUFFERED INPUT LOGIC
-    const [localScore, setLocalScore] = useState('');
-    const [scoreModified, setScoreModified] = useState(false); // Track if user has modified the score
-
-    // Reset score modification state on manual refresh or when changing context (student/subject/assessment)
-    useEffect(() => {
-        setScoreModified(false);
-    }, [refreshVersion, selectedStudentIndex, selectedSubjectId, selectedAssessmentId]);
-
-    // Sync local score when student/assessment changes OR when scores in DataContext change
-    useEffect(() => {
-        const student = filteredStudents[selectedStudentIndex];
-        if (student) {
-            // Get computed score (draft > saved)
-            const score = getComputedScore(student.id, selectedSubjectId, selectedAssessmentId);
-
-            // Fix Input Fighting: Only update localScore if:
-            // 1. It's different from current localScore
-            // 2. AND we haven't just modified it (scoreModified check is tricky because draft update cycles back)
-            // Better strategy: The checking if `localScore` matches `score` covers most cases.
-            // But if `score` is "45" and user types "45.", getComputedScore might return "45" and wipe the dot.
-
-            // If the incoming score is "empty" and local is empty, sync is fine.
-            // If incoming is same as local, ignore.
-
-            if (score !== localScore) {
-                // Danger zone: If user types "5" -> draft updates -> "5" comes back. All good.
-                // User types "5." -> draft updates "5." -> "5." comes back. All good.
-                // The issue is if draft update is async and "old" value comes back temporarily?
-                // Or if `getComputedScore` returns saved value before draft prevails?
-
-                // If `scoreModified` is true, it means WE just typed something. 
-                // We should arguably TRUST local state until we save or switch students.
-                // BUT if a real background sync happens, we might want to know.
-                // Let's assume for Mobile Entry, local state is king while typing.
-
-                if (!scoreModified) {
-                    setLocalScore(score);
+                if (assessment.name.toLowerCase().includes('exam')) {
+                    // Exams are out of 100
+                    return acc + (numerator / 100 * weight);
                 } else {
-                    // If modified, strictly checks if the draft has caught up?
-                    // If `score` (from context) effectively matches our `localScore`, we can reset modified?
-                    if (score === localScore) {
-                        setScoreModified(false);
-                    }
+                    // Classwork are out of weight
+                    return acc + (numerator / (denominator || weight) * weight);
                 }
-            }
-        } else {
-            setLocalScore('');
-            setScoreModified(false);
-        }
-        // Removing `scores` from dependency array might help prevent jitter from background validation
-        // But we need it if cloud sync updates data.
-        // Let's rely on `scoreModified` protection.
-    }, [selectedStudentIndex, selectedSubjectId, selectedAssessmentId, filteredStudents, draftVersion, scores]); // Listen to scores and draftVersion for sync
+            }, 0);
 
-    const commitScore = () => {
-        const student = filteredStudents[selectedStudentIndex];
-        if (!student) return;
-
-        const assessment = assessments.find(a => a.id === selectedAssessmentId);
-        if (!assessment) return;
-
-        0 && console.log('[ScoreEntry - Mobile] commitScore called:', {
-            studentId: student.id,
-            studentName: student.name,
-            subjectId: selectedSubjectId,
-            assessmentId: assessment.id,
-            assessmentName: assessment.name,
-            rawInput: localScore
+            return { id: student.id, total };
         });
 
-        const rawScoreInput = (localScore || '').trim();
-        const isExam = assessment.name.toLowerCase().includes('exam');
-        const maxScore = isExam ? 100 : assessment.weight;
-        const basis = isExam ? 100 : assessment.weight;
+        // Filter out zero-score students if desired, or keep them
+        const sorted = [...studentStats].sort((a, b) => b.total - a.total);
 
-        setMobileScoreError('');
+        const rankings: Record<string, { total: string, rank: string, rawRank: number }> = {};
+        sorted.forEach((stat, i) => {
+            const rank = i + 1;
+            let suffix = 'th';
+            if (rank % 10 === 1 && rank % 100 !== 11) suffix = 'st';
+            else if (rank % 10 === 2 && rank % 100 !== 12) suffix = 'nd';
+            else if (rank % 10 === 3 && rank % 100 !== 13) suffix = 'rd';
 
-        if (!rawScoreInput) {
-            0 && console.log('[ScoreEntry - Mobile] Empty score - clearing:', {
-                studentId: student.id,
-                studentName: student.name
-            });
-            // FIX: Use [''] instead of [] to ensure change is detected
-            updateStudentScores(student.id, selectedSubjectId, assessment.id, ['']);
-            removeDraftScore(student.id, selectedSubjectId, assessment.id);
-            setScoreModified(false); // Clear modification flag
-            return;
-        }
-
-        let convertedScore: number;
-        if (rawScoreInput.includes('/')) {
-            const parts = rawScoreInput.split('/');
-            if (parts.length !== 2) {
-                0 && console.log('[ScoreEntry - Mobile] Validation error: Invalid fraction format');
-                setMobileScoreError("Use 'x' or 'x/y'");
-                return;
-            }
-            const [x, y] = parts.map(Number);
-            if (isNaN(x) || isNaN(y)) {
-                0 && console.log('[ScoreEntry - Mobile] Validation error: Non-numeric values in fraction');
-                setMobileScoreError("Numbers only");
-                return;
-            }
-            if (y === 0) {
-                0 && console.log('[ScoreEntry - Mobile] Validation error: Division by zero');
-                setMobileScoreError("Base cannot be 0");
-                return;
-            }
-            convertedScore = (x / y) * maxScore;
-            0 && console.log('[ScoreEntry - Mobile] Fraction conversion:', { x, y, maxScore, convertedScore });
-        } else {
-            const z = Number(rawScoreInput);
-            if (isNaN(z)) {
-                0 && console.log('[ScoreEntry - Mobile] Validation error: Not a number');
-                setMobileScoreError("Score must be a number");
-                return;
-            }
-            convertedScore = z;
-            0 && console.log('[ScoreEntry - Mobile] Direct score:', { rawInput: z, convertedScore });
-        }
-
-        if (convertedScore > maxScore) {
-            0 && console.log('[ScoreEntry - Mobile] Validation error: Exceeds max score', { convertedScore, maxScore });
-            setMobileScoreError(`Max is ${maxScore}`);
-            return;
-        }
-        if (convertedScore < 0) {
-            0 && console.log('[ScoreEntry - Mobile] Validation error: Negative score');
-            setMobileScoreError("Cannot be negative");
-            return;
-        }
-
-        const finalScore = `${Number(convertedScore.toFixed(1))}/${basis}`;
-        0 && console.log('[ScoreEntry - Mobile] ✅ Score validated and formatted:', {
-            studentId: student.id,
-            studentName: student.name,
-            subjectId: selectedSubjectId,
-            assessmentId: assessment.id,
-            assessmentName: assessment.name,
-            rawInput: rawScoreInput,
-            convertedScore,
-            finalScore
+            rankings[stat.id] = {
+                total: (stat.total).toFixed(1).replace(/\.0$/, ''),
+                rank: `${rank}${suffix}`,
+                rawRank: rank
+            };
         });
 
-        0 && console.log('[ScoreEntry - Mobile] 💾 Calling updateStudentScores (saving to local cache)...');
-        updateStudentScores(student.id, selectedSubjectId, assessment.id, [finalScore]);
+        return rankings;
+    }, [filteredStudents, assessments, selectedSubjectId, getStudentScores, refreshVersion, scores]);
 
-        // Update local score to formatted version and clear modification flag
-        setLocalScore(finalScore);
-        setScoreModified(false);
-
-        // Unregister pending change / remove from draft
-        removeDraftScore(student.id, selectedSubjectId, assessment.id);
-
-        0 && console.log('[ScoreEntry - Mobile] ✅ Score committed successfully');
-    };
-
-    const getPlaceholder = () => {
-        const assessment = assessments.find(a => a.id === selectedAssessmentId);
-        if (!assessment) return '-';
-        return assessment.name.toLowerCase().includes('exam') ? 'e.g., 85' : '-';
-    };
-
-    // ... (Modal logic remains same)
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [modalData, setModalData] = useState<{ student: Student; assessment: Assessment, isExam: boolean } | null>(null);
+    const [modalData, setModalData] = useState<{ student: Student, assessment: Assessment, isExam: boolean } | null>(null);
 
     const handleOpenModal = (student: Student, assessment: Assessment) => {
-        setModalData({ student, assessment, isExam: assessment.name.toLowerCase().includes('exam') });
+        setModalData({
+            student,
+            assessment,
+            isExam: assessment.name.toLowerCase().includes('exam')
+        });
         setIsModalOpen(true);
     };
 
@@ -454,191 +330,177 @@ const ScoreEntry: React.FC = () => {
         setModalData(null);
     };
 
-    const handleAddScore = (newScore: string) => {
+    const handleAddScore = (score: string) => {
         if (!modalData) return;
-        const { student, assessment } = modalData;
-        const currentScores = getStudentScores(student.id, selectedSubjectId, assessment.id);
-        updateStudentScores(student.id, selectedSubjectId, assessment.id, [...currentScores, newScore]);
+        const currentScores = getStudentScores(modalData.student.id, selectedSubjectId, modalData.assessment.id);
+        updateStudentScores(modalData.student.id, selectedSubjectId, modalData.assessment.id, [...currentScores, score]);
     };
 
     const handleDeleteScore = (index: number) => {
         if (!modalData) return;
-        const { student, assessment } = modalData;
-        const currentScores = getStudentScores(student.id, selectedSubjectId, assessment.id);
-        const updatedScores = currentScores.filter((_, i) => i !== index);
-        // FIX: If all scores deleted, set to [''] to ensure it is saved as "Empty" instead of "No Data"
-        if (updatedScores.length === 0) {
-            updateStudentScores(student.id, selectedSubjectId, assessment.id, ['']);
-        } else {
-            updateStudentScores(student.id, selectedSubjectId, assessment.id, updatedScores);
-        }
+        const currentScores = getStudentScores(modalData.student.id, selectedSubjectId, modalData.assessment.id);
+        const newScores = [...currentScores];
+        newScores.splice(index, 1);
+        updateStudentScores(modalData.student.id, selectedSubjectId, modalData.assessment.id, newScores);
     };
 
-    const handleUpdateScore = (index: number, updatedScore: string) => {
+    const handleUpdateScore = (index: number, score: string) => {
         if (!modalData) return;
-        const { student, assessment } = modalData;
-        const currentScores = getStudentScores(student.id, selectedSubjectId, assessment.id);
-        const updatedScores = [...currentScores];
-        updatedScores[index] = updatedScore;
-        updateStudentScores(student.id, selectedSubjectId, assessment.id, updatedScores);
+        const currentScores = getStudentScores(modalData.student.id, selectedSubjectId, modalData.assessment.id);
+        const newScores = [...currentScores];
+        newScores[index] = score;
+        updateStudentScores(modalData.student.id, selectedSubjectId, modalData.assessment.id, newScores);
     };
 
     const totalWeight = useMemo(() => {
-        return assessments.reduce((acc, curr) => acc + curr.weight, 0);
-    }, [sortedAssessments]);
+        return assessments.reduce((sum, a) => sum + a.weight, 0);
+    }, [assessments]);
 
-    const selectStyles = "w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500";
+    const scoreInputRef = useRef<HTMLInputElement>(null);
+    const [localScore, setLocalScore] = useState('');
+    const [scoreModified, setScoreModified] = useState(false);
 
+    // Update local score when student or assessment changes
+    useEffect(() => {
+        const student = filteredStudents[selectedStudentIndex];
+        if (student && selectedSubjectId && selectedAssessmentId) {
+            const val = getComputedScore(student.id, selectedSubjectId, selectedAssessmentId);
+            setLocalScore(val);
+            setScoreModified(false);
+        }
+    }, [selectedStudentIndex, selectedSubjectId, selectedAssessmentId, filteredStudents, draftVersion]);
 
+    const commitScore = () => {
+        if (!scoreModified) return;
+        const student = filteredStudents[selectedStudentIndex];
+        if (!student) return;
 
-    // --- Real-time Stats Calculation (Mobile) ---
-    const projectedStats = useMemo(() => {
-        if (!selectedClass || !selectedSubjectId || !selectedAssessmentId || !filteredStudents || filteredStudents.length === 0) return null;
+        // Validation logic similar to InlineScoreInput
+        const rawScoreInput = localScore.trim();
+        const assessment = assessments.find(a => a.id === selectedAssessmentId);
+        if (!assessment) return;
 
-        const currentStudent = filteredStudents[selectedStudentIndex];
-        if (!currentStudent) return null;
+        const isExam = assessment.name.toLowerCase().includes('exam');
+        const maxScore = isExam ? 100 : assessment.weight;
+        const basis = isExam ? 100 : assessment.weight;
 
-        // Helper to match desktop logic (InlineScoreInput.tsx)
-        const calculateDisplayScore = (scores: string[], assessment: Assessment): number => {
-            if (!scores || scores.length === 0) return 0;
-            const isExam = assessment.name.toLowerCase().includes('exam');
+        if (!rawScoreInput) {
+            // Send [''] to signify cleared/empty. DataContext treats this as a change against []
+            updateStudentScores(student.id, selectedSubjectId, assessment.id, ['']);
+            removeDraftScore(student.id, selectedSubjectId, assessment.id);
+            setScoreModified(false);
+            setMobileScoreError('');
+            return;
+        }
 
-            const sumOfNumerators = scores.reduce((sum, scoreStr) => {
-                if (!scoreStr) return sum;
-                const [score] = scoreStr.split('/').map(Number);
-                return sum + (score || 0);
-            }, 0);
-
-            if (isExam) {
-                // For exams, average the scores
-                return sumOfNumerators / scores.length;
-            } else {
-                // For classwork, weighted score based on max totals
-                const totalMaxPossibleScore = scores.reduce((sum, scoreStr) => {
-                    if (!scoreStr) return sum;
-                    const [, max] = scoreStr.split('/').map(Number);
-                    return sum + (max || assessment.weight);
-                }, 0);
-
-                if (totalMaxPossibleScore === 0) return 0;
-                return (sumOfNumerators / totalMaxPossibleScore) * assessment.weight;
+        let convertedScore: number;
+        if (rawScoreInput.includes('/')) {
+            const parts = rawScoreInput.split('/');
+            if (parts.length !== 2) {
+                setMobileScoreError("Use 'x' or 'x/y'");
+                return;
             }
-        };
+            const [x, y] = parts.map(Number);
+            if (isNaN(x) || isNaN(y) || y === 0) {
+                setMobileScoreError("Invalid fraction");
+                return;
+            }
+            convertedScore = (x / y) * maxScore;
+        } else {
+            const z = Number(rawScoreInput);
+            if (isNaN(z)) {
+                setMobileScoreError("Numbers only");
+                return;
+            }
+            convertedScore = z;
+        }
 
-        // 1. Calculate stats for ALL students
-        const studentTotals = filteredStudents.map(student => {
-            let total = 0;
-            sortedAssessments.forEach(ass => {
-                // Get existing scores
-                let scores = [...(getStudentScores(student.id, selectedSubjectId, ass.id) || [])];
+        if (convertedScore > maxScore || convertedScore < 0) {
+            setMobileScoreError(`Range: 0-${maxScore}`);
+            return;
+        }
 
-                // If this is the active student & assessment, OVERRIDE the score with local input
-                // Assumption: Mobile view edits the FIRST score (index 0)
-                if (student.id === currentStudent.id && ass.id === selectedAssessmentId) {
-                    const isExam = ass.name.toLowerCase().includes('exam');
-                    const basis = isExam ? 100 : ass.weight;
+        const finalScore = `${Number(convertedScore.toFixed(1))}/${basis}`;
+        updateStudentScores(student.id, selectedSubjectId, assessment.id, [finalScore]);
+        removeDraftScore(student.id, selectedSubjectId, assessment.id);
+        setScoreModified(false);
+        setMobileScoreError('');
+    };
 
-                    let rawVal = 0;
-                    const rawInput = (localScore || '').trim();
-                    if (rawInput) {
-                        if (rawInput.includes('/')) {
-                            const p = rawInput.split('/');
-                            if (p.length === 2) rawVal = (Number(p[0]) / Number(p[1])) * basis;
-                        } else {
-                            rawVal = Number(rawInput);
-                        }
-                    }
-                    if (isNaN(rawVal)) rawVal = 0;
+    const getPlaceholder = () => {
+        const assessment = assessments.find(a => a.id === selectedAssessmentId);
+        if (!assessment) return '-';
+        return assessment.name.toLowerCase().includes('exam') ? 'Exam Score (out of 100)' : `Score (out of ${assessment.weight})`;
+    };
 
-                    // Construct the score string to mimic storage
-                    // Note: We blindly replace index 0. If empty, we start a new one.
-                    if (scores.length === 0) scores.push('');
-                    scores[0] = `${rawVal}/${basis}`;
+    const projectedStats = useMemo(() => {
+        const currentStudent = filteredStudents[selectedStudentIndex];
+        if (!currentStudent || !selectedSubjectId) return null;
+
+        // If score modified, we calculate a local "Total" preview
+        if (scoreModified) {
+            const baseline = allStudentsRankings[currentStudent.id] || { total: '0', rank: '-', rawRank: 0 };
+            
+            // Re-calculate total with the localScore
+            let displayTotal = 0;
+            assessments.forEach(assessment => {
+                let scoreStr = '';
+                if (assessment.id === selectedAssessmentId) {
+                    scoreStr = localScore;
+                } else {
+                    const scores = getStudentScores(currentStudent.id, selectedSubjectId, assessment.id);
+                    scoreStr = scores[0] || '';
                 }
 
-                const displayScore = calculateDisplayScore(scores, ass);
-                const isExam = ass.name.toLowerCase().includes('exam');
-
-                if (isExam) {
-                    // Match InlineScoreInput logic: Convert average (out of 100) to weighted value
-                    total += (displayScore / 100 * ass.weight);
+                if (!scoreStr) return;
+                
+                const [num, den] = scoreStr.split('/').map(Number);
+                const weight = assessment.weight;
+                if (assessment.name.toLowerCase().includes('exam')) {
+                    displayTotal += (num / 100 * weight);
                 } else {
-                    total += displayScore;
+                    displayTotal += (num / (den || weight) * weight);
                 }
             });
-            return { id: student.id, total };
-        });
-
-        // 2. Sort to find rank
-        studentTotals.sort((a, b) => b.total - a.total);
-
-        const myEntry = studentTotals.find(s => s.id === currentStudent.id);
-
-        // Fix Rounding: Match desktop "Total (100%)" column
-        // Use toFixed(1) then strip .0 if present
-        let displayTotal = "0";
-        if (myEntry) {
-            const fixed = myEntry.total.toFixed(1);
-            displayTotal = fixed.endsWith('.0') ? fixed.slice(0, -2) : fixed;
+            
+            return {
+                ...baseline,
+                total: displayTotal.toFixed(1).replace(/\.0$/, '')
+            };
         }
 
-        // Proper tie-handling: Students with same score get same rank
-        let rank = 0;
-        if (myEntry) {
-            let currentRank = 1;
-            for (let i = 0; i < studentTotals.length; i++) {
-                if (i > 0 && studentTotals[i].total < studentTotals[i - 1].total) {
-                    currentRank = i + 1;
-                }
-                if (studentTotals[i].id === currentStudent.id) {
-                    rank = currentRank;
-                    break;
-                }
-            }
-        }
+        return allStudentsRankings[currentStudent.id] || null;
+    }, [allStudentsRankings, selectedStudentIndex, localScore, scoreModified, selectedClass, selectedSubjectId, selectedAssessmentId, assessments, getStudentScores]);
 
-        const suffix = (["st", "nd", "rd"][((rank + 90) % 100 - 10) % 10 - 1] || "th");
 
-        return {
-            total: displayTotal,
-            rank: rank > 0 ? `${rank}${suffix}` : '-',
-            rawRank: rank,
-            totalStudents: studentTotals.length
-        };
-
-    }, [selectedClass, selectedSubjectId, selectedAssessmentId, filteredStudents, sortedAssessments, selectedStudentIndex, localScore, getStudentScores]);
-
+    const getSelectStyles = (isCompact: boolean) => `w-full ${isCompact ? 'p-2' : 'p-1 text-xs'} border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-all bg-white text-gray-900 font-medium lg:p-2 lg:text-base`;
 
     return (
-        <div className="space-y-6 pt-14">
+        <div className="space-y-3 lg:space-y-6 pt-14 pb-20 lg:pb-0">
             <div className="flex items-center justify-between">
-                <h1 className="text-3xl font-bold text-gray-800">Score Entry</h1>
-
-                {/* Save Button - Desktop View (Moved to GlobalActionBar) */}
+                <h1 className="text-3xl font-bold text-gray-800 px-4 lg:px-0">Score Entry</h1>
             </div>
 
-            <div className="bg-gray-100 py-4 sticky top-20 lg:top-0 z-20 shadow-md transition-all duration-300">
-                <div className="flex flex-col gap-4 p-4 bg-white rounded-xl shadow-md border border-gray-200">
+            <div className={`sticky ${useMobileView ? 'top-20' : 'top-14'} lg:top-0 z-20 transition-all duration-300 ${!useMobileView ? 'mb-1' : 'py-2 sm:py-4 bg-gray-100'}`}>
+                <div className={`flex flex-col ${useMobileView ? 'gap-2 p-3' : 'gap-0.5 p-2'} sm:gap-4 sm:p-4 bg-white rounded-xl shadow-md border border-gray-200 mx-auto max-w-7xl`}>
 
                     {/* Mobile View Toggle - Top */}
-                    <div className="lg:hidden flex items-center justify-between pb-2 border-b border-gray-100 mb-2">
+                    <div className="lg:hidden flex items-center justify-between pb-2 border-b border-gray-100 mb-1 lg:mb-0">
                         <label className="flex items-center space-x-2 cursor-pointer select-none">
                             <input
                                 type="checkbox"
                                 checked={useMobileView}
                                 onChange={(e) => setUseMobileView(e.target.checked)}
-                                className="form-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500 border-gray-300"
+                                className="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300"
                             />
-                            <span className="text-sm font-bold text-gray-700">Compact View</span>
+                            <span className={`font-bold text-gray-700 ${useMobileView ? 'text-sm' : 'text-[10px]'}`}>Compact View</span>
                         </label>
-                        {!useMobileView && <MobileControls />}
+                        {!useMobileView && <MobileControls compact={true} className="origin-right" />}
                     </div>
 
-                    {/* Save Button for Mobile Table View (!Compact) (Moved to GlobalActionBar) */}
-
-                    <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="grid grid-cols-2 lg:flex lg:flex-row gap-3 lg:gap-4">
                         <div className="flex-1">
-                            <label htmlFor="class-select" className="block text-sm font-medium text-gray-700 mb-1">Select Class</label>
+                            <label htmlFor="class-select" className={`block font-medium text-gray-700 ${useMobileView ? 'text-sm mb-1' : 'text-[10px] mb-0'} lg:text-sm lg:mb-1`}>Select Class</label>
                             <select
                                 id="class-select"
                                 value={selectedClass}
@@ -647,7 +509,7 @@ const ScoreEntry: React.FC = () => {
                                     setSelectedClass(newValue);
                                     localStorage.setItem('scoreEntry_selectedClass', newValue);
                                 }}
-                                className={selectStyles}
+                                className={getSelectStyles(useMobileView)}
                             >
                                 {currentUser?.role === 'Admin' || (classes.length === 0) ? (
                                     <option value="">
@@ -658,7 +520,7 @@ const ScoreEntry: React.FC = () => {
                             </select>
                         </div>
                         <div className="flex-1">
-                            <label htmlFor="subject-select" className="block text-sm font-medium text-gray-700 mb-1">Select Subject</label>
+                            <label htmlFor="subject-select" className={`block font-medium text-gray-700 ${useMobileView ? 'text-sm mb-1' : 'text-[10px] mb-0'} lg:text-sm lg:mb-1`}>Select Subject</label>
                             <select
                                 id="subject-select"
                                 value={selectedSubjectId}
@@ -667,7 +529,7 @@ const ScoreEntry: React.FC = () => {
                                     setSelectedSubjectId(newValue);
                                     localStorage.setItem('scoreEntry_selectedSubjectId', String(newValue));
                                 }}
-                                className={selectStyles}
+                                className={getSelectStyles(useMobileView)}
                             >
                                 {subjects.map(s => <option key={s.id} value={s.id}>{s.subject}</option>)}
                             </select>
@@ -685,7 +547,7 @@ const ScoreEntry: React.FC = () => {
                                             <select
                                                 value={selectedStudentIndex}
                                                 onChange={(e) => setSelectedStudentIndex(Number(e.target.value))}
-                                                className={selectStyles}
+                                                className={getSelectStyles(true)}
                                             >
                                                 {filteredStudents.map((student, index) => (
                                                     <option key={student.id} value={index}>{student.name}</option>
@@ -699,7 +561,6 @@ const ScoreEntry: React.FC = () => {
                                                 {unfilledCount > 0 ? (
                                                     <button
                                                         onClick={() => {
-                                                            // Find the first unscored student
                                                             const firstUnscoredIndex = filteredStudents.findIndex(s => {
                                                                 const scores = getStudentScores(s.id, selectedSubjectId, selectedAssessmentId);
                                                                 return !scores || scores.length === 0 || scores[0] === '';
@@ -709,7 +570,7 @@ const ScoreEntry: React.FC = () => {
                                                                 setMobileScoreError('');
                                                             }
                                                         }}
-                                                        className="text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700 hover:bg-red-200 hover:text-red-800 transition-colors cursor-pointer"
+                                                        className="text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700 hover:bg-red-200 hover:text-red-800 transition-colors"
                                                     >
                                                         {unfilledCount} unscored • Tap to jump
                                                     </button>
@@ -722,7 +583,7 @@ const ScoreEntry: React.FC = () => {
                                             <select
                                                 value={selectedAssessmentId}
                                                 onChange={(e) => setSelectedAssessmentId(Number(e.target.value))}
-                                                className={selectStyles}
+                                                className={getSelectStyles(true)}
                                             >
                                                 {sortedAssessments.map(assessment => (
                                                     <option key={assessment.id} value={assessment.id}>
@@ -748,13 +609,9 @@ const ScoreEntry: React.FC = () => {
                                                             inputMode="decimal"
                                                             value={localScore}
                                                             onChange={(e) => {
-                                                                // Only allow numbers, forward slash (/), and dot (.)
                                                                 const filtered = e.target.value.replace(/[^0-9/.]/g, '');
-                                                                // Logging removed for cleaner production code
                                                                 setLocalScore(filtered);
                                                                 setScoreModified(true);
-
-                                                                // Update global draft
                                                                 const student = filteredStudents[selectedStudentIndex];
                                                                 if (student) {
                                                                     updateDraftScore(student.id, selectedSubjectId, selectedAssessmentId, filtered);
@@ -781,7 +638,6 @@ const ScoreEntry: React.FC = () => {
                                                             </div>
                                                         )}
 
-                                                        {/* Rank Badge inside Input (Moved after input for stacking) */}
                                                         {!isReadOnly && projectedStats && projectedStats.rawRank > 0 && (
                                                             <div className={`absolute left-2 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded-md border text-xs font-bold leading-none shadow-sm z-20 pointer-events-none
                                                                 ${projectedStats.rawRank === 1 ? 'bg-yellow-100 text-yellow-800 border-yellow-300 ring-1 ring-yellow-300' :
@@ -796,26 +652,16 @@ const ScoreEntry: React.FC = () => {
                                                         {localScore && !isReadOnly && (
                                                             <button
                                                                 onClick={() => {
-                                                                    // 1. Update UI immediately
                                                                     setLocalScore('');
                                                                     setScoreModified(true);
-
-                                                                    // 2. FORCE COMMIT the empty value to global state
-                                                                    // commitScore() skips empty strings, so we must manually trigger the update here.
                                                                     const student = filteredStudents[selectedStudentIndex];
                                                                     if (student) {
-                                                                        0 && console.log('[ScoreEntry] 🧹 Clearing score for:', student.name);
-                                                                        // Send [''] to signify cleared/empty. DataContext treats this as a change against []
                                                                         updateStudentScores(student.id, selectedSubjectId, selectedAssessmentId, ['']);
-
-                                                                        // 3. Clean up draft state (since we just committed)
                                                                         removeDraftScore(student.id, selectedSubjectId, selectedAssessmentId);
                                                                     }
-
                                                                     scoreInputRef.current?.focus();
                                                                 }}
                                                                 className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-red-500 transition-colors"
-                                                                title="Clear score"
                                                             >
                                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -827,7 +673,6 @@ const ScoreEntry: React.FC = () => {
                                                 </ReadOnlyWrapper>
                                             </div>
 
-                                            {/* External Stats Box - Total Only */}
                                             {!isReadOnly && projectedStats && (
                                                 <div className="w-20 bg-blue-50 rounded-md border border-blue-100 flex flex-col items-center justify-center shrink-0">
                                                     <span className="text-[10px] uppercase text-blue-400 font-bold tracking-wider">Total</span>
@@ -839,24 +684,18 @@ const ScoreEntry: React.FC = () => {
 
                                     <div className="flex justify-between pt-2">
                                         <button
-                                            onClick={handlePrevStudent}
+                                            onClick={() => setSelectedStudentIndex(prev => Math.max(0, prev - 1))}
                                             disabled={selectedStudentIndex === 0}
-                                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+                                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                         >
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                                            </svg>
-                                            Previous
+                                            Previous Student
                                         </button>
                                         <button
-                                            onClick={handleNextStudent}
+                                            onClick={() => setSelectedStudentIndex(prev => Math.min(filteredStudents.length - 1, prev + 1))}
                                             disabled={selectedStudentIndex === filteredStudents.length - 1}
-                                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+                                            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                         >
-                                            Next
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                                            </svg>
+                                            Next Student
                                         </button>
                                     </div>
                                 </>
@@ -867,17 +706,21 @@ const ScoreEntry: React.FC = () => {
                             )}
                         </div>
                     )}
+
+                    {/* Weight Warning - Inside Selection Card */}
+                    {totalWeight !== 100 && (
+                        <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg text-xs">
+                            <p className="font-bold flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                Weights Warning ({totalWeight}%)
+                            </p>
+                            <p>Sum is not 100%. Review settings.</p>
+                        </div>
+                    )}
                 </div>
             </div>
-
-            {
-                totalWeight !== 100 && (
-                    <div className="p-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 rounded-md">
-                        <p className="font-bold">Warning</p>
-                        <p>The sum of weights for all assessments is {totalWeight}%, not 100%. Please review assessment types in settings.</p>
-                    </div>
-                )
-            }
 
             {/* Desktop View: Grid Table & Mobile Card View */}
             <ReadOnlyWrapper allowedRoles={['Admin', 'Teacher']}>
@@ -907,6 +750,8 @@ const ScoreEntry: React.FC = () => {
                                             assessments={sortedAssessments}
                                             onOpenModal={handleOpenModal}
                                             readOnly={isReadOnly}
+                                            studentTotal={allStudentsRankings[student.id]?.total}
+                                            studentRank={allStudentsRankings[student.id]?.rank}
                                         />
                                     ))
                                 ) : (
@@ -922,23 +767,19 @@ const ScoreEntry: React.FC = () => {
                 </div>
             </ReadOnlyWrapper>
 
-            {
-                isModalOpen && modalData && (
-                    <ScoreManagementModal
-                        isOpen={isModalOpen}
-                        onClose={handleCloseModal}
-                        studentName={modalData.student.name}
-                        assessment={modalData.assessment}
-                        scores={getStudentScores(modalData.student.id, selectedSubjectId, modalData.assessment.id)}
-                        onAddScore={handleAddScore}
-                        onDeleteScore={handleDeleteScore}
-                        onUpdateScore={handleUpdateScore}
-                        isExam={modalData.isExam}
-                    />
-                )
-            }
-
-
+            {isModalOpen && modalData && (
+                <ScoreManagementModal
+                    isOpen={isModalOpen}
+                    onClose={handleCloseModal}
+                    studentName={modalData.student.name}
+                    assessment={modalData.assessment}
+                    scores={getStudentScores(modalData.student.id, selectedSubjectId, modalData.assessment.id)}
+                    onAddScore={handleAddScore}
+                    onDeleteScore={handleDeleteScore}
+                    onUpdateScore={handleUpdateScore}
+                    isExam={modalData.isExam}
+                />
+            )}
 
             <PreviewDataModal
                 isOpen={isDebugModalOpen}
@@ -950,8 +791,7 @@ const ScoreEntry: React.FC = () => {
                 isOnline={isOnline}
                 hasLocalChanges={hasLocalChanges}
             />
-        </div >
-
+        </div>
     );
 };
 
