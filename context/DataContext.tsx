@@ -1,5 +1,5 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect, useRef, useMemo } from 'react';
-import { updateHeartbeat, logUserActivity, getSchoolData, saveDataTransaction, fetchStudents, fetchScoresForClass, fetchSubcollection, fetchMetadataBundle, updateMetadataBundle, updateStudentBucket, ensureStudentBucketExists } from '../services/firebaseService';
+import { updateHeartbeat, logUserActivity, getSchoolData, saveDataTransaction, fetchStudents, fetchScoresForClass, fetchSubcollection, fetchMetadataBundle, updateMetadataBundle, updateStudentBucket, ensureStudentBucketExists, subscribeToDocumentStatus } from '../services/firebaseService';
 import { getDeviceCredential } from '../services/authService';
 import * as SyncLogger from '../services/syncLogger';
 import useLocalStorage from '../hooks/useLocalStorage';
@@ -144,6 +144,7 @@ export interface DataContextType {
     markNotificationAsRead: (id: number) => void;
     markAllNotificationsAsRead: () => void;
     restoreItem: (field: keyof AppDataType, id: number) => void;
+    globalStatusMap: Record<string, { deleted: boolean, deletedBy: number }>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -237,6 +238,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [userLogs, setUserLogs] = useState<UserLog[]>([]);
     const [activeSessions, setActiveSessions] = useState<Record<string, string>>({});
     const [subscription, setSubscription] = useState<any | null>(null);
+    const [globalStatusMap, setGlobalStatusMap] = useState<Record<string, { deleted: boolean, deletedBy: number }>>({});
+    const [isStatusMapLoaded, setIsStatusMapLoaded] = useState(false);
 
     // GATING: Track if the session is "unlocked" (password verified)
     const [isSessionUnlocked, setIsSessionUnlocked] = useState(false);
@@ -266,7 +269,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Force hard reload on version mismatch to clear ghost listeners after update
     useEffect(() => {
-        const LATEST_VERSION = "1.0.124";
+        const LATEST_VERSION = "1.0.125";
         const currentVersion = localStorage.getItem("app_version");
 
         if (currentVersion !== LATEST_VERSION) {
@@ -1095,25 +1098,33 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // AUTO-SYNC REMOVED: All saves are now manual and page-specific
 
+    // Midway Soft-Delete Listener
+    useEffect(() => {
+        if (!schoolId || !isSessionUnlocked) {
+            setGlobalStatusMap({});
+            return;
+        }
+
+        console.log(`[DataContext] 🛡️ Subscribing to document status for ${schoolId}...`);
+        const unsubscribe = subscribeToDocumentStatus(schoolId, (statusMap) => {
+            console.log(`[DataContext] 🛡️ Received status map update: ${Object.keys(statusMap).length} items locked.`);
+            setGlobalStatusMap(statusMap);
+            setIsStatusMapLoaded(true);
+        });
+
+        return () => {
+            console.log(`[DataContext] 🛡️ Unsubscribing from document status for ${schoolId}`);
+            unsubscribe();
+        };
+    }, [schoolId, isSessionUnlocked]);
+
     const saveToCloud = async (isManualSave: boolean = false, skipRefresh: boolean = false) => {
-        // CRITICAL: Check if sync is paused (during authentication)
-        if (isSyncPaused.current) {
-            console.log("Sync is paused (likely during authentication), skipping save");
-            return;
-        }
-
-        if (!schoolId) {
-            console.log("No school ID, skipping cloud save.");
-            return;
-        }
-
-        // Prevent concurrent syncs
-        if (isSyncingRef.current) {
-            console.log("Sync already in progress, skipping duplicate sync");
-            return;
-        }
-
         // Manual save triggered
+        if (!isStatusMapLoaded) {
+            console.warn("[DataContext] 🛡️ Save blocked: Document status map not yet loaded from cloud.");
+            // Optionally show a toast or alert to the user
+            return;
+        }
 
         // CRITICAL: Don't sync if user was active very recently (within last 500ms)
         // This prevents syncing mid-keystroke or mid-interaction
@@ -1202,8 +1213,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // Previously, if we only had deletions (no updates), this block was skipped!
             if (Object.keys(transactionPayload).length > 0 || (transactionDeletions && Object.keys(transactionDeletions).length > 0)) {
                 console.log('[DataContext] ☁️ Performing Universal Transactional Save...');
+                
+                const storedUserId = Number(localStorage.getItem('sba_user_id') || localStorage.getItem('emulator-sba_user_id'));
+                const user = users?.find(u => u.id === storedUserId);
+                const userRole = user?.role || 'Guest';
+
                 // Uses the new generalized transaction helper
-                await saveDataTransaction(schoolId, transactionPayload, transactionDeletions, stateRef.current.students);
+                await saveDataTransaction(schoolId, transactionPayload, transactionDeletions, stateRef.current.students, storedUserId, userRole, globalStatusMap);
             } else {
                 console.log('[DataContext] ℹ️ No actionable updates or deletions found for transaction.');
             }
@@ -1863,6 +1879,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return;
         }
 
+        if (!isStatusMapLoaded) {
+            console.warn(`[savePageData] 🛡️ Save blocked: Document status map not yet loaded from cloud.`);
+            return;
+        }
+
         if (!isDirty(field)) {
             console.log(`[savePageData] No changes to ${String(field)}, skipping save.`);
             return;
@@ -1900,7 +1921,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const user = users?.find(u => u.id === storedUserId);
             const userRole = user?.role || 'Guest';
 
-            await saveDataTransaction(schoolId, updates, _deletions, stateRef.current.students, storedUserId, userRole);
+            await saveDataTransaction(schoolId, updates, _deletions, stateRef.current.students, storedUserId, userRole, globalStatusMap);
 
             // COMPOSITE STORAGE: If we just saved metadata, trigger a bundle rebuild
             // This ensures the optimized 'fetchMetadataBundle' has the latest data.
@@ -1972,7 +1993,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Process offline queue when coming back online
     useEffect(() => {
-        if (isOnline && queuedCount > 0 && schoolId) {
+        if (isOnline && queuedCount > 0 && schoolId && isStatusMapLoaded) {
             console.log('Network restored - syncing current state and clearing queue');
             setIsSyncing(true);
 
@@ -2037,7 +2058,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             // Use the transactional save to perform a SMART MERGE of the offline state
             // This prevents overwriting server data (like the "Data Wipe" bug caused by setDoc/merge:true on arrays)
-            saveDataTransaction(schoolId, currentData, deletions, stateRef.current.students)
+            const storedUserId = Number(localStorage.getItem('sba_user_id') || localStorage.getItem('emulator-sba_user_id'));
+            const user = users?.find(u => u.id === storedUserId);
+            const userRole = user?.role || 'Guest';
+
+            saveDataTransaction(schoolId, currentData, deletions, stateRef.current.students, storedUserId, userRole, globalStatusMap)
                 .then(() => {
                     // Success - clear the entire queue since we just synced current state
                     offlineQueue.clearQueue();
@@ -2063,7 +2088,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     setIsSyncing(false);
                 });
         }
-    }, [isOnline, schoolId, queuedCount]);
+    }, [isOnline, schoolId, queuedCount, users, globalStatusMap, isStatusMapLoaded]);
 
 
     useEffect(() => {
@@ -3271,7 +3296,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             markDirty(field, true);
             markItemDirty(field as string, id);
-        }
+        },
+        globalStatusMap
     };
 
     // Initialize originalData from local storage on load/schoolId change
