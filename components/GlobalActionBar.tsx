@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useData } from '../context/DataContext';
 import { useUser } from '../context/UserContext';
 import { useDatabaseError } from '../context/DatabaseErrorContext';
@@ -46,6 +46,7 @@ const GlobalActionBar: React.FC<GlobalActionBarProps> = ({ onOpenDebugModal, cur
 
     // UI-only state to show spinner immediately on click
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const collapseTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     // Toast state
     const [toast, setToast] = useState<{ message: string, type: 'success' | 'warning' | 'info' } | null>(null);
@@ -86,12 +87,33 @@ const GlobalActionBar: React.FC<GlobalActionBarProps> = ({ onOpenDebugModal, cur
         }
     };
 
-    // Auto-expand when pending count > 0 or notification unread count > 0 (only if not already expanded)
-    React.useEffect(() => {
-        if (pendingCount > 0) {
-            setIsExpanded(true);
+    const isSaveDisabled = pendingCount === 0 || isSyncing || isFetching || isRefreshing || !isOnline || isQuotaExceeded;
+
+    // Manage auto-expand and auto-collapse timer
+    useEffect(() => {
+        // Clear any existing timer when dependencies change
+        if (collapseTimerRef.current) {
+            clearTimeout(collapseTimerRef.current);
+            collapseTimerRef.current = null;
         }
-    }, [pendingCount]);
+
+        if (!isSaveDisabled) {
+            // Auto-expand when save button becomes active (new changes)
+            setIsExpanded(true);
+        } else if (isExpanded) {
+            // If expanded but disabled, start/restart 30s auto-collapse timer
+            collapseTimerRef.current = setTimeout(() => {
+                setIsExpanded(false);
+                collapseTimerRef.current = null;
+            }, 30000);
+        }
+
+        return () => {
+            if (collapseTimerRef.current) {
+                clearTimeout(collapseTimerRef.current);
+            }
+        };
+    }, [isSaveDisabled, isExpanded]);
 
     // Only show for authenticated users
     if (!currentUser) return null;
@@ -148,7 +170,7 @@ const GlobalActionBar: React.FC<GlobalActionBarProps> = ({ onOpenDebugModal, cur
 
     return (
         <WrappedActionBar
-            {...{ onOpenDebugModal, currentPage, currentUser, isAdmin, handleShowDebugData, notifications, unreadCount, isNotificationOpen, setIsNotificationOpen, saveToCloud, refreshFromCloud, isSyncing, isOnline, pendingCount, isFetching, hasLocalChanges, isDebugModalOpen, handleCloseDebugModal, onNavigate, isExpanded, setIsExpanded, handleRefresh, isRefreshing, toast, isQuotaExceeded }}
+            {...{ onOpenDebugModal, currentPage, currentUser, isAdmin, handleShowDebugData, notifications, unreadCount, isNotificationOpen, setIsNotificationOpen, saveToCloud, refreshFromCloud, isSyncing, isOnline, pendingCount, isFetching, hasLocalChanges, isDebugModalOpen, handleCloseDebugModal, onNavigate, isExpanded, setIsExpanded, handleRefresh, isRefreshing, toast, isQuotaExceeded, collapseTimerRef }}
         />
     );
 };
@@ -158,7 +180,7 @@ const WrappedActionBar: React.FC<any> = ({
     onOpenDebugModal, currentPage, currentUser, isAdmin, handleShowDebugData, notifications, unreadCount,
     isNotificationOpen, setIsNotificationOpen, saveToCloud, refreshFromCloud, isSyncing, isOnline,
     pendingCount, isFetching, hasLocalChanges, isDebugModalOpen, handleCloseDebugModal,
-    onNavigate, isExpanded, setIsExpanded, handleRefresh, isRefreshing, toast, isQuotaExceeded
+    onNavigate, isExpanded, setIsExpanded, handleRefresh, isRefreshing, toast, isQuotaExceeded, collapseTimerRef
 }) => {
     const { users, loadImportedData, markNotificationAsRead, markAllNotificationsAsRead } = useData();
 
@@ -297,7 +319,13 @@ const WrappedActionBar: React.FC<any> = ({
                 <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-2xl shadow-lg border border-gray-200 backdrop-blur-md bg-white/90 lg:bg-white/95 lg:px-3 lg:py-2">
                     {/* Expand/Collapse Toggle Button (Mobile Only or Minimal State) */}
                     <button
-                        onClick={() => setIsExpanded(!isExpanded)}
+                        onClick={() => {
+                            if (collapseTimerRef.current) {
+                                clearTimeout(collapseTimerRef.current);
+                                collapseTimerRef.current = null;
+                            }
+                            setIsExpanded(!isExpanded);
+                        }}
                         className={`p-1.5 rounded-lg transition-colors ${isExpanded ? 'text-blue-600 bg-blue-50' : 'text-gray-500 hover:bg-gray-100'}`}
                         title={isExpanded ? "Collapse Controls" : "Expand Controls"}
                     >
