@@ -101,11 +101,11 @@ const GlobalActionBar: React.FC<GlobalActionBarProps> = ({ onOpenDebugModal, cur
             // Auto-expand when save button becomes active (new changes)
             setIsExpanded(true);
         } else if (isExpanded) {
-            // If expanded but disabled, start/restart 30s auto-collapse timer
+            // If expanded but disabled, start/restart 5s auto-collapse timer
             collapseTimerRef.current = setTimeout(() => {
                 setIsExpanded(false);
                 collapseTimerRef.current = null;
-            }, 30000);
+            }, 5000);
         }
 
         return () => {
