@@ -145,6 +145,7 @@ export interface DataContextType {
     markNotificationAsRead: (id: number) => void;
     markAllNotificationsAsRead: () => void;
     restoreItem: (field: keyof AppDataType, id: number) => void;
+    permanentlyDeleteItem: (field: keyof AppDataType, id: number) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -267,7 +268,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Force hard reload on version mismatch to clear ghost listeners after update
     useEffect(() => {
-        const LATEST_VERSION = "1.0.130";
+        const LATEST_VERSION = "1.0.131";
         const currentVersion = localStorage.getItem("app_version");
 
         if (currentVersion !== LATEST_VERSION) {
@@ -3260,6 +3261,30 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             markDirty(field, true);
             markItemDirty(field as string, id);
+        },
+        permanentlyDeleteItem: (field: keyof AppDataType, id: number) => {
+            const userId = Number(localStorage.getItem('sba_user_id') || localStorage.getItem('emulator-sba_user_id'));
+            const user = users?.find(u => u.id === userId);
+            const isAdmin = user?.role === 'Admin';
+
+            if (!isAdmin) {
+                console.error(`[DataContext] 🚫 Permanent deletion blocked: User ${userId} is not an admin.`);
+                return;
+            }
+
+            // Generic permanent deletion logic (filtering out from state)
+            const remove = (prev: any[]) => prev.filter(item => item.id !== id);
+
+            if (field === 'students') setStudents(remove);
+            else if (field === 'subjects') setSubjects(remove);
+            else if (field === 'classes') setClasses(remove);
+            else if (field === 'grades') setGrades(remove);
+            else if (field === 'assessments') setAssessments(remove);
+            else return;
+
+            markDirty(field, true);
+            // We don't need markItemDirty for deletion as getPendingUploadData detects missing IDs
+            console.log(`[DataContext] 🗑️ Permanently deleted ${String(field)} item ${id}`);
         },
     };
 

@@ -8,10 +8,11 @@ interface RestoreModalProps {
     title: string;
     items: any[];
     onRestore: (id: number) => void;
+    onDeletePermanently?: (id: number) => void;
     itemNameKey: string;
 }
 
-const RestoreModal: React.FC<RestoreModalProps> = ({ isOpen, onClose, title, items, onRestore, itemNameKey }) => {
+const RestoreModal: React.FC<RestoreModalProps> = ({ isOpen, onClose, title, items, onRestore, onDeletePermanently, itemNameKey }) => {
     const { currentUser } = useUser();
     const { users } = useData();
 
@@ -83,7 +84,16 @@ const RestoreModal: React.FC<RestoreModalProps> = ({ isOpen, onClose, title, ite
                                                 hour12: true
                                             }) : 'Unknown'}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                                         <td className="px-6 py-4 whitespace-nowrap text-right flex justify-end gap-2">
+                                            {onDeletePermanently && currentUser?.role === 'Admin' && (
+                                                <button
+                                                    onClick={() => onDeletePermanently(item.id)}
+                                                    className="px-3 py-1.5 bg-red-50 text-red-700 hover:bg-red-100 font-bold text-xs rounded-lg transition-colors border border-red-200"
+                                                    title="Permanently remove this item"
+                                                >
+                                                    Delete Permanently
+                                                </button>
+                                            )}
                                             <button
                                                 onClick={() => onRestore(item.id)}
                                                 className="px-3 py-1.5 bg-green-50 text-green-700 hover:bg-green-100 font-bold text-xs rounded-lg transition-colors border border-green-200"

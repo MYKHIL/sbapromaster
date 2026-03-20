@@ -49,13 +49,15 @@ const calculateAge = (dobString: string): string => {
 
 
 const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
-    const { students, deletedStudents, restoreItem, classes, addStudent, updateStudent, deleteStudent, saveStudents, isDirty, isItemDirty, isSyncing, isOnline, settings, updateSettings, loadStudents, subscription } = useData();
+    const { students, deletedStudents, restoreItem, permanentlyDeleteItem, classes, addStudent, updateStudent, deleteStudent, saveStudents, isDirty, isItemDirty, isSyncing, isOnline, settings, updateSettings, loadStudents, subscription } = useData();
     const { currentUser, isAuthenticated } = useUser();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
     const [currentStudent, setCurrentStudent] = useState<Student | Omit<Student, 'id'> | null>(null);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [isPermanentConfirmOpen, setIsPermanentConfirmOpen] = useState(false);
     const [itemIdToDelete, setItemIdToDelete] = useState<number | null>(null);
+    const [idToPermanentlyDelete, setIdToPermanentlyDelete] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     // Preserve selected class filter
     const [selectedClass, setSelectedClass] = useLocalStorage<string>(`selected_class_${settings.schoolName || 'default'}`, '');
@@ -239,6 +241,19 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
         }
         setIsConfirmOpen(false);
         setItemIdToDelete(null);
+    };
+
+    const handlePermanentDeleteClick = (id: number) => {
+        setIdToPermanentlyDelete(id);
+        setIsPermanentConfirmOpen(true);
+    };
+
+    const handleConfirmPermanentDelete = () => {
+        if (idToPermanentlyDelete !== null) {
+            permanentlyDeleteItem('students', idToPermanentlyDelete);
+        }
+        setIsPermanentConfirmOpen(false);
+        setIdToPermanentlyDelete(null);
     };
 
     const handleCloseModal = () => {
@@ -699,7 +714,27 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
                 title="Restore Deleted Students"
                 items={deletedStudents}
                 onRestore={(id) => restoreItem('students', id)}
+                onDeletePermanently={handlePermanentDeleteClick}
                 itemNameKey="name"
+            />
+
+            <ConfirmationModal
+                isOpen={isPermanentConfirmOpen}
+                message={
+                    <>
+                        Are you sure you want to <span className="font-bold text-red-600 underline">permanently delete</span> this student? 
+                        <br /><br />
+                        This action <span className="font-bold">cannot be undone</span> and all related records will be completely removed from the system.
+                    </>
+                }
+                onConfirm={handleConfirmPermanentDelete}
+                onClose={() => {
+                    setIsPermanentConfirmOpen(false);
+                    setIdToPermanentlyDelete(null);
+                }}
+                title="Permanent Deletion"
+                variant="danger"
+                confirmText="Yes, Delete Permanently"
             />
         </div>
     );

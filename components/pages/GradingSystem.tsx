@@ -17,7 +17,7 @@ const EMPTY_GRADE_FORM: Omit<Grade, 'id'> = {
 };
 
 const GradingSystem: React.FC = () => {
-    const { grades, deletedGrades, restoreItem, addGrade, updateGrade, deleteGrade, blockRemoteUpdates, allowRemoteUpdates, saveGrades, isDirty, isItemDirty, isSyncing, isOnline, restoreDefaultGrades, loadMetadata } = useData();
+    const { grades, deletedGrades, restoreItem, permanentlyDeleteItem, addGrade, updateGrade, deleteGrade, blockRemoteUpdates, allowRemoteUpdates, saveGrades, isDirty, isItemDirty, isSyncing, isOnline, restoreDefaultGrades, loadMetadata } = useData();
     const { currentUser } = useUser();
 
     // TRIGGER RECONCILIATION: Identify unsaved local items on mount
@@ -29,8 +29,10 @@ const GradingSystem: React.FC = () => {
     const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
     const [currentGrade, setCurrentGrade] = useState<Grade | Omit<Grade, 'id'> | null>(null);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [isPermanentConfirmOpen, setIsPermanentConfirmOpen] = useState(false);
     const [isRestoreConfirmOpen, setIsRestoreConfirmOpen] = useState(false);
     const [itemIdToDelete, setItemIdToDelete] = useState<number | null>(null);
+    const [idToPermanentlyDelete, setIdToPermanentlyDelete] = useState<number | null>(null);
     const [modalError, setModalError] = useState('');
 
     const inputStyles = "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500";
@@ -106,6 +108,19 @@ const GradingSystem: React.FC = () => {
         }
         setIsConfirmOpen(false);
         setItemIdToDelete(null);
+    };
+
+    const handlePermanentDeleteClick = (id: number) => {
+        setIdToPermanentlyDelete(id);
+        setIsPermanentConfirmOpen(true);
+    };
+
+    const handleConfirmPermanentDelete = () => {
+        if (idToPermanentlyDelete !== null) {
+            permanentlyDeleteItem('grades', idToPermanentlyDelete);
+        }
+        setIsPermanentConfirmOpen(false);
+        setIdToPermanentlyDelete(null);
     };
 
     const handleCloseModal = () => {
@@ -349,7 +364,27 @@ const GradingSystem: React.FC = () => {
                     title="Restore Deleted Grades"
                     items={deletedGrades}
                     onRestore={(id) => restoreItem('grades', id)}
+                    onDeletePermanently={handlePermanentDeleteClick}
                     itemNameKey="name"
+                />
+
+                <ConfirmationModal
+                    isOpen={isPermanentConfirmOpen}
+                    message={
+                        <>
+                            Are you sure you want to <span className="font-bold text-red-600 underline">permanently delete</span> this grade? 
+                            <br /><br />
+                            This action <span className="font-bold">cannot be undone</span> and all related records will be completely removed from the system.
+                        </>
+                    }
+                    onConfirm={handleConfirmPermanentDelete}
+                    onClose={() => {
+                        setIsPermanentConfirmOpen(false);
+                        setIdToPermanentlyDelete(null);
+                    }}
+                    title="Permanent Deletion"
+                    variant="danger"
+                    confirmText="Yes, Delete Permanently"
                 />
             </div>
         </ReadOnlyWrapper>

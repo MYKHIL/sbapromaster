@@ -26,14 +26,16 @@ const EMPTY_TEACHER_FORM: Omit<Class, 'id'> = {
 const SIGNATURE_PLACEHOLDER = 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTUwIDUwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0yIDI1LjVDMiAyNS41IDE1LjUgMTUuNSAyOS41IDI4QzQzLjUgNDAuNSA1MyAyNS41IDY2LjUgMjAuNUM4MCAxNS41IDg4LjUgMjkgMTAwIDI5QzExMS41IDI5IDEyMyAxNS41IDEzNyAyOS41IiBzdHJva2U9IiM5Y2EzYWYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+';
 
 const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
-    const { classes, deletedClasses, restoreItem, addClass, updateClass, deleteClass, saveClasses, isDirty, isItemDirty, isSyncing, isOnline, subscription, loadMetadata } = useData();
+    const { classes, deletedClasses, restoreItem, permanentlyDeleteItem, addClass, updateClass, deleteClass, saveClasses, isDirty, isItemDirty, isSyncing, isOnline, subscription, loadMetadata } = useData();
     const { currentUser } = useUser();
     const isAdmin = currentUser?.role === 'Admin';
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
     const [currentClassData, setCurrentClassData] = useState<Class | Omit<Class, 'id'> | null>(null);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [isPermanentConfirmOpen, setIsPermanentConfirmOpen] = useState(false);
     const [itemIdToDelete, setItemIdToDelete] = useState<number | null>(null);
+    const [idToPermanentlyDelete, setIdToPermanentlyDelete] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [isEnhancing, setIsEnhancing] = useState(false);
     const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
@@ -123,6 +125,19 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
         }
         setIsConfirmOpen(false);
         setItemIdToDelete(null);
+    };
+
+    const handlePermanentDeleteClick = (id: number) => {
+        setIdToPermanentlyDelete(id);
+        setIsPermanentConfirmOpen(true);
+    };
+
+    const handleConfirmPermanentDelete = () => {
+        if (idToPermanentlyDelete !== null) {
+            permanentlyDeleteItem('classes', idToPermanentlyDelete);
+        }
+        setIsPermanentConfirmOpen(false);
+        setIdToPermanentlyDelete(null);
     };
 
     const handleCloseModal = () => {
@@ -526,7 +541,27 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
                 title="Restore Deleted Classes"
                 items={deletedClasses}
                 onRestore={(id) => restoreItem('classes', id)}
+                onDeletePermanently={handlePermanentDeleteClick}
                 itemNameKey="name"
+            />
+
+            <ConfirmationModal
+                isOpen={isPermanentConfirmOpen}
+                message={
+                    <>
+                        Are you sure you want to <span className="font-bold text-red-600 underline">permanently delete</span> this class? 
+                        <br /><br />
+                        This action <span className="font-bold">cannot be undone</span> and all related records (including student enrollments in this class) will be completely removed from the system.
+                    </>
+                }
+                onConfirm={handleConfirmPermanentDelete}
+                onClose={() => {
+                    setIsPermanentConfirmOpen(false);
+                    setIdToPermanentlyDelete(null);
+                }}
+                title="Permanent Deletion"
+                variant="danger"
+                confirmText="Yes, Delete Permanently"
             />
         </div>
     );

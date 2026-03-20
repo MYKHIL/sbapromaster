@@ -15,7 +15,7 @@ const EMPTY_SUBJECT_FORM: Omit<Subject, 'id'> = {
 };
 
 const Subjects: React.FC = () => {
-    const { subjects, deletedSubjects, restoreItem, addSubject, updateSubject, deleteSubject, saveSubjects, isDirty, isItemDirty, isSyncing, isOnline, loadMetadata } = useData();
+    const { subjects, deletedSubjects, restoreItem, permanentlyDeleteItem, addSubject, updateSubject, deleteSubject, saveSubjects, isDirty, isItemDirty, isSyncing, isOnline, loadMetadata } = useData();
     const { currentUser } = useUser();
 
     // TRIGGER RECONCILIATION: Identify unsaved local items on mount
@@ -27,7 +27,9 @@ const Subjects: React.FC = () => {
     const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
     const [currentSubject, setCurrentSubject] = useState<Subject | Omit<Subject, 'id'> | null>(null);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [isPermanentConfirmOpen, setIsPermanentConfirmOpen] = useState(false);
     const [itemIdToDelete, setItemIdToDelete] = useState<number | null>(null);
+    const [idToPermanentlyDelete, setIdToPermanentlyDelete] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
 
     const inputStyles = "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500";
@@ -69,6 +71,19 @@ const Subjects: React.FC = () => {
         }
         setIsConfirmOpen(false);
         setItemIdToDelete(null);
+    };
+
+    const handlePermanentDeleteClick = (id: number) => {
+        setIdToPermanentlyDelete(id);
+        setIsPermanentConfirmOpen(true);
+    };
+
+    const handleConfirmPermanentDelete = () => {
+        if (idToPermanentlyDelete !== null) {
+            permanentlyDeleteItem('subjects', idToPermanentlyDelete);
+        }
+        setIsPermanentConfirmOpen(false);
+        setIdToPermanentlyDelete(null);
     };
 
     const handleCloseModal = () => {
@@ -295,7 +310,27 @@ const Subjects: React.FC = () => {
                 title="Restore Deleted Subjects"
                 items={deletedSubjects}
                 onRestore={(id) => restoreItem('subjects', id)}
+                onDeletePermanently={handlePermanentDeleteClick}
                 itemNameKey="subject"
+            />
+
+            <ConfirmationModal
+                isOpen={isPermanentConfirmOpen}
+                message={
+                    <>
+                        Are you sure you want to <span className="font-bold text-red-600 underline">permanently delete</span> this subject? 
+                        <br /><br />
+                        This action <span className="font-bold">cannot be undone</span> and all related records will be completely removed from the system.
+                    </>
+                }
+                onConfirm={handleConfirmPermanentDelete}
+                onClose={() => {
+                    setIsPermanentConfirmOpen(false);
+                    setIdToPermanentlyDelete(null);
+                }}
+                title="Permanent Deletion"
+                variant="danger"
+                confirmText="Yes, Delete Permanently"
             />
         </div>
     );
