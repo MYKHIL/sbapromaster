@@ -85,8 +85,12 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
         // Merge with existing values to keep untouched fields stable? 
         // No, we want to overwrite if draftVersion changes (meaning someone else updated it)
         setInlineValues(prev => ({ ...prev, ...initialValues }));
-        setErrors({});
     }, [student, subjectId, assessments, draftVersion, scores]); // Listen to draftVersion and scores for external changes
+
+    // NEW: Clear errors when switching rows/subjects
+    useEffect(() => {
+        setErrors({});
+    }, [student.id, subjectId]);
 
     const handleValueChange = (assessmentId: number, value: string) => {
         const filteredValue = value.replace(/[^0-9/.]/g, '');
@@ -181,17 +185,20 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
             if (parts.length !== 2) {
                 0 && console.log('[InlineScoreInput] Validation error: Invalid fraction format');
                 setErrors(prev => ({ ...prev, [assessmentId]: "Use 'x' or 'x/y'" }));
+                removeDraftScore(student.id, subjectId, assessmentId);
                 return;
             }
             const [x, y] = parts.map(Number);
             if (isNaN(x) || isNaN(y)) {
                 0 && console.log('[InlineScoreInput] Validation error: Non-numeric values in fraction');
                 setErrors(prev => ({ ...prev, [assessmentId]: "Numbers only" }));
+                removeDraftScore(student.id, subjectId, assessmentId);
                 return;
             }
             if (y === 0) {
                 0 && console.log('[InlineScoreInput] Validation error: Division by zero');
                 setErrors(prev => ({ ...prev, [assessmentId]: "Base cannot be 0" }));
+                removeDraftScore(student.id, subjectId, assessmentId);
                 return;
             }
             convertedScore = (x / y) * maxScore;
@@ -201,20 +208,25 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
             if (isNaN(z)) {
                 0 && console.log('[InlineScoreInput] Validation error: Not a number');
                 setErrors(prev => ({ ...prev, [assessmentId]: "Score must be a number" }));
+                removeDraftScore(student.id, subjectId, assessmentId);
                 return;
             }
             convertedScore = z;
             0 && console.log('[InlineScoreInput] Direct score:', { rawInput: z, convertedScore });
         }
 
-        if (convertedScore > maxScore) {
-            0 && console.log('[InlineScoreInput] Validation error: Exceeds max score', { convertedScore, maxScore });
-            setErrors(prev => ({ ...prev, [assessmentId]: `Max is ${maxScore}` }));
-            return;
-        }
-        if (convertedScore < 0) {
-            0 && console.log('[InlineScoreInput] Validation error: Negative score');
-            setErrors(prev => ({ ...prev, [assessmentId]: "Cannot be negative" }));
+        if (convertedScore / basis > 1 || convertedScore < 0) {
+            setErrors(prev => ({ ...prev, [assessmentId]: `Score cannot exceed assessment weight (max 100%)` }));
+            // Revert to original value
+            const originalVal = originalValues.current[assessmentId] || '';
+            setInlineValues(prev => ({ ...prev, [assessmentId]: originalVal }));
+            // Remove from modified fields
+            setModifiedFields(prev => {
+                const next = new Set(prev);
+                next.delete(assessmentId);
+                return next;
+            });
+            removeDraftScore(student.id, subjectId, assessmentId);
             return;
         }
 

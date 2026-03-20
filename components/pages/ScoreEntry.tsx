@@ -360,15 +360,22 @@ const ScoreEntry: React.FC = () => {
     const [localScore, setLocalScore] = useState('');
     const [scoreModified, setScoreModified] = useState(false);
 
+    // Clear error only when student, subject, or assessment changes
+    useEffect(() => {
+        setMobileScoreError('');
+    }, [selectedStudentIndex, selectedSubjectId, selectedAssessmentId]);
+
     // Update local score when student or assessment changes
     useEffect(() => {
         const student = filteredStudents[selectedStudentIndex];
         if (student && selectedSubjectId && selectedAssessmentId) {
             const val = getComputedScore(student.id, selectedSubjectId, selectedAssessmentId);
-            setLocalScore(val);
-            setScoreModified(false);
+            if (localScore !== val) {
+                setLocalScore(val);
+                setScoreModified(false);
+            }
         }
-    }, [selectedStudentIndex, selectedSubjectId, selectedAssessmentId, filteredStudents, draftVersion]);
+    }, [selectedStudentIndex, selectedSubjectId, selectedAssessmentId, filteredStudents, draftVersion, scores, localScore, getComputedScore]);
 
     const commitScore = () => {
         if (!scoreModified) return;
@@ -398,11 +405,13 @@ const ScoreEntry: React.FC = () => {
             const parts = rawScoreInput.split('/');
             if (parts.length !== 2) {
                 setMobileScoreError("Use 'x' or 'x/y'");
+                removeDraftScore(student.id, selectedSubjectId, assessment.id);
                 return;
             }
             const [x, y] = parts.map(Number);
             if (isNaN(x) || isNaN(y) || y === 0) {
                 setMobileScoreError("Invalid fraction");
+                removeDraftScore(student.id, selectedSubjectId, assessment.id);
                 return;
             }
             convertedScore = (x / y) * maxScore;
@@ -410,13 +419,17 @@ const ScoreEntry: React.FC = () => {
             const z = Number(rawScoreInput);
             if (isNaN(z)) {
                 setMobileScoreError("Numbers only");
+                removeDraftScore(student.id, selectedSubjectId, assessment.id);
                 return;
             }
             convertedScore = z;
         }
 
-        if (convertedScore > maxScore || convertedScore < 0) {
-            setMobileScoreError(`Range: 0-${maxScore}`);
+        if (convertedScore / basis > 1 || convertedScore < 0) {
+            setMobileScoreError(`Score cannot exceed assessment weight (max 100%)`);
+            setLocalScore(''); // Clear input on error as requested
+            setScoreModified(false);
+            removeDraftScore(student.id, selectedSubjectId, assessment.id);
             return;
         }
 
@@ -505,6 +518,7 @@ const ScoreEntry: React.FC = () => {
                                 id="class-select"
                                 value={selectedClass}
                                 onChange={(e) => {
+                                    if (scoreModified) commitScore();
                                     const newValue = e.target.value;
                                     setSelectedClass(newValue);
                                     localStorage.setItem('scoreEntry_selectedClass', newValue);
@@ -525,6 +539,7 @@ const ScoreEntry: React.FC = () => {
                                 id="subject-select"
                                 value={selectedSubjectId}
                                 onChange={(e) => {
+                                    if (scoreModified) commitScore();
                                     const newValue = Number(e.target.value);
                                     setSelectedSubjectId(newValue);
                                     localStorage.setItem('scoreEntry_selectedSubjectId', String(newValue));
@@ -546,7 +561,10 @@ const ScoreEntry: React.FC = () => {
                                             <label className="block text-sm font-medium text-gray-700 mb-1">Student</label>
                                             <select
                                                 value={selectedStudentIndex}
-                                                onChange={(e) => setSelectedStudentIndex(Number(e.target.value))}
+                                                onChange={(e) => {
+                                                    if (scoreModified) commitScore();
+                                                    setSelectedStudentIndex(Number(e.target.value));
+                                                }}
                                                 className={getSelectStyles(true)}
                                             >
                                                 {filteredStudents.map((student, index) => (
@@ -582,7 +600,10 @@ const ScoreEntry: React.FC = () => {
                                             </div>
                                             <select
                                                 value={selectedAssessmentId}
-                                                onChange={(e) => setSelectedAssessmentId(Number(e.target.value))}
+                                                onChange={(e) => {
+                                                    if (scoreModified) commitScore();
+                                                    setSelectedAssessmentId(Number(e.target.value));
+                                                }}
                                                 className={getSelectStyles(true)}
                                             >
                                                 {sortedAssessments.map(assessment => (

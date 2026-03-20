@@ -22,11 +22,9 @@ service cloud.firestore {
     function isAuthorizedToRestore(oldData, newData) {
       let isDeleted = oldData.get('deleted', false);
       let isRestoring = isDeleted && newData.get('deleted', true) == false;
-      let requesterId = newData.get('requesterId', -1);
-      let requesterRole = newData.get('requesterRole', 'Guest');
-      let isAuthorized = requesterRole == 'Admin' || requesterId == oldData.get('deletedBy', -2);
       
-      return !isDeleted || (isRestoring && isAuthorized);
+      // deleter check is now done in the client's app
+      return !isDeleted || isRestoring;
     }
 
     match /subscriptions/{schoolId} {
