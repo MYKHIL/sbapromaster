@@ -491,7 +491,7 @@ const ScoreEntry: React.FC = () => {
     return (
         <div className="space-y-3 lg:space-y-6 pt-14 pb-20 lg:pb-0">
             <div className="flex items-center justify-between">
-                <h1 className="text-3xl font-bold text-gray-800 px-4 lg:px-0">Score Entry</h1>
+                <h1 className="text-3xl font-bold text-gray-800 px-4 lg:px-0">Score Entrysa</h1>
             </div>
 
             <div className={`sticky ${useMobileView ? 'top-20' : 'top-14'} lg:top-0 z-20 transition-all duration-300 ${!useMobileView ? 'mb-1' : 'py-2 sm:py-4 bg-gray-100'}`}>
