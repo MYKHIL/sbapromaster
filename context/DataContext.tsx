@@ -272,7 +272,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.142"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.143"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -282,26 +282,22 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 const serverVersion = data.version;
                 
                 if (serverVersion && serverVersion !== LATEST_VERSION) {
-                    console.log(`[Version] 🚀 New version detected: ${serverVersion} (Current: ${LATEST_VERSION}).`);
+                    // Check if we have mission-critical unsaved changes
+                    const isDirty = dirtyFields.current.size > 0;
                     
-                    // If the user has unsaved changes, we DO NOT reload. 
-                    // We just let them know a new version is ready for next time.
-                    if (dirtyFields.current.size > 0) {
-                        console.log('[Version] 🛡️ Unsaved changes detected. Postponing reload until next session.');
+                    if (isDirty) {
+                        console.log(`[Version] 🚀 New version ${serverVersion} available. Postponing auto-refresh due to unsaved changes.`);
                         return;
                     }
 
-                    // For GitHub Pages, we need a significant delay (build time)
-                    // 10 seconds is a helpful grace period.
-                    console.log(`[Version] 🔄 Auto-refreshing in 10s to apply updates...`);
-                    setTimeout(() => {
-                        // Re-check dirty status right before reload
-                        if (dirtyFields.current.size === 0) {
-                            window.location.reload();
-                        } else {
-                            console.log('[Version] 🛡️ User started typing. Cancelling auto-refresh.');
-                        }
-                    }, 10000); 
+                    // No unsaved changes: Perform a TRULY SILENT reload immediately.
+                    // We've already waited 2 minutes on the server side, so the code is READY.
+                    console.log(`[Version] 🚀 New version ${serverVersion} detected. Applying silently...`);
+                    
+                    // Force a reload without the beforeunload prompt
+                    // @ts-ignore
+                    window.onbeforeunload = null;
+                    window.location.reload();
                 }
             }
         }, (error) => {
