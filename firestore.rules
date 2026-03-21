@@ -72,6 +72,11 @@ service cloud.firestore {
       }
     }
 
+    match /system/deployment {
+      allow read: if true;
+      allow write: if request.resource.data.deploymentSecret == "c93a215026f36ac783bcac8ba5e4bbea1c3cdb6c79d3824f9712143c44dbb0f3";
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

@@ -266,15 +266,36 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Track manual refreshes to force components to drop unsaved data
     const [refreshVersion, setRefreshVersion] = useState(0);
 
-    // Force hard reload on version mismatch to clear ghost listeners after update
+    // -------------------------------------------------------------------------
+    // INSTANT VERSION UPDATE (Push-Based)
+    // -------------------------------------------------------------------------
+    // Listen for deployment pings from the build script. If the version in the 
+    // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.135";
-        const currentVersion = localStorage.getItem("app_version");
+        const LATEST_VERSION = "1.0.136"; // Updated automatically by build script
+        
+        // Listen to the system/deployment document in the CURRENT database
+        const deployDocRef = doc(db, 'system', 'deployment');
+        
+        const unsubscribe = onSnapshot(deployDocRef, (snap) => {
+            if (snap.exists()) {
+                const data = snap.data();
+                const serverVersion = data.version;
+                
+                if (serverVersion && serverVersion !== LATEST_VERSION) {
+                    console.log(`[Version] 🚀 New version detected: ${serverVersion} (Current: ${LATEST_VERSION}). Refreshing...`);
+                    // Optional: Brief delay to ensure all assets are fully deployed before reload
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                }
+            }
+        }, (error) => {
+            console.warn('[Version] Failed to attach version listener:', error);
+        });
 
-        if (currentVersion !== LATEST_VERSION) {
-            localStorage.setItem("app_version", LATEST_VERSION);
-            window.location.reload();
-        }
+        // Cleanup on unmount
+        return () => unsubscribe();
     }, []);
 
     // Track original cloud data to compare against current state
