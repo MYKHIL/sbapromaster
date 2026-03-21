@@ -272,7 +272,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.149"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.150"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -282,9 +282,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 const serverVersion = data.version;
                 
                 if (serverVersion && serverVersion !== LATEST_VERSION) {
+                    // Guard against infinite reload loops when the CDN (Vercel/GitHub Pages)
+                    // is still serving a cached old bundle after a reload.
+                    // We track the last version we attempted a reload for in sessionStorage.
+                    // If we already tried to reload for THIS server version, back off — 
+                    // the new code just isn't live yet on the CDN.
+                    const reloadAttemptKey = `reload_attempted_for_${serverVersion}`;
+                    if (sessionStorage.getItem(reloadAttemptKey)) {
+                        console.log(`[Version] ⏸️ Already reloaded for v${serverVersion}. Waiting for CDN to propagate...`);
+                        return;
+                    }
+
                     console.log(`[Version] 🚀 New version ${serverVersion} detected. Reloading silently...`);
-                    // Suppress beforeunload prompt and reload immediately.
-                    // The 2-minute server delay guarantees the new code is already live.
+                    sessionStorage.setItem(reloadAttemptKey, 'true');
                     window.onbeforeunload = null;
                     window.location.reload();
                 }
