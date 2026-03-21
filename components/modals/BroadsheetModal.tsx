@@ -71,22 +71,24 @@ const BroadsheetModal: React.FC<BroadsheetModalProps> = ({ isOpen, onClose, term
                             const isExam = ass.name.toLowerCase().includes('exam');
 
                             if (isExam) {
-                                // Exam: avg(raw) / 100 * weight
                                 const rawSum = rawStrs.reduce((a, b) => {
-                                    if (!b) return a;
-                                    return a + (Number(b.split('/')[0]) || 0);
+                                    const s = (b || '').toString();
+                                    if (!s.includes('/')) return a;
+                                    return a + (Number(s.split('/')[0]) || 0);
                                 }, 0);
                                 const avg = rawStrs.length > 0 ? rawSum / rawStrs.length : 0;
                                 return sum + (avg / 100 * ass.weight);
                             } else {
                                 // Class: sum(raw) / sum(max) * weight
                                 const rawSum = rawStrs.reduce((a, b) => {
-                                    if (!b) return a;
-                                    return a + (Number(b.split('/')[0]) || 0);
+                                    const s = (b || '').toString();
+                                    if (!s.includes('/')) return a;
+                                    return a + (Number(s.split('/')[0]) || 0);
                                 }, 0);
                                 const maxSum = rawStrs.reduce((a, b) => {
-                                    if (!b) return a;
-                                    return a + (Number(b.split('/')[1]) || ass.weight);
+                                    const s = (b || '').toString();
+                                    if (!s.includes('/')) return a + ass.weight;
+                                    return a + (Number(s.split('/')[1]) || ass.weight);
                                 }, 0);
                                 if (maxSum === 0) return sum;
                                 return sum + (rawSum / maxSum * ass.weight);
@@ -169,12 +171,14 @@ const BroadsheetModal: React.FC<BroadsheetModalProps> = ({ isOpen, onClose, term
 
                 // Calc weighted contribution
                 const rawSum = rawArr.reduce((a, b) => {
-                    if (!b) return a;
-                    return a + (Number(b.split('/')[0]) || 0);
+                    const s = (b || '').toString();
+                    if (!s.includes('/')) return a;
+                    return a + (Number(s.split('/')[0]) || 0);
                 }, 0);
                 const maxSum = rawArr.reduce((a, b) => {
-                    if (!b) return a;
-                    return a + (Number(b.split('/')[1]) || ass.weight);
+                    const s = (b || '').toString();
+                    if (!s.includes('/')) return a + ass.weight;
+                    return a + (Number(s.split('/')[1]) || ass.weight);
                 }, 0);
                 if (maxSum > 0) {
                     subTotalA += (rawSum / maxSum * ass.weight);
@@ -186,8 +190,9 @@ const BroadsheetModal: React.FC<BroadsheetModalProps> = ({ isOpen, onClose, term
                 rawScores[examAssessment.name] = rawArr.map(r => (r || '').split('/')[0]).join(', ') || '-';
 
                 const rawSum = rawArr.reduce((a, b) => {
-                    if (!b) return a;
-                    return a + (Number(b.split('/')[0]) || 0);
+                    const s = (b || '').toString();
+                    if (!s.includes('/')) return a;
+                    return a + (Number(s.split('/')[0]) || 0);
                 }, 0);
                 // Exam is usually direct percentage contribution or simple avg
                 const avg = rawArr.length > 0 ? rawSum / rawArr.length : 0;

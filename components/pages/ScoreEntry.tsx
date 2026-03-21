@@ -274,9 +274,9 @@ const ScoreEntry: React.FC = () => {
                 const scores = getStudentScores(student.id, selectedSubjectId, assessment.id);
                 // We use calculateDisplayScore from InlineScoreInput if we wanted to be identical,
                 // but for ranking we just need the weighted sum.
-                if (!scores || scores.length === 0 || scores[0] === '') return acc;
-
-                const scoreStr = scores[0];
+                if (!scores || !scores[0]) return acc;
+                const scoreStr = (scores[0] || '').toString();
+                if (!scoreStr.includes('/')) return acc;
                 const [numerator, denominator] = scoreStr.split('/').map(Number);
                 const weight = assessment.weight;
 
@@ -467,7 +467,9 @@ const ScoreEntry: React.FC = () => {
 
                 if (!scoreStr) return;
                 
-                const [num, den] = scoreStr.split('/').map(Number);
+                const scoreText = (scoreStr || '').toString();
+                if (!scoreText.includes('/')) return;
+                const [num, den] = scoreText.split('/').map(Number);
                 const weight = assessment.weight;
                 if (assessment.name.toLowerCase().includes('exam')) {
                     displayTotal += (num / 100 * weight);
@@ -491,7 +493,7 @@ const ScoreEntry: React.FC = () => {
     return (
         <div className="space-y-3 lg:space-y-6 pt-14 pb-20 lg:pb-0">
             <div className="flex items-center justify-between">
-                <h1 className="text-3xl font-bold text-gray-800 px-4 lg:px-0">Score Entry</h1>
+                <h1 className="text-3xl font-bold text-gray-800 px-4 lg:px-0">Score Ent</h1>
             </div>
 
             <div className={`sticky ${useMobileView ? 'top-20' : 'top-14'} lg:top-0 z-20 transition-all duration-300 ${!useMobileView ? 'mb-1' : 'py-2 sm:py-4 bg-gray-100'}`}>
