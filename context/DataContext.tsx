@@ -272,9 +272,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.140"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.141"; // Updated automatically by build script
         
-        // Listen to the system/deployment document in the CURRENT database
         const deployDocRef = doc(db, 'system', 'deployment');
         
         const unsubscribe = onSnapshot(deployDocRef, (snap) => {
@@ -283,18 +282,32 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 const serverVersion = data.version;
                 
                 if (serverVersion && serverVersion !== LATEST_VERSION) {
-                    console.log(`[Version] 🚀 New version detected: ${serverVersion} (Current: ${LATEST_VERSION}). Refreshing...`);
-                    // Optional: Brief delay to ensure all assets are fully deployed before reload
+                    console.log(`[Version] 🚀 New version detected: ${serverVersion} (Current: ${LATEST_VERSION}).`);
+                    
+                    // If the user has unsaved changes, we DO NOT reload. 
+                    // We just let them know a new version is ready for next time.
+                    if (dirtyFields.current.size > 0) {
+                        console.log('[Version] 🛡️ Unsaved changes detected. Postponing reload until next session.');
+                        return;
+                    }
+
+                    // For GitHub Pages, we need a significant delay (build time)
+                    // 10 seconds is a helpful grace period.
+                    console.log(`[Version] 🔄 Auto-refreshing in 10s to apply updates...`);
                     setTimeout(() => {
-                        window.location.reload();
-                    }, 2000);
+                        // Re-check dirty status right before reload
+                        if (dirtyFields.current.size === 0) {
+                            window.location.reload();
+                        } else {
+                            console.log('[Version] 🛡️ User started typing. Cancelling auto-refresh.');
+                        }
+                    }, 10000); 
                 }
             }
         }, (error) => {
             console.warn('[Version] Failed to attach version listener:', error);
         });
 
-        // Cleanup on unmount
         return () => unsubscribe();
     }, []);
 
