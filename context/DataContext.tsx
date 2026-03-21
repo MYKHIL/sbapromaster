@@ -272,7 +272,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.148"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.149"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -282,20 +282,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 const serverVersion = data.version;
                 
                 if (serverVersion && serverVersion !== LATEST_VERSION) {
-                    // Check if we have mission-critical unsaved changes
-                    const isDirty = dirtyFields.current.size > 0;
-                    
-                    if (isDirty) {
-                        console.log(`[Version] 🚀 New version ${serverVersion} available. Postponing auto-refresh due to unsaved changes.`);
-                        return;
-                    }
-
-                    // No unsaved changes: Perform a TRULY SILENT reload immediately.
-                    // We've already waited 2 minutes on the server side, so the code is READY.
-                    console.log(`[Version] 🚀 New version ${serverVersion} detected. Applying silently...`);
-                    
-                    // Force a reload without the beforeunload prompt
-                    // @ts-ignore
+                    console.log(`[Version] 🚀 New version ${serverVersion} detected. Reloading silently...`);
+                    // Suppress beforeunload prompt and reload immediately.
+                    // The 2-minute server delay guarantees the new code is already live.
                     window.onbeforeunload = null;
                     window.location.reload();
                 }
