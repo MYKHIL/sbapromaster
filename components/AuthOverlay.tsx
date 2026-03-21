@@ -15,6 +15,7 @@ import YearTermSelector from './auth/YearTermSelector';
 import RegistrationForm from './auth/RegistrationForm';
 import SessionRestoreDialog from './auth/SessionRestoreDialog';
 import RegistrationPendingDialog from './auth/RegistrationPendingDialog';
+import SubscriptionExpiredDialog from './auth/SubscriptionExpiredDialog';
 import AdminSetup from './AdminSetup';
 import UserSelection from './UserSelection';
 import SubscriptionRequestModal from './SubscriptionRequestModal';
@@ -37,6 +38,8 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
     const [schoolData, setSchoolData] = useState<AppDataType | null>(null);
     const [currentSchoolId, setCurrentSchoolId] = useState<string | null>(null);
     const [showSessionRestore, setShowSessionRestore] = useState<boolean>(false);
+    const [isCheckingLicense, setIsCheckingLicense] = useState<boolean>(false);
+    const [showSubscriptionExpired, setShowSubscriptionExpired] = useState<boolean>(false);
     const [sessionInfo, setSessionInfo] = useState<{ schoolName: string; userName: string; academicYear?: string; academicTerm?: string } | null>(null);
     const [showRegistrationPending, setShowRegistrationPending] = useState<boolean>(false);
     const [pendingSchoolName, setPendingSchoolName] = useState<string>('');
@@ -143,7 +146,11 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 if (result.status !== 'success' || !result.data) {
                     console.error('[AuthOverlay] Failed to restore school session:', result.status);
                     if (result.status === 'expired') {
-                        alert('Your school license has expired. Please renew your subscription to continue.');
+                        // Show expiry dialog before modal
+                        setPendingSchoolName(result.data?.settings?.schoolName || savedSchoolId.split('_')[0]);
+                        setShowSubscriptionExpired(true);
+                    } else {
+                        alert(result.message || `Session restoration failed: ${result.status}`);
                     }
                     // Clear invalid school session
                     localStorage.removeItem('sba_school_id');
@@ -242,9 +249,31 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
         setCurrentStep('school-list');
     };
 
-    const handleSchoolSelect = (school: SchoolListItem) => {
-        setSelectedSchool(school);
-        setCurrentStep('password');
+    const handleSchoolSelect = async (school: SchoolListItem) => {
+        setIsCheckingLicense(true);
+        try {
+            0 && console.log('[AuthOverlay] Checking license status for school:', school.docId);
+            const { getExistingSubscription } = await import('../services/firebaseService');
+            const expiryDate = await getExistingSubscription(school.docId, school._databaseIndex || 0);
+
+            if (expiryDate && new Date() > expiryDate) {
+                0 && console.log('[AuthOverlay] Proactive interception: School license expired');
+                setPendingSchoolName(school.displayName || school.docId.split('_')[0]);
+                setShowSubscriptionExpired(true);
+                return;
+            }
+
+            // License is valid or not found, proceed to password
+            setSelectedSchool(school);
+            setCurrentStep('password');
+        } catch (error) {
+            console.error('[AuthOverlay] Proactive license check failed:', error);
+            // Fallback: Continue to password screen, executeLogin will perform the authoritative check
+            setSelectedSchool(school);
+            setCurrentStep('password');
+        } finally {
+            setIsCheckingLicense(false);
+        }
     };
 
     const handlePasswordVerified = (password: string) => {
@@ -553,7 +582,9 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 console.error('[AuthOverlay] ❌ Login failed:', result.message || result.status);
 
                 if (result.status === 'expired') {
-                    alert(result.message || 'Your school license has expired. Please renew your subscription through the License Portal.');
+                    // Show expiry dialog before modal
+                    setPendingSchoolName(result.data?.settings?.schoolName || docId.split('_')[0]);
+                    setShowSubscriptionExpired(true);
                 } else {
                     alert(result.message || `Login failed: ${result.status}`);
                 }
@@ -729,59 +760,6 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
 
     // ========== RENDER ==========
 
-    // Show loading state while restoring session
-    if (restoringSession) {
-        return (
-            <div className="fixed inset-0 bg-gray-900 bg-opacity-95 z-50 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4"></div>
-                    <p className="text-white text-lg">Restoring session...</p>
-                </div>
-            </div>
-        );
-    }
-
-    // Show session restore dialog
-    if (showSessionRestore && sessionInfo) {
-        return (
-            <SessionRestoreDialog
-                schoolName={sessionInfo.schoolName}
-                userName={sessionInfo.userName}
-                academicYear={sessionInfo.academicYear}
-                academicTerm={sessionInfo.academicTerm}
-                onContinue={handleContinueSession}
-                onLogout={handleLogoutSession}
-            />
-        );
-    }
-
-    // Show registration pending dialog
-    if (showRegistrationPending) {
-        return (
-            <>
-                <RegistrationPendingDialog
-                    schoolName={pendingSchoolName}
-                    onClose={() => {
-                        setShowRegistrationPending(false);
-                        setPendingSchoolName('');
-                        setCurrentStep('welcome');
-                    }}
-                    onSubscribe={() => setIsSubscriptionModalOpen(true)}
-                />
-                <SubscriptionRequestModal
-                    isOpen={isSubscriptionModalOpen}
-                    onClose={() => {
-                        setIsSubscriptionModalOpen(false);
-                        setPendingRegistration(null);
-                    }}
-                    onSuccess={handleRegistrationComplete}
-                    initialSchoolName={pendingSchoolName}
-                    pendingRegistration={pendingRegistration}
-                />
-            </>
-        );
-    }
-
     if (currentStep === 'authenticated') {
         return (
             <>
@@ -798,89 +776,153 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
         );
     }
 
-    // Render appropriate screen based on current step
-    switch (currentStep) {
-        case 'welcome':
+    const renderAuthContent = () => {
+        // Show loading state while restoring session or checking license
+        if (restoringSession || isCheckingLicense) {
             return (
-                <>
+                <div className="fixed inset-0 bg-gray-900 bg-opacity-95 z-50 flex items-center justify-center">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4"></div>
+                        <p className="text-white text-lg">{restoringSession ? 'Restoring session...' : 'Verifying school license...'}</p>
+                    </div>
+                </div>
+            );
+        }
+
+        // Show session restore dialog
+        if (showSessionRestore && sessionInfo) {
+            return (
+                <SessionRestoreDialog
+                    schoolName={sessionInfo.schoolName}
+                    userName={sessionInfo.userName}
+                    academicYear={sessionInfo.academicYear}
+                    academicTerm={sessionInfo.academicTerm}
+                    onContinue={handleContinueSession}
+                    onLogout={handleLogoutSession}
+                />
+            );
+        }
+
+        // Show registration pending dialog
+        if (showRegistrationPending) {
+            return (
+                <RegistrationPendingDialog
+                    schoolName={pendingSchoolName}
+                    onClose={() => {
+                        setShowRegistrationPending(false);
+                        setPendingSchoolName('');
+                        setCurrentStep('welcome');
+                    }}
+                    onSubscribe={() => setIsSubscriptionModalOpen(true)}
+                />
+            );
+        }
+
+        // Render appropriate screen based on current step
+        switch (currentStep) {
+            case 'welcome':
+                return (
                     <WelcomeScreen
                         onRegister={handleRegisterClick}
                         onLogin={handleLoginClick}
                         onSubscribe={() => setIsSubscriptionModalOpen(true)}
                     />
-                    <SubscriptionRequestModal
-                        isOpen={isSubscriptionModalOpen}
-                        onClose={() => setIsSubscriptionModalOpen(false)}
-                        onSuccess={handleRegistrationComplete}
+                );
+
+            case 'school-list':
+                return (
+                    <SchoolListScreen
+                        onSelectSchool={handleSchoolSelect}
+                        onBack={handleBackToWelcome}
                     />
-                </>
-            );
+                );
 
-        case 'school-list':
-            return (
-                <SchoolListScreen
-                    onSelectSchool={handleSchoolSelect}
-                    onBack={handleBackToWelcome}
-                />
-            );
+            case 'password':
+                return selectedSchool ? (
+                    <PasswordScreen
+                        school={selectedSchool}
+                        onPasswordVerified={handlePasswordVerified}
+                        onBack={handleBackToSchoolList}
+                    />
+                ) : null;
 
-        case 'password':
-            return selectedSchool ? (
-                <PasswordScreen
-                    school={selectedSchool}
-                    onPasswordVerified={handlePasswordVerified}
-                    onBack={handleBackToSchoolList}
-                />
-            ) : null;
+            case 'year-term':
+                return selectedSchool ? (
+                    <YearTermSelector
+                        school={selectedSchool}
+                        onSelectPeriod={handlePeriodSelect}
+                        onBack={handleBackToPassword}
+                    />
+                ) : null;
 
-        case 'year-term':
-            return selectedSchool ? (
-                <YearTermSelector
-                    school={selectedSchool}
-                    onSelectPeriod={handlePeriodSelect}
-                    onBack={handleBackToPassword}
-                />
-            ) : null;
+            case 'register':
+                return (
+                    <RegistrationForm
+                        onRegister={handleRegistration}
+                        onBack={handleBackToWelcome}
+                    />
+                );
 
-        case 'register':
-            return (
-                <RegistrationForm
-                    onRegister={handleRegistration}
-                    onBack={handleBackToWelcome}
-                />
-            );
-
-        case 'admin-setup':
-            return (
-                <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-                    <div className="w-full max-w-md">
-                        <AdminSetup
-                            mode="setup"
-                            users={[]}
-                            onComplete={handleAdminSetup}
-                            isFetching={isFetching}
-                        />
+            case 'admin-setup':
+                return (
+                    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+                        <div className="w-full max-w-md">
+                            <AdminSetup
+                                mode="setup"
+                                users={[]}
+                                onComplete={handleAdminSetup}
+                                isFetching={isFetching}
+                            />
+                        </div>
                     </div>
-                </div>
-            );
+                );
 
-        case 'user-selection':
-            return (
-                <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-                    <div className="w-full max-w-md">
-                        <UserSelection
-                            users={sortedUsers}
-                            onLogin={handleUserLogin}
-                            onSetPassword={handleSetPassword}
-                            onBack={handleLogoutSession}
-                        />
+            case 'user-selection':
+                return (
+                    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+                        <div className="w-full max-w-md">
+                            <UserSelection
+                                users={sortedUsers}
+                                onLogin={handleUserLogin}
+                                onSetPassword={handleSetPassword}
+                                onBack={handleLogoutSession}
+                            />
+                        </div>
                     </div>
-                </div>
-            );
+                );
 
-        default:
-            return null;
-    }
+            default:
+                return null;
+        }
+    };
+
+    return (
+        <>
+            {renderAuthContent()}
+            {showSubscriptionExpired && (
+                <SubscriptionExpiredDialog
+                    schoolName={pendingSchoolName}
+                    onClose={() => setShowSubscriptionExpired(false)}
+                    onReactivate={() => {
+                        setShowSubscriptionExpired(false);
+                        setIsSubscriptionModalOpen(true);
+                    }}
+                />
+            )}
+            {isSubscriptionModalOpen && (
+                <SubscriptionRequestModal
+                    isOpen={isSubscriptionModalOpen}
+                    onClose={() => {
+                        setIsSubscriptionModalOpen(false);
+                        setPendingRegistration(null);
+                    }}
+                    initialSchoolName={pendingSchoolName}
+                    onSuccess={handleRegistrationComplete}
+                    pendingRegistration={pendingRegistration}
+                />
+            )}
+        </>
+    );
 };
 
 export default AuthOverlay;

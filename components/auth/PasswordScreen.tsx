@@ -28,24 +28,9 @@ const PasswordScreen: React.FC<PasswordScreenProps> = ({ school, onPasswordVerif
             const { isValid, isExpired } = await verifySchoolPassword(school.docId, password);
 
             if (isValid) {
-                if (isExpired) {
-                    setError(
-                        <span>
-                            Your school license has expired. Please contact the {' '}
-                            <a
-                                href="https://wa.me/233542410613"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="font-bold underline hover:text-red-800 transition-colors"
-                            >
-                                Support Team at 0542410613
-                            </a>{' '}
-                            to renew your subscription.
-                        </span>
-                    );
-                    return;
-                }
-                onPasswordVerified(password); // Pass the password to parent
+                // If the license is expired, we still proceed to AuthOverlay
+                // which will handle the redirection to the subscription modal.
+                onPasswordVerified(password);
             } else {
                 setError('Incorrect password. Please try again.');
                 setPassword('');

@@ -84,8 +84,15 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
             setAllSchools(uniqueSchools);
 
             if (initialSchoolName) {
-                const found = uniqueSchools.find(s => s.displayName === initialSchoolName);
-                if (found) setSelectedSchool(found);
+                const lowerInitial = initialSchoolName.toLowerCase();
+                const found = uniqueSchools.find(s =>
+                    s.displayName.toLowerCase() === lowerInitial ||
+                    s.docId.split('_')[0].toLowerCase() === lowerInitial
+                );
+                if (found) {
+                    setSelectedSchool(found);
+                    setSearchTerm(found.displayName);
+                }
             }
         } catch (error) {
             console.error('[Subscription] Failed to load schools:', error);
