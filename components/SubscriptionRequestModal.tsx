@@ -12,7 +12,7 @@ interface SubscriptionRequestModalProps {
 }
 
 const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isOpen, onClose, onSuccess, initialSchoolName, pendingRegistration }) => {
-    const [selectedTier, setSelectedTier] = useState(SUBSCRIPTION_TIERS[1].name);
+    const [selectedTier, setSelectedTier] = useState(SUBSCRIPTION_TIERS[2].name);
     const [selectedSchool, setSelectedSchool] = useState<SchoolListItem | null>(null);
     const [searchTerm, setSearchTerm] = useState(initialSchoolName || '');
     const [allSchools, setAllSchools] = useState<SchoolListItem[]>([]);
@@ -518,15 +518,18 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                     {/* 2. Billing Email + Duration — same row */}
                     <div className="flex gap-3 items-end">
                         {/* Email */}
-                        <div className="flex-1 space-y-1">
-                            <label className="block text-sm font-semibold text-gray-700">
+                        <div className="flex-1 space-y-1.5">
+                            <label className="block text-sm font-bold text-gray-800 flex items-center gap-1.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
                                 Billing Email <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="email"
                                 required
                                 placeholder="Email for receipt..."
-                                className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-all text-sm"
+                                className="w-full px-4 py-3 bg-indigo-50/30 border-2 border-indigo-100/50 rounded-xl focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100/50 outline-none transition-all text-[15px] font-medium text-indigo-900 placeholder:text-gray-400"
                                 value={paymentEmail}
                                 onChange={(e) => setPaymentEmail(e.target.value)}
                             />
@@ -534,8 +537,8 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
 
                         {/* Duration — hidden for free/quote tiers */}
                         {!isNaN(basePrice) && basePrice > 0 && (
-                            <div className="space-y-1">
-                                <label className="block text-sm font-semibold text-gray-700">Duration</label>
+                            <div className="space-y-1.5">
+                                <label className="block text-sm font-bold text-gray-800 text-center sm:text-left">Duration</label>
                                 <div className="flex items-center gap-1.5">
                                     <input
                                         type="number"
@@ -543,18 +546,18 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                                         max={durationUnit === 'Month' ? 60 : 10}
                                         value={durationValue}
                                         onChange={(e) => setDurationValue(Math.max(1, parseInt(e.target.value) || 1))}
-                                        className="w-14 px-2 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-400 outline-none transition-all text-center font-bold text-indigo-900"
+                                        className="w-14 px-2 py-3 bg-white border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100/50 outline-none transition-all text-center font-bold text-indigo-900 text-[15px]"
                                     />
-                                    <div className="flex bg-gray-100 p-0.5 rounded-lg">
+                                    <div className="flex bg-gray-100 p-1 rounded-xl">
                                         <button
                                             onClick={() => setDurationUnit('Month')}
-                                            className={`py-2 px-2.5 rounded-md text-xs font-bold transition-all ${durationUnit === 'Month' ? 'bg-indigo-600 text-white shadow' : 'text-gray-500 hover:text-gray-700'}`}
+                                            className={`py-2 px-3 rounded-lg text-xs font-bold transition-all ${durationUnit === 'Month' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                                         >
                                             Mo
                                         </button>
                                         <button
                                             onClick={() => setDurationUnit('Year')}
-                                            className={`py-2 px-2.5 rounded-md text-xs font-bold transition-all ${durationUnit === 'Year' ? 'bg-indigo-600 text-white shadow' : 'text-gray-500 hover:text-gray-700'}`}
+                                            className={`py-2 px-3 rounded-lg text-xs font-bold transition-all ${durationUnit === 'Year' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                                         >
                                             Yr
                                         </button>
