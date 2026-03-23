@@ -1,81 +1,47 @@
-Navigated to https://sbahub.vercel.app/
-App-B-TrXEe6.js:242 [2026-03-23T16:30:35.134Z]  @firebase/analytics: Analytics: Firebase Analytics is not supported in this environment. Wrap initialization of analytics in analytics.isSupported() to prevent initialization in unsupported environments. Details: (1) This is a browser extension environment. (analytics/invalid-analytics-context).
-t8 @ App-B-TrXEe6.js:242
-warn @ App-B-TrXEe6.js:242
-b7 @ App-B-TrXEe6.js:767
-y7 @ App-B-TrXEe6.js:767
-(anonymous) @ App-B-TrXEe6.js:767
-getOrInitializeService @ App-B-TrXEe6.js:212
-initialize @ App-B-TrXEe6.js:212
-x7 @ App-B-TrXEe6.js:767
-v7 @ App-B-TrXEe6.js:767
-(anonymous) @ App-B-TrXEe6.js:3817
-App-B-TrXEe6.js:3823 [DataContext] Sync PAUSED
-App-B-TrXEe6.js:3823 [DataContext] 🧹 Persistence disabled for mampongpresbyprimarya_2025-2026_Second-Term. Clearing sensitive DISK cache...
-App-B-TrXEe6.js:3823 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
-App-B-TrXEe6.js:3823 [DataContext] ⚒️ Rebuilding item-level dirty map...
-App-B-TrXEe6.js:3823 [DataContext] 🛡️ Role-Based Guard: stripping unauthorized change to 'settings'
-(anonymous) @ App-B-TrXEe6.js:3823
-(anonymous) @ App-B-TrXEe6.js:3823
-(anonymous) @ App-B-TrXEe6.js:3823
-e0 @ main-qAU3y-pZ.js:48
-G.useMemo @ main-qAU3y-pZ.js:17
-gj @ App-B-TrXEe6.js:3823
-Zf @ main-qAU3y-pZ.js:48
-ic @ main-qAU3y-pZ.js:48
-Y0 @ main-qAU3y-pZ.js:48
-mo @ main-qAU3y-pZ.js:48
-mv @ main-qAU3y-pZ.js:48
-Nc @ main-qAU3y-pZ.js:48
-fo @ main-qAU3y-pZ.js:48
-Mo @ main-qAU3y-pZ.js:48
-zt @ main-qAU3y-pZ.js:25
-App-B-TrXEe6.js:3823 [DataContext] Sync PAUSED
-App-B-TrXEe6.js:3823 [Version] ⏸️ Already reloaded for v1.0.162. Waiting for CDN to propagate...
-App-B-TrXEe6.js:3833  POST https://sbahub.vercel.app/api/initialize-payment 401 (Unauthorized)
-(anonymous) @ App-B-TrXEe6.js:3833
-xhr @ App-B-TrXEe6.js:3833
-sv @ App-B-TrXEe6.js:3835
-_request @ App-B-TrXEe6.js:3836
-request @ App-B-TrXEe6.js:3835
-(anonymous) @ App-B-TrXEe6.js:3836
-(anonymous) @ App-B-TrXEe6.js:3831
-nP @ App-B-TrXEe6.js:4143
-G @ App-B-TrXEe6.js:4143
-No @ main-qAU3y-pZ.js:48
-(anonymous) @ main-qAU3y-pZ.js:48
-qi @ main-qAU3y-pZ.js:48
-Xc @ main-qAU3y-pZ.js:48
-Pc @ main-qAU3y-pZ.js:49
-Iv @ main-qAU3y-pZ.js:49
-App-B-TrXEe6.js:4147 Paystack initialization failed: AxiosError: Request failed with status code 401
-    at P3 (App-B-TrXEe6.js:3833:1091)
-    at XMLHttpRequest.y (App-B-TrXEe6.js:3833:5953)
-    at _l.request (App-B-TrXEe6.js:3835:2094)
-    at async nP (App-B-TrXEe6.js:4143:75755)
-    at async G (App-B-TrXEe6.js:4143:81935)
-console.error @ App-B-TrXEe6.js:4147
-nP @ App-B-TrXEe6.js:4143
+App-Cv8Yfxt5.js:3833  POST https://sbahub.vercel.app/api/initialize-payment 401 (Unauthorized)
+(anonymous) @ App-Cv8Yfxt5.js:3833
+xhr @ App-Cv8Yfxt5.js:3833
+sv @ App-Cv8Yfxt5.js:3835
+_request @ App-Cv8Yfxt5.js:3836
+request @ App-Cv8Yfxt5.js:3835
+(anonymous) @ App-Cv8Yfxt5.js:3836
+(anonymous) @ App-Cv8Yfxt5.js:3831
+nP @ App-Cv8Yfxt5.js:4143
+G @ App-Cv8Yfxt5.js:4143
+No @ main-vQNx1EL8.js:48
+(anonymous) @ main-vQNx1EL8.js:48
+qi @ main-vQNx1EL8.js:48
+Xc @ main-vQNx1EL8.js:48
+Pc @ main-vQNx1EL8.js:49
+Iv @ main-vQNx1EL8.js:49
+App-Cv8Yfxt5.js:4147 Paystack initialization failed: AxiosError: Request failed with status code 401
+    at P3 (App-Cv8Yfxt5.js:3833:1091)
+    at XMLHttpRequest.y (App-Cv8Yfxt5.js:3833:5953)
+    at _l.request (App-Cv8Yfxt5.js:3835:2094)
+    at async nP (App-Cv8Yfxt5.js:4143:75755)
+    at async G (App-Cv8Yfxt5.js:4143:81935)
+console.error @ App-Cv8Yfxt5.js:4147
+nP @ App-Cv8Yfxt5.js:4143
 await in nP
-G @ App-B-TrXEe6.js:4143
-No @ main-qAU3y-pZ.js:48
-(anonymous) @ main-qAU3y-pZ.js:48
-qi @ main-qAU3y-pZ.js:48
-Xc @ main-qAU3y-pZ.js:48
-Pc @ main-qAU3y-pZ.js:49
-Iv @ main-qAU3y-pZ.js:49
-App-B-TrXEe6.js:4147 AxiosError: Request failed with status code 401
-    at P3 (App-B-TrXEe6.js:3833:1091)
-    at XMLHttpRequest.y (App-B-TrXEe6.js:3833:5953)
-    at _l.request (App-B-TrXEe6.js:3835:2094)
-    at async nP (App-B-TrXEe6.js:4143:75755)
-    at async G (App-B-TrXEe6.js:4143:81935)
-console.error @ App-B-TrXEe6.js:4147
-G @ App-B-TrXEe6.js:4143
+G @ App-Cv8Yfxt5.js:4143
+No @ main-vQNx1EL8.js:48
+(anonymous) @ main-vQNx1EL8.js:48
+qi @ main-vQNx1EL8.js:48
+Xc @ main-vQNx1EL8.js:48
+Pc @ main-vQNx1EL8.js:49
+Iv @ main-vQNx1EL8.js:49
+App-Cv8Yfxt5.js:4147 AxiosError: Request failed with status code 401
+    at P3 (App-Cv8Yfxt5.js:3833:1091)
+    at XMLHttpRequest.y (App-Cv8Yfxt5.js:3833:5953)
+    at _l.request (App-Cv8Yfxt5.js:3835:2094)
+    at async nP (App-Cv8Yfxt5.js:4143:75755)
+    at async G (App-Cv8Yfxt5.js:4143:81935)
+console.error @ App-Cv8Yfxt5.js:4147
+G @ App-Cv8Yfxt5.js:4143
 await in G
-No @ main-qAU3y-pZ.js:48
-(anonymous) @ main-qAU3y-pZ.js:48
-qi @ main-qAU3y-pZ.js:48
-Xc @ main-qAU3y-pZ.js:48
-Pc @ main-qAU3y-pZ.js:49
-Iv @ main-qAU3y-pZ.js:49
+No @ main-vQNx1EL8.js:48
+(anonymous) @ main-vQNx1EL8.js:48
+qi @ main-vQNx1EL8.js:48
+Xc @ main-vQNx1EL8.js:48
+Pc @ main-vQNx1EL8.js:49
+Iv @ main-vQNx1EL8.js:49
