@@ -28,9 +28,13 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         const { email, amount, metadata } = req.body;
         
         const secretKey = (process.env.PAYSTACK_SECRET_KEY || '').trim();
+        const isLive = secretKey.startsWith('sk_live');
         
         // Log initialization attempt (Safe)
-        console.log(`[Paystack API] Initializing payment for ${email} (Mode: ${secretKey.startsWith('sk_live') ? 'LIVE' : 'TEST'})`);
+        console.log(`[Paystack API] Initializing payment for ${email} (Server Key Mode: ${isLive ? 'LIVE' : 'TEST'})`);
+
+        // Check for potential mismatch (if we can infer from metadata or similar)
+        // But for now, just ensure the user knows which one we found.
 
         // Validate inputs
         if (!email || !amount) {
