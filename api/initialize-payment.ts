@@ -27,11 +27,10 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     try {
         const { email, amount, metadata } = req.body;
         
-        // Log initialization attempt (Safe)
         const secretKey = (process.env.PAYSTACK_SECRET_KEY || '').trim();
         
         // Log initialization attempt (Safe)
-        console.log(`[Paystack API] Initializing for ${email} (Mode: ${secretKey.startsWith('sk_live') ? 'LIVE' : 'TEST'}) using ${secretKey ? secretKey.substring(0, 8) + '...' : 'MISSING'}`);
+        console.log(`[Paystack API] Initializing payment for ${email} (Mode: ${secretKey.startsWith('sk_live') ? 'LIVE' : 'TEST'})`);
 
         // Validate inputs
         if (!email || !amount) {
@@ -66,9 +65,15 @@ async function handler(req: VercelRequest, res: VercelResponse) {
 
         if (!response.ok) {
             console.error('Paystack initialization error:', data);
+            let errorMessage = data.message || 'Unknown error';
+            
+            if (response.status === 401) {
+                errorMessage = 'Paystack API Rejected the Secret Key. Please check your Vercel Environment Variables and ensure PAYSTACK_SECRET_KEY matches the public key and mode (Live/Test).';
+            }
+
             return res.status(response.status).json({
                 error: 'Payment initialization failed',
-                details: data.message || 'Unknown error',
+                details: errorMessage,
             });
         }
 

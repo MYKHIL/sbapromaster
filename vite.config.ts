@@ -19,7 +19,8 @@ export default defineConfig(({ mode }) => {
         name: 'api-mock',
         configureServer(server) {
           server.middlewares.use('/api/firebase-config', (req, res) => {
-            console.log(`[Mock API] Serving firebase-config. Loaded Paystack PK: ${env.PAYSTACK_PUBLIC_KEY ? env.PAYSTACK_PUBLIC_KEY.substring(0, 15) + '...' : 'MISSING'}`);
+            const pk = (env.PAYSTACK_PUBLIC_KEY || '').trim();
+            console.log(`[Mock API] Serving firebase-config. Mode: ${pk.startsWith('pk_live') ? 'LIVE' : 'TEST'}`);
             // Dynamically detect all Firebase configurations from loadEnv 'env'
             const configs: { [key: number]: any } = {};
             let index = 1;
