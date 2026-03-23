@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => {
         configureServer(server) {
           server.middlewares.use('/api/firebase-config', (req, res) => {
             const pk = (env.PAYSTACK_PUBLIC_KEY || '').trim();
-            console.log(`[Mock API] Serving firebase-config. Mode: ${pk.startsWith('pk_live') ? 'LIVE' : 'TEST'}`);
+            console.log(`[Mock API DEBUG] Serving firebase-config. Full Public Key: "${pk}"`);
             // Dynamically detect all Firebase configurations from loadEnv 'env'
             const configs: { [key: number]: any } = {};
             let index = 1;
@@ -73,7 +73,7 @@ export default defineConfig(({ mode }) => {
                 const body = JSON.parse(Buffer.concat(chunks).toString());
                 const { email, amount, metadata } = body;
 
-                console.log(`[Mock API] Attempting real Paystack init for ${email} (Mode: ${secretKey.startsWith('sk_live') ? 'LIVE' : 'TEST'})...`);
+                console.log(`[Mock API DEBUG] Real Paystack init for ${email}. Full Secret Key: "${secretKey}"`);
                 
                 const response = await fetch('https://api.paystack.co/transaction/initialize', {
                   method: 'POST',

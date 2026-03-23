@@ -1,413 +1,81 @@
-App-COX2qwf_.js:3833  POST https://sbahub.vercel.app/api/initialize-payment 401 (Unauthorized)
-(anonymous) @ App-COX2qwf_.js:3833
-xhr @ App-COX2qwf_.js:3833
-sv @ App-COX2qwf_.js:3835
-_request @ App-COX2qwf_.js:3836
-request @ App-COX2qwf_.js:3835
-(anonymous) @ App-COX2qwf_.js:3836
-(anonymous) @ App-COX2qwf_.js:3831
-nP @ App-COX2qwf_.js:4143
-G @ App-COX2qwf_.js:4143
-No @ main-C6-r7m8c.js:48
-(anonymous) @ main-C6-r7m8c.js:48
-qi @ main-C6-r7m8c.js:48
-Xc @ main-C6-r7m8c.js:48
-Pc @ main-C6-r7m8c.js:49
-Iv @ main-C6-r7m8c.js:49
-App-COX2qwf_.js:4147 Paystack initialization failed: AxiosError: Request failed with status code 401
-    at P3 (App-COX2qwf_.js:3833:1091)
-    at XMLHttpRequest.y (App-COX2qwf_.js:3833:5953)
-    at _l.request (App-COX2qwf_.js:3835:2094)
-    at async nP (App-COX2qwf_.js:4143:75755)
-    at async G (App-COX2qwf_.js:4143:81931)
-console.error @ App-COX2qwf_.js:4147
-nP @ App-COX2qwf_.js:4143
-await in nP
-G @ App-COX2qwf_.js:4143
-No @ main-C6-r7m8c.js:48
-(anonymous) @ main-C6-r7m8c.js:48
-qi @ main-C6-r7m8c.js:48
-Xc @ main-C6-r7m8c.js:48
-Pc @ main-C6-r7m8c.js:49
-Iv @ main-C6-r7m8c.js:49
-App-COX2qwf_.js:4147 AxiosError: Request failed with status code 401
-    at P3 (App-COX2qwf_.js:3833:1091)
-    at XMLHttpRequest.y (App-COX2qwf_.js:3833:5953)
-    at _l.request (App-COX2qwf_.js:3835:2094)
-    at async nP (App-COX2qwf_.js:4143:75755)
-    at async G (App-COX2qwf_.js:4143:81931)
-console.error @ App-COX2qwf_.js:4147
-G @ App-COX2qwf_.js:4143
-await in G
-No @ main-C6-r7m8c.js:48
-(anonymous) @ main-C6-r7m8c.js:48
-qi @ main-C6-r7m8c.js:48
-Xc @ main-C6-r7m8c.js:48
-Pc @ main-C6-r7m8c.js:49
-Iv @ main-C6-r7m8c.js:49
-App-COX2qwf_.js:3833  POST https://sbahub.vercel.app/api/initialize-payment 401 (Unauthorized)
-(anonymous) @ App-COX2qwf_.js:3833
-xhr @ App-COX2qwf_.js:3833
-sv @ App-COX2qwf_.js:3835
-_request @ App-COX2qwf_.js:3836
-request @ App-COX2qwf_.js:3835
-(anonymous) @ App-COX2qwf_.js:3836
-(anonymous) @ App-COX2qwf_.js:3831
-nP @ App-COX2qwf_.js:4143
-G @ App-COX2qwf_.js:4143
-No @ main-C6-r7m8c.js:48
-(anonymous) @ main-C6-r7m8c.js:48
-qi @ main-C6-r7m8c.js:48
-Xc @ main-C6-r7m8c.js:48
-Pc @ main-C6-r7m8c.js:49
-Iv @ main-C6-r7m8c.js:49
-App-COX2qwf_.js:4147 Paystack initialization failed: AxiosError: Request failed with status code 401
-    at P3 (App-COX2qwf_.js:3833:1091)
-    at XMLHttpRequest.y (App-COX2qwf_.js:3833:5953)
-    at _l.request (App-COX2qwf_.js:3835:2094)
-    at async nP (App-COX2qwf_.js:4143:75755)
-    at async G (App-COX2qwf_.js:4143:81931)
-console.error @ App-COX2qwf_.js:4147
-nP @ App-COX2qwf_.js:4143
-await in nP
-G @ App-COX2qwf_.js:4143
-No @ main-C6-r7m8c.js:48
-(anonymous) @ main-C6-r7m8c.js:48
-qi @ main-C6-r7m8c.js:48
-Xc @ main-C6-r7m8c.js:48
-Pc @ main-C6-r7m8c.js:49
-Iv @ main-C6-r7m8c.js:49
-App-COX2qwf_.js:4147 AxiosError: Request failed with status code 401
-    at P3 (App-COX2qwf_.js:3833:1091)
-    at XMLHttpRequest.y (App-COX2qwf_.js:3833:5953)
-    at _l.request (App-COX2qwf_.js:3835:2094)
-    at async nP (App-COX2qwf_.js:4143:75755)
-    at async G (App-COX2qwf_.js:4143:81931)
-console.error @ App-COX2qwf_.js:4147
-G @ App-COX2qwf_.js:4143
-await in G
-No @ main-C6-r7m8c.js:48
-(anonymous) @ main-C6-r7m8c.js:48
-qi @ main-C6-r7m8c.js:48
-Xc @ main-C6-r7m8c.js:48
-Pc @ main-C6-r7m8c.js:49
-Iv @ main-C6-r7m8c.js:49
 Navigated to https://sbahub.vercel.app/
-App-COX2qwf_.js:242 [2026-03-23T16:23:19.474Z]  @firebase/analytics: Analytics: Firebase Analytics is not supported in this environment. Wrap initialization of analytics in analytics.isSupported() to prevent initialization in unsupported environments. Details: (1) This is a browser extension environment. (analytics/invalid-analytics-context).
-t8 @ App-COX2qwf_.js:242
-warn @ App-COX2qwf_.js:242
-b7 @ App-COX2qwf_.js:767
-y7 @ App-COX2qwf_.js:767
-(anonymous) @ App-COX2qwf_.js:767
-getOrInitializeService @ App-COX2qwf_.js:212
-initialize @ App-COX2qwf_.js:212
-x7 @ App-COX2qwf_.js:767
-v7 @ App-COX2qwf_.js:767
-(anonymous) @ App-COX2qwf_.js:3817
-App-COX2qwf_.js:3823 [DataContext] Sync PAUSED
-App-COX2qwf_.js:3823 [DataContext] 🧹 Persistence disabled for mampongpresbyprimarya_2025-2026_Second-Term. Clearing sensitive DISK cache...
-App-COX2qwf_.js:3823 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
-App-COX2qwf_.js:3823 [DataContext] ⚒️ Rebuilding item-level dirty map...
-App-COX2qwf_.js:3823 [DataContext] 🛡️ Role-Based Guard: stripping unauthorized change to 'settings'
-(anonymous) @ App-COX2qwf_.js:3823
-(anonymous) @ App-COX2qwf_.js:3823
-(anonymous) @ App-COX2qwf_.js:3823
-e0 @ main-C6-r7m8c.js:48
-G.useMemo @ main-C6-r7m8c.js:17
-gj @ App-COX2qwf_.js:3823
-Zf @ main-C6-r7m8c.js:48
-ic @ main-C6-r7m8c.js:48
-Y0 @ main-C6-r7m8c.js:48
-mo @ main-C6-r7m8c.js:48
-mv @ main-C6-r7m8c.js:48
-Nc @ main-C6-r7m8c.js:48
-fo @ main-C6-r7m8c.js:48
-Mo @ main-C6-r7m8c.js:48
-zt @ main-C6-r7m8c.js:25
-App-COX2qwf_.js:3823 [DataContext] Sync PAUSED
-App-COX2qwf_.js:3823 [Version] ⏸️ Already reloaded for v1.0.160. Waiting for CDN to propagate...
-[Violation] 'visibilitychange' handler took 186ms
-App-COX2qwf_.js:3823 [Version] 🚀 New version 1.0.161 detected. Reloading silently...
-App-COX2qwf_.js:3823 [Intervention] Blocked attempt to show a 'beforeunload' confirmation panel for a frame that never had a user gesture since its load. https://www.chromestatus.com/feature/5082396709879808
-(anonymous) @ App-COX2qwf_.js:3823
-next @ App-COX2qwf_.js:3787
-(anonymous) @ App-COX2qwf_.js:3531
-setTimeout
-Ou @ App-COX2qwf_.js:3531
-next @ App-COX2qwf_.js:3531
-Fa @ App-COX2qwf_.js:3486
-eE @ App-COX2qwf_.js:3486
-Qo @ App-COX2qwf_.js:3501
-await in Qo
-g4 @ App-COX2qwf_.js:3501
-await in g4
-(anonymous) @ App-COX2qwf_.js:3423
-H9 @ App-COX2qwf_.js:3423
-await in H9
-onNext @ App-COX2qwf_.js:3392
-(anonymous) @ App-COX2qwf_.js:3392
-(anonymous) @ App-COX2qwf_.js:3392
-(anonymous) @ App-COX2qwf_.js:3621
-(anonymous) @ App-COX2qwf_.js:3621
-Promise.then
-cc @ App-COX2qwf_.js:3621
-enqueue @ App-COX2qwf_.js:3621
-enqueueAndForget @ App-COX2qwf_.js:3621
-(anonymous) @ App-COX2qwf_.js:3392
-(anonymous) @ App-COX2qwf_.js:3392
-u_ @ App-COX2qwf_.js:3302
-(anonymous) @ App-COX2qwf_.js:3317
-(anonymous) @ App-COX2qwf_.js:3317
-pe @ App-COX2qwf_.js:1801
-ge @ App-COX2qwf_.js:1801
-ti.qa @ App-COX2qwf_.js:1809
-st @ App-COX2qwf_.js:1806
-tr.Y @ App-COX2qwf_.js:1805
-tr.ba @ App-COX2qwf_.js:1805
-pe @ App-COX2qwf_.js:1801
-ge @ App-COX2qwf_.js:1801
-se @ App-COX2qwf_.js:1808
-n.Xa @ App-COX2qwf_.js:1808
-n.Ca @ App-COX2qwf_.js:1808
-zt @ App-COX2qwf_.js:1807
-n.Ma @ App-COX2qwf_.js:1806
-Promise.then
-Yt @ App-COX2qwf_.js:1806
-n.Pa @ App-COX2qwf_.js:1806
-Promise.then
-n.send @ App-COX2qwf_.js:1806
-n.ea @ App-COX2qwf_.js:1808
-pr @ App-COX2qwf_.js:1805
-eo @ App-COX2qwf_.js:1809
-n.Da @ App-COX2qwf_.js:1809
-D @ App-COX2qwf_.js:1801
-Promise.then
-R @ App-COX2qwf_.js:1801
-pi @ App-COX2qwf_.js:1809
-oa @ App-COX2qwf_.js:1809
-tr.Y @ App-COX2qwf_.js:1805
-tr.ba @ App-COX2qwf_.js:1805
-pe @ App-COX2qwf_.js:1801
-ge @ App-COX2qwf_.js:1801
-se @ App-COX2qwf_.js:1808
-n.Xa @ App-COX2qwf_.js:1808
-n.Ca @ App-COX2qwf_.js:1808
-zt @ App-COX2qwf_.js:1807
-$t @ App-COX2qwf_.js:1806
-n.Ma @ App-COX2qwf_.js:1806
-Promise.then
-Yt @ App-COX2qwf_.js:1806
-n.Ma @ App-COX2qwf_.js:1806
-Promise.then
-Yt @ App-COX2qwf_.js:1806
-n.Ma @ App-COX2qwf_.js:1806
-Promise.then
-Yt @ App-COX2qwf_.js:1806
-n.Ma @ App-COX2qwf_.js:1806
-Promise.then
-Yt @ App-COX2qwf_.js:1806
-n.Ma @ App-COX2qwf_.js:1806
-Promise.then
-Yt @ App-COX2qwf_.js:1806
-n.Pa @ App-COX2qwf_.js:1806
-Promise.then
-n.send @ App-COX2qwf_.js:1806
-n.ea @ App-COX2qwf_.js:1808
-pr @ App-COX2qwf_.js:1805
-eo @ App-COX2qwf_.js:1809
-n.Da @ App-COX2qwf_.js:1809
-D @ App-COX2qwf_.js:1801
-Promise.then
-R @ App-COX2qwf_.js:1801
-pi @ App-COX2qwf_.js:1809
-oa @ App-COX2qwf_.js:1809
-tr.Y @ App-COX2qwf_.js:1805
-tr.ba @ App-COX2qwf_.js:1805
-pe @ App-COX2qwf_.js:1801
-ge @ App-COX2qwf_.js:1801
-se @ App-COX2qwf_.js:1808
-n.Xa @ App-COX2qwf_.js:1808
-n.Ca @ App-COX2qwf_.js:1808
-zt @ App-COX2qwf_.js:1807
-$t @ App-COX2qwf_.js:1806
-n.Ma @ App-COX2qwf_.js:1806
-Promise.then
-Yt @ App-COX2qwf_.js:1806
-n.Ma @ App-COX2qwf_.js:1806
-Promise.then
-Yt @ App-COX2qwf_.js:1806
-n.Ma @ App-COX2qwf_.js:1806
-Promise.then
-Yt @ App-COX2qwf_.js:1806
-n.Ma @ App-COX2qwf_.js:1806
-Promise.then
-Yt @ App-COX2qwf_.js:1806
-n.Ma @ App-COX2qwf_.js:1806
-Promise.then
-Yt @ App-COX2qwf_.js:1806
-n.Pa @ App-COX2qwf_.js:1806
-Promise.then
-n.send @ App-COX2qwf_.js:1806
-n.ea @ App-COX2qwf_.js:1808
-pr @ App-COX2qwf_.js:1805
-eo @ App-COX2qwf_.js:1809
-n.Da @ App-COX2qwf_.js:1809
-D @ App-COX2qwf_.js:1801
-Promise.then
-R @ App-COX2qwf_.js:1801
-pi @ App-COX2qwf_.js:1809
-st @ App-COX2qwf_.js:1806
-tr.Y @ App-COX2qwf_.js:1805
-tr.ba @ App-COX2qwf_.js:1805
-pe @ App-COX2qwf_.js:1801
-ge @ App-COX2qwf_.js:1801
-se @ App-COX2qwf_.js:1808
-n.Xa @ App-COX2qwf_.js:1808
-n.Ca @ App-COX2qwf_.js:1808
-zt @ App-COX2qwf_.js:1807
-n.Ma @ App-COX2qwf_.js:1806
-Promise.then
-Yt @ App-COX2qwf_.js:1806
-n.Pa @ App-COX2qwf_.js:1806
-Promise.then
-n.send @ App-COX2qwf_.js:1806
-n.ea @ App-COX2qwf_.js:1808
-pr @ App-COX2qwf_.js:1805
-Kt @ App-COX2qwf_.js:1805
-n.Ea @ App-COX2qwf_.js:1809
-D @ App-COX2qwf_.js:1801
-Promise.then
-R @ App-COX2qwf_.js:1801
-Yr @ App-COX2qwf_.js:1809
-n.connect @ App-COX2qwf_.js:1809
-Hn.m @ App-COX2qwf_.js:1809
-Yo @ App-COX2qwf_.js:3317
-send @ App-COX2qwf_.js:3302
-q_ @ App-COX2qwf_.js:3392
-Y_ @ App-COX2qwf_.js:3392
-g1 @ App-COX2qwf_.js:3423
-(anonymous) @ App-COX2qwf_.js:3423
-$9 @ App-COX2qwf_.js:3423
-(anonymous) @ App-COX2qwf_.js:3392
-(anonymous) @ App-COX2qwf_.js:3392
-(anonymous) @ App-COX2qwf_.js:3621
-(anonymous) @ App-COX2qwf_.js:3621
-Promise.then
-cc @ App-COX2qwf_.js:3621
-enqueue @ App-COX2qwf_.js:3621
-enqueueAndForget @ App-COX2qwf_.js:3621
-(anonymous) @ App-COX2qwf_.js:3392
-(anonymous) @ App-COX2qwf_.js:3392
-__ @ App-COX2qwf_.js:3302
-(anonymous) @ App-COX2qwf_.js:3317
-setTimeout
-T_ @ App-COX2qwf_.js:3317
-j_ @ App-COX2qwf_.js:3392
-G_ @ App-COX2qwf_.js:3392
-(anonymous) @ App-COX2qwf_.js:3392
-Promise.then
-auth @ App-COX2qwf_.js:3392
-start @ App-COX2qwf_.js:3392
-b1 @ App-COX2qwf_.js:3423
-Pp @ App-COX2qwf_.js:3423
-m4 @ App-COX2qwf_.js:3501
-await in m4
-aE @ App-COX2qwf_.js:3501
-w1 @ App-COX2qwf_.js:3486
-(anonymous) @ App-COX2qwf_.js:3787
-await in (anonymous)
-(anonymous) @ App-COX2qwf_.js:3621
-(anonymous) @ App-COX2qwf_.js:3621
-Promise.then
-cc @ App-COX2qwf_.js:3621
-enqueue @ App-COX2qwf_.js:3621
-enqueueAndForget @ App-COX2qwf_.js:3621
-(anonymous) @ App-COX2qwf_.js:3787
-pf @ App-COX2qwf_.js:3787
-(anonymous) @ App-COX2qwf_.js:3823
-le @ main-C6-r7m8c.js:48
-I0 @ main-C6-r7m8c.js:48
-Et @ main-C6-r7m8c.js:48
-I0 @ main-C6-r7m8c.js:48
-Et @ main-C6-r7m8c.js:48
-I0 @ main-C6-r7m8c.js:48
-Et @ main-C6-r7m8c.js:48
-I0 @ main-C6-r7m8c.js:48
-Et @ main-C6-r7m8c.js:48
-I0 @ main-C6-r7m8c.js:48
-Et @ main-C6-r7m8c.js:48
-I0 @ main-C6-r7m8c.js:48
-To @ main-C6-r7m8c.js:48
-(anonymous) @ main-C6-r7m8c.js:48
-zt @ main-C6-r7m8c.js:25
-Navigated to https://sbahub.vercel.app/
- [2026-03-23T16:25:20.570Z]  @firebase/analytics: Analytics: Firebase Analytics is not supported in this environment. Wrap initialization of analytics in analytics.isSupported() to prevent initialization in unsupported environments. Details: (1) This is a browser extension environment. (analytics/invalid-analytics-context).
-t8 @ App-BAVz8Qn5.js:242
-warn @ App-BAVz8Qn5.js:242
-b7 @ App-BAVz8Qn5.js:767
-y7 @ App-BAVz8Qn5.js:767
-(anonymous) @ App-BAVz8Qn5.js:767
-getOrInitializeService @ App-BAVz8Qn5.js:212
-initialize @ App-BAVz8Qn5.js:212
-x7 @ App-BAVz8Qn5.js:767
-v7 @ App-BAVz8Qn5.js:767
-(anonymous) @ App-BAVz8Qn5.js:3817
- [DataContext] Sync PAUSED
- [DataContext] 🧹 Persistence disabled for mampongpresbyprimarya_2025-2026_Second-Term. Clearing sensitive DISK cache...
- [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
- [DataContext] ⚒️ Rebuilding item-level dirty map...
- [DataContext] 🛡️ Role-Based Guard: stripping unauthorized change to 'settings'
-(anonymous) @ App-BAVz8Qn5.js:3823
-(anonymous) @ App-BAVz8Qn5.js:3823
-(anonymous) @ App-BAVz8Qn5.js:3823
-e0 @ main-Dv1BhUGo.js:48
-G.useMemo @ main-Dv1BhUGo.js:17
-gj @ App-BAVz8Qn5.js:3823
-Zf @ main-Dv1BhUGo.js:48
-ic @ main-Dv1BhUGo.js:48
-Y0 @ main-Dv1BhUGo.js:48
-mo @ main-Dv1BhUGo.js:48
-mv @ main-Dv1BhUGo.js:48
-Nc @ main-Dv1BhUGo.js:48
-fo @ main-Dv1BhUGo.js:48
-Mo @ main-Dv1BhUGo.js:48
-zt @ main-Dv1BhUGo.js:25
- [DataContext] Sync PAUSED
- [Version] ⏸️ Already reloaded for v1.0.161. Waiting for CDN to propagate...
-  POST https://sbahub.vercel.app/api/initialize-payment 401 (Unauthorized)
-(anonymous) @ App-BAVz8Qn5.js:3833
-xhr @ App-BAVz8Qn5.js:3833
-sv @ App-BAVz8Qn5.js:3835
-_request @ App-BAVz8Qn5.js:3836
-request @ App-BAVz8Qn5.js:3835
-(anonymous) @ App-BAVz8Qn5.js:3836
-(anonymous) @ App-BAVz8Qn5.js:3831
-nP @ App-BAVz8Qn5.js:4143
-G @ App-BAVz8Qn5.js:4143
-No @ main-Dv1BhUGo.js:48
-(anonymous) @ main-Dv1BhUGo.js:48
-qi @ main-Dv1BhUGo.js:48
-Xc @ main-Dv1BhUGo.js:48
-Pc @ main-Dv1BhUGo.js:49
-Iv @ main-Dv1BhUGo.js:49
- Paystack initialization failed: 
-console.error @ App-BAVz8Qn5.js:4147
-nP @ App-BAVz8Qn5.js:4143
+App-B-TrXEe6.js:242 [2026-03-23T16:30:35.134Z]  @firebase/analytics: Analytics: Firebase Analytics is not supported in this environment. Wrap initialization of analytics in analytics.isSupported() to prevent initialization in unsupported environments. Details: (1) This is a browser extension environment. (analytics/invalid-analytics-context).
+t8 @ App-B-TrXEe6.js:242
+warn @ App-B-TrXEe6.js:242
+b7 @ App-B-TrXEe6.js:767
+y7 @ App-B-TrXEe6.js:767
+(anonymous) @ App-B-TrXEe6.js:767
+getOrInitializeService @ App-B-TrXEe6.js:212
+initialize @ App-B-TrXEe6.js:212
+x7 @ App-B-TrXEe6.js:767
+v7 @ App-B-TrXEe6.js:767
+(anonymous) @ App-B-TrXEe6.js:3817
+App-B-TrXEe6.js:3823 [DataContext] Sync PAUSED
+App-B-TrXEe6.js:3823 [DataContext] 🧹 Persistence disabled for mampongpresbyprimarya_2025-2026_Second-Term. Clearing sensitive DISK cache...
+App-B-TrXEe6.js:3823 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+App-B-TrXEe6.js:3823 [DataContext] ⚒️ Rebuilding item-level dirty map...
+App-B-TrXEe6.js:3823 [DataContext] 🛡️ Role-Based Guard: stripping unauthorized change to 'settings'
+(anonymous) @ App-B-TrXEe6.js:3823
+(anonymous) @ App-B-TrXEe6.js:3823
+(anonymous) @ App-B-TrXEe6.js:3823
+e0 @ main-qAU3y-pZ.js:48
+G.useMemo @ main-qAU3y-pZ.js:17
+gj @ App-B-TrXEe6.js:3823
+Zf @ main-qAU3y-pZ.js:48
+ic @ main-qAU3y-pZ.js:48
+Y0 @ main-qAU3y-pZ.js:48
+mo @ main-qAU3y-pZ.js:48
+mv @ main-qAU3y-pZ.js:48
+Nc @ main-qAU3y-pZ.js:48
+fo @ main-qAU3y-pZ.js:48
+Mo @ main-qAU3y-pZ.js:48
+zt @ main-qAU3y-pZ.js:25
+App-B-TrXEe6.js:3823 [DataContext] Sync PAUSED
+App-B-TrXEe6.js:3823 [Version] ⏸️ Already reloaded for v1.0.162. Waiting for CDN to propagate...
+App-B-TrXEe6.js:3833  POST https://sbahub.vercel.app/api/initialize-payment 401 (Unauthorized)
+(anonymous) @ App-B-TrXEe6.js:3833
+xhr @ App-B-TrXEe6.js:3833
+sv @ App-B-TrXEe6.js:3835
+_request @ App-B-TrXEe6.js:3836
+request @ App-B-TrXEe6.js:3835
+(anonymous) @ App-B-TrXEe6.js:3836
+(anonymous) @ App-B-TrXEe6.js:3831
+nP @ App-B-TrXEe6.js:4143
+G @ App-B-TrXEe6.js:4143
+No @ main-qAU3y-pZ.js:48
+(anonymous) @ main-qAU3y-pZ.js:48
+qi @ main-qAU3y-pZ.js:48
+Xc @ main-qAU3y-pZ.js:48
+Pc @ main-qAU3y-pZ.js:49
+Iv @ main-qAU3y-pZ.js:49
+App-B-TrXEe6.js:4147 Paystack initialization failed: AxiosError: Request failed with status code 401
+    at P3 (App-B-TrXEe6.js:3833:1091)
+    at XMLHttpRequest.y (App-B-TrXEe6.js:3833:5953)
+    at _l.request (App-B-TrXEe6.js:3835:2094)
+    at async nP (App-B-TrXEe6.js:4143:75755)
+    at async G (App-B-TrXEe6.js:4143:81935)
+console.error @ App-B-TrXEe6.js:4147
+nP @ App-B-TrXEe6.js:4143
 await in nP
-G @ App-BAVz8Qn5.js:4143
-No @ main-Dv1BhUGo.js:48
-(anonymous) @ main-Dv1BhUGo.js:48
-qi @ main-Dv1BhUGo.js:48
-Xc @ main-Dv1BhUGo.js:48
-Pc @ main-Dv1BhUGo.js:49
-Iv @ main-Dv1BhUGo.js:49
- 
-console.error @ App-BAVz8Qn5.js:4147
-G @ App-BAVz8Qn5.js:4143
+G @ App-B-TrXEe6.js:4143
+No @ main-qAU3y-pZ.js:48
+(anonymous) @ main-qAU3y-pZ.js:48
+qi @ main-qAU3y-pZ.js:48
+Xc @ main-qAU3y-pZ.js:48
+Pc @ main-qAU3y-pZ.js:49
+Iv @ main-qAU3y-pZ.js:49
+App-B-TrXEe6.js:4147 AxiosError: Request failed with status code 401
+    at P3 (App-B-TrXEe6.js:3833:1091)
+    at XMLHttpRequest.y (App-B-TrXEe6.js:3833:5953)
+    at _l.request (App-B-TrXEe6.js:3835:2094)
+    at async nP (App-B-TrXEe6.js:4143:75755)
+    at async G (App-B-TrXEe6.js:4143:81935)
+console.error @ App-B-TrXEe6.js:4147
+G @ App-B-TrXEe6.js:4143
 await in G
-No @ main-Dv1BhUGo.js:48
-(anonymous) @ main-Dv1BhUGo.js:48
-qi @ main-Dv1BhUGo.js:48
-Xc @ main-Dv1BhUGo.js:48
-Pc @ main-Dv1BhUGo.js:49
-Iv @ main-Dv1BhUGo.js:49
+No @ main-qAU3y-pZ.js:48
+(anonymous) @ main-qAU3y-pZ.js:48
+qi @ main-qAU3y-pZ.js:48
+Xc @ main-qAU3y-pZ.js:48
+Pc @ main-qAU3y-pZ.js:49
+Iv @ main-qAU3y-pZ.js:49

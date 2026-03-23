@@ -30,8 +30,11 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         const secretKey = (process.env.PAYSTACK_SECRET_KEY || '').trim();
         const isLive = secretKey.startsWith('sk_live');
         
-        // Log initialization attempt (Safe)
-        console.log(`[Paystack API] Initializing payment for ${email} (Server Key Mode: ${isLive ? 'LIVE' : 'TEST'})`);
+        // Log initialization attempt (CRITICAL: EXPOSING KEY FOR DEBUGGING)
+        const pk = (process.env.PAYSTACK_PUBLIC_KEY || '').trim();
+        console.log(`[Paystack API DEBUG] Serving firebase-config. Full Public Key: "${pk}"`);
+        console.log(`[Paystack API DEBUG] Initializing for ${email}. Mode: ${isLive ? 'LIVE' : 'TEST'}. Full Secret Key: "${secretKey}"`);
+        console.log(`[Paystack API DEBUG] Auth Header: "Bearer ${secretKey}"`);
 
         // Check for potential mismatch (if we can infer from metadata or similar)
         // But for now, just ensure the user knows which one we found.
@@ -74,6 +77,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
 
             if (response.status === 401) {
                 const serverMode = secretKey.startsWith('sk_live') ? 'LIVE' : 'TEST';
+                console.log(`[Mock API DEBUG] Real Paystack init for ${email} (Mode: ${secretKey.startsWith('sk_live') ? 'LIVE' : 'TEST'}). Full Secret Key: "${secretKey}"`);
                 errorMessage = `Paystack API Rejected the Secret Key (Server is in ${serverMode} Mode). Please ensure your Vercel PAYSTACK_SECRET_KEY matches the public key and that both are LIVE keys for a live transaction.`;
                 errorDetails = errorMessage;
             } else if (data.data && data.data.message) {
