@@ -1,37 +1,456 @@
-SubscriptionRequestModal.tsx:232 [Paystack] Initialization success: {reference: 'MOCK_1774277865933', usingKey: 'pk_live_...'}
-content.js:13 Loading the script 'blob:https://checkout.paystack.com/0af267cf-deb6-49b5-b825-62c0ce21c387' violates the following Content Security Policy directive: "script-src-elem 'self' https://checkout.gointerpay.net/ https://checkout.rch.io/v2.22/fingerprint https://www.googletagmanager.com/gtag/ https://s3-eu-west-1.amazonaws.com/pstk-public-files/js/pusher.min.js https://applepay.cdn-apple.com/jsapi/v1.1.0/apple-pay-sdk.js https://www.googletagmanager.com/debug/ 'sha384-QQMs28J0n8Mw4Q1CHlPa/iPNoI8cHTH141eSbWme69K7V+4TvvHzfFm+PuE4JpxF' 'nonce-RKbOEaiay0AHLiYI' 'sha384-kYN1NbScnNOnyvDqahb4am4uYrSJh/+eDDN9ipiMT/Xx6ivmTHrN4Eh1JD6JZ2Ek'". The action has been blocked.
+SubscriptionRequestModal.tsx:235 [Paystack] Initialization success: {reference: 'MOCK_1774278689162', usingKey: 'pk_test_...'}
+content.js:13 Loading the script 'blob:https://checkout.paystack.com/5544072d-22dd-4fcb-8cb6-09f905e73fcd' violates the following Content Security Policy directive: "script-src-elem 'self' https://checkout.gointerpay.net/ https://checkout.rch.io/v2.22/fingerprint https://www.googletagmanager.com/gtag/ https://s3-eu-west-1.amazonaws.com/pstk-public-files/js/pusher.min.js https://applepay.cdn-apple.com/jsapi/v1.1.0/apple-pay-sdk.js https://www.googletagmanager.com/debug/ 'sha384-QQMs28J0n8Mw4Q1CHlPa/iPNoI8cHTH141eSbWme69K7V+4TvvHzfFm+PuE4JpxF' 'nonce-RKbWcCq0vYry9VCi' 'sha384-kYN1NbScnNOnyvDqahb4am4uYrSJh/+eDDN9ipiMT/Xx6ivmTHrN4Eh1JD6JZ2Ek'". The action has been blocked.
 (anonymous) @ content.js:13
 await in (anonymous)
 (anonymous) @ content.js:13
 (anonymous) @ content.js:13
 (anonymous) @ content.js:13
-vendor-CjCsaaRx.js:1  POST https://api.paystack.co/charge/mobile_money 400 (Bad Request)
-(anonymous) @ vendor-CjCsaaRx.js:1
-WP @ vendor-CjCsaaRx.js:1
-hg @ vendor-CjCsaaRx.js:1
-qn.request @ vendor-CjCsaaRx.js:1
-(anonymous) @ vendor-CjCsaaRx.js:1
-(anonymous) @ vendor-CjCsaaRx.js:1
-Cg @ vendor-CjCsaaRx.js:26
-(anonymous) @ vendor-CjCsaaRx.js:26
-Promise.then
-authenticateMobileMoney @ vendor-CjCsaaRx.js:26
-authenticatePayment @ index-OHJzKh9X.js:37
-jl @ index-OHJzKh9X.js:13
-_s @ index-OHJzKh9X.js:13
-Uk @ index-OHJzKh9X.js:13
-onSubmit @ index-OHJzKh9X.js:37
-(anonymous) @ index-OHJzKh9X.js:37
-(anonymous) @ index-OHJzKh9X.js:17
-jl @ index-OHJzKh9X.js:13
-_s @ index-OHJzKh9X.js:13
-e @ index-OHJzKh9X.js:17
+js?id=G-0WCTF5FP66:717 [Violation] 'setTimeout' handler took 135ms
+firebaseService.ts:802 [Activation] 🎯 Targeting ACTIVE Database Index: 5 (Project: sba-pro-master-35ff1)
+SubscriptionRequestModal.tsx:235 [Paystack] Initialization success: {reference: 'MOCK_1774278844719', usingKey: 'pk_test_...'}
+firebaseService.ts:802 [Activation] 🎯 Targeting ACTIVE Database Index: 5 (Project: sba-pro-master-35ff1)
 client:964 [vite] server connection lost. Polling for restart...
+Navigated to http://localhost:3000/
 client:789 [vite] connecting...
 react-dom-client.development.js:28004 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
-Navigated to http://localhost:3000/
 client:912 [vite] connected.
-firebaseService.ts:69 [2026-03-23T15:03:12.081Z]  @firebase/analytics: Analytics: Firebase Analytics is not supported in this environment. Wrap initialization of analytics in analytics.isSupported() to prevent initialization in unsupported environments. Details: (1) This is a browser extension environment. (analytics/invalid-analytics-context).
+firebaseService.ts:69 [2026-03-23T15:20:07.546Z]  @firebase/analytics: Analytics: Firebase Analytics is not supported in this environment. Wrap initialization of analytics in analytics.isSupported() to prevent initialization in unsupported environments. Details: (1) This is a browser extension environment. (analytics/invalid-analytics-context).
+defaultLogHandler @ logger.ts:115
+warn @ logger.ts:206
+warnOnBrowserContextMismatch @ factory.ts:169
+factory @ factory.ts:182
+(anonymous) @ index.ts:58
+getOrInitializeService @ provider.ts:318
+initialize @ provider.ts:242
+initializeAnalytics @ api.ts:112
+getAnalytics @ api.ts:85
+(anonymous) @ firebaseService.ts:69
+DataContext.tsx:1480 [DataContext] Sync PAUSED
+DataContext.tsx:700 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:654 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:1480 [DataContext] Sync PAUSED
+DataContext.tsx:700 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:654 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:1721 [DataContext] 🛡️ Role-Based Guard: stripping unauthorized change to 'settings'
+(anonymous) @ DataContext.tsx:1721
+(anonymous) @ DataContext.tsx:1663
+(anonymous) @ DataContext.tsx:1764
+updateMemo @ react-dom-client.development.js:8795
+useMemo @ react-dom-client.development.js:26484
+exports.useMemo @ react.development.js:1251
+DataProvider @ DataContext.tsx:1763
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooks @ react-dom-client.development.js:7662
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:18957
+performWorkUntilDeadline @ scheduler.development.js:45
+<DataProvider>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+App @ App.tsx:295
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooksAgain @ react-dom-client.development.js:7762
+renderWithHooks @ react-dom-client.development.js:7674
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:18957
+performWorkUntilDeadline @ scheduler.development.js:45
+<App>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+bootstrap @ index.tsx:106
+await in bootstrap
+(anonymous) @ index.tsx:123
+DataContext.tsx:1721 [DataContext] 🛡️ Role-Based Guard: stripping unauthorized change to 'settings'
+(anonymous) @ DataContext.tsx:1721
+(anonymous) @ DataContext.tsx:1663
+(anonymous) @ DataContext.tsx:1764
+updateMemo @ react-dom-client.development.js:8799
+useMemo @ react-dom-client.development.js:26484
+exports.useMemo @ react.development.js:1251
+DataProvider @ DataContext.tsx:1763
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooks @ react-dom-client.development.js:7662
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:18957
+performWorkUntilDeadline @ scheduler.development.js:45
+<DataProvider>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+App @ App.tsx:295
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooksAgain @ react-dom-client.development.js:7762
+renderWithHooks @ react-dom-client.development.js:7674
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:18957
+performWorkUntilDeadline @ scheduler.development.js:45
+<App>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+bootstrap @ index.tsx:106
+await in bootstrap
+(anonymous) @ index.tsx:123
+DataContext.tsx:1480 [DataContext] Sync PAUSED
+js?l=dataLayer&id=G-MD7SR62BCB:659 [Violation] 'setTimeout' handler took 87ms
+DataContext.tsx:1480 [DataContext] Sync PAUSED
+(index):1 [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://www.chromium.org/developers/design-documents/create-amazing-password-forms) <input id=​"password" class=​"w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-xl focus:​border-blue-500 focus:​outline-none transition-colors" placeholder=​"Enter password" type=​"password" value=​"presbya" disabled>​
+[Violation] Forced reflow while executing JavaScript took 37ms
+DataContext.tsx:1480 [DataContext] Sync PAUSED
+DataContext.tsx:1480 [DataContext] Sync PAUSED
+DataContext.tsx:266 [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 9, …}
+DataContext.tsx:280 [DataContext] 🧠 Pre-empting context reset for: mampongpresbyprimarya_2025-2026_Second-Term-2025-2026-Second Term
+DataContext.tsx:301 [DataContext] 🛡️ Remote Sync: Preserving local changes to 'settings' — field is dirty. Skipping overwrite.
+DataContext.tsx:305 [DataContext] ✅ Updating activeSessions
+DataContext.tsx:305 [DataContext] ✅ Updating users
+DataContext.tsx:394 [DataContext] ✅ Updating users: 3
+DataContext.tsx:420 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
+DataContext.tsx:443 [DataContext] 💾 Updated originalData baseline with merge strategy
+DataContext.tsx:700 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:654 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:266 [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 9, …}
+DataContext.tsx:280 [DataContext] 🧠 Pre-empting context reset for: mampongpresbyprimarya_2025-2026_Second-Term-2025-2026-Second Term
+DataContext.tsx:305 [DataContext] ✅ Updating activeSessions
+DataContext.tsx:305 [DataContext] ✅ Updating users
+DataContext.tsx:394 [DataContext] ✅ Updating users: 3
+DataContext.tsx:420 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
+DataContext.tsx:443 [DataContext] 💾 Updated originalData baseline with merge strategy
+DataContext.tsx:700 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:654 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:1480 [DataContext] Sync PAUSED
+DataContext.tsx:700 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:654 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:1480 [DataContext] Sync PAUSED
+DataContext.tsx:700 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:654 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:700 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:654 [DataContext] ⚒️ Rebuilding item-level dirty map...
+(index):1 [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://www.chromium.org/developers/design-documents/create-amazing-password-forms) <input class=​"w-full px-4 py-2 border border-gray-300 rounded-md focus:​ring-blue-500 focus:​border-blue-500 outline-none transition" placeholder=​"Enter your password" required type=​"password" value=​"devadmin">​
+UserContext.tsx:96 [UserContext] 🔓 Dev Admin bypass used
+login @ UserContext.tsx:96
+await in login
+handleUserLogin @ AuthOverlay.tsx:696
+await in handleUserLogin
+handleSubmit @ UserSelection.tsx:54
+executeDispatch @ react-dom-client.development.js:19116
+runWithFiberInDEV @ react-dom-client.development.js:871
+processDispatchQueue @ react-dom-client.development.js:19166
+(anonymous) @ react-dom-client.development.js:19767
+batchedUpdates$1 @ react-dom-client.development.js:3255
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:19320
+dispatchEvent @ react-dom-client.development.js:23585
+dispatchDiscreteEvent @ react-dom-client.development.js:23553
+<form>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+UserSelection @ UserSelection.tsx:128
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooksAgain @ react-dom-client.development.js:7762
+renderWithHooks @ react-dom-client.development.js:7674
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performSyncWorkOnRoot @ react-dom-client.development.js:18972
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:18814
+processRootScheduleInMicrotask @ react-dom-client.development.js:18853
+(anonymous) @ react-dom-client.development.js:18991
+<UserSelection>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+renderAuthContent @ AuthOverlay.tsx:869
+AuthOverlay @ AuthOverlay.tsx:884
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooksAgain @ react-dom-client.development.js:7762
+renderWithHooks @ react-dom-client.development.js:7674
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:18957
+performWorkUntilDeadline @ scheduler.development.js:45
+DataContext.tsx:1486 [DataContext] Sync RESUMED
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:2006 [DataContext] 🔍 loadMetadata Check: {hasData: true, previouslyLoaded: false, isUpToDate: false, inflight: false}
+DataContext.tsx:2031 [DataContext] 📥 Loading Metadata (Classes, Subjects, Assessments)...
+DataContext.tsx:700 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:654 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:744 [DataContext] 🛰️ Setting up True Listeners for mampongpresbyprimarya_2025-2026_Second-Term...
+DataContext.tsx:1441 [DataContext] 📦 Checking student bucket existence for mampongpresbyprimarya_2025-2026_Second-Term...
+DataContext.tsx:2006 [DataContext] 🔍 loadMetadata Check: {hasData: true, previouslyLoaded: false, isUpToDate: false, inflight: true}
+DataContext.tsx:2025 [DataContext] ⏳ Metadata fetch already in progress. Deduping...
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:700 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:654 [DataContext] ⚒️ Rebuilding item-level dirty map...
+(index):1 [DOM] Password field is not contained in a form: (More info: https://www.chromium.org/developers/design-documents/create-amazing-password-forms) <input class=​"block w-full px-3 py-2 border border-gray-300 rounded-md focus:​ring-blue-500 focus:​border-blue-500 pr-10" placeholder=​"Enter school password" type=​"password" value=​"presbya">​
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:769 [DataContext] 📥 Real-time update for School Main Doc
+DataContext.tsx:266 [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 9, …}
+DataContext.tsx:280 [DataContext] 🧠 Pre-empting context reset for: mampongpresbyprimarya_2025-2026_Second-Term-2025-2026-Second Term
+DataContext.tsx:301 [DataContext] 🛡️ Remote Sync: Preserving local changes to 'userLogs' — field is dirty. Skipping overwrite.
+DataContext.tsx:301 [DataContext] 🛡️ Remote Sync: Preserving local changes to 'activeSessions' — field is dirty. Skipping overwrite.
+DataContext.tsx:420 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
+DataContext.tsx:443 [DataContext] 💾 Updated originalData baseline with merge strategy
+DataContext.tsx:700 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:654 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+scheduler.development.js:14 [Violation] 'message' handler took 312ms
+DataContext.tsx:751 [DataContext] 📥 Real-time update for students
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:700 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:654 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:751 [DataContext] 📥 Real-time update for classes
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:700 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:654 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:751 [DataContext] 📥 Real-time update for subjects
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:700 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:654 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:751 [DataContext] 📥 Real-time update for assessments
+DataContext.tsx:700 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:654 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:700 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:654 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:751 [DataContext] 📥 Real-time update for grades
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:700 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:654 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:700 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:654 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:2119 [DataContext] ✅ Metadata Merge triggered for School: mampongpresbyprimarya_2025-2026_Second-Term
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:700 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:654 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:700 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:654 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:700 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:654 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:1707 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1774279337545 for userLogs
+DataContext.tsx:162 [DataContext] 🔍 isItemDirty(classes, 2): LOCAL-ONLY & MEANINGFUL. Marking dirty.
+DataContext.tsx:162 [DataContext] 🔍 isItemDirty(classes, 2): LOCAL-ONLY & MEANINGFUL. Marking dirty.
+DataContext.tsx:162 [DataContext] 🔍 isItemDirty(classes, 2): LOCAL-ONLY & MEANINGFUL. Marking dirty.
+DataContext.tsx:162 [DataContext] 🔍 isItemDirty(classes, 2): LOCAL-ONLY & MEANINGFUL. Marking dirty.
+DataContext.tsx:162 [DataContext] 🔍 isItemDirty(classes, 2): LOCAL-ONLY & MEANINGFUL. Marking dirty.
+DataContext.tsx:162 [DataContext] 🔍 isItemDirty(classes, 2): LOCAL-ONLY & MEANINGFUL. Marking dirty.
+DataContext.tsx:162 [DataContext] 🔍 isItemDirty(classes, 2): LOCAL-ONLY & MEANINGFUL. Marking dirty.
+DataContext.tsx:162 [DataContext] 🔍 isItemDirty(classes, 2): LOCAL-ONLY & MEANINGFUL. Marking dirty.
+DataContext.tsx:162 [DataContext] 🔍 isItemDirty(classes, 2): LOCAL-ONLY & MEANINGFUL. Marking dirty.
+DataContext.tsx:162 [DataContext] 🔍 isItemDirty(classes, 2): LOCAL-ONLY & MEANINGFUL. Marking dirty.
+DataContext.tsx:162 [DataContext] 🔍 isItemDirty(classes, 2): LOCAL-ONLY & MEANINGFUL. Marking dirty.
+DataContext.tsx:162 [DataContext] 🔍 isItemDirty(classes, 2): LOCAL-ONLY & MEANINGFUL. Marking dirty.
+DataContext.tsx:931 [DataContext] 📥 Manual refresh initiated - fetching data from cloud [FULL]...
+DataContext.tsx:1503 [DataContext] 🔄 Reverting ALL pending changes...
+DataContext.tsx:700 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:654 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:936 [DataContext] ✅ Main document fetched, applying updates...
+DataContext.tsx:942 [DataContext] 🧹 Cleared all pending changes and score cache for manual refresh
+DataContext.tsx:266 [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 9, …}
+DataContext.tsx:280 [DataContext] 🧠 Pre-empting context reset for: mampongpresbyprimarya_2025-2026_Second-Term-2025-2026-Second Term
+DataContext.tsx:305 [DataContext] ✅ Updating userLogs
+DataContext.tsx:305 [DataContext] ✅ Updating activeSessions
+DataContext.tsx:420 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
+DataContext.tsx:443 [DataContext] 💾 Updated originalData baseline with merge strategy
+DataContext.tsx:700 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:654 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:952 [DataContext] 🔄 Force refreshing Metadata (Classes, Subjects, Assessments)...
+DataContext.tsx:2006 [DataContext] 🔍 loadMetadata Check: {hasData: true, previouslyLoaded: true, isUpToDate: false, inflight: false}
+DataContext.tsx:2031 [DataContext] 📥 Loading Metadata (Classes, Subjects, Assessments)...
+DataContext.tsx:956 [DataContext] 🔄 Force refreshing Students subcollection...
+DataContext.tsx:1822 [DataContext] 🔍 loadStudents Check: {studentsCount: 3, serverTS: undefined, loadedTS: undefined, isUpToDate: false, hasBaseline: true, …}
+DataContext.tsx:1850 [DataContext] 📥 Loading Students (Optimized via Bucket)...
+DataContext.tsx:960 [DataContext] 🔄 Force refreshing Score Buckets for loaded subjects...
+DataContext.tsx:700 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:654 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:700 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:654 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:2119 [DataContext] ✅ Metadata Merge triggered for School: mampongpresbyprimarya_2025-2026_Second-Term
+DataContext.tsx:700 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:654 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:700 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:654 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:1854 [DataContext] ✅ Loaded 3 students.
+DataContext.tsx:700 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:654 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:971 [DataContext] 🎉 Manual refresh complete
+DataContext.tsx:700 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:654 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:700 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:654 [DataContext] ⚒️ Rebuilding item-level dirty map...
+react-dom-client.development.js:18985 [Violation] 'setInterval' handler took 143ms
+scheduler.development.js:14 [Violation] 'message' handler took 246ms
+DataContext.tsx:700 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:654 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:700 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:654 [DataContext] ⚒️ Rebuilding item-level dirty map...
+client:883 [vite] invalidate /context/DataContext.tsx: Could not Fast Refresh ("getItemId" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+client:883 [vite] hot updated: /context/DataContext.tsx
+client:883 [vite] hot updated: /index.css
+ [vite] hot updated: /components/NotificationCenter.tsx
+ [vite] hot updated: /index.css
+ [vite] hot updated: /App.tsx
+ [vite] invalidate /context/UserContext.tsx: Could not Fast Refresh ("useUser" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+ [vite] hot updated: /context/UserContext.tsx
+ [vite] hot updated: /components/GlobalActionBar.tsx
+ [vite] hot updated: /components/GreetingToast.tsx
+ [vite] hot updated: /components/pages/ScoreEntry.tsx
+ [vite] hot updated: /components/pages/ReportViewer.tsx
+ [vite] hot updated: /components/pages/Dashboard.tsx
+ [vite] hot updated: /components/pages/Settings.tsx
+ [vite] hot updated: /components/pages/GradingSystem.tsx
+ [vite] hot updated: /components/SyncOverlayConnected.tsx
+ [vite] hot updated: /components/pages/FirebaseAnalytics.tsx
+ [vite] hot updated: /components/Sidebar.tsx
+ [vite] hot updated: /components/pages/Students.tsx
+ [vite] hot updated: /components/UserBadge.tsx
+ [vite] hot updated: /components/pages/Subjects.tsx
+ [vite] hot updated: /components/pages/ScoreSummary.tsx
+ [vite] hot updated: /components/pages/StudentProgress.tsx
+ [vite] hot updated: /components/pages/AssessmentTypes.tsx
+ [vite] hot updated: /components/pages/DataManagement.tsx
+ [vite] hot updated: /components/AuthOverlay.tsx
+ [vite] hot updated: /components/pages/Teachers.tsx
+ [vite] hot updated: /components/pages/SubjectAnalysis.tsx
+ [vite] hot updated: /components/InlineScoreInput.tsx
+ [vite] hot updated: /components/ReportCard.tsx
+ [vite] hot updated: /components/ReportCustomizationPanel.tsx
+ [vite] invalidate /components/ReadOnlyWrapper.tsx: Could not Fast Refresh ("usePermissions" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+ [vite] hot updated: /components/ReadOnlyWrapper.tsx
+ [vite] hot updated: /components/PreviewDataModal.tsx
+ [vite] hot updated: /components/modals/RestoreModal.tsx
+ [vite] hot updated: /components/IndexNumberConfig.tsx
+ [vite] hot updated: /components/AdminSetup.tsx
+ [vite] hot updated: /index.css
+ [vite] hot updated: /App.tsx
+ [vite] hot updated: /components/GlobalActionBar.tsx
+ [vite] hot updated: /components/pages/ScoreEntry.tsx
+ [vite] hot updated: /components/pages/ReportViewer.tsx
+ [vite] hot updated: /components/TeacherPageRedirect.tsx
+ [vite] hot updated: /components/pages/Settings.tsx
+ [vite] hot updated: /components/pages/GradingSystem.tsx
+ [vite] hot updated: /components/Sidebar.tsx
+ [vite] hot updated: /components/pages/Students.tsx
+ [vite] hot updated: /components/UserBadge.tsx
+ [vite] hot updated: /components/pages/Subjects.tsx
+ [vite] hot updated: /components/pages/ScoreSummary.tsx
+ [vite] hot updated: /components/pages/StudentProgress.tsx
+ [vite] hot updated: /components/pages/AssessmentTypes.tsx
+client:883 [vite] hot updated: /components/pages/DataManagement.tsx
+client:883 [vite] hot updated: /components/AuthOverlay.tsx
+client:883 [vite] hot updated: /components/pages/Teachers.tsx
+client:883 [vite] hot updated: /components/pages/SubjectAnalysis.tsx
+client:883 [vite] hot updated: /components/ReadOnlyWrapper.tsx
+client:883 [vite] hot updated: /components/modals/RestoreModal.tsx
+client:883 [vite] hot updated: /components/AdminSetup.tsx
+client:883 [vite] hot updated: /index.css
+client:883 [vite] hot updated: /components/pages/ScoreEntry.tsx
+client:883 [vite] hot updated: /components/pages/ReportViewer.tsx
+client:883 [vite] hot updated: /components/pages/Settings.tsx
+client:883 [vite] hot updated: /components/pages/GradingSystem.tsx
+client:883 [vite] hot updated: /components/pages/Students.tsx
+client:883 [vite] hot updated: /components/pages/Subjects.tsx
+client:883 [vite] hot updated: /components/pages/AssessmentTypes.tsx
+client:883 [vite] hot updated: /components/pages/Teachers.tsx
+DataContext.tsx:2198 [DataContext] Sync PAUSED
+DataContext.tsx:2198 [DataContext] Sync PAUSED
+@react-refresh:602 [Violation] 'setTimeout' handler took 84ms
+DataContext.tsx:800 [DataContext] 🛑 Cleaning up listeners for mampongpresbyprimarya_2025-2026_Second-Term
+DataContext.tsx:2198 [DataContext] Sync PAUSED
+scheduler.development.js:14 [Violation] 'message' handler took 238ms
+DataContext.tsx:502 [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 9, …}
+DataContext.tsx:520 [DataContext] 🧠 Pre-empting context reset for: mampongpresbyprimarya_2025-2026_Second-Term-2025-2026-Second Term
+DataContext.tsx:539 [DataContext] 🛡️ Remote Sync: Preserving local changes to 'activeSessions' — field is dirty. Skipping overwrite.
+DataContext.tsx:693 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
+DataContext.tsx:727 [DataContext] 💾 Updated originalData baseline with merge strategy
+DataContext.tsx:1101 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:1049 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:502 [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 9, …}
+DataContext.tsx:520 [DataContext] 🧠 Pre-empting context reset for: mampongpresbyprimarya_2025-2026_Second-Term-2025-2026-Second Term
+DataContext.tsx:539 [DataContext] 🛡️ Remote Sync: Preserving local changes to 'activeSessions' — field is dirty. Skipping overwrite.
+DataContext.tsx:693 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
+DataContext.tsx:727 [DataContext] 💾 Updated originalData baseline with merge strategy
+DataContext.tsx:1101 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:1049 [DataContext] ⚒️ Rebuilding item-level dirty map...
+scheduler.development.js:14 [Violation] 'message' handler took 550ms
+DataContext.tsx:2198 [DataContext] Sync PAUSED
+DataContext.tsx:1101 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:1049 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:2198 [DataContext] Sync PAUSED
+DataContext.tsx:1101 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:1049 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:1101 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:1049 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:100 [Version] 🚀 New version 1.0.10 detected. Reloading silently...
+async_observer.ts:63 [Violation] 'setTimeout' handler took 2407ms
+Navigated to http://localhost:3000/
+client:789 [vite] connecting...
+react-dom-client.development.js:28004 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+client:912 [vite] connected.
+firebaseService.ts:69 [2026-03-23T15:26:28.731Z]  @firebase/analytics: Analytics: Firebase Analytics is not supported in this environment. Wrap initialization of analytics in analytics.isSupported() to prevent initialization in unsupported environments. Details: (1) This is a browser extension environment. (analytics/invalid-analytics-context).
 defaultLogHandler @ logger.ts:115
 warn @ logger.ts:206
 warnOnBrowserContextMismatch @ factory.ts:169
@@ -127,33 +546,285 @@ bootstrap @ index.tsx:106
 await in bootstrap
 (anonymous) @ index.tsx:123
 DataContext.tsx:2198 [DataContext] Sync PAUSED
-js?l=dataLayer&id=G-MD7SR62BCB:659 [Violation] 'setTimeout' handler took 60ms
-SubscriptionRequestModal.tsx:232 [Paystack] Initialization success: {reference: 'MOCK_1774278204137', usingKey: 'pk_live_...'}
-index-OHJzKh9X.js:37 [Violation] 'setTimeout' handler took 308ms
-content.js:13 Loading the script 'blob:https://checkout.paystack.com/5fd0522c-046b-4a9f-a8f5-ba3840301357' violates the following Content Security Policy directive: "script-src-elem 'self' https://checkout.gointerpay.net/ https://checkout.rch.io/v2.22/fingerprint https://www.googletagmanager.com/gtag/ https://s3-eu-west-1.amazonaws.com/pstk-public-files/js/pusher.min.js https://applepay.cdn-apple.com/jsapi/v1.1.0/apple-pay-sdk.js https://www.googletagmanager.com/debug/ 'sha384-QQMs28J0n8Mw4Q1CHlPa/iPNoI8cHTH141eSbWme69K7V+4TvvHzfFm+PuE4JpxF' 'nonce-RKbSGuVRJ37bCoqR' 'sha384-kYN1NbScnNOnyvDqahb4am4uYrSJh/+eDDN9ipiMT/Xx6ivmTHrN4Eh1JD6JZ2Ek'". The action has been blocked.
+DataContext.tsx:292 [Version] ⏸️ Already reloaded for v1.0.10. Waiting for CDN to propagate...
+client:883 [vite] invalidate /context/DataContext.tsx: Could not Fast Refresh ("getItemId" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+client:883 [vite] hot updated: /context/DataContext.tsx
+client:883 [vite] hot updated: /index.css
+ [vite] hot updated: /components/NotificationCenter.tsx
+ [vite] hot updated: /index.css
+ [vite] hot updated: /App.tsx
+ [vite] invalidate /context/UserContext.tsx: Could not Fast Refresh ("useUser" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+ [vite] hot updated: /context/UserContext.tsx
+ [vite] hot updated: /components/GlobalActionBar.tsx
+ [vite] hot updated: /components/GreetingToast.tsx
+ [vite] hot updated: /components/pages/ScoreEntry.tsx
+ [vite] hot updated: /components/pages/ReportViewer.tsx
+ [vite] hot updated: /components/pages/Dashboard.tsx
+ [vite] hot updated: /components/pages/Settings.tsx
+ [vite] hot updated: /components/pages/GradingSystem.tsx
+ [vite] hot updated: /components/SyncOverlayConnected.tsx
+ [vite] hot updated: /components/pages/FirebaseAnalytics.tsx
+ [vite] hot updated: /components/Sidebar.tsx
+ [vite] hot updated: /components/pages/Students.tsx
+ [vite] hot updated: /components/UserBadge.tsx
+ [vite] hot updated: /components/pages/Subjects.tsx
+ [vite] hot updated: /components/pages/ScoreSummary.tsx
+ [vite] hot updated: /components/pages/StudentProgress.tsx
+ [vite] hot updated: /components/pages/AssessmentTypes.tsx
+ [vite] hot updated: /components/pages/DataManagement.tsx
+client:883 [vite] hot updated: /components/AuthOverlay.tsx
+client:883 [vite] hot updated: /components/pages/Teachers.tsx
+client:883 [vite] hot updated: /components/pages/SubjectAnalysis.tsx
+client:883 [vite] hot updated: /components/InlineScoreInput.tsx
+client:883 [vite] hot updated: /components/ReportCard.tsx
+client:883 [vite] hot updated: /components/ReportCustomizationPanel.tsx
+client:883 [vite] invalidate /components/ReadOnlyWrapper.tsx: Could not Fast Refresh ("usePermissions" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+client:883 [vite] hot updated: /components/ReadOnlyWrapper.tsx
+client:883 [vite] hot updated: /components/PreviewDataModal.tsx
+client:883 [vite] hot updated: /components/modals/RestoreModal.tsx
+client:883 [vite] hot updated: /components/IndexNumberConfig.tsx
+client:883 [vite] hot updated: /components/AdminSetup.tsx
+DataContext.tsx:2528 [DataContext] 🛡️ Role-Based Guard: stripping unauthorized change to 'settings'
+(anonymous) @ DataContext.tsx:2528
+(anonymous) @ DataContext.tsx:2438
+(anonymous) @ DataContext.tsx:2594
+updateMemo @ react-dom-client.development.js:8795
+useMemo @ react-dom-client.development.js:26484
+exports.useMemo @ react.development.js:1251
+DataProvider @ DataContext.tsx:2593
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooks @ react-dom-client.development.js:7662
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performSyncWorkOnRoot @ react-dom-client.development.js:18972
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:18814
+flushSyncWork$1 @ react-dom-client.development.js:16898
+scheduleRefresh @ react-dom-client.development.js:113
+(anonymous) @ @react-refresh:228
+performReactRefresh @ @react-refresh:217
+(anonymous) @ @react-refresh:604
+<DataProvider>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+App @ App.tsx:295
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooksAgain @ react-dom-client.development.js:7762
+renderWithHooks @ react-dom-client.development.js:7674
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:18957
+performWorkUntilDeadline @ scheduler.development.js:45
+<App>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+bootstrap @ index.tsx:106
+await in bootstrap
+(anonymous) @ index.tsx:123
+DataContext.tsx:2528 [DataContext] 🛡️ Role-Based Guard: stripping unauthorized change to 'settings'
+(anonymous) @ DataContext.tsx:2528
+(anonymous) @ DataContext.tsx:2438
+(anonymous) @ DataContext.tsx:2594
+updateMemo @ react-dom-client.development.js:8799
+useMemo @ react-dom-client.development.js:26484
+exports.useMemo @ react.development.js:1251
+DataProvider @ DataContext.tsx:2593
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooks @ react-dom-client.development.js:7662
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performSyncWorkOnRoot @ react-dom-client.development.js:18972
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:18814
+flushSyncWork$1 @ react-dom-client.development.js:16898
+scheduleRefresh @ react-dom-client.development.js:113
+(anonymous) @ @react-refresh:228
+performReactRefresh @ @react-refresh:217
+(anonymous) @ @react-refresh:604
+<DataProvider>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+App @ App.tsx:295
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooksAgain @ react-dom-client.development.js:7762
+renderWithHooks @ react-dom-client.development.js:7674
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:18957
+performWorkUntilDeadline @ scheduler.development.js:45
+<App>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+bootstrap @ index.tsx:106
+await in bootstrap
+(anonymous) @ index.tsx:123
+DataContext.tsx:2198 [DataContext] Sync PAUSED
+DataContext.tsx:2198 [DataContext] Sync PAUSED
+ [vite] hot updated: /index.css
+ [vite] hot updated: /App.tsx
+ [vite] hot updated: /components/GlobalActionBar.tsx
+ [vite] hot updated: /components/pages/ScoreEntry.tsx
+ [vite] hot updated: /components/pages/ReportViewer.tsx
+ [vite] hot updated: /components/TeacherPageRedirect.tsx
+ [vite] hot updated: /components/pages/Settings.tsx
+ [vite] hot updated: /components/pages/GradingSystem.tsx
+ [vite] hot updated: /components/Sidebar.tsx
+ [vite] hot updated: /components/pages/Students.tsx
+ [vite] hot updated: /components/UserBadge.tsx
+ [vite] hot updated: /components/pages/Subjects.tsx
+ [vite] hot updated: /components/pages/ScoreSummary.tsx
+ [vite] hot updated: /components/pages/StudentProgress.tsx
+ [vite] hot updated: /components/pages/AssessmentTypes.tsx
+client:883 [vite] hot updated: /components/pages/DataManagement.tsx
+client:883 [vite] hot updated: /components/AuthOverlay.tsx
+client:883 [vite] hot updated: /components/pages/Teachers.tsx
+client:883 [vite] hot updated: /components/pages/SubjectAnalysis.tsx
+client:883 [vite] hot updated: /components/ReadOnlyWrapper.tsx
+client:883 [vite] hot updated: /components/modals/RestoreModal.tsx
+client:883 [vite] hot updated: /components/AdminSetup.tsx
+client:883 [vite] hot updated: /index.css
+client:883 [vite] hot updated: /components/pages/ScoreEntry.tsx
+client:883 [vite] hot updated: /components/pages/ReportViewer.tsx
+client:883 [vite] hot updated: /components/pages/Settings.tsx
+client:883 [vite] hot updated: /components/pages/GradingSystem.tsx
+client:883 [vite] hot updated: /components/pages/Students.tsx
+client:883 [vite] hot updated: /components/pages/Subjects.tsx
+client:883 [vite] hot updated: /components/pages/AssessmentTypes.tsx
+client:883 [vite] hot updated: /components/pages/Teachers.tsx
+SubscriptionRequestModal.tsx:235 [Paystack] Initialization success: {reference: 'MOCK_1774279655743', usingKey: 'pk_test_...'}
+vendor-CjCsaaRx.js:1 [Violation] 'setTimeout' handler took 110ms
+content.js:13 Loading the script 'blob:https://checkout.paystack.com/c14ae5cf-996d-4b62-aabe-c12449fd8264' violates the following Content Security Policy directive: "script-src-elem 'self' https://checkout.gointerpay.net/ https://checkout.rch.io/v2.22/fingerprint https://www.googletagmanager.com/gtag/ https://s3-eu-west-1.amazonaws.com/pstk-public-files/js/pusher.min.js https://applepay.cdn-apple.com/jsapi/v1.1.0/apple-pay-sdk.js https://www.googletagmanager.com/debug/ 'sha384-QQMs28J0n8Mw4Q1CHlPa/iPNoI8cHTH141eSbWme69K7V+4TvvHzfFm+PuE4JpxF' 'nonce-RKbg6mxAPIV0Q+UK' 'sha384-kYN1NbScnNOnyvDqahb4am4uYrSJh/+eDDN9ipiMT/Xx6ivmTHrN4Eh1JD6JZ2Ek'". The action has been blocked.
 (anonymous) @ content.js:13
 await in (anonymous)
 (anonymous) @ content.js:13
 (anonymous) @ content.js:13
 (anonymous) @ content.js:13
-vendor-CjCsaaRx.js:1  POST https://api.paystack.co/charge/mobile_money 400 (Bad Request)
-(anonymous) @ vendor-CjCsaaRx.js:1
-WP @ vendor-CjCsaaRx.js:1
-hg @ vendor-CjCsaaRx.js:1
-qn.request @ vendor-CjCsaaRx.js:1
-(anonymous) @ vendor-CjCsaaRx.js:1
-(anonymous) @ vendor-CjCsaaRx.js:1
-Cg @ vendor-CjCsaaRx.js:26
-(anonymous) @ vendor-CjCsaaRx.js:26
-Promise.then
-authenticateMobileMoney @ vendor-CjCsaaRx.js:26
-authenticatePayment @ index-OHJzKh9X.js:37
-jl @ index-OHJzKh9X.js:13
-_s @ index-OHJzKh9X.js:13
-Uk @ index-OHJzKh9X.js:13
-onSubmit @ index-OHJzKh9X.js:37
-(anonymous) @ index-OHJzKh9X.js:37
-(anonymous) @ index-OHJzKh9X.js:17
-jl @ index-OHJzKh9X.js:13
-_s @ index-OHJzKh9X.js:13
-e @ index-OHJzKh9X.js:17
+js?id=G-0WCTF5FP66:717 [Violation] 'setTimeout' handler took 75ms
+firebaseService.ts:802 [Activation] 🎯 Targeting ACTIVE Database Index: 5 (Project: sba-pro-master-35ff1)
+client:964 [vite] server connection lost. Polling for restart...
+client:789 [vite] connecting...
+react-dom-client.development.js:28004 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+client:912 [vite] connected.
+Navigated to http://localhost:3000/
+firebaseService.ts:69 [2026-03-23T15:37:32.653Z]  @firebase/analytics: Analytics: Firebase Analytics is not supported in this environment. Wrap initialization of analytics in analytics.isSupported() to prevent initialization in unsupported environments. Details: (1) This is a browser extension environment. (analytics/invalid-analytics-context).
+defaultLogHandler @ logger.ts:115
+warn @ logger.ts:206
+warnOnBrowserContextMismatch @ factory.ts:169
+factory @ factory.ts:182
+(anonymous) @ index.ts:58
+getOrInitializeService @ provider.ts:318
+initialize @ provider.ts:242
+initializeAnalytics @ api.ts:112
+getAnalytics @ api.ts:85
+(anonymous) @ firebaseService.ts:69
+DataContext.tsx:2198 [DataContext] Sync PAUSED
+DataContext.tsx:1101 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:1049 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:2198 [DataContext] Sync PAUSED
+DataContext.tsx:1101 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:1049 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:2528 [DataContext] 🛡️ Role-Based Guard: stripping unauthorized change to 'settings'
+(anonymous) @ DataContext.tsx:2528
+(anonymous) @ DataContext.tsx:2438
+(anonymous) @ DataContext.tsx:2594
+updateMemo @ react-dom-client.development.js:8795
+useMemo @ react-dom-client.development.js:26484
+exports.useMemo @ react.development.js:1251
+DataProvider @ DataContext.tsx:2593
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooks @ react-dom-client.development.js:7662
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:18957
+performWorkUntilDeadline @ scheduler.development.js:45
+<DataProvider>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+App @ App.tsx:295
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooksAgain @ react-dom-client.development.js:7762
+renderWithHooks @ react-dom-client.development.js:7674
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:18957
+performWorkUntilDeadline @ scheduler.development.js:45
+<App>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+bootstrap @ index.tsx:106
+await in bootstrap
+(anonymous) @ index.tsx:123
+DataContext.tsx:2528 [DataContext] 🛡️ Role-Based Guard: stripping unauthorized change to 'settings'
+(anonymous) @ DataContext.tsx:2528
+(anonymous) @ DataContext.tsx:2438
+(anonymous) @ DataContext.tsx:2594
+updateMemo @ react-dom-client.development.js:8799
+useMemo @ react-dom-client.development.js:26484
+exports.useMemo @ react.development.js:1251
+DataProvider @ DataContext.tsx:2593
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooks @ react-dom-client.development.js:7662
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:18957
+performWorkUntilDeadline @ scheduler.development.js:45
+<DataProvider>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+App @ App.tsx:295
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooksAgain @ react-dom-client.development.js:7762
+renderWithHooks @ react-dom-client.development.js:7674
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:18957
+performWorkUntilDeadline @ scheduler.development.js:45
+<App>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+bootstrap @ index.tsx:106
+await in bootstrap
+(anonymous) @ index.tsx:123
+DataContext.tsx:2198 [DataContext] Sync PAUSED
+js?l=dataLayer&id=G-MD7SR62BCB:658 [Violation] 'setTimeout' handler took 53ms
+js?l=dataLayer&id=G-MD7SR62BCB:799 [Violation] 'setTimeout' handler took 50ms
+SubscriptionRequestModal.tsx:235 [Paystack] Initialization success: {reference: 'MOCK_1774280318054', usingKey: 'pk_test_...'}
+content.js:13 Loading the script 'blob:https://checkout.paystack.com/4e07fa09-68d9-4eca-9ac2-0c4d8312d4a7' violates the following Content Security Policy directive: "script-src-elem 'self' https://checkout.gointerpay.net/ https://checkout.rch.io/v2.22/fingerprint https://www.googletagmanager.com/gtag/ https://s3-eu-west-1.amazonaws.com/pstk-public-files/js/pusher.min.js https://applepay.cdn-apple.com/jsapi/v1.1.0/apple-pay-sdk.js https://www.googletagmanager.com/debug/ 'sha384-QQMs28J0n8Mw4Q1CHlPa/iPNoI8cHTH141eSbWme69K7V+4TvvHzfFm+PuE4JpxF' 'nonce-RKcDUhWS6hXmsfQb' 'sha384-kYN1NbScnNOnyvDqahb4am4uYrSJh/+eDDN9ipiMT/Xx6ivmTHrN4Eh1JD6JZ2Ek'". The action has been blocked.
+(anonymous) @ content.js:13
+await in (anonymous)
+(anonymous) @ content.js:13
+(anonymous) @ content.js:13
+(anonymous) @ content.js:13
+vendor-CjCsaaRx.js:1 [Violation] 'setTimeout' handler took 66ms
+[Violation] Forced reflow while executing JavaScript took 48ms
+firebaseService.ts:802 [Activation] 🎯 Targeting ACTIVE Database Index: 5 (Project: sba-pro-master-35ff1)

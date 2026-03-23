@@ -28,7 +28,10 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         const { email, amount, metadata } = req.body;
         
         // Log initialization attempt (Safe)
-        console.log(`[Paystack API] Initializing for ${email} using ${process.env.PAYSTACK_SECRET_KEY ? process.env.PAYSTACK_SECRET_KEY.substring(0, 8) : 'MISSING'}...`);
+        const secretKey = (process.env.PAYSTACK_SECRET_KEY || '').trim();
+        
+        // Log initialization attempt (Safe)
+        console.log(`[Paystack API] Initializing for ${email} (Mode: ${secretKey.startsWith('sk_live') ? 'LIVE' : 'TEST'}) using ${secretKey ? secretKey.substring(0, 8) + '...' : 'MISSING'}`);
 
         // Validate inputs
         if (!email || !amount) {
@@ -38,11 +41,16 @@ async function handler(req: VercelRequest, res: VercelResponse) {
             });
         }
 
+        if (!secretKey) {
+            console.error('[Paystack API] Error: PAYSTACK_SECRET_KEY is missing');
+            return res.status(500).json({ error: 'Paystack Secret Key not configured on server' });
+        }
+
         // Initialize payment with Paystack
         const response = await fetch('https://api.paystack.co/transaction/initialize', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+                'Authorization': `Bearer ${secretKey}`,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({

@@ -60,8 +60,9 @@ export default defineConfig(({ mode }) => {
             console.log('[Mock API] Initializing payment request...');
             res.setHeader('Content-Type', 'application/json');
 
+            const secretKey = (env.PAYSTACK_SECRET_KEY || '').trim();
             // If we have a secret key locally, try to get a real reference
-            if (env.PAYSTACK_SECRET_KEY) {
+            if (secretKey) {
               try {
                 // Buffer the request body
                 const chunks: any[] = [];
@@ -71,12 +72,12 @@ export default defineConfig(({ mode }) => {
                 const body = JSON.parse(Buffer.concat(chunks).toString());
                 const { email, amount, metadata } = body;
 
-                console.log(`[Mock API] Attempting real Paystack init for ${email}...`);
+                console.log(`[Mock API] Attempting real Paystack init for ${email} (Mode: ${secretKey.startsWith('sk_live') ? 'LIVE' : 'TEST'})...`);
                 
                 const response = await fetch('https://api.paystack.co/transaction/initialize', {
                   method: 'POST',
                   headers: {
-                    'Authorization': `Bearer ${env.PAYSTACK_SECRET_KEY}`,
+                    'Authorization': `Bearer ${secretKey}`,
                     'Content-Type': 'application/json',
                   },
                   body: JSON.stringify({
