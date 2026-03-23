@@ -1014,15 +1014,24 @@ export const getSchoolYearsAndTerms = async (schoolName: string, databaseIndex?:
             snapshot.forEach(doc => {
                 const data = doc.data() as any;
                 const docSchoolName = data.settings?.schoolName;
+                const academicYear = data.settings?.academicYear;
+                const academicTerm = data.settings?.academicTerm;
 
-                // Match by actual school name
-                if (docSchoolName === schoolName) {
-                    periods.push({
-                        year: data.settings?.academicYear || 'Unknown Year',
-                        term: data.settings?.academicTerm || 'Unknown Term',
-                        docId: doc.id
-                    });
+                // The Firestore range query already scopes results to the correct school
+                // via docIdPrefix — every doc returned here belongs to this school.
+                // Skip only if there is absolutely no period data on the document.
+                if (!academicYear && !academicTerm) return;
+
+                if (docSchoolName && docSchoolName !== schoolName) {
+                    // Warn but still include — a name mismatch in settings shouldn't hide a valid period
+                    console.warn(`[Auth] Period doc "${doc.id}" has schoolName "${docSchoolName}" but expected "${schoolName}". Including anyway.`);
                 }
+
+                periods.push({
+                    year: academicYear || 'Unknown Year',
+                    term: academicTerm || 'Unknown Term',
+                    docId: doc.id
+                });
             });
 
             // Clean up temp app if used
