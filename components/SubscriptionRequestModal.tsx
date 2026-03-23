@@ -232,7 +232,7 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
             // Use the key from the environment (Vite prefetched) or the one loaded dynamically from API
             const publicKey = (import.meta as any).env?.VITE_PAYSTACK_PUBLIC_KEY || PAYSTACK_PUBLIC_KEY;
 
-            console.log(`[Mock API] Attempting real Paystack init for ${paymentEmail} (Mode: ${publicKey?.startsWith('pk_live') ? 'LIVE' : 'TEST'})...`);
+            console.log(`[Paystack] Initialization success: { reference: ${initResponse.reference}, mode: ${publicKey?.startsWith('pk_live') ? 'LIVE' : 'TEST'} }`);
 
             // 2. Open Paystack Popup
             const PaystackPop = (window as any).PaystackPop;
