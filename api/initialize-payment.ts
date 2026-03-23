@@ -73,8 +73,9 @@ async function handler(req: VercelRequest, res: VercelResponse) {
             let errorDetails = data.message || 'Unknown error'; // Default details to message
 
             if (response.status === 401) {
-                errorMessage = 'Paystack API Rejected the Secret Key. Please check your Vercel Environment Variables and ensure PAYSTACK_SECRET_KEY matches the public key and mode (Live/Test).';
-                errorDetails = errorMessage; // Use the specific message for details as well
+                const serverMode = secretKey.startsWith('sk_live') ? 'LIVE' : 'TEST';
+                errorMessage = `Paystack API Rejected the Secret Key (Server is in ${serverMode} Mode). Please ensure your Vercel PAYSTACK_SECRET_KEY matches the public key and that both are LIVE keys for a live transaction.`;
+                errorDetails = errorMessage;
             } else if (data.data && data.data.message) {
                 // Sometimes Paystack returns errors with a nested 'data.message'
                 errorDetails = data.data.message;
