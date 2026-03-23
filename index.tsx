@@ -33,7 +33,7 @@ if (!rootElement) {
   throw new Error("Could not find root element to mount to");
 }
 
-import { setFirebaseConfigs, setSchoolDatabaseMapping, setActivationHash, API_BASE_URL, FIREBASE_CONFIGS } from './constants';
+import { setFirebaseConfigs, setSchoolDatabaseMapping, setActivationHash, setPaystackPublicKey, API_BASE_URL, FIREBASE_CONFIGS } from './constants';
 
 const loadFirebaseConfig = async () => {
   try {
@@ -43,6 +43,12 @@ const loadFirebaseConfig = async () => {
     // Handle different response structures (e.g. { configs: ... } or just configs)
     const configs = data.configs || data;
     setFirebaseConfigs(configs);
+
+    // Load Paystack Public Key from API
+    if (data.paystackPublicKey) {
+      setPaystackPublicKey(data.paystackPublicKey);
+      0 && console.log('[App] Paystack Public Key loaded from API');
+    }
 
     // Load school-to-database mapping from API
     if (data.schoolDatabaseMapping) {

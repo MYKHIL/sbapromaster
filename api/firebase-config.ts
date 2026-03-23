@@ -61,6 +61,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
             success: true,
             configs, 
             schoolDatabaseMapping,
+            paystackPublicKey: process.env.PAYSTACK_PUBLIC_KEY,
             activationHash: process.env.PASSWORD_HASH // Required for client-side activation security rules
         });
 

@@ -741,7 +741,7 @@ export const getSchoolList = async (prefix?: string, includeLocked: boolean = fa
  */
 export const getExistingSubscription = async (schoolId: string, dbIndex: number): Promise<Date | null> => {
     try {
-        const baseName = schoolId.split('_')[0];
+        const baseName = schoolId.split('_')[0].toLowerCase();
         const { ACTIVE_DATABASE_INDEX } = await import('../constants');
         let targetDb = db;
         let tempApp: any = null;
@@ -777,7 +777,7 @@ export const activateSchoolSubscriptionLocally = async (
     registrationData?: { password: string; initialData: AppDataType }
 ): Promise<any> => {
     const { id: schoolId, dbIndex } = schoolDetails;
-    const baseName = schoolId.split('_')[0];
+    const baseName = schoolId.split('_')[0].toLowerCase();
     let tempApp: any = null;
 
     try {
@@ -797,7 +797,9 @@ export const activateSchoolSubscriptionLocally = async (
                 experimentalForceLongPolling: true
             });
             targetProjectId = config.projectId;
-            0 && console.log(`[Activation] Targeting Database ${dbIndex} (${targetProjectId}).`);
+            console.log(`[Activation] 🎯 Targeting Database Index: ${dbIndex} (Project: ${targetProjectId})`);
+        } else {
+            console.log(`[Activation] 🎯 Targeting ACTIVE Database Index: ${dbIndex} (Project: ${targetProjectId})`);
         }
 
         // 1. Subscription Calculations
@@ -2053,7 +2055,7 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
                         const data = docSnap.data() as AppDataType;
                         if (data.password !== password) return { status: 'wrong_password' };
                         // Fetch subscription for existing school in other DB
-                        const subRef = doc(tempDb, 'subscriptions', docId.split('_')[0]);
+                        const subRef = doc(tempDb, 'subscriptions', docId.split('_')[0].toLowerCase());
                         const subSnap = await loggedGetDoc(subRef, `loginOrRegisterSchool_tempDb_sub/${targetDatabaseIndex}/${docId}`);
                         const subscription = subSnap.exists() ? subSnap.data() : null;
                         // Return success with data, but caller (AuthOverlay) will initiate the DB switch
@@ -2066,7 +2068,7 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
                         await setDoc(docRef, newData);
 
                         if (newData.Access === true) {
-                            const subRef = doc(tempDb, 'subscriptions', docId.split('_')[0]);
+                            const subRef = doc(tempDb, 'subscriptions', docId.split('_')[0].toLowerCase());
                             const subSnap = await loggedGetDoc(subRef, `loginOrRegisterSchool_tempDb_sub/${targetDatabaseIndex}/${docId}`);
                             const subscription = subSnap.exists() ? subSnap.data() : null;
                             return { status: 'success', data: newData, docId: docId, subscription };
@@ -2193,7 +2195,7 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
                 // If Access is true, return success (debug mode). Otherwise, pending.
                 if (newData.Access === true) {
                     0 && console.log(`[FIREBASE_DEBUG] New document created with Access=true. Returning 'success'.`);
-                    const subRef = doc(db, 'subscriptions', docId.split('_')[0]);
+                    const subRef = doc(db, 'subscriptions', docId.split('_')[0].toLowerCase());
                     const subSnap = await loggedGetDoc(subRef, `loginOrRegisterSchool_create_sub/${docId}`);
                     const subscription = subSnap.exists() ? subSnap.data() : null;
                     return { status: 'success', data: newData, docId: docId, subscription };

@@ -19,47 +19,94 @@ export default defineConfig(({ mode }) => {
         name: 'api-mock',
         configureServer(server) {
           server.middlewares.use('/api/firebase-config', (req, res) => {
-            // Mock the Vercel API response using local .env vars
-            const configs = {
-              1: {
-                apiKey: process.env.FIREBASE_1_API_KEY,
-                authDomain: process.env.FIREBASE_1_AUTH_DOMAIN,
-                projectId: process.env.FIREBASE_1_PROJECT_ID,
-                storageBucket: process.env.FIREBASE_1_STORAGE_BUCKET,
-                messagingSenderId: process.env.FIREBASE_1_MESSAGING_SENDER_ID,
-                appId: process.env.FIREBASE_1_APP_ID,
-                measurementId: process.env.FIREBASE_1_MEASUREMENT_ID,
-              },
-              2: {
-                apiKey: process.env.FIREBASE_2_API_KEY,
-                authDomain: process.env.FIREBASE_2_AUTH_DOMAIN,
-                projectId: process.env.FIREBASE_2_PROJECT_ID,
-                storageBucket: process.env.FIREBASE_2_STORAGE_BUCKET,
-                messagingSenderId: process.env.FIREBASE_2_MESSAGING_SENDER_ID,
-                appId: process.env.FIREBASE_2_APP_ID,
-                measurementId: process.env.FIREBASE_2_MEASUREMENT_ID,
-                isReserved: true,
-              },
-              3: {
-                apiKey: process.env.FIREBASE_3_API_KEY,
-                authDomain: process.env.FIREBASE_3_AUTH_DOMAIN,
-                projectId: process.env.FIREBASE_3_PROJECT_ID,
-                storageBucket: process.env.FIREBASE_3_STORAGE_BUCKET,
-                messagingSenderId: process.env.FIREBASE_3_MESSAGING_SENDER_ID,
-                appId: process.env.FIREBASE_3_APP_ID,
-                measurementId: process.env.FIREBASE_3_MEASUREMENT_ID,
-              }
-            };
+            console.log(`[Mock API] Serving firebase-config. Loaded Paystack PK: ${env.PAYSTACK_PUBLIC_KEY ? env.PAYSTACK_PUBLIC_KEY.substring(0, 15) + '...' : 'MISSING'}`);
+            // Dynamically detect all Firebase configurations from loadEnv 'env'
+            const configs: { [key: number]: any } = {};
+            let index = 1;
+            while (env[`FIREBASE_${index}_API_KEY`]) {
+              configs[index] = {
+                apiKey: env[`FIREBASE_${index}_API_KEY`],
+                authDomain: env[`FIREBASE_${index}_AUTH_DOMAIN`],
+                projectId: env[`FIREBASE_${index}_PROJECT_ID`],
+                storageBucket: env[`FIREBASE_${index}_STORAGE_BUCKET`],
+                messagingSenderId: env[`FIREBASE_${index}_MESSAGING_SENDER_ID`],
+                appId: env[`FIREBASE_${index}_APP_ID`],
+                measurementId: env[`FIREBASE_${index}_MEASUREMENT_ID`],
+                isReserved: env[`FIREBASE_${index}_IS_RESERVED`] === 'true',
+                label: env[`FIREBASE_${index}_LABEL`] || `Database ${index}`
+              };
+              index++;
+            }
+
+            // Dynamically load school-to-database mapping
+            let schoolDatabaseMapping: { [key: string]: number } = {};
+            try {
+              schoolDatabaseMapping = JSON.parse(env.SCHOOL_DATABASE_MAPPING || '{}');
+            } catch (e) {
+              console.warn('[Mock API] Failed to parse SCHOOL_DATABASE_MAPPING:', e);
+            }
             res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ success: true, configs, schoolDatabaseMapping: { 'ayirebida': 2 } }));
+            res.end(JSON.stringify({ 
+              success: true, 
+              configs, 
+              schoolDatabaseMapping,
+              paystackPublicKey: env.PAYSTACK_PUBLIC_KEY,
+              activationHash: env.PASSWORD_HASH
+            }));
           });
 
           // Mock Payment Initialization
-          server.middlewares.use('/api/initialize-payment', (req, res) => {
-            0 && console.log('[Mock API] Initializing payment...');
+          server.middlewares.use('/api/initialize-payment', async (req, res) => {
+            console.log('[Mock API] Initializing payment request...');
             res.setHeader('Content-Type', 'application/json');
-            // Return a mock reference. NOTE: Using this in Paystack popup will likely fail validation.
+
+            // If we have a secret key locally, try to get a real reference
+            if (env.PAYSTACK_SECRET_KEY) {
+              try {
+                // Buffer the request body
+                const chunks: any[] = [];
+                for await (const chunk of req) {
+                  chunks.push(chunk);
+                }
+                const body = JSON.parse(Buffer.concat(chunks).toString());
+                const { email, amount, metadata } = body;
+
+                console.log(`[Mock API] Attempting real Paystack init for ${email}...`);
+                
+                const response = await fetch('https://api.paystack.co/transaction/initialize', {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${env.PAYSTACK_SECRET_KEY}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    email,
+                    amount: Math.round(amount * 100),
+                    currency: 'GHS',
+                    metadata: metadata || {}
+                  }),
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                  console.log('[Mock API] Real Paystack initialization SUCCESS');
+                  return res.end(JSON.stringify({
+                    success: true,
+                    authorizationUrl: data.data.authorization_url,
+                    accessCode: data.data.access_code,
+                    reference: data.data.reference,
+                  }));
+                }
+                console.error('[Mock API] Real Paystack initialization FAILED:', data);
+              } catch (err) {
+                console.error('[Mock API] Error during real Paystack init:', err);
+              }
+            }
+
+            // Fallback to mock reference (will 400 in real SDK, but survives the API call)
+            console.warn('[Mock API] Falling back to MOCK reference (PAYSTACK_SECRET_KEY missing or failed)');
             res.end(JSON.stringify({
+              success: true,
               authorization_url: 'https://checkout.paystack.com/mock',
               access_code: 'mock_code',
               reference: 'MOCK_' + Date.now()
@@ -71,6 +118,7 @@ export default defineConfig(({ mode }) => {
             0 && console.log('[Mock API] Verifying payment...');
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({
+              success: true,
               status: 'success',
               message: 'Verification successful',
               data: { status: 'success' }

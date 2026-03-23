@@ -51,9 +51,9 @@ export const ACTIVE_DATABASE_INDEX = storedIndex ? parseInt(storedIndex, 10) : 1
 const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 const isGitHubPages = typeof window !== 'undefined' && window.location.hostname.includes('github.io');
 
-export const API_BASE_URL = isLocal || isGitHubPages
-  ? 'https://sbapromaster.vercel.app/api' // Use Production Vercel API even when local
-  : '/api'; // Relative path for Vercel deployment
+export const API_BASE_URL = isGitHubPages
+  ? 'https://sbapromaster.vercel.app/api' // Use Production Vercel API for GitHub Pages
+  : '/api'; // Relative path for Vercel deployment and local dev (Vite proxy/Vercel dev)
 
 export interface FirebaseConfig {
   apiKey: string;
@@ -89,6 +89,11 @@ export let ACTIVATION_HASH = '';
 export const setActivationHash = (hash: string) => {
   ACTIVATION_HASH = hash;
 };
+export let PAYSTACK_PUBLIC_KEY = '';
+
+export const setPaystackPublicKey = (key: string) => {
+  PAYSTACK_PUBLIC_KEY = key;
+};
 
 export const INITIAL_SETTINGS: SchoolSettings = {
   schoolName: '',
@@ -102,12 +107,10 @@ export const INITIAL_SETTINGS: SchoolSettings = {
   logo: '',
   headmasterSignature: '',
   isDataEntryLocked: false,
-  autoAssignIndexNumbers: false,
   indexNumberGlobalPrefix: '',
   indexNumberGlobalSuffix: '',
   indexNumberCounterDigits: 3,
   indexNumberPerClass: false,
-  indexNumberAutoSort: false,
   indexNumberGlobalCounter: 1,
   allowPersistence: true,
 };
@@ -145,11 +148,11 @@ export const INITIAL_GRADES: Grade[] = [
 ];
 
 export const INITIAL_ASSESSMENTS: Assessment[] = [
-  { id: 1, name: 'Class Exercise', weight: 10 },
-  { id: 2, name: 'Class Test', weight: 15 },
-  { id: 3, name: 'Assignment', weight: 10 },
-  { id: 4, name: 'Group Work', weight: 15 },
-  { id: 5, name: 'Exam', weight: 50 },
+  { id: 1, name: 'Class Exercise', weight: 10, type: 'Class' },
+  { id: 2, name: 'Class Test', weight: 15, type: 'Class' },
+  { id: 3, name: 'Assignment', weight: 10, type: 'Class' },
+  { id: 4, name: 'Group Work', weight: 15, type: 'Class' },
+  { id: 5, name: 'Exam', weight: 50, type: 'Exam' },
 ];
 
 export const INITIAL_SCORES: Score[] = [];

@@ -1,4 +1,159 @@
-App-CJdnixX4.js:3823 [DataContext] Sync PAUSED
-(index):1 [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://www.chromium.org/developers/design-documents/create-amazing-password-forms) <input id=​"password" class=​"w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-xl focus:​border-blue-500 focus:​outline-none transition-colors" placeholder=​"Enter password" type=​"password" value>​
-App-CJdnixX4.js:3823 [DataContext] Sync PAUSED
-App-CJdnixX4.js:3823 [DataContext] Sync PAUSED
+SubscriptionRequestModal.tsx:232 [Paystack] Initialization success: {reference: 'MOCK_1774277865933', usingKey: 'pk_live_...'}
+content.js:13 Loading the script 'blob:https://checkout.paystack.com/0af267cf-deb6-49b5-b825-62c0ce21c387' violates the following Content Security Policy directive: "script-src-elem 'self' https://checkout.gointerpay.net/ https://checkout.rch.io/v2.22/fingerprint https://www.googletagmanager.com/gtag/ https://s3-eu-west-1.amazonaws.com/pstk-public-files/js/pusher.min.js https://applepay.cdn-apple.com/jsapi/v1.1.0/apple-pay-sdk.js https://www.googletagmanager.com/debug/ 'sha384-QQMs28J0n8Mw4Q1CHlPa/iPNoI8cHTH141eSbWme69K7V+4TvvHzfFm+PuE4JpxF' 'nonce-RKbOEaiay0AHLiYI' 'sha384-kYN1NbScnNOnyvDqahb4am4uYrSJh/+eDDN9ipiMT/Xx6ivmTHrN4Eh1JD6JZ2Ek'". The action has been blocked.
+(anonymous) @ content.js:13
+await in (anonymous)
+(anonymous) @ content.js:13
+(anonymous) @ content.js:13
+(anonymous) @ content.js:13
+vendor-CjCsaaRx.js:1  POST https://api.paystack.co/charge/mobile_money 400 (Bad Request)
+(anonymous) @ vendor-CjCsaaRx.js:1
+WP @ vendor-CjCsaaRx.js:1
+hg @ vendor-CjCsaaRx.js:1
+qn.request @ vendor-CjCsaaRx.js:1
+(anonymous) @ vendor-CjCsaaRx.js:1
+(anonymous) @ vendor-CjCsaaRx.js:1
+Cg @ vendor-CjCsaaRx.js:26
+(anonymous) @ vendor-CjCsaaRx.js:26
+Promise.then
+authenticateMobileMoney @ vendor-CjCsaaRx.js:26
+authenticatePayment @ index-OHJzKh9X.js:37
+jl @ index-OHJzKh9X.js:13
+_s @ index-OHJzKh9X.js:13
+Uk @ index-OHJzKh9X.js:13
+onSubmit @ index-OHJzKh9X.js:37
+(anonymous) @ index-OHJzKh9X.js:37
+(anonymous) @ index-OHJzKh9X.js:17
+jl @ index-OHJzKh9X.js:13
+_s @ index-OHJzKh9X.js:13
+e @ index-OHJzKh9X.js:17
+client:964 [vite] server connection lost. Polling for restart...
+client:789 [vite] connecting...
+react-dom-client.development.js:28004 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+Navigated to http://localhost:3000/
+client:912 [vite] connected.
+firebaseService.ts:69 [2026-03-23T15:03:12.081Z]  @firebase/analytics: Analytics: Firebase Analytics is not supported in this environment. Wrap initialization of analytics in analytics.isSupported() to prevent initialization in unsupported environments. Details: (1) This is a browser extension environment. (analytics/invalid-analytics-context).
+defaultLogHandler @ logger.ts:115
+warn @ logger.ts:206
+warnOnBrowserContextMismatch @ factory.ts:169
+factory @ factory.ts:182
+(anonymous) @ index.ts:58
+getOrInitializeService @ provider.ts:318
+initialize @ provider.ts:242
+initializeAnalytics @ api.ts:112
+getAnalytics @ api.ts:85
+(anonymous) @ firebaseService.ts:69
+DataContext.tsx:2198 [DataContext] Sync PAUSED
+DataContext.tsx:1101 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:1049 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:2198 [DataContext] Sync PAUSED
+DataContext.tsx:1101 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:1049 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:2528 [DataContext] 🛡️ Role-Based Guard: stripping unauthorized change to 'settings'
+(anonymous) @ DataContext.tsx:2528
+(anonymous) @ DataContext.tsx:2438
+(anonymous) @ DataContext.tsx:2594
+updateMemo @ react-dom-client.development.js:8795
+useMemo @ react-dom-client.development.js:26484
+exports.useMemo @ react.development.js:1251
+DataProvider @ DataContext.tsx:2593
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooks @ react-dom-client.development.js:7662
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:18957
+performWorkUntilDeadline @ scheduler.development.js:45
+<DataProvider>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+App @ App.tsx:295
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooksAgain @ react-dom-client.development.js:7762
+renderWithHooks @ react-dom-client.development.js:7674
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:18957
+performWorkUntilDeadline @ scheduler.development.js:45
+<App>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+bootstrap @ index.tsx:106
+await in bootstrap
+(anonymous) @ index.tsx:123
+DataContext.tsx:2528 [DataContext] 🛡️ Role-Based Guard: stripping unauthorized change to 'settings'
+(anonymous) @ DataContext.tsx:2528
+(anonymous) @ DataContext.tsx:2438
+(anonymous) @ DataContext.tsx:2594
+updateMemo @ react-dom-client.development.js:8799
+useMemo @ react-dom-client.development.js:26484
+exports.useMemo @ react.development.js:1251
+DataProvider @ DataContext.tsx:2593
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooks @ react-dom-client.development.js:7662
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:18957
+performWorkUntilDeadline @ scheduler.development.js:45
+<DataProvider>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+App @ App.tsx:295
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooksAgain @ react-dom-client.development.js:7762
+renderWithHooks @ react-dom-client.development.js:7674
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:18957
+performWorkUntilDeadline @ scheduler.development.js:45
+<App>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+bootstrap @ index.tsx:106
+await in bootstrap
+(anonymous) @ index.tsx:123
+DataContext.tsx:2198 [DataContext] Sync PAUSED
+js?l=dataLayer&id=G-MD7SR62BCB:659 [Violation] 'setTimeout' handler took 60ms
+SubscriptionRequestModal.tsx:232 [Paystack] Initialization success: {reference: 'MOCK_1774278204137', usingKey: 'pk_live_...'}
+index-OHJzKh9X.js:37 [Violation] 'setTimeout' handler took 308ms
+content.js:13 Loading the script 'blob:https://checkout.paystack.com/5fd0522c-046b-4a9f-a8f5-ba3840301357' violates the following Content Security Policy directive: "script-src-elem 'self' https://checkout.gointerpay.net/ https://checkout.rch.io/v2.22/fingerprint https://www.googletagmanager.com/gtag/ https://s3-eu-west-1.amazonaws.com/pstk-public-files/js/pusher.min.js https://applepay.cdn-apple.com/jsapi/v1.1.0/apple-pay-sdk.js https://www.googletagmanager.com/debug/ 'sha384-QQMs28J0n8Mw4Q1CHlPa/iPNoI8cHTH141eSbWme69K7V+4TvvHzfFm+PuE4JpxF' 'nonce-RKbSGuVRJ37bCoqR' 'sha384-kYN1NbScnNOnyvDqahb4am4uYrSJh/+eDDN9ipiMT/Xx6ivmTHrN4Eh1JD6JZ2Ek'". The action has been blocked.
+(anonymous) @ content.js:13
+await in (anonymous)
+(anonymous) @ content.js:13
+(anonymous) @ content.js:13
+(anonymous) @ content.js:13
+vendor-CjCsaaRx.js:1  POST https://api.paystack.co/charge/mobile_money 400 (Bad Request)
+(anonymous) @ vendor-CjCsaaRx.js:1
+WP @ vendor-CjCsaaRx.js:1
+hg @ vendor-CjCsaaRx.js:1
+qn.request @ vendor-CjCsaaRx.js:1
+(anonymous) @ vendor-CjCsaaRx.js:1
+(anonymous) @ vendor-CjCsaaRx.js:1
+Cg @ vendor-CjCsaaRx.js:26
+(anonymous) @ vendor-CjCsaaRx.js:26
+Promise.then
+authenticateMobileMoney @ vendor-CjCsaaRx.js:26
+authenticatePayment @ index-OHJzKh9X.js:37
+jl @ index-OHJzKh9X.js:13
+_s @ index-OHJzKh9X.js:13
+Uk @ index-OHJzKh9X.js:13
+onSubmit @ index-OHJzKh9X.js:37
+(anonymous) @ index-OHJzKh9X.js:37
+(anonymous) @ index-OHJzKh9X.js:17
+jl @ index-OHJzKh9X.js:13
+_s @ index-OHJzKh9X.js:13
+e @ index-OHJzKh9X.js:17

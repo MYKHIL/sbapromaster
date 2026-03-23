@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { SUBSCRIPTION_TIERS, ADMIN_EMAIL } from '../constants';
+import { SUBSCRIPTION_TIERS, ADMIN_EMAIL, PAYSTACK_PUBLIC_KEY } from '../constants';
 import { AppDataType, getSchoolList, SchoolListItem } from '../services/firebaseService';
 import { initializePayment, loadPaystackScript, activateSubscription } from '../services/paystackService';
 import MessageBox from './MessageBox';
@@ -221,11 +221,20 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
 
         try {
             // 1. Initialize Transaction with calculated amount
+            0 && console.log('[Paystack] Initializing with:', { email: paymentEmail, amount: calculatedAmount });
             const initResponse = await initializePayment(paymentEmail, calculatedAmount, {
                 schoolId: selectedSchool.docId,
                 schoolName: selectedSchool.displayName,
                 tierName: currentTier.name,
                 duration: customDurationStr
+            });
+
+            // Use the key from the environment (Vite prefetched) or the one loaded dynamically from API
+            const publicKey = (import.meta as any).env?.VITE_PAYSTACK_PUBLIC_KEY || PAYSTACK_PUBLIC_KEY;
+
+            console.log('[Paystack] Initialization success:', { 
+                reference: initResponse.reference,
+                usingKey: publicKey ? `${publicKey.substring(0, 8)}...` : 'MISSING'
             });
 
             // 2. Open Paystack Popup
@@ -239,7 +248,7 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
 
             // Use .setup() legacy method which is standard for v1/inline.js
             const handler = PaystackPop.setup({
-                key: 'pk_live_1018c988f6aa654f737092f2a09ec6cc6ca1065f', // Paystack Public Key
+                key: publicKey, // Paystack Public Key
                 email: paymentEmail,
                 amount: Math.round(calculatedAmount * 100), // in kobo/pesewas
                 ref: initResponse.reference,

@@ -3,14 +3,14 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     function isSubscriptionActive(schoolId) {
-      let baseId = schoolId.split('_')[0];
+      let baseId = schoolId.split('_')[0].lower();
       let subPath = /databases/$(database)/documents/subscriptions/$(baseId);
       // Logic: Allow if subscription exists and is not expired
       return exists(subPath) && get(subPath).data.expiryDate > request.time;
     }
 
     function getSubscriptionData(schoolId) {
-      let baseId = schoolId.split('_')[0];
+      let baseId = schoolId.split('_')[0].lower();
       let subPath = /databases/$(database)/documents/subscriptions/$(baseId);
       return get(subPath).data;
     }

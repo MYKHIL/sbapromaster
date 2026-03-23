@@ -26,6 +26,9 @@ async function handler(req: VercelRequest, res: VercelResponse) {
 
     try {
         const { email, amount, metadata } = req.body;
+        
+        // Log initialization attempt (Safe)
+        console.log(`[Paystack API] Initializing for ${email} using ${process.env.PAYSTACK_SECRET_KEY ? process.env.PAYSTACK_SECRET_KEY.substring(0, 8) : 'MISSING'}...`);
 
         // Validate inputs
         if (!email || !amount) {
@@ -44,7 +47,8 @@ async function handler(req: VercelRequest, res: VercelResponse) {
             },
             body: JSON.stringify({
                 email,
-                amount: amount * 100, // Convert to pesewas (smallest unit)
+                amount: Math.round(amount * 100), // Convert to pesewas (smallest unit)
+                currency: 'GHS',
                 metadata: metadata || {},
                 callback_url: metadata?.callbackUrl || undefined,
             }),
