@@ -343,7 +343,7 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
 
         } catch (error: any) {
             console.error(error);
-            const errMsg = error.response?.data?.message || error.message || "Payment initialization failed.";
+            const errMsg = error.response?.data?.details || error.response?.data?.message || error.message || "Payment initialization failed.";
             setPaymentError(errMsg);
             setIsProcessingPayment(false);
         }

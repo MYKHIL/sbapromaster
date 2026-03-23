@@ -70,14 +70,24 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         if (!response.ok) {
             console.error('Paystack initialization error:', data);
             let errorMessage = data.message || 'Unknown error';
-            
+            let errorDetails = data.message || 'Unknown error'; // Default details to message
+
             if (response.status === 401) {
                 errorMessage = 'Paystack API Rejected the Secret Key. Please check your Vercel Environment Variables and ensure PAYSTACK_SECRET_KEY matches the public key and mode (Live/Test).';
+                errorDetails = errorMessage; // Use the specific message for details as well
+            } else if (data.data && data.data.message) {
+                // Sometimes Paystack returns errors with a nested 'data.message'
+                errorDetails = data.data.message;
             }
+            
+            // The instruction provided a line that seems to be for a different error object structure (e.g., axios error)
+            // const errMsg = error.response?.data?.details || error.response?.data?.message || error.message || "Payment initialization failed.";
+            // Applying the spirit of the instruction to use 'details' for more specific info if available.
 
             return res.status(response.status).json({
                 error: 'Payment initialization failed',
-                details: errorMessage,
+                message: errorMessage,
+                details: errorDetails, // Frontend can check this for more specific info
             });
         }
 
