@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
 import { getSchoolHistory, type AppDataType, createDocumentId } from '../../services/firebaseService';
@@ -251,7 +251,7 @@ const StudentProgress: React.FC = () => {
         // 1. Pre-calculate Ranks for each Term
         const termRankings = historyData.map(termData => {
             const tScores = termData.scores || [];
-            const tStudents = termData.students || [];
+            const tStudents = (termData.students || []).filter(s => !s.deleted);
             const tAssessments = termData.assessments || [];
             const tSubjects = termData.subjects || [];
 
@@ -305,7 +305,7 @@ const StudentProgress: React.FC = () => {
 
             historyData.forEach((termData, termIdx) => {
                 let studentInTerm: Student | undefined;
-                const termStudents = termData.students || [];
+                const termStudents = (termData.students || []).filter(s => !s.deleted);
 
                 if (student.indexNumber) {
                     studentInTerm = termStudents.find(s => s.indexNumber === student.indexNumber);
@@ -417,12 +417,25 @@ const StudentProgress: React.FC = () => {
     const singleStudent = selectedStudents.length === 1 ? selectedStudents[0] : null;
     const singleHistory = singleStudent ? historiesMap[singleStudent.id] || [] : [];
 
-    // Filter students for search
-    const filteredStudents = students.filter(s =>
-        (s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            s.indexNumber.includes(searchQuery)) &&
-        !selectedStudents.find(sel => sel.id === s.id) // Exclude already selected
-    );
+    // Filter and Sort students for search
+    const filteredStudents = useMemo(() => {
+        let results = [...students];
+
+        // Apply standardized sort: Gender (Desc) -> Name (Asc)
+        results.sort((a, b) => {
+            if (a.gender !== b.gender) {
+                return b.gender.localeCompare(a.gender);
+            }
+            return a.name.localeCompare(b.name);
+        });
+
+        const query = searchQuery.toLowerCase();
+        return results.filter(s =>
+            (s.name.toLowerCase().includes(query) ||
+                (s.indexNumber || '').includes(searchQuery)) &&
+            !selectedStudents.find(sel => sel.id === s.id)
+        );
+    }, [students, searchQuery, selectedStudents]);
 
 
     // --- Insights Logic for Single Student ---

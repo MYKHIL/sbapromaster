@@ -49,7 +49,7 @@ const calculateAge = (dobString: string): string => {
 
 
 const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
-    const { students, deletedStudents, restoreItem, permanentlyDeleteItem, classes, addStudent, updateStudent, deleteStudent, saveStudents, isDirty, isItemDirty, isSyncing, isOnline, settings, updateSettings, loadStudents, subscription } = useData();
+    const { students, deletedStudents, restoreItem, permanentlyDeleteItem, classes, addStudent, updateStudent, updateClass, deleteStudent, saveStudents, isDirty, isItemDirty, isSyncing, isOnline, settings, updateSettings, loadStudents, subscription } = useData();
     const { currentUser, isAuthenticated } = useUser();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
@@ -108,7 +108,15 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
 
     const filteredStudents = useMemo(() => {
         const query = searchQuery.toLowerCase();
-        let results = accessibleStudents;
+        let results = [...accessibleStudents];
+
+        // Apply standardized sort: Gender (Desc) -> Name (Asc)
+        results.sort((a, b) => {
+            if (a.gender !== b.gender) {
+                return b.gender.localeCompare(a.gender);
+            }
+            return a.name.localeCompare(b.name);
+        });
 
         // Filter by selected class
         if (selectedClass) {
@@ -315,15 +323,11 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
 
                 // Increment the appropriate counter
                 if (settings.indexNumberPerClass && classObj) {
-                    // Update class counter
-                    const updatedClasses = classes.map(c =>
-                        c.id === classObj.id
-                            ? { ...c, indexNumberCounter: (c.indexNumberCounter || 1) + 1 }
-                            : c
-                    );
-                    // You'll need to update classes via DataContext
-                    // For now, update settings with global counter
-                    updateSettings({ indexNumberGlobalCounter: nextCounter + 1 });
+                    // Update class counter correctly via updateClass
+                    updateClass({
+                        ...classObj,
+                        indexNumberCounter: (classObj.indexNumberCounter || 1) + 1
+                    });
                 } else {
                     // Update global counter
                     updateSettings({ indexNumberGlobalCounter: nextCounter + 1 });

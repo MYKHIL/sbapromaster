@@ -74,7 +74,18 @@ const ReportViewer: React.FC = () => {
     if (!selectedClassId) return [];
     const selectedClass = classes.find(c => c.id === selectedClassId);
     if (!selectedClass) return [];
-    return students.filter(s => s.class === selectedClass.name);
+    
+    let results = students.filter(s => s.class === selectedClass.name);
+
+    // Apply standardized sort: Gender (Desc) -> Name (Asc)
+    results.sort((a, b) => {
+        if (a.gender !== b.gender) {
+            return b.gender.localeCompare(a.gender);
+        }
+        return a.name.localeCompare(b.name);
+    });
+
+    return results;
   }, [students, classes, selectedClassId]);
 
   const accessibleClasses = useMemo(() => {

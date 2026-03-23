@@ -238,15 +238,25 @@ const ScoreEntry: React.FC = () => {
     const filteredStudents = useMemo(() => {
         if (!students) return [];
 
+        let results = [...students];
+
+        // Apply standardized sort: Gender (Desc) -> Name (Asc)
+        results.sort((a, b) => {
+            if (a.gender !== b.gender) {
+                return b.gender.localeCompare(a.gender);
+            }
+            return a.name.localeCompare(b.name);
+        });
+
         // If no class selected:
         if (!selectedClass) {
             // Admins see all students (All Classes mode)
-            if (currentUser?.role === 'Admin') return students;
+            if (currentUser?.role === 'Admin') return results;
             // Others see nothing until they select a class
             return [];
         }
 
-        return students.filter(student => student.class === selectedClass);
+        return results.filter(student => student.class === selectedClass);
     }, [students, selectedClass, currentUser]);
 
     // Reset student index if it goes out of bounds (e.g. class change)

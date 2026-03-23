@@ -17,7 +17,7 @@ const BroadsheetModal: React.FC<BroadsheetModalProps> = ({ isOpen, onClose, term
     const subjects = termData.subjects || [];
     const assessments = termData.assessments || [];
     const scores = termData.scores || [];
-    const studentsInClass = (termData.students || []).filter(s => s.class === targetClass);
+    const studentsInClass = (termData.students || []).filter(s => s.class === targetClass && !s.deleted);
 
     // Split assessments into Exam and Class
     const examAssessment = assessments.find(a => a.name.toLowerCase().includes('exam'));
@@ -47,7 +47,7 @@ const BroadsheetModal: React.FC<BroadsheetModalProps> = ({ isOpen, onClose, term
 
     // Calculate processed data for the table
     const tableData = useMemo(() => {
-        const studentsInClass = (termData.students || []).filter(s => s.class === targetClass);
+        const studentsInClass = (termData.students || []).filter(s => s.class === targetClass && !s.deleted);
         const scores = termData.scores || [];
 
         // Calculate averages for ranking

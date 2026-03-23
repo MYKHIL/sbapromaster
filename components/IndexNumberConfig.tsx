@@ -70,33 +70,23 @@ const IndexNumberConfig: React.FC = () => {
         try {
             // Generate new index numbers for all students
             const sortAlphabetically = settings.indexNumberAutoSort || false;
-            const updatedStudents = reassignAllIndexNumbers(students, classes, settings, sortAlphabetically);
+            // Always reset counters to 1 when regenerating all as requested by user "each class restarts from 1"
+            const { updatedStudents, updatedClasses } = reassignAllIndexNumbers(students, classes, settings, sortAlphabetically, true);
 
             // Update scores and report data to match new index numbers
             const updatedScores = scores.map(score => {
-                const oldStudent = students.find(s => s.id === score.studentId);
-                const newStudent = updatedStudents.find(s => s.id === score.studentId);
-                if (oldStudent && newStudent && oldStudent.indexNumber !== newStudent.indexNumber) {
-                    // Index number changed - we just update the student reference, score ID stays the same
-                    return score; // Score ID is based on studentId-subjectId, not index number
-                }
-                return score;
+                return score; // Score ID is based on studentId-subjectId, not index number
             });
 
             // Update report data
             const updatedReportData = reportData.map(report => {
-                const oldStudent = students.find(s => s.id === report.studentId);
-                const newStudent = updatedStudents.find(s => s.id === report.studentId);
-                if (oldStudent && newStudent && oldStudent.indexNumber !== newStudent.indexNumber) {
-                    // Just return as-is, report data keys by studentId not index number
-                    return report;
-                }
                 return report;
             });
 
-            // Update all data at once
+            // Update all data at once, including classes which now have reset counters
             loadImportedData({
                 students: updatedStudents,
+                classes: updatedClasses,
                 scores: updatedScores,
                 reportData: updatedReportData,
             }, false);
