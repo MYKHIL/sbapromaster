@@ -11,6 +11,7 @@ import ReadOnlyWrapper from '../ReadOnlyWrapper';
 import { useUser } from '../../context/UserContext';
 import { processImageForUpload, validateImageSize } from '../../utils/imageUtils';
 import { exportToExcel, exportToPDF } from '../../utils/exportUtils';
+import { useUserAction } from '../../context/UserActionContext';
 import type { NavigationMeta } from '../../types';
 
 interface TeachersProps {
@@ -26,12 +27,15 @@ const EMPTY_TEACHER_FORM: Omit<Class, 'id'> = {
 const SIGNATURE_PLACEHOLDER = 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTUwIDUwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0yIDI1LjVDMiAyNS41IDE1LjUgMTUuNSAyOS41IDI4QzQzLjUgNDAuNSA1MyAyNS41IDY2LjUgMjAuNUM4MCAxNS41IDg4LjUgMjkgMTAwIDI5QzExMS41IDI5IDEyMyAxNS41IDEzNyAyOS41IiBzdHJva2U9IiM5Y2EzYWYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+';
 
 const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
+    const { recordAction } = useUserAction();
     const { classes, deletedClasses, restoreItem, permanentlyDeleteItem, addClass, updateClass, deleteClass, saveClasses, isDirty, isItemDirty, isSyncing, isOnline, subscription, loadMetadata } = useData();
     const { currentUser } = useUser();
     const isAdmin = currentUser?.role === 'Admin';
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
     const [currentClassData, setCurrentClassData] = useState<Class | Omit<Class, 'id'> | null>(null);
+    const firstInputRef = React.useRef<HTMLInputElement>(null);
+
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [isPermanentConfirmOpen, setIsPermanentConfirmOpen] = useState(false);
     const [itemIdToDelete, setItemIdToDelete] = useState<number | null>(null);
@@ -105,14 +109,17 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
     const handleAddNew = () => {
         setCurrentClassData(EMPTY_TEACHER_FORM);
         setIsModalOpen(true);
+        recordAction('Opened modal to add new teacher/class');
     };
 
     const handleEdit = (cls: Class) => {
         if (canEditClass(cls)) {
             setCurrentClassData(cls);
             setIsModalOpen(true);
+            recordAction(`Opened modal to edit teacher for class: ${cls.name}`);
         }
     };
+
 
     const handleDeleteClick = (id: number) => {
         setItemIdToDelete(id);
@@ -444,36 +451,40 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
             </ReadOnlyWrapper>
 
             {isModalOpen && currentClassData && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                    <div className="bg-white p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-lg m-4 relative pt-12 pb-24 lg:pb-8">
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
+                    <div className="bg-white p-5 rounded-xl shadow-2xl w-full max-w-lg relative animate-fade-in-scale">
+
                         {/* Vanishing Feedback Header */}
                         {saveFeedback && (
                             <div className="absolute top-0 left-0 right-0 bg-green-500 text-white py-2 px-4 text-center font-bold animate-fade-in-down z-10 rounded-t-xl text-sm">
                                 {saveFeedback}
                             </div>
                         )}
-                        <h2 className="text-2xl font-bold mb-6 text-gray-800">{'id' in currentClassData ? 'Edit Teacher/Class' : 'Add New Teacher/Class'}</h2>
+                        <h2 className="text-xl font-bold mb-4 text-gray-800">{'id' in currentClassData ? 'Edit Teacher/Class' : 'Add New Teacher/Class'}</h2>
                         <form onSubmit={handleSubmit} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Class Name</label>
-                                <input
-                                    type="text"
-                                    name="name"
-                                    value={currentClassData.name}
-                                    onChange={handleChange}
-                                    required
-                                    className={inputStyles}
-                                    disabled={!isAdmin && 'id' in currentClassData} // Disable editing class name for non-admins if editing
-                                />
-                                {/* Clarification for teachers why this is disabled */}
-                                {!isAdmin && 'id' in currentClassData && (
-                                    <p className="text-xs text-gray-500 mt-1">Class assignment cannot be changed.</p>
-                                )}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Class Name</label>
+                                    <input
+                                        ref={firstInputRef}
+                                        type="text"
+                                        name="name"
+                                        value={currentClassData.name}
+                                        onChange={handleChange}
+                                        required
+                                        className={inputStyles}
+                                        disabled={!isAdmin && 'id' in currentClassData} // Disable editing class name for non-admins if editing
+                                    />
+                                    {!isAdmin && 'id' in currentClassData && (
+                                        <p className="text-[10px] text-gray-500 mt-0.5">Fixed class assignment.</p>
+                                    )}
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Teacher's Name</label>
+                                    <input type="text" name="teacherName" value={currentClassData.teacherName} onChange={handleChange} required className={inputStyles} />
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Teacher's Name</label>
-                                <input type="text" name="teacherName" value={currentClassData.teacherName} onChange={handleChange} required className={inputStyles} />
-                            </div>
+
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Teacher's Signature</label>
                                 <div className="mt-1 flex items-center space-x-4">
@@ -516,10 +527,11 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
                                     </div>
                                 )}
                             </div>
-                            <div className="flex justify-end pt-4 space-x-2">
-                                <button type="button" onClick={handleCloseModal} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancel</button>
-                                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save</button>
+                            <div className="flex justify-end pt-2 space-x-2">
+                                <button type="button" onClick={handleCloseModal} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">Close</button>
+                                <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold shadow-sm transition-all active:scale-95">Commit</button>
                             </div>
+
                         </form>
                     </div>
                 </div>

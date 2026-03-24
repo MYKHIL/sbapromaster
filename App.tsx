@@ -19,6 +19,7 @@ import { DataProvider, useData } from './context/DataContext';
 import { UserProvider, useUser } from './context/UserContext';
 import { DatabaseErrorProvider, useDatabaseError } from './context/DatabaseErrorContext';
 import { FirebaseAnalyticsProvider } from './context/FirebaseAnalyticsContext';
+import { UserActionProvider, useUserAction } from './context/UserActionContext';
 import type { Page, NavigationMeta } from './types';
 import GlobalActionBar from './components/GlobalActionBar';
 import UserBadge from './components/UserBadge';
@@ -140,6 +141,13 @@ const AppContent: React.FC = () => {
   const [pendingMeta, setPendingMeta] = useState<NavigationMeta | null>(null);
   const [navigationMeta, setNavigationMeta] = useState<NavigationMeta | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const { recordAction } = useUserAction();
+
+  // Record initial page load
+  React.useEffect(() => {
+    recordAction(`App started on ${currentPage} page`);
+  }, [recordAction]);
+
 
   // Clear navigation meta after use
   React.useEffect(() => {
@@ -166,7 +174,9 @@ const AppContent: React.FC = () => {
 
     setNavigationMeta(meta || null);
     setCurrentPage(page);
-  }, [currentPage, isPageDirty]);
+    recordAction(`Navigated to ${page}${meta ? ` (${JSON.stringify(meta)})` : ''}`);
+  }, [currentPage, isPageDirty, recordAction]);
+
 
   const confirmNavigation = () => {
     if (pendingPage) {
@@ -291,15 +301,17 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <DatabaseErrorProvider>
-      <DataProvider>
-        <UserProvider>
-          <FirebaseAnalyticsProvider>
-            <AppContent />
-          </FirebaseAnalyticsProvider>
-        </UserProvider>
-      </DataProvider>
-    </DatabaseErrorProvider>
+    <UserActionProvider>
+      <DatabaseErrorProvider>
+        <DataProvider>
+          <UserProvider>
+            <FirebaseAnalyticsProvider>
+              <AppContent />
+            </FirebaseAnalyticsProvider>
+          </UserProvider>
+        </DataProvider>
+      </DatabaseErrorProvider>
+    </UserActionProvider>
   );
 };
 

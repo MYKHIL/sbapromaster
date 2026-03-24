@@ -1,47 +1,98 @@
-App-Cv8Yfxt5.js:3833  POST https://sbahub.vercel.app/api/initialize-payment 401 (Unauthorized)
-(anonymous) @ App-Cv8Yfxt5.js:3833
-xhr @ App-Cv8Yfxt5.js:3833
-sv @ App-Cv8Yfxt5.js:3835
-_request @ App-Cv8Yfxt5.js:3836
-request @ App-Cv8Yfxt5.js:3835
-(anonymous) @ App-Cv8Yfxt5.js:3836
-(anonymous) @ App-Cv8Yfxt5.js:3831
-nP @ App-Cv8Yfxt5.js:4143
-G @ App-Cv8Yfxt5.js:4143
-No @ main-vQNx1EL8.js:48
-(anonymous) @ main-vQNx1EL8.js:48
-qi @ main-vQNx1EL8.js:48
-Xc @ main-vQNx1EL8.js:48
-Pc @ main-vQNx1EL8.js:49
-Iv @ main-vQNx1EL8.js:49
-App-Cv8Yfxt5.js:4147 Paystack initialization failed: AxiosError: Request failed with status code 401
-    at P3 (App-Cv8Yfxt5.js:3833:1091)
-    at XMLHttpRequest.y (App-Cv8Yfxt5.js:3833:5953)
-    at _l.request (App-Cv8Yfxt5.js:3835:2094)
-    at async nP (App-Cv8Yfxt5.js:4143:75755)
-    at async G (App-Cv8Yfxt5.js:4143:81935)
-console.error @ App-Cv8Yfxt5.js:4147
-nP @ App-Cv8Yfxt5.js:4143
-await in nP
-G @ App-Cv8Yfxt5.js:4143
-No @ main-vQNx1EL8.js:48
-(anonymous) @ main-vQNx1EL8.js:48
-qi @ main-vQNx1EL8.js:48
-Xc @ main-vQNx1EL8.js:48
-Pc @ main-vQNx1EL8.js:49
-Iv @ main-vQNx1EL8.js:49
-App-Cv8Yfxt5.js:4147 AxiosError: Request failed with status code 401
-    at P3 (App-Cv8Yfxt5.js:3833:1091)
-    at XMLHttpRequest.y (App-Cv8Yfxt5.js:3833:5953)
-    at _l.request (App-Cv8Yfxt5.js:3835:2094)
-    at async nP (App-Cv8Yfxt5.js:4143:75755)
-    at async G (App-Cv8Yfxt5.js:4143:81935)
-console.error @ App-Cv8Yfxt5.js:4147
-G @ App-Cv8Yfxt5.js:4143
-await in G
-No @ main-vQNx1EL8.js:48
-(anonymous) @ main-vQNx1EL8.js:48
-qi @ main-vQNx1EL8.js:48
-Xc @ main-vQNx1EL8.js:48
-Pc @ main-vQNx1EL8.js:49
-Iv @ main-vQNx1EL8.js:49
+Navigated to http://localhost:3000/
+client:789 [vite] connecting...
+react-dom-client.development.js:28004 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+client:912 [vite] connected.
+firebaseService.ts:69 [2026-03-24T12:51:12.077Z]  @firebase/analytics: Analytics: Firebase Analytics is not supported in this environment. Wrap initialization of analytics in analytics.isSupported() to prevent initialization in unsupported environments. Details: (1) This is a browser extension environment. (analytics/invalid-analytics-context).
+defaultLogHandler @ logger.ts:115
+warn @ logger.ts:206
+warnOnBrowserContextMismatch @ factory.ts:169
+factory @ factory.ts:182
+(anonymous) @ index.ts:58
+getOrInitializeService @ provider.ts:318
+initialize @ provider.ts:242
+initializeAnalytics @ api.ts:112
+getAnalytics @ api.ts:85
+(anonymous) @ firebaseService.ts:69
+UserActionContext.tsx:48 Uncaught Error: useUserAction must be used within a UserActionProvider
+    at useUserAction (UserActionContext.tsx:48:15)
+    at DatabaseErrorProvider (DatabaseErrorContext.tsx:18:63)
+    at Object.react_stack_bottom_frame (react-dom-client.development.js:25904:20)
+    at renderWithHooks (react-dom-client.development.js:7662:22)
+    at updateFunctionComponent (react-dom-client.development.js:10166:19)
+    at beginWork (react-dom-client.development.js:11778:18)
+    at runWithFiberInDEV (react-dom-client.development.js:871:30)
+    at performUnitOfWork (react-dom-client.development.js:17641:22)
+    at workLoopSync (react-dom-client.development.js:17469:41)
+    at renderRootSync (react-dom-client.development.js:17450:11)
+useUserAction @ UserActionContext.tsx:48
+DatabaseErrorProvider @ DatabaseErrorContext.tsx:18
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooks @ react-dom-client.development.js:7662
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16583
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:18957
+performWorkUntilDeadline @ scheduler.development.js:45
+<DatabaseErrorProvider>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+App @ App.tsx:304
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooksAgain @ react-dom-client.development.js:7762
+renderWithHooks @ react-dom-client.development.js:7674
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16583
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:18957
+performWorkUntilDeadline @ scheduler.development.js:45
+<App>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+bootstrap @ index.tsx:106
+await in bootstrap
+(anonymous) @ index.tsx:123
+App.tsx:304 An error occurred in the <DatabaseErrorProvider> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+defaultOnUncaughtError @ react-dom-client.development.js:9362
+logUncaughtError @ react-dom-client.development.js:9431
+runWithFiberInDEV @ react-dom-client.development.js:871
+lane.callback @ react-dom-client.development.js:9461
+callCallback @ react-dom-client.development.js:7423
+commitCallbacks @ react-dom-client.development.js:7443
+runWithFiberInDEV @ react-dom-client.development.js:874
+commitLayoutEffectOnFiber @ react-dom-client.development.js:14047
+flushLayoutEffects @ react-dom-client.development.js:18138
+commitRoot @ react-dom-client.development.js:17954
+commitRootWhenReady @ react-dom-client.development.js:16824
+performWorkOnRoot @ react-dom-client.development.js:16722
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:18957
+performWorkUntilDeadline @ scheduler.development.js:45
+<DatabaseErrorProvider>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+App @ App.tsx:304
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooksAgain @ react-dom-client.development.js:7762
+renderWithHooks @ react-dom-client.development.js:7674
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16583
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:18957
+performWorkUntilDeadline @ scheduler.development.js:45
+<App>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+bootstrap @ index.tsx:106
+await in bootstrap
+(anonymous) @ index.tsx:123

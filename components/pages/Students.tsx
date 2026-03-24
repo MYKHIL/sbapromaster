@@ -15,6 +15,7 @@ import { generateIndexNumber } from '../../utils/indexNumberGenerator';
 import { getNextAvailableCounter } from '../../utils/indexNumberCounter';
 import { sortClassesByName } from '../../utils/classSort';
 import { exportToExcel, exportToPDF } from '../../utils/exportUtils';
+import { useUserAction } from '../../context/UserActionContext';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import type { Page, NavigationMeta } from '../../types';
 
@@ -49,11 +50,15 @@ const calculateAge = (dobString: string): string => {
 
 
 const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
-    const { students, deletedStudents, restoreItem, permanentlyDeleteItem, classes, addStudent, updateStudent, updateClass, deleteStudent, saveStudents, isDirty, isItemDirty, isSyncing, isOnline, settings, updateSettings, loadStudents, subscription } = useData();
+    const { recordAction } = useUserAction();
+    const dataContext = useData();
+    const { students, deletedStudents, restoreItem, permanentlyDeleteItem, classes, addStudent, updateStudent, updateClass, deleteStudent, saveStudents, isDirty, isItemDirty, isSyncing, isOnline, settings, updateSettings, loadStudents, subscription } = dataContext;
     const { currentUser, isAuthenticated } = useUser();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
     const [currentStudent, setCurrentStudent] = useState<Student | Omit<Student, 'id'> | null>(null);
+    const firstInputRef = React.useRef<HTMLInputElement>(null);
+
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [isPermanentConfirmOpen, setIsPermanentConfirmOpen] = useState(false);
     const [itemIdToDelete, setItemIdToDelete] = useState<number | null>(null);
@@ -222,7 +227,9 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
             class: selectedClass || ''
         });
         setIsModalOpen(true);
+        recordAction('Opened modal to add new student');
     };
+
 
     const handleEdit = (student: Student) => {
         if (!canManageStudentsInClass(currentUser, student.class)) {
@@ -231,7 +238,9 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
         }
         setCurrentStudent(student);
         setIsModalOpen(true);
+        recordAction(`Opened modal to edit student: ${student.name}`);
     };
+
 
     const handleDeleteClick = (id: number) => {
         const student = students.find(s => s.id === id);
@@ -284,7 +293,9 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        recordAction(`Clicked Commit on ${currentStudent && 'id' in currentStudent ? 'Edit' : 'Add'} Student modal`);
         if (!currentStudent) return;
+
 
         // Check auto-assignment mode
         const isAutoAssignMode = settings.autoAssignIndexNumbers;
@@ -343,8 +354,8 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
                 return;
             }
 
-            // STAY OPEN ON ADD
-            setSaveFeedback("Student Added Successfully!");
+            // STAY OPEN ON ADD for continuous entry
+            setSaveFeedback(`Student "${studentToAdd.name}" Added!`);
             setCurrentStudent({
                 ...EMPTY_STUDENT_FORM,
                 class: studentToAdd.class, // Maintain context
@@ -581,15 +592,17 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
             </ReadOnlyWrapper>
 
             {isModalOpen && currentStudent && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                    <div className="bg-white p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-lg m-4 overflow-y-auto max-h-[90vh] relative pt-12 pb-24 lg:pb-8">
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
+                    <div className="bg-white p-5 rounded-xl shadow-2xl w-full max-w-lg relative animate-fade-in-scale overflow-y-auto max-h-[95vh]">
+
                         {/* Vanishing Feedback Header */}
                         {saveFeedback && (
                             <div className="absolute top-0 left-0 right-0 bg-green-500 text-white py-2 px-4 text-center font-bold animate-fade-in-down z-10 rounded-t-xl text-sm">
                                 {saveFeedback}
                             </div>
                         )}
-                        <h2 className="text-2xl font-bold mb-6 text-gray-800">{'id' in currentStudent ? 'Edit Student' : 'Add New Student'}</h2>
+                        <h2 className="text-xl font-bold mb-4 text-gray-800">{'id' in currentStudent ? 'Edit Student' : 'Add New Student'}</h2>
+
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Student Photo</label>
@@ -619,68 +632,54 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
                                 )}
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Name</label>
-                                <input type="text" name="name" value={currentStudent.name} onChange={handleChange} className={inputStyles} placeholder="Full Name" required />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Name</label>
+                                    <input ref={firstInputRef} type="text" name="name" value={currentStudent.name} onChange={handleChange} className={inputStyles} placeholder="Full Name" required />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">
+                                        Index Number
+                                        {settings.autoAssignIndexNumbers && (
+                                            <span className="ml-2 text-[10px] text-blue-600">
+                                                {('id' in currentStudent) ? '(Locked)' : '(Auto)'}
+                                            </span>
+                                        )}
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="indexNumber"
+                                        value={currentStudent.indexNumber}
+                                        onChange={handleChange}
+                                        className={`${inputStyles} ${settings.autoAssignIndexNumbers ? 'bg-gray-100 cursor-not-allowed opacity-75' : ''}`}
+                                        placeholder={settings.autoAssignIndexNumbers && !('id' in currentStudent) ? 'Auto-generated' : 'Index Number'}
+                                        disabled={settings.autoAssignIndexNumbers}
+                                        required={!settings.autoAssignIndexNumbers}
+                                    />
+                                </div>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">
-                                    Index Number
-                                    {settings.autoAssignIndexNumbers && (
-                                        <span className="ml-2 text-xs text-blue-600">
-                                            {('id' in currentStudent) ? '(Locked)' : '(Auto-generated)'}
-                                        </span>
-                                    )}
-                                </label>
-                                <input
-                                    type="text"
-                                    name="indexNumber"
-                                    value={currentStudent.indexNumber}
-                                    onChange={handleChange}
-                                    className={`${inputStyles} ${settings.autoAssignIndexNumbers ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                                    placeholder={settings.autoAssignIndexNumbers && !('id' in currentStudent) ? 'Will be auto-generated' : 'Index Number'}
-                                    disabled={settings.autoAssignIndexNumbers}
-                                    required={!settings.autoAssignIndexNumbers}
-                                />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Class</label>
+                                    <select name="class" value={currentStudent.class} onChange={handleChange} className={inputStyles} required>
+                                        <option value="">Select Class</option>
+                                        {availableClasses.map((cls) => (
+                                            <option key={cls.id} value={cls.name}>{cls.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Gender</label>
+                                    <select name="gender" value={currentStudent.gender} onChange={handleChange} className={inputStyles}>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                    </select>
+                                </div>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Class</label>
-                                <select name="class" value={currentStudent.class} onChange={handleChange} className={inputStyles} required>
-                                    <option value="">Select Class</option>
-                                    {availableClasses.map((cls) => (
-                                        <option key={cls.id} value={cls.name}>{cls.name}</option>
-                                    ))}
-                                </select>
-                                {availableClasses.length === 0 && (
-                                    <div className="mt-2 text-center">
-                                        <p className="text-xs text-amber-600 mb-2">No classes found. You must add classes and teachers first.</p>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                if (onNavigate) {
-                                                    onNavigate('Teachers', { openAddModal: true });
-                                                }
-                                            }}
-                                            className="w-full py-2 bg-amber-100 text-amber-800 text-sm font-semibold rounded-md border border-amber-200 hover:bg-amber-200 transition-colors flex items-center justify-center gap-2"
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                            </svg>
-                                            Go to Add Class/Teacher
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Gender</label>
-                                <select name="gender" value={currentStudent.gender} onChange={handleChange} className={inputStyles}>
-                                    <option value="Male">Male</option>
-                                    <option value="Female">Female</option>
-                                </select>
-                            </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Date of Birth</label>
@@ -692,10 +691,11 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
                                 </div>
                             </div>
 
-                            <div className="flex justify-end space-x-3 pt-4">
-                                <button type="button" onClick={handleCloseModal} className="px-4 py-2 border rounded-md text-gray-700 hover:bg-gray-50">Cancel</button>
-                                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 shadow-md transform active:scale-95 transition-transform">Save</button>
+                            <div className="flex justify-end space-x-2 pt-2">
+                                <button type="button" onClick={handleCloseModal} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">Close</button>
+                                <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold shadow-sm transition-all active:scale-95">Commit</button>
                             </div>
+
                         </form>
                     </div>
                 </div>

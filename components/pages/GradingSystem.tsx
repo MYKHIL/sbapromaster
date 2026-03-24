@@ -4,6 +4,7 @@ import type { Grade } from '../../types';
 import ReadOnlyWrapper from '../ReadOnlyWrapper';
 import ConfirmationModal from '../ConfirmationModal';
 import { useUser } from '../../context/UserContext';
+import { useUserAction } from '../../context/UserActionContext';
 import RestoreModal from '../modals/RestoreModal';
 import { DIRTY_INDICATOR_BG, DIRTY_INDICATOR_TEXT, DIRTY_INDICATOR_SECONDARY_TEXT, DIRTY_INDICATOR_HOVER_BG, DIRTY_INDICATOR_BORDER } from '../../constants';
 import { INITIAL_GRADES } from '../../constants';
@@ -17,8 +18,10 @@ const EMPTY_GRADE_FORM: Omit<Grade, 'id'> = {
 };
 
 const GradingSystem: React.FC = () => {
+    const { recordAction } = useUserAction();
     const { grades, deletedGrades, restoreItem, permanentlyDeleteItem, addGrade, updateGrade, deleteGrade, blockRemoteUpdates, allowRemoteUpdates, saveGrades, isDirty, isItemDirty, isSyncing, isOnline, restoreDefaultGrades, loadMetadata } = useData();
     const { currentUser } = useUser();
+
 
     // TRIGGER RECONCILIATION: Identify unsaved local items on mount
     React.useEffect(() => {
@@ -34,6 +37,9 @@ const GradingSystem: React.FC = () => {
     const [itemIdToDelete, setItemIdToDelete] = useState<number | null>(null);
     const [idToPermanentlyDelete, setIdToPermanentlyDelete] = useState<number | null>(null);
     const [modalError, setModalError] = useState('');
+    const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
+    const firstInputRef = React.useRef<HTMLInputElement>(null);
+
 
     const inputStyles = "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500";
 
@@ -89,13 +95,17 @@ const GradingSystem: React.FC = () => {
         blockRemoteUpdates();
         setCurrentGrade(EMPTY_GRADE_FORM);
         setIsModalOpen(true);
+        recordAction('Opened modal to add new grade');
     };
+
 
     const handleEdit = (grade: Grade) => {
         blockRemoteUpdates();
         setCurrentGrade(grade);
         setIsModalOpen(true);
+        recordAction(`Opened modal to edit grade: ${grade.name}`);
     };
+
 
     const handleDeleteClick = (id: number) => {
         setItemIdToDelete(id);
@@ -128,7 +138,19 @@ const GradingSystem: React.FC = () => {
         setIsModalOpen(false);
         setCurrentGrade(null);
         setModalError('');
+        setSaveFeedback(null);
     };
+
+    // Auto-focus logic
+    React.useEffect(() => {
+        if (isModalOpen && firstInputRef.current) {
+            setTimeout(() => {
+                firstInputRef.current?.focus();
+                firstInputRef.current?.select();
+            }, 100);
+        }
+    }, [isModalOpen, currentGrade]);
+
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -137,7 +159,9 @@ const GradingSystem: React.FC = () => {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        recordAction(`Clicked Commit on ${currentGrade && 'id' in currentGrade ? 'Edit' : 'Add'} Grade modal`);
         if (!currentGrade) return;
+
         setModalError('');
 
         if (currentGrade.minScore > currentGrade.maxScore) {
@@ -161,9 +185,15 @@ const GradingSystem: React.FC = () => {
             updateGrade(currentGrade);
         } else {
             addGrade(currentGrade);
+            // STAY OPEN ON ADD for continuous entry
+            setSaveFeedback(`Grade "${currentGrade.name}" Added!`);
+            setCurrentGrade(EMPTY_GRADE_FORM);
+            setTimeout(() => setSaveFeedback(null), 3000);
+            return;
         }
         handleCloseModal();
     };
+
 
     const handleRestoreDefault = () => {
         setIsRestoreConfirmOpen(true);
@@ -308,14 +338,22 @@ const GradingSystem: React.FC = () => {
                 </div>
 
                 {isModalOpen && currentGrade && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                        <div className="bg-white p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-lg m-4">
-                            <h2 className="text-2xl font-bold mb-6 text-gray-800">{'id' in currentGrade ? 'Edit Grade' : 'Add New Grade'}</h2>
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
+                        <div className="bg-white p-5 rounded-xl shadow-2xl w-full max-w-lg relative animate-fade-in-scale">
+                            {/* Vanishing Feedback Header */}
+                            {saveFeedback && (
+                                <div className="absolute top-0 left-0 right-0 bg-green-500 text-white py-2 px-4 text-center font-bold animate-fade-in-down z-10 rounded-t-xl text-sm">
+                                    {saveFeedback}
+                                </div>
+                            )}
+                            <h2 className="text-xl font-bold mb-4 text-gray-800">{'id' in currentGrade ? 'Edit Grade' : 'Add New Grade'}</h2>
+
                             <form onSubmit={handleSubmit} className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Grade Name</label>
-                                    <input type="text" name="name" value={currentGrade.name} onChange={handleChange} required className={inputStyles} />
+                                    <input ref={firstInputRef} type="text" name="name" value={currentGrade.name} onChange={handleChange} required className={inputStyles} placeholder="e.g. A1, B2" />
                                 </div>
+
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700">Minimum Score (%)</label>
@@ -330,12 +368,13 @@ const GradingSystem: React.FC = () => {
                                     <label className="block text-sm font-medium text-gray-700">Remark</label>
                                     <input type="text" name="remark" value={currentGrade.remark} onChange={handleChange} required className={inputStyles} />
                                 </div>
-                                {modalError && <p className="text-sm text-red-600">{modalError}</p>}
-                                <div className="flex justify-end pt-4 space-x-2">
-                                    <button type="button" onClick={handleCloseModal} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancel</button>
-                                    <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save</button>
+                                {modalError && <p className="text-[10px] text-red-600 font-semibold">{modalError}</p>}
+                                <div className="flex justify-end pt-2 space-x-2">
+                                    <button type="button" onClick={handleCloseModal} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">Close</button>
+                                    <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold shadow-sm transition-all active:scale-95">Commit</button>
                                 </div>
                             </form>
+
                         </div>
                     </div>
                 )}

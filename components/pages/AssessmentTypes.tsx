@@ -4,6 +4,7 @@ import type { Assessment } from '../../types';
 import ReadOnlyWrapper from '../ReadOnlyWrapper';
 import ConfirmationModal from '../ConfirmationModal';
 import { useUser } from '../../context/UserContext';
+import { useUserAction } from '../../context/UserActionContext';
 import RestoreModal from '../modals/RestoreModal';
 import { DIRTY_INDICATOR_BG, DIRTY_INDICATOR_TEXT, DIRTY_INDICATOR_SECONDARY_TEXT, DIRTY_INDICATOR_HOVER_BG, DIRTY_INDICATOR_BORDER } from '../../constants';
 
@@ -21,8 +22,10 @@ const DragHandleIcon: React.FC = () => (
 
 
 const AssessmentTypes: React.FC = () => {
+    const { recordAction } = useUserAction();
     const { assessments, deletedAssessments, restoreItem, permanentlyDeleteItem, setAssessments, addAssessment, updateAssessment, deleteAssessment, saveAssessments, isDirty, isItemDirty, isSyncing, isOnline, loadMetadata } = useData();
     const { currentUser } = useUser();
+
 
     // TRIGGER RECONCILIATION: Identify unsaved local items on mount
     React.useEffect(() => {
@@ -37,6 +40,9 @@ const AssessmentTypes: React.FC = () => {
     const [itemIdToDelete, setItemIdToDelete] = useState<number | null>(null);
     const [idToPermanentlyDelete, setIdToPermanentlyDelete] = useState<number | null>(null);
     const [modalError, setModalError] = useState('');
+    const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
+    const firstInputRef = React.useRef<HTMLInputElement>(null);
+
 
     const [draggedItem, setDraggedItem] = useState<Assessment | null>(null);
     const [dragOverItem, setDragOverItem] = useState<Assessment | null>(null);
@@ -124,12 +130,15 @@ const AssessmentTypes: React.FC = () => {
     const handleAddNew = () => {
         setCurrentAssessment(EMPTY_ASSESSMENT_FORM);
         setIsModalOpen(true);
+        recordAction('Opened modal to add new assessment type');
     };
 
     const handleEdit = (assessment: Assessment) => {
         setCurrentAssessment(assessment);
         setIsModalOpen(true);
+        recordAction(`Opened modal to edit assessment: ${assessment.name}`);
     };
+
 
     const handleDeleteClick = (id: number) => {
         setItemIdToDelete(id);
@@ -161,7 +170,19 @@ const AssessmentTypes: React.FC = () => {
         setIsModalOpen(false);
         setCurrentAssessment(null);
         setModalError('');
+        setSaveFeedback(null);
     };
+
+    // Auto-focus logic
+    React.useEffect(() => {
+        if (isModalOpen && firstInputRef.current) {
+            setTimeout(() => {
+                firstInputRef.current?.focus();
+                firstInputRef.current?.select();
+            }, 100);
+        }
+    }, [isModalOpen, currentAssessment]);
+
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -170,7 +191,9 @@ const AssessmentTypes: React.FC = () => {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        recordAction(`Clicked Commit on ${currentAssessment && 'id' in currentAssessment ? 'Edit' : 'Add'} Assessment modal`);
         if (!currentAssessment) return;
+
         setModalError('');
 
         if ('id' in currentAssessment) {
@@ -192,9 +215,15 @@ const AssessmentTypes: React.FC = () => {
             updateAssessment(assessmentToSave as Assessment);
         } else {
             addAssessment(assessmentToSave);
+            // STAY OPEN ON ADD for continuous entry
+            setSaveFeedback(`Assessment "${assessmentToSave.name}" Added!`);
+            setCurrentAssessment(EMPTY_ASSESSMENT_FORM);
+            setTimeout(() => setSaveFeedback(null), 3000);
+            return;
         }
         handleCloseModal();
     };
+
 
     return (
         <ReadOnlyWrapper allowedRoles={['Admin']}>
@@ -381,24 +410,35 @@ const AssessmentTypes: React.FC = () => {
                 </div>
 
                 {isModalOpen && currentAssessment && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                        <div className="bg-white p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-lg m-4">
-                            <h2 className="text-2xl font-bold mb-6 text-gray-800">{'id' in currentAssessment ? 'Edit Assessment' : 'Add New Assessment'}</h2>
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
+                        <div className="bg-white p-5 rounded-xl shadow-2xl w-full max-w-lg relative animate-fade-in-scale">
+                            {/* Vanishing Feedback Header */}
+                            {saveFeedback && (
+                                <div className="absolute top-0 left-0 right-0 bg-green-500 text-white py-2 px-4 text-center font-bold animate-fade-in-down z-10 rounded-t-xl text-sm">
+                                    {saveFeedback}
+                                </div>
+                            )}
+                            <h2 className="text-xl font-bold mb-4 text-gray-800">{'id' in currentAssessment ? 'Edit Assessment' : 'Add New Assessment'}</h2>
+
                             <form onSubmit={handleSubmit} className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Assessment Name</label>
-                                    <input type="text" name="name" value={currentAssessment.name} onChange={handleChange} required className={inputStyles} />
-                                    {modalError && <p className="text-red-500 text-xs mt-1">{modalError}</p>}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">Assessment Name</label>
+                                        <input ref={firstInputRef} type="text" name="name" value={currentAssessment.name} onChange={handleChange} required className={inputStyles} placeholder="e.g. Class Test 1" />
+                                        {modalError && <p className="text-red-500 text-[10px] mt-1 font-semibold">{modalError}</p>}
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">Weight (%)</label>
+                                        <input type="number" name="weight" value={currentAssessment.weight} onChange={handleChange} required className={inputStyles} />
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Weight / Max Score (%)</label>
-                                    <input type="number" name="weight" value={currentAssessment.weight} onChange={handleChange} required className={inputStyles} />
-                                </div>
-                                <div className="flex justify-end pt-4 space-x-2">
-                                    <button type="button" onClick={handleCloseModal} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancel</button>
-                                    <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save</button>
+
+                                <div className="flex justify-end pt-2 space-x-2">
+                                    <button type="button" onClick={handleCloseModal} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">Close</button>
+                                    <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold shadow-sm transition-all active:scale-95">Commit</button>
                                 </div>
                             </form>
+
                         </div>
                     </div>
                 )}

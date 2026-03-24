@@ -4,6 +4,7 @@ import type { Subject } from '../../types';
 import ConfirmationModal from '../ConfirmationModal';
 import ReadOnlyWrapper from '../ReadOnlyWrapper';
 import { useUser } from '../../context/UserContext';
+import { useUserAction } from '../../context/UserActionContext';
 import RestoreModal from '../modals/RestoreModal';
 import { DIRTY_INDICATOR_BG, DIRTY_INDICATOR_TEXT, DIRTY_INDICATOR_SECONDARY_TEXT, DIRTY_INDICATOR_HOVER_BG, DIRTY_INDICATOR_BORDER } from '../../constants';
 
@@ -15,6 +16,7 @@ const EMPTY_SUBJECT_FORM: Omit<Subject, 'id'> = {
 };
 
 const Subjects: React.FC = () => {
+    const { recordAction } = useUserAction();
     const { subjects, deletedSubjects, restoreItem, permanentlyDeleteItem, addSubject, updateSubject, deleteSubject, saveSubjects, isDirty, isItemDirty, isSyncing, isOnline, loadMetadata } = useData();
     const { currentUser } = useUser();
 
@@ -26,6 +28,9 @@ const Subjects: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
     const [currentSubject, setCurrentSubject] = useState<Subject | Omit<Subject, 'id'> | null>(null);
+    const firstInputRef = React.useRef<HTMLInputElement>(null);
+    const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
+
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [isPermanentConfirmOpen, setIsPermanentConfirmOpen] = useState(false);
     const [itemIdToDelete, setItemIdToDelete] = useState<number | null>(null);
@@ -53,12 +58,15 @@ const Subjects: React.FC = () => {
     const handleAddNew = () => {
         setCurrentSubject(EMPTY_SUBJECT_FORM);
         setIsModalOpen(true);
+        recordAction('Opened modal to add new subject');
     };
 
     const handleEdit = (subject: Subject) => {
         setCurrentSubject(subject);
         setIsModalOpen(true);
+        recordAction(`Opened modal to edit subject: ${subject.subject}`);
     };
+
 
     const handleDeleteClick = (id: number) => {
         setItemIdToDelete(id);
@@ -89,7 +97,19 @@ const Subjects: React.FC = () => {
     const handleCloseModal = () => {
         setIsModalOpen(false);
         setCurrentSubject(null);
+        setSaveFeedback(null);
     };
+
+    // Auto-focus logic
+    React.useEffect(() => {
+        if (isModalOpen && firstInputRef.current) {
+            setTimeout(() => {
+                firstInputRef.current?.focus();
+                firstInputRef.current?.select();
+            }, 100);
+        }
+    }, [isModalOpen, currentSubject]);
+
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -98,15 +118,22 @@ const Subjects: React.FC = () => {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        recordAction(`Clicked Commit on ${currentSubject && 'id' in currentSubject ? 'Edit' : 'Add'} Subject modal`);
         if (!currentSubject) return;
 
         if ('id' in currentSubject) {
             updateSubject(currentSubject);
         } else {
             addSubject(currentSubject);
+            // STAY OPEN ON ADD for continuous entry
+            setSaveFeedback(`Subject "${currentSubject.subject}" Added!`);
+            setCurrentSubject(EMPTY_SUBJECT_FORM);
+            setTimeout(() => setSaveFeedback(null), 3000);
+            return;
         }
         handleCloseModal();
     };
+
 
     return (
         <div className="space-y-6 pb-24 lg:pb-0">
@@ -270,26 +297,36 @@ const Subjects: React.FC = () => {
 
 
             {isModalOpen && currentSubject && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                    <div className="bg-white p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-lg m-4">
-                        <h2 className="text-2xl font-bold mb-6 text-gray-800">{'id' in currentSubject ? 'Edit Subject' : 'Add New Subject'}</h2>
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
+                    <div className="bg-white p-5 rounded-xl shadow-2xl w-full max-w-lg relative animate-fade-in-scale">
+                        {/* Vanishing Feedback Header */}
+                        {saveFeedback && (
+                            <div className="absolute top-0 left-0 right-0 bg-green-500 text-white py-2 px-4 text-center font-bold animate-fade-in-down z-10 rounded-t-xl text-sm">
+                                {saveFeedback}
+                            </div>
+                        )}
+                        <h2 className="text-xl font-bold mb-4 text-gray-800">{'id' in currentSubject ? 'Edit Subject' : 'Add New Subject'}</h2>
+
                         <form onSubmit={handleSubmit} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Subject Name</label>
-                                <input type="text" name="subject" value={currentSubject.subject} onChange={handleChange} required className={inputStyles} />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Subject Name</label>
+                                    <input ref={firstInputRef} type="text" name="subject" value={currentSubject.subject} onChange={handleChange} required className={inputStyles} />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Type</label>
+                                    <select name="type" value={currentSubject.type} onChange={handleChange} className={inputStyles}>
+                                        <option>Core</option>
+                                        <option>Elective</option>
+                                    </select>
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Type</label>
-                                <select name="type" value={currentSubject.type} onChange={handleChange} className={inputStyles}>
-                                    <option>Core</option>
-                                    <option>Elective</option>
-                                </select>
-                            </div>
-                            <div className="flex justify-end pt-4 space-x-2">
-                                <button type="button" onClick={handleCloseModal} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancel</button>
-                                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save</button>
+                            <div className="flex justify-end pt-2 space-x-2">
+                                <button type="button" onClick={handleCloseModal} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">Close</button>
+                                <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold shadow-sm transition-all active:scale-95">Commit</button>
                             </div>
                         </form>
+
                     </div>
                 </div>
             )}

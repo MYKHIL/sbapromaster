@@ -5,6 +5,8 @@ import {
     isQuotaExhaustedError,
     getNextQuotaResetDate
 } from '../utils/databaseErrorHandler';
+import { useDatabaseError } from '../context/DatabaseErrorContext';
+
 
 interface DatabaseErrorModalProps {
     error: any;
@@ -70,8 +72,10 @@ const DatabaseErrorModal: React.FC<DatabaseErrorModalProps> = ({ error, onClose,
     if (!isOpen || !error) return null;
 
     const errorInfo = getDatabaseErrorInfo(error);
-    const whatsappLink = createWhatsAppErrorLink(error);
+    const { breadcrumbs } = useDatabaseError(); // Get captured breadcrumbs from context
+    const whatsappLink = createWhatsAppErrorLink(error, breadcrumbs);
     const isQuotaError = isQuotaExhaustedError(error);
+
 
     // Dynamic message injection
     const displayMessage = isQuotaError && liveTimeMessage

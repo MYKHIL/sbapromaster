@@ -63,23 +63,35 @@ export const isDatabaseError = (error: any): boolean => {
 };
 
 /**
- * Creates a WhatsApp URL with the error message
+ * Creates a WhatsApp URL with the error message and breadcrumbs
  */
-export const createWhatsAppErrorLink = (error: any): string => {
+export const createWhatsAppErrorLink = (error: any, breadcrumbs: { action: string; timestamp: string }[] = []): string => {
     const errorMessage = error.message || error.toString() || 'Unknown error';
     const errorCode = error.code || 'NO_CODE';
     const timestamp = new Date().toLocaleString();
 
-    const message = `🚨 *SBA Pro Master - Database Error*\n\n` +
+    let message = `🚨 *SBA Pro Master - Database Error*\n\n` +
         `⏰ Time: ${timestamp}\n` +
         `❌ Error Code: ${errorCode}\n` +
-        `📝 Error Message: ${errorMessage}\n\n` +
-        `Please help resolve this issue as soon as possible.`;
+        `📝 Error Message: ${errorMessage}\n\n`;
+
+    if (breadcrumbs && breadcrumbs.length > 0) {
+        message += `👣 *Recent Actions:*\n`;
+        // Include last 7 actions to keep message length reasonable for WhatsApp
+        const recent = breadcrumbs.slice(-7);
+        recent.forEach(b => {
+            message += `• [${b.timestamp}] ${b.action}\n`;
+        });
+        message += `\n`;
+    }
+
+    message += `Please help resolve this issue as soon as possible.`;
 
     const phoneNumber = DEVELOPER_PHONE.replace(/^0/, '233');
 
     return `${WHATSAPP_BASE_URL}${phoneNumber}?text=${encodeURIComponent(message)}`;
 };
+
 
 /**
  * Formats a Date object into a professional, human-friendly string
