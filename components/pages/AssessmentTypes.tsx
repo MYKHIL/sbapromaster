@@ -218,6 +218,12 @@ const AssessmentTypes: React.FC = () => {
             // STAY OPEN ON ADD for continuous entry
             setSaveFeedback(`Assessment "${assessmentToSave.name}" Added!`);
             setCurrentAssessment(EMPTY_ASSESSMENT_FORM);
+
+            // Explicit focus for batch entry
+            setTimeout(() => {
+                firstInputRef.current?.focus();
+            }, 150);
+
             setTimeout(() => setSaveFeedback(null), 3000);
             return;
         }
@@ -412,12 +418,14 @@ const AssessmentTypes: React.FC = () => {
                 {isModalOpen && currentAssessment && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
                         <div className="bg-white p-5 rounded-xl shadow-2xl w-full max-w-lg relative animate-fade-in-scale">
-                            {/* Vanishing Feedback Header */}
-                            {saveFeedback && (
-                                <div className="absolute top-0 left-0 right-0 bg-green-500 text-white py-2 px-4 text-center font-bold animate-fade-in-down z-10 rounded-t-xl text-sm">
-                                    {saveFeedback}
-                                </div>
-                            )}
+                            {/* Vanishing Feedback Header - Stable DOM to prevent keyboard dismissal */}
+                            <div 
+                                className={`absolute top-0 left-0 right-0 bg-green-500 text-white py-2 px-4 text-center font-bold z-10 rounded-t-xl text-sm transition-all duration-300 pointer-events-none ${
+                                    saveFeedback ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'
+                                }`}
+                            >
+                                {saveFeedback || 'Success'}
+                            </div>
                             <h2 className="text-xl font-bold mb-4 text-gray-800">{'id' in currentAssessment ? 'Edit Assessment' : 'Add New Assessment'}</h2>
 
                             <form onSubmit={handleSubmit} className="space-y-4">

@@ -70,6 +70,17 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
     const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
     const hasSetDefaultClass = useRef(false);
 
+    // Auto-focus logic
+    React.useEffect(() => {
+        if (isModalOpen && firstInputRef.current) {
+            const timer = setTimeout(() => {
+                firstInputRef.current?.focus();
+                firstInputRef.current?.select();
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [isModalOpen, currentStudent]);
+
     const inputStyles = "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500";
     const searchInputStyles = "w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
 
@@ -362,6 +373,11 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
                 gender: studentToAdd.gender
             });
 
+            // Explicit focus for batch entry
+            setTimeout(() => {
+                firstInputRef.current?.focus();
+            }, 150);
+
             // Vanish after 3s
             setTimeout(() => setSaveFeedback(null), 3000);
             return; // Don't close modal
@@ -595,12 +611,14 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
                     <div className="bg-white p-5 rounded-xl shadow-2xl w-full max-w-lg relative animate-fade-in-scale overflow-y-auto max-h-[95vh]">
 
-                        {/* Vanishing Feedback Header */}
-                        {saveFeedback && (
-                            <div className="absolute top-0 left-0 right-0 bg-green-500 text-white py-2 px-4 text-center font-bold animate-fade-in-down z-10 rounded-t-xl text-sm">
-                                {saveFeedback}
-                            </div>
-                        )}
+                        {/* Vanishing Feedback Header - Stable DOM to prevent keyboard dismissal */}
+                        <div 
+                            className={`absolute top-0 left-0 right-0 bg-green-500 text-white py-2 px-4 text-center font-bold z-10 rounded-t-xl text-sm transition-all duration-300 pointer-events-none ${
+                                saveFeedback ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'
+                            }`}
+                        >
+                            {saveFeedback || 'Success'}
+                        </div>
                         <h2 className="text-xl font-bold mb-4 text-gray-800">{'id' in currentStudent ? 'Edit Student' : 'Add New Student'}</h2>
 
                         <form onSubmit={handleSubmit} className="space-y-4">

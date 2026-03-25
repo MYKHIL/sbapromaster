@@ -44,6 +44,17 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
     const [isEnhancing, setIsEnhancing] = useState(false);
     const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
 
+    // Auto-focus logic
+    React.useEffect(() => {
+        if (isModalOpen && firstInputRef.current) {
+            const timer = setTimeout(() => {
+                firstInputRef.current?.focus();
+                firstInputRef.current?.select();
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [isModalOpen, currentClassData]);
+
     // Initial check for navigation meta (handle instructions to open modal)
     // AND: Trigger Metadata Reconciliation to identify unsaved local items
     React.useEffect(() => {
@@ -254,6 +265,11 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
             setSaveFeedback("Class Added Successfully!");
             setCurrentClassData(EMPTY_TEACHER_FORM);
 
+            // Explicit focus for batch entry
+            setTimeout(() => {
+                firstInputRef.current?.focus();
+            }, 150);
+
             // Vanish after 3s
             setTimeout(() => setSaveFeedback(null), 3000);
             return; // Don't close modal
@@ -454,12 +470,14 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
                     <div className="bg-white p-5 rounded-xl shadow-2xl w-full max-w-lg relative animate-fade-in-scale">
 
-                        {/* Vanishing Feedback Header */}
-                        {saveFeedback && (
-                            <div className="absolute top-0 left-0 right-0 bg-green-500 text-white py-2 px-4 text-center font-bold animate-fade-in-down z-10 rounded-t-xl text-sm">
-                                {saveFeedback}
-                            </div>
-                        )}
+                        {/* Vanishing Feedback Header - Stable DOM to prevent keyboard dismissal */}
+                        <div 
+                            className={`absolute top-0 left-0 right-0 bg-green-500 text-white py-2 px-4 text-center font-bold z-10 rounded-t-xl text-sm transition-all duration-300 pointer-events-none ${
+                                saveFeedback ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'
+                            }`}
+                        >
+                            {saveFeedback || 'Success'}
+                        </div>
                         <h2 className="text-xl font-bold mb-4 text-gray-800">{'id' in currentClassData ? 'Edit Teacher/Class' : 'Add New Teacher/Class'}</h2>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
