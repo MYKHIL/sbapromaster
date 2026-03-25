@@ -53,23 +53,23 @@ export interface DataContextType {
     updateSettings: (updates: Partial<SchoolSettings>) => void;
     setAssessments: React.Dispatch<React.SetStateAction<Assessment[]>>; // For reordering
     // Student CRUD
-    addStudent: (student: Omit<Student, 'id'>) => void;
+    addStudent: (student: Omit<Student, 'id'>) => number;
     updateStudent: (student: Student) => void;
     deleteStudent: (id: number) => void;
     // Subject CRUD
-    addSubject: (subject: Omit<Subject, 'id'>) => void;
+    addSubject: (subject: Omit<Subject, 'id'>) => number;
     updateSubject: (subject: Subject) => void;
     deleteSubject: (id: number) => void;
     // Class CRUD
-    addClass: (cls: Omit<Class, 'id'>) => void;
+    addClass: (cls: Omit<Class, 'id'>) => number;
     updateClass: (cls: Class) => void;
     deleteClass: (id: number) => void;
     // Grade CRUD
-    addGrade: (grade: Omit<Grade, 'id'>) => void;
+    addGrade: (grade: Omit<Grade, 'id'>) => number;
     updateGrade: (grade: Grade) => void;
     deleteGrade: (id: number) => void;
     // Assessment CRUD
-    addAssessment: (assessment: Omit<Assessment, 'id'>) => void;
+    addAssessment: (assessment: Omit<Assessment, 'id'>) => number;
     updateAssessment: (assessment: Assessment) => void;
     deleteAssessment: (id: number) => void;
     // Score CRUD
@@ -272,7 +272,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.170"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.171"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -1546,6 +1546,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const newId = maxId + 1;
             markItemDirty(fieldKey as string, newId);
             setItems(prev => [...prev, { ...item, id: newId, _isLocallyCreated: true } as unknown as T]);
+            return newId;
         },
         update: (updatedItem: T) => {
             markDirty(fieldKey, true);
@@ -1573,15 +1574,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Wrapped student CRUD that also updates the student bucket on changes
     const addStudent = (student: Omit<Student, 'id'>) => {
         markDirty('students', true);
+        const sequentialIds = students.map(i => typeof i.id === 'number' ? i.id : 0).filter(id => id < 1000000);
+        const maxId = sequentialIds.length > 0 ? Math.max(...sequentialIds) : 0;
+        const newId = maxId + 1;
+        
+        markItemDirty('students', newId);
         setStudents(prev => {
-            const sequentialIds = prev.map(i => typeof i.id === 'number' ? i.id : 0).filter(id => id < 1000000);
-            const maxId = sequentialIds.length > 0 ? Math.max(...sequentialIds) : 0;
-            const newId = maxId + 1;
-            markItemDirty('students', newId);
             const newItem = { ...student, id: newId, _isLocallyCreated: true } as Student;
-            const next = [...prev, newItem];
-            return next;
+            return [...prev, newItem];
         });
+        return newId;
     };
 
     const updateStudent = (updatedStudent: Student) => {
@@ -1625,6 +1627,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
             return [...prev, newAssessment]; // Otherwise, append
         });
+        return newId;
     };
     const updateAssessment = (updatedAssessment: Assessment) => {
         markDirty('assessments', true);
@@ -1645,15 +1648,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Wrapped subject CRUD that also updates the metadata bundle on changes
     const addSubject = (subject: Omit<Subject, 'id'>) => {
         markDirty('subjects', true);
+        const sequentialIds = subjects.map(i => typeof i.id === 'number' ? i.id : 0).filter(id => id < 1000000);
+        const maxId = sequentialIds.length > 0 ? Math.max(...sequentialIds) : 0;
+        const newId = maxId + 1;
+        
+        markItemDirty('subjects', newId);
         setSubjects(prev => {
-            const sequentialIds = prev.map(i => typeof i.id === 'number' ? i.id : 0).filter(id => id < 1000000);
-            const maxId = sequentialIds.length > 0 ? Math.max(...sequentialIds) : 0;
-            const newId = maxId + 1;
-            markItemDirty('subjects', newId);
             const newItem = { ...subject, id: newId, _isLocallyCreated: true } as Subject;
-            const next = [...prev, newItem];
-            return next;
+            return [...prev, newItem];
         });
+        return newId;
     };
 
     const updateSubject = (updatedSubject: Subject) => {
@@ -1679,15 +1683,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Wrapped class CRUD that also updates the metadata bundle on changes
     const addClass = (cls: Omit<Class, 'id'>) => {
         markDirty('classes', true);
+        const sequentialIds = classes.map(i => typeof i.id === 'number' ? i.id : 0).filter(id => id < 1000000);
+        const maxId = sequentialIds.length > 0 ? Math.max(...sequentialIds) : 0;
+        const newId = maxId + 1;
+        
+        markItemDirty('classes', newId);
         setClasses(prev => {
-            const sequentialIds = prev.map(i => typeof i.id === 'number' ? i.id : 0).filter(id => id < 1000000);
-            const maxId = sequentialIds.length > 0 ? Math.max(...sequentialIds) : 0;
-            const newId = maxId + 1;
-            markItemDirty('classes', newId);
             const newItem = { ...cls, id: newId, _isLocallyCreated: true } as Class;
-            const next = [...prev, newItem];
-            return next;
+            return [...prev, newItem];
         });
+        return newId;
     };
 
     const updateClass = (updatedClass: Class) => {
@@ -3240,8 +3245,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         draftVersion,
         pendingCount,
         isPageDirty,
-        subscription,
         isItemDirty,
+        subscription,
         isSettingDirty,
         isScoreDirty,
         isDraftScore,

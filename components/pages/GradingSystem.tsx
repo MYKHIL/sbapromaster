@@ -38,6 +38,8 @@ const GradingSystem: React.FC = () => {
     const [idToPermanentlyDelete, setIdToPermanentlyDelete] = useState<number | null>(null);
     const [modalError, setModalError] = useState('');
     const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
+    const [sessionAddedIds, setSessionAddedIds] = useState<number[]>([]);
+    const [isSessionListOpen, setIsSessionListOpen] = useState(false);
     const firstInputRef = React.useRef<HTMLInputElement>(null);
 
 
@@ -133,13 +135,6 @@ const GradingSystem: React.FC = () => {
         setIdToPermanentlyDelete(null);
     };
 
-    const handleCloseModal = () => {
-        allowRemoteUpdates();
-        setIsModalOpen(false);
-        setCurrentGrade(null);
-        setModalError('');
-        setSaveFeedback(null);
-    };
 
     // Auto-focus logic: Trigger ONLY on initial modal open
     React.useEffect(() => {
@@ -185,7 +180,10 @@ const GradingSystem: React.FC = () => {
         if ('id' in currentGrade) {
             updateGrade(currentGrade);
         } else {
-            addGrade(currentGrade);
+            const newId = addGrade(currentGrade);
+            if (newId) {
+                setSessionAddedIds(prev => [newId, ...prev]);
+            }
             // STAY OPEN ON ADD for continuous entry
             setSaveFeedback(`Grade "${currentGrade.name}" Added!`);
             setCurrentGrade(EMPTY_GRADE_FORM);
@@ -202,6 +200,15 @@ const GradingSystem: React.FC = () => {
             return;
         }
         handleCloseModal();
+    };
+
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setModalError('');
+        setSaveFeedback(null);
+        setSessionAddedIds([]);
+        setIsSessionListOpen(false);
+        allowRemoteUpdates();
     };
 
 
@@ -348,41 +355,94 @@ const GradingSystem: React.FC = () => {
                 </div>
 
                 {isModalOpen && currentGrade && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
-                        <div className="bg-white p-5 rounded-xl shadow-2xl w-full max-w-lg relative animate-fade-in-scale">
-                            <h2 className="text-xl font-bold mb-1 text-gray-800">{'id' in currentGrade ? 'Edit Grade' : 'Add New Grade'}</h2>
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-2 sm:p-4">
+                        <div className="bg-white p-3 sm:p-5 rounded-xl shadow-2xl w-full max-w-lg relative animate-fade-in-scale overflow-y-auto max-h-[98vh] sm:max-h-[95vh]">
 
-                        {/* Smooth Push-Down Feedback Label */}
-                        <div className={`overflow-hidden transition-all duration-300 ${saveFeedback ? 'max-h-12 mb-2 opacity-100' : 'max-h-0 mb-0 opacity-0'}`}>
-                            <div className="text-green-600 font-bold text-sm py-1">
-                                {saveFeedback || ''}
+                            <div className="flex items-center justify-between mb-3 border-b pb-2">
+                                <h2 className="text-lg sm:text-xl font-bold text-gray-800">{'id' in currentGrade ? 'Edit Grade' : 'Add New Grade'}</h2>
+                                
+                                {/* Session Counter Badge (Header position) */}
+                                {sessionAddedIds.length > 0 && (
+                                    <button 
+                                        type="button"
+                                        onClick={() => setIsSessionListOpen(!isSessionListOpen)}
+                                        className="flex items-center space-x-1 px-2.5 py-1 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-sm border border-blue-500 active:scale-95"
+                                    >
+                                        <span className="text-[10px] font-bold">{sessionAddedIds.length} Added</span>
+                                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 transition-transform ${isSessionListOpen ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                                        </svg>
+                                    </button>
+                                )}
                             </div>
-                        </div>
 
-                            <form onSubmit={handleSubmit} className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Grade Name</label>
-                                    <input ref={firstInputRef} type="text" name="name" value={currentGrade.name} onChange={handleChange} required className={inputStyles} placeholder="e.g. A1, B2" />
+                        {/* Feedback label removed from top */}
+
+                            <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+                                <div className="grid grid-cols-2 gap-2.5">
+                                    <div className="col-span-1">
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-tight mb-1">Grade Name</label>
+                                        <div className="relative">
+                                            <input ref={firstInputRef} type="text" name="name" value={currentGrade.name} onChange={handleChange} required className={`${inputStyles} py-1.5 text-sm`} placeholder="e.g. A1, B2" />
+                                            
+                                            {/* Session List Dropdown */}
+                                            {isSessionListOpen && sessionAddedIds.length > 0 && (
+                                                <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-100 p-2 max-h-40 overflow-y-auto animate-fade-in-down ring-1 ring-black/5">
+                                                    <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 px-1 flex justify-between">
+                                                        <span>Session History</span>
+                                                        <span>({sessionAddedIds.length})</span>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        {sessionAddedIds.map(id => {
+                                                            const g = grades.find(item => item.id === id);
+                                                            const isDirty = isItemDirty('grades', id);
+                                                            return (
+                                                                <div key={id} className="flex items-center justify-between px-2 py-1.5 bg-gray-50 rounded text-xs">
+                                                                    <span className="truncate flex-1 text-gray-700 font-medium">{g?.name || 'Unknown'}</span>
+                                                                    <span className={`ml-2 px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase ${
+                                                                        isDirty ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'
+                                                                    }`}>
+                                                                        {isDirty ? 'Pending' : 'Saved'}
+                                                                    </span>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Push-Down Feedback */}
+                                        <div className={`overflow-hidden transition-all duration-300 ${saveFeedback ? 'max-h-12 mt-1 opacity-100' : 'max-h-0 opacity-0'}`}>
+                                            <div className="text-green-600 font-bold text-[11px] py-1 pl-1 flex items-center bg-green-50 rounded">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                                </svg>
+                                                {saveFeedback || ''}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="col-span-1">
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-tight mb-1">Remark</label>
+                                        <input type="text" name="remark" value={currentGrade.remark} onChange={handleChange} required className={`${inputStyles} py-1.5 text-sm`} placeholder="e.g. Excellent" />
+                                    </div>
+
+                                    <div className="col-span-1">
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-tight mb-1">Min Score (%)</label>
+                                        <input type="number" name="minScore" value={currentGrade.minScore} onChange={handleChange} required className={`${inputStyles} py-1.5 text-sm`} />
+                                    </div>
+                                    <div className="col-span-1">
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-tight mb-1">Max Score (%)</label>
+                                        <input type="number" name="maxScore" value={currentGrade.maxScore} onChange={handleChange} required className={`${inputStyles} py-1.5 text-sm`} />
+                                    </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700">Minimum Score (%)</label>
-                                        <input type="number" name="minScore" value={currentGrade.minScore} onChange={handleChange} required className={inputStyles} />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700">Maximum Score (%)</label>
-                                        <input type="number" name="maxScore" value={currentGrade.maxScore} onChange={handleChange} required className={inputStyles} />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Remark</label>
-                                    <input type="text" name="remark" value={currentGrade.remark} onChange={handleChange} required className={inputStyles} />
-                                </div>
-                                {modalError && <p className="text-[10px] text-red-600 font-semibold">{modalError}</p>}
-                                <div className="flex justify-end pt-2 space-x-2">
-                                    <button type="button" onClick={handleCloseModal} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">Close</button>
-                                    <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold shadow-sm transition-all active:scale-95">Commit</button>
+                                {modalError && <p className="text-red-500 text-[10px] mt-0.5 font-bold animate-pulse">{modalError}</p>}
+
+                                <div className="flex justify-end pt-2 space-x-2 border-t mt-2">
+                                    <button type="button" onClick={handleCloseModal} className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-bold hover:bg-gray-200 transition-colors">Close</button>
+                                    <button type="submit" className="px-5 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 shadow-sm transition-all active:scale-95">Commit</button>
                                 </div>
                             </form>
 
