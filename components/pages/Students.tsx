@@ -70,7 +70,7 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
     const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
     const hasSetDefaultClass = useRef(false);
 
-    // Auto-focus logic
+    // Auto-focus logic: Trigger ONLY on initial modal open
     React.useEffect(() => {
         if (isModalOpen && firstInputRef.current) {
             const timer = setTimeout(() => {
@@ -79,7 +79,7 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
             }, 100);
             return () => clearTimeout(timer);
         }
-    }, [isModalOpen, currentStudent]);
+    }, [isModalOpen]);
 
     const inputStyles = "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500";
     const searchInputStyles = "w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
@@ -373,9 +373,12 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
                 gender: studentToAdd.gender
             });
 
-            // Explicit focus for batch entry
+            // Explicit focus AND select for batch entry (after reset)
             setTimeout(() => {
-                firstInputRef.current?.focus();
+                if (firstInputRef.current) {
+                    firstInputRef.current.focus();
+                    firstInputRef.current.select();
+                }
             }, 150);
 
             // Vanish after 3s
@@ -611,15 +614,14 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
                     <div className="bg-white p-5 rounded-xl shadow-2xl w-full max-w-lg relative animate-fade-in-scale overflow-y-auto max-h-[95vh]">
 
-                        {/* Vanishing Feedback Header - Stable DOM to prevent keyboard dismissal */}
-                        <div 
-                            className={`absolute top-0 left-0 right-0 bg-green-500 text-white py-2 px-4 text-center font-bold z-10 rounded-t-xl text-sm transition-all duration-300 pointer-events-none ${
-                                saveFeedback ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'
-                            }`}
-                        >
-                            {saveFeedback || 'Success'}
+                        <h2 className="text-xl font-bold mb-1 text-gray-800">{'id' in currentStudent ? 'Edit Student' : 'Add New Student'}</h2>
+
+                        {/* Smooth Push-Down Feedback Label */}
+                        <div className={`overflow-hidden transition-all duration-300 ${saveFeedback ? 'max-h-12 mb-2 opacity-100' : 'max-h-0 mb-0 opacity-0'}`}>
+                            <div className="text-green-600 font-bold text-sm py-1">
+                                {saveFeedback || ''}
+                            </div>
                         </div>
-                        <h2 className="text-xl font-bold mb-4 text-gray-800">{'id' in currentStudent ? 'Edit Student' : 'Add New Student'}</h2>
 
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>

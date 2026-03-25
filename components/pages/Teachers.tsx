@@ -44,7 +44,7 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
     const [isEnhancing, setIsEnhancing] = useState(false);
     const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
 
-    // Auto-focus logic
+    // Auto-focus logic: Trigger ONLY on initial modal open
     React.useEffect(() => {
         if (isModalOpen && firstInputRef.current) {
             const timer = setTimeout(() => {
@@ -53,7 +53,7 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
             }, 100);
             return () => clearTimeout(timer);
         }
-    }, [isModalOpen, currentClassData]);
+    }, [isModalOpen]);
 
     // Initial check for navigation meta (handle instructions to open modal)
     // AND: Trigger Metadata Reconciliation to identify unsaved local items
@@ -265,9 +265,12 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
             setSaveFeedback("Class Added Successfully!");
             setCurrentClassData(EMPTY_TEACHER_FORM);
 
-            // Explicit focus for batch entry
+            // Explicit focus AND select for batch entry (after reset)
             setTimeout(() => {
-                firstInputRef.current?.focus();
+                if (firstInputRef.current) {
+                    firstInputRef.current.focus();
+                    firstInputRef.current.select();
+                }
             }, 150);
 
             // Vanish after 3s
@@ -470,15 +473,14 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
                     <div className="bg-white p-5 rounded-xl shadow-2xl w-full max-w-lg relative animate-fade-in-scale">
 
-                        {/* Vanishing Feedback Header - Stable DOM to prevent keyboard dismissal */}
-                        <div 
-                            className={`absolute top-0 left-0 right-0 bg-green-500 text-white py-2 px-4 text-center font-bold z-10 rounded-t-xl text-sm transition-all duration-300 pointer-events-none ${
-                                saveFeedback ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'
-                            }`}
-                        >
-                            {saveFeedback || 'Success'}
+                        <h2 className="text-xl font-bold mb-1 text-gray-800">{'id' in currentClassData ? 'Edit Teacher/Class' : 'Add New Teacher/Class'}</h2>
+                        
+                        {/* Smooth Push-Down Feedback Label */}
+                        <div className={`overflow-hidden transition-all duration-300 ${saveFeedback ? 'max-h-12 mb-2 opacity-100' : 'max-h-0 mb-0 opacity-0'}`}>
+                            <div className="text-green-600 font-bold text-sm py-1">
+                                {saveFeedback || ''}
+                            </div>
                         </div>
-                        <h2 className="text-xl font-bold mb-4 text-gray-800">{'id' in currentClassData ? 'Edit Teacher/Class' : 'Add New Teacher/Class'}</h2>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
