@@ -68,10 +68,21 @@ const IndexNumberConfig: React.FC = () => {
 
     const regenerateAllIndexNumbers = () => {
         try {
+            // Build the current settings from local state, not just context
+            const currentSettings = {
+                ...settings,
+                indexNumberGlobalPrefix: globalPrefix,
+                indexNumberGlobalSuffix: globalSuffix,
+                indexNumberCounterDigits: counterDigits,
+                indexNumberPerClass: perClass,
+                indexNumberAutoSort: autoSort,
+            };
+
             // Generate new index numbers for all students
-            const sortAlphabetically = settings.indexNumberAutoSort || false;
+            const sortAlphabetically = autoSort || false;
             // Always reset counters to 1 when regenerating all as requested by user "each class restarts from 1"
-            const { updatedStudents, updatedClasses } = reassignAllIndexNumbers(students, classes, settings, sortAlphabetically, true);
+            const { updatedStudents, updatedClasses } = reassignAllIndexNumbers(students, classes, currentSettings, sortAlphabetically, true);
+
 
             // Update scores and report data to match new index numbers
             const updatedScores = scores.map(score => {
@@ -83,13 +94,17 @@ const IndexNumberConfig: React.FC = () => {
                 return report;
             });
 
-            // Update all data at once, including classes which now have reset counters
+            // Update all data at once, including classes which now have reset counters AND save settings
             loadImportedData({
+                settings: currentSettings,
                 students: updatedStudents,
                 classes: updatedClasses,
                 scores: updatedScores,
                 reportData: updatedReportData,
             }, false);
+
+            console.log(`[IndexNumberConfig] Regenerated index numbers for ${updatedStudents.length} students with prefix "${currentSettings.indexNumberGlobalPrefix}"`);
+
 
             setSuccess('All student index numbers have been regenerated. Click SAVE to persist.');
             setTimeout(() => setSuccess(null), 5000);

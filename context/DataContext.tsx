@@ -272,7 +272,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.166"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.167"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -2420,17 +2420,18 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         if (fieldsToSave.length === 0) return {};
 
-        // Use current state variables directly instead of Ref to ensure Render-Cycle freshness
-        const currentData: AppDataType = {
-            settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions
-        };
+        // FIX: Use stateRef.current instead of closure variables.
+        // Closure values (settings, scores, etc.) may be STALE if React state updates (e.g. from
+        // draft score commits via setScores) haven't re-rendered yet when getPendingUploadData is called.
+        // stateRef.current is kept in sync via a useEffect and is always up-to-date.
+        const currentData: AppDataType = stateRef.current;
         const payload: any = {};
         const deletions: any = {};
 
         // GRANULAR ROLE-BASED GUARD
         // Fetch current user from localStorage/state to verify permissions
         const storedUserId = localStorage.getItem('sba_user_id') || localStorage.getItem('emulator-sba_user_id');
-        const currentUser = (storedUserId && users) ? users.find(u => String(u.id) === storedUserId) : null;
+        const currentUser = (storedUserId && currentData.users) ? currentData.users.find(u => String(u.id) === storedUserId) : null;
         const userRole = currentUser?.role || 'Guest';
         const isAdmin = userRole === 'Admin';
         const allowedClasses = currentUser?.allowedClasses || [];
@@ -2555,7 +2556,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
 
         return payload;
-    }, [schoolId, users, settings, students, subjects, classes, grades, assessments, scores, reportData, classData, userLogs, activeSessions]);
+    // FIX: Removed stale state vars from deps (settings, students, scores, etc.) since we now
+    // read from stateRef.current (a ref) which doesn't need to be in the dep array.
+    // schoolId is still needed because it drives user lookup context.
+    }, [schoolId]);
 
     // Draft Score State
     const draftScores = useRef<Map<string, string>>(new Map());

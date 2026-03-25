@@ -182,6 +182,15 @@ const ScoreEntry: React.FC = () => {
         localStorage.setItem('scoreEntry_selectedStudentIndex', String(selectedStudentIndex));
     }, [selectedStudentIndex]);
 
+    // FIX: Reset mobile student index when class or subject changes.
+    // The index is positional, so if the student list changes (e.g. students added/sorted differently
+    // between sessions), an old persisted index could point to the WRONG student.
+    // Resetting to 0 on context change ensures correct student is always targeted.
+    useEffect(() => {
+        setSelectedStudentIndex(0);
+    }, [selectedClass, selectedSubjectId]);
+
+
     // Safe initialization for selectedAssessmentId
     const [selectedAssessmentId, setSelectedAssessmentId] = useState<number>(() => {
         try {
