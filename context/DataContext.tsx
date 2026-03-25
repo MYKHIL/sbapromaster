@@ -272,7 +272,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.167"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.168"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -2642,7 +2642,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const isPageDirty = React.useCallback((pageName: Page): boolean => {
         const PAGE_DATA_MAPPING: Record<string, (keyof AppDataType)[]> = {
             'School Setup': ['settings'],
-            'Teachers': ['users'],
+            'Classes & Teachers': ['classes', 'users'],
             'Subjects': ['subjects'],
             'Students': ['students'],
             'Grading System': ['grades'],

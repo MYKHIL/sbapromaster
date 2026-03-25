@@ -26,7 +26,7 @@ const PAGE_MESSAGES: Record<string, string[]> = {
     'Dashboard': ["Overview of your school's performance.", "Check out the latest stats.", "Your command center."],
     'Students': ["Manage your student records here.", "Update student profiles.", "View and edit student details."],
     'Subjects': ["Configure school subjects.", "Assign facilitators to subjects.", "Manage curriculum."],
-    'Teachers': ["Manage comments and teacher details.", "Class teacher assignments.", "Edit teacher signatures."],
+    'Classes & Teachers': ["Manage comments and teacher details.", "Class teacher assignments.", "Edit teacher signatures."],
     'Score Entry': ["Enter assessment scores.", "Record student marks efficiently.", "Keep grading up to date."],
     'Report Viewer': ["Generate and view report cards.", "Print student reports.", "Analyze student performance."],
     'Assessment Types': ["Define assessment categories.", "Set up grading weights.", "Configure exam types."],

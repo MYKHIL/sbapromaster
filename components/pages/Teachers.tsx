@@ -281,7 +281,7 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
                     </div>
                 </div>
             )}
-            <h1 className="text-3xl font-bold text-gray-800">Manage Teachers &amp; Classes</h1>
+            <h1 className="text-3xl font-bold text-gray-800">Manage Classes &amp; Teachers</h1>
 
             <div className="bg-gray-100 py-4">
                 <div className="flex flex-col md:flex-row justify-start items-center gap-4">

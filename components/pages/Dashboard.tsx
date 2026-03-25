@@ -47,9 +47,14 @@ const Dashboard: React.FC<{ onNavigate?: (page: Page) => void }> = ({ onNavigate
       <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-200">
         <h2 className="text-2xl font-bold text-gray-800 mb-4">Quick Start Guide</h2>
         <ol className="list-decimal list-inside space-y-3 text-gray-600">
-          <li>Go to the <span className="font-semibold text-blue-600">Settings</span> page to configure school details.</li>
-          <li>Add your students and subjects in the <span className="font-semibold text-blue-600">Students</span> and <span className="font-semibold text-blue-600">Subjects</span> pages.</li>
+          <li>Go to the <span className="font-semibold text-blue-600">School Setup</span> page to configure school details.</li>
+          <li>Add the classes and teachers in the <span className="font-semibold text-blue-600">Classes & Teachers</span> page.</li>
+          <li>Add your students and subjects in the <span className="font-semibold text-blue-600">Students</span> and <span className="font-semibold text-blue-600">Subjects</span> pages respectively.</li>
+          <li>Setup your grading scale in the <span className="font-semibold text-blue-600">Grading System</span> page.</li>          
+          <li>Setup your assessment types in the <span className="font-semibold text-blue-600">Assessment Types</span> page.</li>
           <li>Use the <span className="font-semibold text-blue-600">Score Entry</span> page to input assessment scores for each student.</li>
+          <li>Setup your grading scale in the <span className="font-semibold text-blue-600">Grading System</span> page.</li>
+          <li>Use the <span className="font-semibold text-blue-600">Settings</span> page to configure various settings like <span className="font-semibold text-green-600">Creating a new term</span>, <span className="font-semibold text-green-600">Managing Users</span>, <span className="font-semibold text-green-600">Enabling/Disabling auto assingment of Index Numbers</span>, etc.</li>
           <li>Generate and print beautiful report cards from the <span className="font-semibold text-blue-600">Report Viewer</span>.</li>
         </ol>
       </div>

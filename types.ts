@@ -2,7 +2,7 @@ export type Page =
   | 'Dashboard'
   | 'Students'
   | 'Subjects'
-  | 'Teachers'
+  | 'Classes & Teachers'
   | 'Score Entry'
   | 'Report Viewer'
   | 'Grading System'

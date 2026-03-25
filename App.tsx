@@ -54,7 +54,7 @@ const ActivePage: React.FC<{
   switch (page) {
     case 'Dashboard': return <Dashboard onNavigate={onNavigate} />;
     case 'School Setup': return <Settings />;
-    case 'Teachers': return <Teachers navigationMeta={navigationMeta} />;
+    case 'Classes & Teachers': return <Teachers navigationMeta={navigationMeta} />;
     case 'Subjects': return <Subjects />;
     case 'Students': return <Students onNavigate={onNavigate} />;
     case 'Grading System': return <GradingSystem />;
@@ -123,8 +123,9 @@ const AppContent: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>(() => {
     // Try to load last visited page from localStorage
     try {
-      const savedPage = localStorage.getItem('lastVisitedPage');
+      let savedPage = localStorage.getItem('lastVisitedPage');
       if (savedPage) {
+        if (savedPage === 'Teachers') savedPage = 'Classes & Teachers';
         return savedPage as Page;
       }
     } catch (e) {
