@@ -588,12 +588,31 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                                 >
                                     <div className="flex justify-between items-center">
                                         <p className="font-bold text-gray-900 text-sm">{tier.name}</p>
-                                        <p className="text-indigo-600 font-bold text-xs">
-                                            {tier.price}
-                                            {!isNaN(parseFloat(tier.price.replace(/[^0-9.]/g, ''))) && parseFloat(tier.price.replace(/[^0-9.]/g, '')) > 0
-                                                ? <span className="text-gray-400 font-normal">/yr</span>
-                                                : <span className="text-gray-400 font-normal text-[10px]"> &bull; {tier.duration}</span>
-                                            }
+                                        <p className="text-indigo-600 font-bold text-xs text-right">
+                                            {(() => {
+                                                const priceValue = parseFloat(tier.price.replace(/[^0-9.]/g, ''));
+                                                if (isNaN(priceValue) || priceValue === 0) return tier.price;
+
+                                                if (durationUnit === 'Term') {
+                                                    const termPrice = priceValue / 3;
+                                                    return (
+                                                        <>
+                                                            GHS {termPrice.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                                                            <span className="text-gray-400 font-normal ml-0.5">/term</span>
+                                                        </>
+                                                    );
+                                                }
+
+                                                return (
+                                                    <>
+                                                        {tier.price}
+                                                        <span className="text-gray-400 font-normal ml-0.5">/yr</span>
+                                                    </>
+                                                );
+                                            })()}
+                                            {(isNaN(parseFloat(tier.price.replace(/[^0-9.]/g, ''))) || parseFloat(tier.price.replace(/[^0-9.]/g, '')) === 0) && (
+                                                <span className="text-gray-400 font-normal text-[10px]"> &bull; {tier.duration}</span>
+                                            )}
                                         </p>
                                     </div>
                                     <p className="text-xs text-gray-500 mt-0.5">

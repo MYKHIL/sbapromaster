@@ -10,7 +10,7 @@ const UserBadge: React.FC = () => {
     // Early return BEFORE other hooks to avoid React error #300
     if (!currentUser) return null;
 
-    const { isOnline, isSyncing, queuedCount, onlineUsers, settings, subjects } = useData();
+    const { isOnline, isSyncing, queuedCount, onlineUsers, settings, subjects, subscription } = useData();
     const [showConfirm, setShowConfirm] = useState(false);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [showOnlineUsers, setShowOnlineUsers] = useState(false);
@@ -311,6 +311,29 @@ const UserBadge: React.FC = () => {
                                         <div className="flex justify-between items-center text-sm">
                                             <span className="font-medium text-blue-900 bg-blue-50 px-2 py-0.5 rounded">{settings?.schoolName.toUpperCase() || 'No School Name Set'}</span>
                                         </div>
+                                         {subscription?.expiryDate && (() => {
+                                            const expiry = subscription.expiryDate?.toDate ? subscription.expiryDate.toDate() : new Date(subscription.expiryDate);
+                                            const isExpired = expiry < new Date();
+                                            const daysLeft = Math.ceil((expiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                                            return (
+                                                <div className={`rounded-lg px-3 py-2 space-y-1.5 ${isExpired ? 'bg-red-50 border border-red-200' : daysLeft <= 30 ? 'bg-orange-50 border border-orange-200' : 'bg-indigo-50 border border-indigo-100'}`}>
+                                                    <p className={`text-[10px] font-black uppercase tracking-widest ${isExpired ? 'text-red-400' : daysLeft <= 30 ? 'text-orange-400' : 'text-indigo-400'}`}>License</p>
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-xs text-gray-600">Expiry Date</span>
+                                                        <span className={`font-bold px-2 py-0.5 rounded text-xs ${isExpired ? 'text-red-700 bg-red-100' : daysLeft <= 30 ? 'text-orange-700 bg-orange-100' : 'text-indigo-700 bg-indigo-100'}`}>
+                                                            {expiry.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                        </span>
+                                                    </div>
+                                                    {isExpired ? (
+                                                        <p className="text-[10px] text-red-600 font-semibold text-center">⚠️ License has expired</p>
+                                                    ) : daysLeft <= 30 ? (
+                                                        <p className="text-[10px] text-orange-600 font-medium text-center">{daysLeft} day{daysLeft !== 1 ? 's' : ''} remaining</p>
+                                                    ) : (
+                                                        <p className="text-[10px] text-indigo-500 font-medium text-center">✓ Active</p>
+                                                    )}
+                                                </div>
+                                            );
+                                        })()}
                                         <div className="flex justify-between items-center text-sm">
                                             <span className="text-gray-500">Academic Year</span>
                                             <span className="font-medium text-gray-900 bg-gray-50 px-2 py-0.5 rounded">{settings?.academicYear || 'N/A'}</span>
@@ -337,7 +360,7 @@ const UserBadge: React.FC = () => {
                                                 </span>
                                             </div>
                                         </div>
-                                    </div>
+                                    </div>                                       
 
                                     <div className="mt-3 pt-2 text-[10px] text-center text-gray-400 border-t border-gray-50">
                                         Dates are set in System Settings
