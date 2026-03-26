@@ -607,7 +607,36 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
 
                 {/* Mobile Card View */}
                 <div className="lg:hidden space-y-4">
+                    {/* Mobile Sort Bar */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs text-gray-400 font-medium shrink-0">Sort by:</span>
+                        {(['name', 'indexNumber', 'class', 'gender'] as (keyof Student)[]).map(col => {
+                            const isActive = sortConfig.key === col;
+                            return (
+                                <button
+                                    key={col}
+                                    onClick={() => handleSort(col)}
+                                    className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all ${
+                                        isActive
+                                            ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                            : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400 hover:text-blue-600'
+                                    }`}
+                                >
+                                    {col === 'indexNumber' ? 'Index No.' : col.charAt(0).toUpperCase() + col.slice(1)}
+                                    {isActive && (
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            {sortConfig.dir === 'asc'
+                                                ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
+                                                : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />}
+                                        </svg>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+
                     {filteredStudents.length > 0 ? (
+
                         filteredStudents.map((student, index) => {
                             const canManage = canManageStudentsInClass(currentUser, student.class);
                             const isDirtyRow = isItemDirty('students', student.id);
