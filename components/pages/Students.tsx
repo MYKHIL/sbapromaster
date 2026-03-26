@@ -72,6 +72,14 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
     const [isSessionListOpen, setIsSessionListOpen] = useState(false);
     const [modalError, setModalError] = useState<string | null>(null);
     const hasSetDefaultClass = useRef(false);
+    const [sortConfig, setSortConfig] = useState<{ key: keyof Student | null; dir: 'asc' | 'desc' }>({ key: 'gender', dir: 'desc' });
+
+    const handleSort = (key: keyof Student) => {
+        setSortConfig(prev => ({
+            key,
+            dir: prev.key === key && prev.dir === 'asc' ? 'desc' : 'asc'
+        }));
+    };
 
     // Auto-focus logic: Trigger ONLY on initial modal open
     React.useEffect(() => {
@@ -133,11 +141,19 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
         const query = searchQuery.toLowerCase();
         let results = [...accessibleStudents];
 
-        // Apply standardized sort: Gender (Desc) -> Name (Asc)
+        // Apply sort based on sortConfig, with gender-desc + name-asc as defaults when no column sort is active
         results.sort((a, b) => {
-            if (a.gender !== b.gender) {
-                return b.gender.localeCompare(a.gender);
+            if (sortConfig.key) {
+                const key = sortConfig.key;
+                const valA = String(a[key] ?? '').toLowerCase();
+                const valB = String(b[key] ?? '').toLowerCase();
+                const cmp = valA.localeCompare(valB);
+                if (cmp !== 0) return sortConfig.dir === 'asc' ? cmp : -cmp;
+                // Secondary: name asc
+                return a.name.localeCompare(b.name);
             }
+            // Fallback default: gender desc, then name asc
+            if (a.gender !== b.gender) return b.gender.localeCompare(a.gender);
             return a.name.localeCompare(b.name);
         });
 
@@ -156,7 +172,7 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
         }
 
         return results;
-    }, [accessibleStudents, selectedClass, searchQuery]);
+    }, [accessibleStudents, selectedClass, searchQuery, sortConfig]);
 
 
 
@@ -509,10 +525,30 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
                                 <tr className="bg-gray-50 border-b">
                                     <th className="p-4 font-semibold text-gray-600">#</th>
                                     <th className="p-4 font-semibold text-gray-600">Photo</th>
-                                    <th className="p-4 font-semibold text-gray-600">Index Number</th>
-                                    <th className="p-4 font-semibold text-gray-600">Name</th>
-                                    <th className="p-4 font-semibold text-gray-600">Class</th>
-                                    <th className="p-4 font-semibold text-gray-600">Gender</th>
+                                    {(['indexNumber', 'name', 'class', 'gender'] as (keyof Student)[]).map(col => (
+                                        <th
+                                            key={col}
+                                            className={`p-4 font-semibold cursor-pointer select-none whitespace-nowrap transition-colors ${
+                                                sortConfig.key === col ? 'text-blue-600 bg-blue-50' : 'text-gray-600 hover:text-blue-500 hover:bg-gray-100'
+                                            }`}
+                                            onClick={() => handleSort(col)}
+                                        >
+                                            <span className="flex items-center gap-1">
+                                                {col === 'indexNumber' ? 'Index Number' : col.charAt(0).toUpperCase() + col.slice(1)}
+                                                {sortConfig.key === col ? (
+                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        {sortConfig.dir === 'asc'
+                                                            ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
+                                                            : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />}
+                                                    </svg>
+                                                ) : (
+                                                    <svg className="w-3 h-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" />
+                                                    </svg>
+                                                )}
+                                            </span>
+                                        </th>
+                                    ))}
                                     <th className="p-4 font-semibold text-gray-600">Actions</th>
                                 </tr>
                             </thead>
