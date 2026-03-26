@@ -28,7 +28,7 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
 
     // Duration State
     const [durationValue, setDurationValue] = useState(1);
-    const [durationUnit, setDurationUnit] = useState<'Month' | 'Year'>('Year');
+    const [durationUnit, setDurationUnit] = useState<'Term' | 'Year'>('Year');
 
     // MessageBox State
     const [messageBox, setMessageBox] = useState<{
@@ -192,7 +192,7 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
     // --- Derived pricing values ---
     const currentTier = SUBSCRIPTION_TIERS.find(t => t.name === selectedTier) || SUBSCRIPTION_TIERS[1];
     const basePrice = parseFloat(currentTier.price.replace(/[^0-9.]/g, ''));
-    const totalMonths = durationUnit === 'Year' ? durationValue * 12 : durationValue;
+    const totalMonths = durationUnit === 'Year' ? durationValue * 12 : durationValue * 4;
     // All paid tiers use per-year pricing (12 months base)
     const calculatedAmount = isNaN(basePrice) ? 0 : (basePrice / 12) * totalMonths;
     const customDurationStr = `${durationValue} ${durationUnit}${durationValue > 1 ? 's' : ''}`;
@@ -549,23 +549,23 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                                     <input
                                         type="number"
                                         min="1"
-                                        max={durationUnit === 'Month' ? 60 : 10}
+                                        max={durationUnit === 'Term' ? 12 : 10}
                                         value={durationValue}
                                         onChange={(e) => setDurationValue(Math.max(1, parseInt(e.target.value) || 1))}
                                         className="w-14 px-2 py-3 bg-white border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100/50 outline-none transition-all text-center font-bold text-indigo-900 text-[15px]"
                                     />
                                     <div className="flex bg-gray-100 p-1 rounded-xl">
                                         <button
-                                            onClick={() => setDurationUnit('Month')}
-                                            className={`py-2 px-3 rounded-lg text-xs font-bold transition-all ${durationUnit === 'Month' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                            onClick={() => setDurationUnit('Term')}
+                                            className={`py-2 px-3 rounded-lg text-xs font-bold transition-all ${durationUnit === 'Term' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                                         >
-                                            Mo
+                                            Term
                                         </button>
                                         <button
                                             onClick={() => setDurationUnit('Year')}
                                             className={`py-2 px-3 rounded-lg text-xs font-bold transition-all ${durationUnit === 'Year' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                                         >
-                                            Yr
+                                            Year
                                         </button>
                                     </div>
                                 </div>

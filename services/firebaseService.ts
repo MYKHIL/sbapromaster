@@ -826,6 +826,8 @@ export const activateSchoolSubscriptionLocally = async (
         const durationStr = (tier.duration || '1 Year').toLowerCase();
         if (durationStr.includes('week')) {
             expiryDate.setDate(baseDate.getDate() + ((parseInt(durationStr) || 1) * 7));
+        } else if (durationStr.includes('term')) {
+            expiryDate.setMonth(baseDate.getMonth() + ((parseInt(durationStr) || 1) * 4));
         } else if (durationStr.includes('month')) {
             expiryDate.setMonth(baseDate.getMonth() + (parseInt(durationStr) || 12));
         } else {
