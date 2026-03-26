@@ -137,7 +137,7 @@ export const exportSubjectAnalysisExcel = async (
     activeSubjects.forEach(subject => {
         const startMergeRow = currentRow;
         ['Male', 'Female', 'Total'].forEach((gender) => {
-            const rowValues = [subject, gender];
+            const rowValues: (string | number)[] = [subject, gender];
             let rowTotal = 0;
             gradeNames.forEach(grade => {
                 const count = subjectGradeCounts[subject][gender][grade] || 0;
@@ -190,7 +190,7 @@ export const exportSubjectAnalysisExcel = async (
     });
 
     ['Male', 'Female', 'Total'].forEach(gender => {
-        const rowValues = [gender];
+        const rowValues: (string | number)[] = [gender];
         let genderTotal = 0;
         
         sortedAggregates.forEach(agg => {
@@ -289,3 +289,219 @@ export const exportToPDF = (
 
     doc.save(`${filename}.pdf`);
 };
+
+/**
+ * Specialized PDF export for the Student List (notice board quality).
+ * - Single class: class name shown as a section header, Class column omitted.
+ * - Multiple classes: class name kept as a column.
+ * Uses large fonts and landscape orientation for notice board readability.
+ */
+export interface PdfExportOptions {
+    fontSizes: {
+        title: number;
+        classHeader: number;
+        tableHeader: number;
+        body: number;
+    };
+    layout: 'portrait' | 'landscape';
+    sortKey: 'name' | 'indexNumber' | 'gender';
+    sortDir: 'asc' | 'desc';
+    includeDobAge: boolean;
+}
+
+export const DEFAULT_STUDENT_PDF_OPTIONS: PdfExportOptions = {
+    fontSizes: {
+        title: 24,
+        classHeader: 18,
+        tableHeader: 14,
+        body: 14,
+    },
+    layout: 'landscape',
+    sortKey: 'name',
+    sortDir: 'asc',
+    includeDobAge: false,
+};
+
+export const exportStudentListPDF = (
+    students: { name: string; indexNumber: string; gender: string; class: string; dateOfBirth: string }[],
+    selectedClass: string, // '' = all classes
+    schoolName: string,
+    filename: string,
+    options: PdfExportOptions = DEFAULT_STUDENT_PDF_OPTIONS
+) => {
+    const doc = new jsPDF({ orientation: options.layout, unit: 'mm', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const isMultiClass = !selectedClass;
+    const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    // Ensure calculateAge is available or reimplement it simply
+    const calculateAge = (dobString: string): string => {
+        if (!dobString || !/^\d{4}-\d{2}-\d{2}$/.test(dobString)) return '';
+        const dob = new Date(dobString);
+        const today = new Date();
+        if (dob.getTime() > today.getTime()) return '';
+        let age = today.getFullYear() - dob.getFullYear();
+        const monthDifference = today.getMonth() - dob.getMonth();
+        if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < dob.getDate())) {
+            age--;
+        }
+        return age >= 1 ? age.toString() : '';
+    };
+
+    // Sort students
+    const sortedStudents = [...students].sort((a, b) => {
+        const key = options.sortKey;
+        const valA = String(a[key] ?? '').toLowerCase();
+        const valB = String(b[key] ?? '').toLowerCase();
+        const cmp = valA.localeCompare(valB);
+        if (cmp !== 0) return options.sortDir === 'asc' ? cmp : -cmp;
+        return a.name.localeCompare(b.name);
+    });
+
+    const getHeaders = () => {
+        const base = ['#', 'Index Number', 'Name', 'Gender'];
+        if (options.includeDobAge) {
+            base.push('Date of Birth', 'Age');
+        }
+        return [base];
+    };
+
+    const getRowData = (s: any, i: number) => {
+        const base = [i + 1, s.indexNumber, s.name, s.gender];
+        if (options.includeDobAge) {
+            base.push(s.dateOfBirth ? new Date(s.dateOfBirth).toLocaleDateString('en-GB') : '', calculateAge(s.dateOfBirth));
+        }
+        return base;
+    };
+
+    const getColumnStyles = () => {
+        const styles: any = {
+            0: { cellWidth: 14, halign: 'center' },
+            1: { cellWidth: 44 },
+            2: { cellWidth: 'auto' },
+            3: { cellWidth: 28, halign: 'center' },
+        };
+        if (options.includeDobAge) {
+            styles[4] = { cellWidth: 35, halign: 'center' };
+            styles[5] = { cellWidth: 20, halign: 'center' };
+        }
+        return styles;
+    };
+
+    const handleSerialCellFontSize = (data: any, paddingMm: number) => {
+        if (data.column.index === 0 && data.cell.raw != null) {
+            const text = String(data.cell.raw);
+            const availableWidthMm = 14 - (paddingMm * 2); // 14mm is internal column 0 width
+            
+            let testSize = data.section === 'head' ? options.fontSizes.tableHeader : options.fontSizes.body;
+            // Determine a size that fits the text
+            doc.setFontSize(testSize);
+            while (doc.getTextWidth(text) > availableWidthMm && testSize > 4) {
+                testSize -= 0.5;
+                doc.setFontSize(testSize);
+            }
+            if (testSize !== (data.section === 'head' ? options.fontSizes.tableHeader : options.fontSizes.body)) {
+                data.cell.styles.fontSize = testSize;
+            }
+        }
+    };
+
+    if (isMultiClass) {
+        // --- MULTI-CLASS: one section per class ---
+        const grouped: Record<string, typeof sortedStudents> = {};
+        sortedStudents.forEach(s => {
+            if (!grouped[s.class]) grouped[s.class] = [];
+            grouped[s.class].push(s);
+        });
+
+        // Main title
+        doc.setFontSize(options.fontSizes.title);
+        doc.setFont('helvetica', 'bold');
+        doc.text((schoolName || 'Students List').toUpperCase(), pageWidth / 2, 18, { align: 'center' });
+        doc.setFontSize(options.fontSizes.body - 2);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100);
+        doc.text(`Generated: ${dateStr}`, pageWidth / 2, 26, { align: 'center' });
+        doc.setTextColor(0);
+
+        let startY = 34;
+
+        Object.entries(grouped).forEach(([cls, clsStudents], idx) => {
+            if (idx > 0) {
+                doc.addPage();
+                startY = 20;
+            }
+
+            // Class header
+            doc.setFontSize(options.fontSizes.classHeader);
+            doc.setFont('helvetica', 'bold');
+            doc.text(`CLASS: ${cls.toUpperCase()}`, 14, startY);
+            startY += 8;
+
+            autoTable(doc, {
+                head: getHeaders(),
+                body: clsStudents.map((s, i) => getRowData(s, i)),
+                startY,
+                theme: 'grid',
+                headStyles: { fillColor: [41, 98, 172], textColor: [255, 255, 255], fontSize: options.fontSizes.tableHeader, fontStyle: 'bold', cellPadding: 4 },
+                styles: { textColor: [0, 0, 0], fontSize: options.fontSizes.body, cellPadding: 4, font: 'helvetica' },
+                columnStyles: getColumnStyles(),
+                didDrawPage: (data) => { startY = data.cursor?.y ?? startY; },
+                didParseCell: (data) => handleSerialCellFontSize(data, 4)
+            });
+
+            // Count summary below table
+            const males = clsStudents.filter(s => s.gender === 'Male').length;
+            const females = clsStudents.filter(s => s.gender === 'Female').length;
+            const cursorY = (doc as any).lastAutoTable?.finalY ?? startY;
+            doc.setFontSize(options.fontSizes.body - 3);
+            doc.setFont('helvetica', 'italic');
+            doc.setTextColor(80);
+            doc.text(`Total: ${clsStudents.length}  |  Male: ${males}  |  Female: ${females}`, 14, cursorY + 7);
+            doc.setTextColor(0);
+            startY = cursorY + 14;
+        });
+
+    } else {
+        // --- SINGLE CLASS: class as header, no class column ---
+        const males = sortedStudents.filter(s => s.gender === 'Male').length;
+        const females = sortedStudents.filter(s => s.gender === 'Female').length;
+
+        // School name
+        doc.setFontSize(options.fontSizes.title);
+        doc.setFont('helvetica', 'bold');
+        doc.text((schoolName || 'Students List').toUpperCase(), pageWidth / 2, 18, { align: 'center' });
+
+        // Class name as prominent header
+        doc.setFontSize(options.fontSizes.classHeader);
+        doc.text(`CLASS: ${selectedClass.toUpperCase()}`, pageWidth / 2, 28, { align: 'center' });
+
+        doc.setFontSize(options.fontSizes.body - 2);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100);
+        doc.text(`Generated: ${dateStr}`, pageWidth / 2, 36, { align: 'center' });
+        doc.setTextColor(0);
+
+        autoTable(doc, {
+            head: getHeaders(),
+            body: sortedStudents.map((s, i) => getRowData(s, i)),
+            startY: 42,
+            theme: 'grid',
+            headStyles: { fillColor: [41, 98, 172], textColor: [255, 255, 255], fontSize: options.fontSizes.tableHeader, fontStyle: 'bold', cellPadding: 5 },
+            styles: { textColor: [0, 0, 0], fontSize: options.fontSizes.body, cellPadding: 5, font: 'helvetica' },
+            columnStyles: getColumnStyles(),
+            didParseCell: (data) => handleSerialCellFontSize(data, 5)
+        });
+
+        const cursorY = (doc as any).lastAutoTable?.finalY ?? 100;
+        doc.setFontSize(options.fontSizes.body - 2);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(80);
+        doc.text(`Total: ${sortedStudents.length}  |  Male: ${males}  |  Female: ${females}`, pageWidth / 2, cursorY + 8, { align: 'center' });
+    }
+
+    doc.save(`${filename}.pdf`);
+};
+
+
+

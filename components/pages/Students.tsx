@@ -14,7 +14,8 @@ import { processImageForUpload, validateImageSize } from '../../utils/imageUtils
 import { generateIndexNumber } from '../../utils/indexNumberGenerator';
 import { getNextAvailableCounter } from '../../utils/indexNumberCounter';
 import { sortClassesByName } from '../../utils/classSort';
-import { exportToExcel, exportToPDF } from '../../utils/exportUtils';
+import { exportToExcel, exportStudentListPDF, DEFAULT_STUDENT_PDF_OPTIONS } from '../../utils/exportUtils';
+import type { PdfExportOptions } from '../../utils/exportUtils';
 import { useUserAction } from '../../context/UserActionContext';
 import useLocalStorage from '../../hooks/useLocalStorage';
 import type { Page, NavigationMeta } from '../../types';
@@ -73,6 +74,8 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
     const [modalError, setModalError] = useState<string | null>(null);
     const hasSetDefaultClass = useRef(false);
     const [sortConfig, setSortConfig] = useState<{ key: keyof Student | null; dir: 'asc' | 'desc' }>({ key: 'gender', dir: 'desc' });
+    const [showPdfOptions, setShowPdfOptions] = useState(false);
+    const [pdfOptions, setPdfOptions] = useState<PdfExportOptions>(DEFAULT_STUDENT_PDF_OPTIONS);
 
     const handleSort = (key: keyof Student) => {
         setSortConfig(prev => ({
@@ -192,17 +195,17 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
         exportToExcel(data, headers, keys, 'Students_List', 'Students');
     };
 
-    const handleExportPDF = () => {
-        const headers = ['Name', 'Index Number', 'Gender', 'Class', 'Date of Birth', 'Age'];
-        const data = filteredStudents.map(s => [
-            s.name,
-            s.indexNumber,
-            s.gender,
-            s.class,
-            s.dateOfBirth,
-            calculateAge(s.dateOfBirth)
-        ]);
-        exportToPDF('Students List', headers, data, 'Students_List');
+    const handleExportPDF = () => setShowPdfOptions(true);
+
+    const handleConfirmPdfExport = () => {
+        exportStudentListPDF(
+            filteredStudents.map(s => ({ name: s.name, indexNumber: s.indexNumber, gender: s.gender, class: s.class, dateOfBirth: s.dateOfBirth || '' })),
+            selectedClass,
+            settings.schoolName || '',
+            'Students_List',
+            pdfOptions
+        );
+        setShowPdfOptions(false);
     };
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -842,7 +845,123 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
                 </div>
             )}
 
+            {/* PDF Options Modal */}
+            {showPdfOptions && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm animate-fade-in-scale">
+                        <div className="flex items-center justify-between p-4 border-b">
+                            <div>
+                                <h2 className="text-base font-bold text-gray-800">PDF Font Sizes</h2>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                    {selectedClass ? `Class: ${selectedClass}` : 'All Classes (grouped by class)'}
+                                </p>
+                            </div>
+                            <button onClick={() => setShowPdfOptions(false)} className="text-gray-400 hover:text-gray-600 p-1">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                        </div>
+                        <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
+                            {/* Document Options */}
+                            <div className="space-y-3">
+                                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Document Styling</h3>
+                                {([
+                                    { key: 'title', label: 'School Name / Title' },
+                                    { key: 'classHeader', label: 'Class Header' },
+                                    { key: 'tableHeader', label: 'Table Headers' },
+                                    { key: 'body', label: 'Body Text' },
+                                ] as { key: keyof PdfExportOptions['fontSizes']; label: string }[]).map(({ key, label }) => (
+                                    <div key={key} className="flex items-center justify-between gap-3">
+                                        <label className="text-sm text-gray-700 flex-1">{label}</label>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => setPdfOptions(p => ({ ...p, fontSizes: { ...p.fontSizes, [key]: Math.max(6, p.fontSizes[key] - 1) } }))}
+                                                className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 font-bold text-gray-700 flex items-center justify-center text-lg leading-none"
+                                            >−</button>
+                                            <span className="w-8 text-center text-sm font-semibold text-gray-900">{pdfOptions.fontSizes[key]}</span>
+                                            <button
+                                                onClick={() => setPdfOptions(p => ({ ...p, fontSizes: { ...p.fontSizes, [key]: Math.min(48, p.fontSizes[key] + 1) } }))}
+                                                className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 font-bold text-gray-700 flex items-center justify-center text-lg leading-none"
+                                            >+</button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Data Options */}
+                            <div className="pt-3 border-t space-y-3">
+                                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Data & Layout</h3>
+                                
+                                <div className="space-y-1">
+                                    <label className="text-sm text-gray-700 block">Layout</label>
+                                    <select
+                                        value={pdfOptions.layout}
+                                        onChange={(e) => setPdfOptions(p => ({ ...p, layout: e.target.value as 'portrait' | 'landscape' }))}
+                                        className="w-full text-sm border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 py-1.5"
+                                    >
+                                        <option value="landscape">Landscape</option>
+                                        <option value="portrait">Portrait</option>
+                                    </select>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                        <label className="text-sm text-gray-700 block">Sort By</label>
+                                        <select
+                                            value={pdfOptions.sortKey}
+                                            onChange={(e) => setPdfOptions(p => ({ ...p, sortKey: e.target.value as 'name' | 'indexNumber' | 'gender' }))}
+                                            className="w-full text-sm border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 py-1.5"
+                                        >
+                                            <option value="name">Name</option>
+                                            <option value="indexNumber">Index Number</option>
+                                            <option value="gender">Gender</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-sm text-gray-700 block">Order</label>
+                                        <select
+                                            value={pdfOptions.sortDir}
+                                            onChange={(e) => setPdfOptions(p => ({ ...p, sortDir: e.target.value as 'asc' | 'desc' }))}
+                                            className="w-full text-sm border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 py-1.5"
+                                        >
+                                            <option value="asc">Ascending (A-Z)</option>
+                                            <option value="desc">Descending (Z-A)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <label className="flex items-center gap-2 mt-2 cursor-pointer group">
+                                    <div className="relative flex items-center justify-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={pdfOptions.includeDobAge}
+                                            onChange={(e) => setPdfOptions(p => ({ ...p, includeDobAge: e.target.checked }))}
+                                            className="peer sr-only"
+                                        />
+                                        <div className="w-4 h-4 rounded border-2 border-gray-300 peer-checked:bg-blue-600 peer-checked:border-blue-600 transition-colors"></div>
+                                        <svg className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none stroke-current stroke-2" fill="none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                    </div>
+                                    <span className="text-sm text-gray-700 group-hover:text-gray-900">Include Date of Birth & Age</span>
+                                </label>
+                            </div>
+
+                            <button
+                                onClick={() => setPdfOptions(DEFAULT_STUDENT_PDF_OPTIONS)}
+                                className="text-xs text-blue-500 hover:underline mt-2 block"
+                            >Reset to defaults</button>
+                        </div>
+                        <div className="flex justify-end gap-2 p-4 border-t">
+                            <button onClick={() => setShowPdfOptions(false)} className="px-4 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-semibold">Cancel</button>
+                            <button onClick={handleConfirmPdfExport} className="px-4 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold shadow-sm flex items-center gap-1.5">
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20 2H8c-1.1 0-2 .9-2 2v12H4v5c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5v1.5H19v2h-1.5V7h2V8.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z" /></svg>
+                                Export PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <ConfirmationModal
+
                 isOpen={isConfirmOpen}
                 message="Are you sure you want to delete this student? Its records will be hidden."
                 onConfirm={handleConfirmDelete}
