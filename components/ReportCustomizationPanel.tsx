@@ -9,6 +9,8 @@ interface ReportCustomizationPanelProps {
     performanceSummary: string;
     onCollapseChange?: (isCollapsed: boolean) => void;
     classId: number;
+    shouldAutoExpand?: boolean;
+    manualExpandTrigger?: number;
 }
 
 const AIGenerateButton: React.FC<{ isGenerating: boolean; onClick: () => void; }> = ({ isGenerating, onClick }) => (
@@ -465,7 +467,7 @@ const InputWithOptions: React.FC<{
     );
 };
 
-const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ student, performanceSummary, onCollapseChange, classId }) => {
+const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ student, performanceSummary, onCollapseChange, classId, shouldAutoExpand = true, manualExpandTrigger = 0 }) => {
     const { getReportData, updateReportData, getClassData, updateClassData, settings } = useData();
     const [data, setData] = useState<Partial<Omit<ReportSpecificData, 'totalSchoolDays'>>>({ attendance: '', conduct: '', interest: '', attitude: '', teacherRemark: '' });
     const [originalData, setOriginalData] = useState<Partial<Omit<ReportSpecificData, 'totalSchoolDays'>>>({});
@@ -490,8 +492,23 @@ const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ stu
         setOriginalTotalDays(days);
 
         setHasUnsavedChanges(false);
-        setIsCollapsed(false);
-    }, [student.id, classId]); // Intentional: exclude getReportData/getClassData to avoid reset loop
+        
+        // Auto-expand logic based on preference
+        if (shouldAutoExpand) {
+            setIsCollapsed(false);
+        } else {
+            // If auto-expand is off, we stay collapsed on student change
+            // (Unless we are on desktop, but the CSS handles visibility there)
+            setIsCollapsed(true);
+        }
+    }, [student.id, classId, shouldAutoExpand]); // Intentional: exclude getReportData/getClassData to avoid reset loop
+
+    // Manual expansion logic
+    useEffect(() => {
+        if (manualExpandTrigger > 0) {
+            setIsCollapsed(prev => !prev);
+        }
+    }, [manualExpandTrigger]);
 
     // Check for changes whenever data updates
     useEffect(() => {

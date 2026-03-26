@@ -309,6 +309,9 @@ const UserBadge: React.FC = () => {
 
                                     <div className="space-y-3">
                                         <div className="flex justify-between items-center text-sm">
+                                            <span className="font-medium text-blue-900 bg-blue-50 px-2 py-0.5 rounded">{settings?.schoolName.toUpperCase() || 'No School Name Set'}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm">
                                             <span className="text-gray-500">Academic Year</span>
                                             <span className="font-medium text-gray-900 bg-gray-50 px-2 py-0.5 rounded">{settings?.academicYear || 'N/A'}</span>
                                         </div>

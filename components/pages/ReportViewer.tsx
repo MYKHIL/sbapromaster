@@ -51,9 +51,17 @@ const ReportViewer: React.FC = () => {
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
   const [pdfError, setPdfError] = useState<any>(null);
 
-  // New: Comparison Mode & Loading
   const [isComparisonMode, setIsComparisonMode] = useState(false);
   const [isLocalLoading, setIsLocalLoading] = useState(false);
+
+  // Auto-pop Comments Preference (Persisted)
+  const [autoPopComments, setAutoPopComments] = useState<boolean>(() => {
+    const saved = localStorage.getItem('reportViewer_autoPopComments');
+    return saved === null ? true : saved === 'true';
+  });
+
+  // State to handle manual expansion from the button
+  const [manualExpandTrigger, setManualExpandTrigger] = useState(0);
 
   const reportContainerRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -184,6 +192,7 @@ const ReportViewer: React.FC = () => {
     if (!isComparisonMode) {
       setSelectedStudentId('all');
       localStorage.setItem('reportViewer_selectedStudentId', 'all');
+      setManualExpandTrigger(0);
     }
   };
 
@@ -208,6 +217,7 @@ const ReportViewer: React.FC = () => {
     } else {
       // Standard Mode: Show panel when a student is selected
       setShowPanel(true);
+      setManualExpandTrigger(0);
     }
   };
 
@@ -228,6 +238,12 @@ const ReportViewer: React.FC = () => {
       }
       return newState;
     });
+  };
+
+  const toggleAutoPop = () => {
+    const newVal = !autoPopComments;
+    setAutoPopComments(newVal);
+    localStorage.setItem('reportViewer_autoPopComments', String(newVal));
   };
 
   const clearComparison = () => {
@@ -328,8 +344,9 @@ const ReportViewer: React.FC = () => {
               </select>
             </div>
 
-            {/* Comparison Mode Toggle - Relocated */}
-            <div className="w-full md:w-auto flex items-center md:items-end pb-1">
+            {/* Toggles & Manual Button Row */}
+            <div className="w-full md:w-auto flex flex-wrap items-center md:items-end gap-x-6 gap-y-4 pb-1">
+              {/* Comparison Mode Toggle */}
               <div className="flex items-center gap-2">
                 <label className="flex items-center cursor-pointer select-none text-sm font-medium text-gray-700">
                   <span className="mr-2">Comparison Mode</span>
@@ -345,6 +362,37 @@ const ReportViewer: React.FC = () => {
                   </button>
                 )}
               </div>
+
+              {/* Auto-pop Comments Toggle & Manual Button - Only shown when a student is selected and NOT in comparison mode */}
+              {selectedStudentId !== 'all' && !isComparisonMode && (
+                <div className="flex items-center gap-x-6 gap-y-2 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <label className="flex items-center cursor-pointer select-none text-sm font-medium text-gray-700">
+                      <span className="mr-2 whitespace-nowrap">Auto-show (Mobile)</span>
+                      <div className="relative">
+                        <input type="checkbox" className="sr-only" checked={autoPopComments} onChange={toggleAutoPop} />
+                        <div className={`block w-10 h-6 rounded-full transition-colors ${autoPopComments ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
+                        <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${autoPopComments ? 'transform translate-x-4' : ''}`}></div>
+                      </div>
+                    </label>
+                  </div>
+
+                  {!autoPopComments && (
+                    <button
+                      onClick={() => setManualExpandTrigger(prev => prev + 1)}
+                      className={`
+                        lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-300
+                        ${isPanelCollapsed ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-600 border border-blue-200'}
+                      `}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                      </svg>
+                      {isPanelCollapsed ? 'Show Comments' : 'Hide Comments'}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           {isComparisonMode && (
@@ -364,6 +412,8 @@ const ReportViewer: React.FC = () => {
                 performanceSummary={summary}
                 onCollapseChange={setIsPanelCollapsed}
                 classId={Number(selectedClassId)}
+                shouldAutoExpand={autoPopComments}
+                manualExpandTrigger={manualExpandTrigger}
               />
             </ReadOnlyWrapper>
           )}
