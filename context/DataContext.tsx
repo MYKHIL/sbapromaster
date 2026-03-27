@@ -272,7 +272,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.177"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.178"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -979,9 +979,22 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         const initialState = initialStates[field];
 
-        // If local data is semantically equal to the initial state, it's not a meaningful discrepancy
-        // (i.e., it's just a fresh login/reload with no real uncommitted changes)
-        const isDefault = isDataEqual(local, initialState);
+        let isDefault = false;
+        
+        // If the initial state is an array, compare against the specific item with matching ID
+        if (Array.isArray(initialState)) {
+            const localId = getItemId(local);
+            const initialItem = initialState.find((item: any) => String(getItemId(item)) === String(localId));
+            if (initialItem) {
+                isDefault = isDataEqual(local, initialItem);
+            } else {
+                // If the item isn't in the initial state array, it's definitely a meaningful addition
+                isDefault = false;
+            }
+        } else {
+            // If the initial state is not an array (e.g., settings), compare the entire object
+            isDefault = isDataEqual(local, initialState);
+        }
 
         if (isDefault) {
             // console.log(`[DataContext] 🔍 isMeaningfulDiscrepancy(${field}): Item matches INITIAL STATE. Not meaningful.`);
