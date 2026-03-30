@@ -307,11 +307,29 @@ const StudentProgress: React.FC = () => {
                 let studentInTerm: Student | undefined;
                 const termStudents = (termData.students || []).filter(s => !s.deleted);
 
-                if (student.indexNumber) {
+                // 1. Index number + same class (strongest: index numbers are per-class in this school)
+                if (student.indexNumber && student.class) {
+                    studentInTerm = termStudents.find(s =>
+                        s.indexNumber === student.indexNumber &&
+                        s.class === student.class
+                    );
+                }
+                // 2. Index number only (fallback: student may have changed class between terms)
+                if (!studentInTerm && student.indexNumber) {
                     studentInTerm = termStudents.find(s => s.indexNumber === student.indexNumber);
                 }
+                // 3. Name + same class (for students without index numbers, or index number changed)
                 if (!studentInTerm) {
-                    studentInTerm = termStudents.find(s => s.name.toLowerCase() === student.name.toLowerCase());
+                    studentInTerm = termStudents.find(s =>
+                        s.name.trim().toLowerCase() === student.name.trim().toLowerCase() &&
+                        s.class === student.class
+                    );
+                }
+                // 4. Name only — last resort, most likely to produce a false match
+                if (!studentInTerm) {
+                    studentInTerm = termStudents.find(s =>
+                        s.name.trim().toLowerCase() === student.name.trim().toLowerCase()
+                    );
                 }
 
                 if (studentInTerm) {
@@ -1214,7 +1232,11 @@ const StudentProgress: React.FC = () => {
                                                     </div>
                                                     <div>
                                                         <h4 className="text-lg font-bold text-gray-800">{item.academicTerm} {item.academicYear}</h4>
-                                                        <p className="text-sm text-gray-500">{item.class} • Position: <span className="font-medium text-gray-700">{item.position}</span></p>
+                                                        <p className="text-sm text-gray-500">
+                                                            Class: <span className="font-medium text-gray-700">{item.class}</span>
+                                                            {' • '}
+                                                            Position: <span className="font-medium text-gray-700">{item.position}</span>
+                                                        </p>
                                                     </div>
                                                 </div>
 
@@ -1353,6 +1375,7 @@ const StudentProgress: React.FC = () => {
             {/* Broadsheet Modal */}
             {broadsheetModal.isOpen && broadsheetModal.termData && broadsheetModal.targetClass && (
                 <BroadsheetModal
+                    key={`${broadsheetModal.targetClass}_${broadsheetModal.termData.settings?.academicYear}_${broadsheetModal.termData.settings?.academicTerm}`}
                     isOpen={broadsheetModal.isOpen}
                     onClose={() => setBroadsheetModal({ isOpen: false })}
                     termData={broadsheetModal.termData}
