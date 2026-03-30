@@ -600,12 +600,35 @@ const ScoreEntry: React.FC = () => {
                                                 {unfilledCount > 0 ? (
                                                     <button
                                                         onClick={() => {
-                                                            const firstUnscoredIndex = filteredStudents.findIndex(s => {
+                                                            if (scoreModified) commitScore();
+                                                            
+                                                            // Find the NEXT unscored student after the current one
+                                                            let nextIndex = -1;
+                                                            
+                                                            // 1. Search forward from current selection
+                                                            for (let i = selectedStudentIndex + 1; i < filteredStudents.length; i++) {
+                                                                const s = filteredStudents[i];
                                                                 const scores = getStudentScores(s.id, selectedSubjectId, selectedAssessmentId);
-                                                                return !scores || scores.length === 0 || scores[0] === '';
-                                                            });
-                                                            if (firstUnscoredIndex !== -1) {
-                                                                setSelectedStudentIndex(firstUnscoredIndex);
+                                                                if (!scores || scores.length === 0 || scores[0] === '') {
+                                                                    nextIndex = i;
+                                                                    break;
+                                                                }
+                                                            }
+                                                            
+                                                            // 2. If nothing found, wrap around to start
+                                                            if (nextIndex === -1) {
+                                                                for (let i = 0; i < selectedStudentIndex; i++) {
+                                                                    const s = filteredStudents[i];
+                                                                    const scores = getStudentScores(s.id, selectedSubjectId, selectedAssessmentId);
+                                                                    if (!scores || scores.length === 0 || scores[0] === '') {
+                                                                        nextIndex = i;
+                                                                        break;
+                                                                    }
+                                                                }
+                                                            }
+
+                                                            if (nextIndex !== -1) {
+                                                                setSelectedStudentIndex(nextIndex);
                                                                 setMobileScoreError('');
                                                             }
                                                         }}
@@ -726,14 +749,20 @@ const ScoreEntry: React.FC = () => {
 
                                     <div className="flex justify-between pt-2">
                                         <button
-                                            onClick={() => setSelectedStudentIndex(prev => Math.max(0, prev - 1))}
+                                            onClick={() => {
+                                                if (scoreModified) commitScore();
+                                                setSelectedStudentIndex(prev => Math.max(0, prev - 1));
+                                            }}
                                             disabled={selectedStudentIndex === 0}
                                             className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                         >
                                             Previous Student
                                         </button>
                                         <button
-                                            onClick={() => setSelectedStudentIndex(prev => Math.min(filteredStudents.length - 1, prev + 1))}
+                                            onClick={() => {
+                                                if (scoreModified) commitScore();
+                                                setSelectedStudentIndex(prev => Math.min(filteredStudents.length - 1, prev + 1));
+                                            }}
                                             disabled={selectedStudentIndex === filteredStudents.length - 1}
                                             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                         >
