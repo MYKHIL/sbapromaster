@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import CameraCapture from '../CameraCapture';
+import SignaturePad from '../SignaturePad';
 import { useData } from '../../context/DataContext';
 import { enhanceImage } from '../../services/geminiService';
 import { AI_FEATURES_ENABLED } from '../../constants';
@@ -46,6 +47,63 @@ const Settings: React.FC = () => {
   const [isEnhancingLogo, setIsEnhancingLogo] = useState(false);
   const [isEnhancingSignature, setIsEnhancingSignature] = useState(false);
   const [formData, setFormData] = useState<SchoolSettings>(settings);
+  const [showSignaturePad, setShowSignaturePad] = useState(false);
+
+  // Context menu state for signature image download
+  const [sigContextMenu, setSigContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const sigLongPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sigContextMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close context menu when clicking outside
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (sigContextMenu && sigContextMenuRef.current && !sigContextMenuRef.current.contains(e.target as Node)) {
+        setSigContextMenu(null);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [sigContextMenu]);
+
+  const handleSignatureDrawSave = useCallback(async (dataUrl: string) => {
+    try {
+      const processed = await processImageForUpload(dataUrl);
+      updateSettings({ headmasterSignature: processed });
+    } catch {
+      updateSettings({ headmasterSignature: dataUrl });
+    }
+  }, [updateSettings]);
+
+  const downloadSignature = useCallback(() => {
+    const src = settings.headmasterSignature;
+    if (!src) return;
+    const a = document.createElement('a');
+    a.href = src;
+    a.download = 'headmaster-signature.png';
+    a.click();
+    setSigContextMenu(null);
+  }, [settings.headmasterSignature]);
+
+  const handleSigContextMenu = useCallback((e: React.MouseEvent) => {
+    if (!settings.headmasterSignature) return;
+    e.preventDefault();
+    setSigContextMenu({ x: e.clientX, y: e.clientY });
+  }, [settings.headmasterSignature]);
+
+  const handleSigTouchStart = useCallback((e: React.TouchEvent) => {
+    if (!settings.headmasterSignature) return;
+    sigLongPressTimer.current = setTimeout(() => {
+      const touch = e.touches[0];
+      setSigContextMenu({ x: touch.clientX, y: touch.clientY });
+    }, 500);
+  }, [settings.headmasterSignature]);
+
+  const handleSigTouchEnd = useCallback(() => {
+    if (sigLongPressTimer.current) {
+      clearTimeout(sigLongPressTimer.current);
+      sigLongPressTimer.current = null;
+    }
+  }, []);
 
   // Synchronize local form data when settings change (reverts, remote loads, etc.)
   useEffect(() => {
@@ -444,8 +502,19 @@ const Settings: React.FC = () => {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Headmaster's Signature</label>
               <div className="flex items-center space-x-4">
-                <div className="relative">
-                  <img src={settings.headmasterSignature || SIGNATURE_PLACEHOLDER} alt="Signature Preview" className={`h-12 w-36 object-contain border p-1 rounded-md bg-gray-50 transition-colors ${isSettingDirty('headmasterSignature') ? 'border-amber-500' : ''}`} />
+                {/* Signature preview with right-click / long-press to download */}
+                <div className="relative flex-shrink-0">
+                  <img
+                    src={settings.headmasterSignature || SIGNATURE_PLACEHOLDER}
+                    alt="Signature Preview"
+                    title={settings.headmasterSignature ? 'Right-click or long-press to download' : undefined}
+                    className={`h-12 w-36 object-contain border p-1 rounded-md bg-gray-50 transition-colors ${isSettingDirty('headmasterSignature') ? 'border-amber-500' : ''} ${settings.headmasterSignature ? 'cursor-context-menu' : ''}`}
+                    onContextMenu={handleSigContextMenu}
+                    onTouchStart={handleSigTouchStart}
+                    onTouchEnd={handleSigTouchEnd}
+                    onTouchMove={handleSigTouchEnd}
+                    draggable={false}
+                  />
                   {isSettingDirty('headmasterSignature') && (
                     <span className="absolute -top-2 -right-2 bg-yellow-400 text-black text-[10px] font-bold px-2 py-0.5 rounded shadow-sm uppercase tracking-wider">UNSAVED</span>
                   )}
@@ -454,6 +523,17 @@ const Settings: React.FC = () => {
                   <div className="space-y-2 w-full">
                     <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'headmasterSignature')} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
                     <CameraCapture onCapture={(img) => handleCameraCapture(img, 'headmasterSignature')} label="Take Signature Photo" />
+                    {/* Draw signature button */}
+                    <button
+                      type="button"
+                      onClick={() => setShowSignaturePad(true)}
+                      className="flex items-center px-3 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-md hover:bg-indigo-100 transition-colors text-sm font-medium w-full justify-center"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                      Draw Signature
+                    </button>
                     {settings.headmasterSignature && (
                       <button
                         type="button"
@@ -480,6 +560,43 @@ const Settings: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Signature drawing pad modal */}
+      {showSignaturePad && (
+        <SignaturePad
+          onSave={handleSignatureDrawSave}
+          onClose={() => setShowSignaturePad(false)}
+        />
+      )}
+
+      {/* Signature context menu (right-click / long-press) */}
+      {sigContextMenu && (
+        <div
+          ref={sigContextMenuRef}
+          className="fixed z-50 bg-white rounded-xl shadow-2xl border border-gray-100 py-1.5 min-w-[180px] overflow-hidden"
+          style={{ top: sigContextMenu.y, left: sigContextMenu.x }}
+        >
+          <button
+            className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors gap-2.5"
+            onClick={downloadSignature}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Download Signature
+          </button>
+          <div className="border-t border-gray-100 my-1" />
+          <button
+            className="flex items-center w-full px-4 py-2.5 text-sm text-gray-500 hover:bg-gray-50 transition-colors gap-2.5"
+            onClick={() => setSigContextMenu(null)}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            Close
+          </button>
+        </div>
+      )}
     </ReadOnlyWrapper>
   );
 };

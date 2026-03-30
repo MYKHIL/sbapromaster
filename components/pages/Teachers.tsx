@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import CameraCapture from '../CameraCapture';
+import SignaturePad from '../SignaturePad';
 import { useData } from '../../context/DataContext';
 import SaveButton from '../SaveButton';
 import type { Class } from '../../types';
@@ -46,6 +47,62 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
     const [sessionAddedIds, setSessionAddedIds] = useState<number[]>([]);
     const [isSessionListOpen, setIsSessionListOpen] = useState(false);
     const [modalError, setModalError] = useState<string | null>(null);
+    const [showSignaturePad, setShowSignaturePad] = useState(false);
+
+    // Context menu state for teacher signature download
+    const [sigContextMenu, setSigContextMenu] = useState<{ x: number; y: number } | null>(null);
+    const sigLongPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const sigContextMenuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (sigContextMenu && sigContextMenuRef.current && !sigContextMenuRef.current.contains(e.target as Node)) {
+                setSigContextMenu(null);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [sigContextMenu]);
+
+    const handleSignatureDrawSave = useCallback(async (dataUrl: string) => {
+        try {
+            const processed = await processImageForUpload(dataUrl);
+            setCurrentClassData(prev => prev ? { ...prev, teacherSignature: processed } : null);
+        } catch {
+            setCurrentClassData(prev => prev ? { ...prev, teacherSignature: dataUrl } : null);
+        }
+    }, []);
+
+    const downloadTeacherSignature = useCallback(() => {
+        const src = currentClassData?.teacherSignature;
+        if (!src) return;
+        const a = document.createElement('a');
+        a.href = src;
+        a.download = 'teacher-signature.png';
+        a.click();
+        setSigContextMenu(null);
+    }, [currentClassData?.teacherSignature]);
+
+    const handleSigContextMenu = useCallback((e: React.MouseEvent) => {
+        if (!currentClassData?.teacherSignature) return;
+        e.preventDefault();
+        setSigContextMenu({ x: e.clientX, y: e.clientY });
+    }, [currentClassData?.teacherSignature]);
+
+    const handleSigTouchStart = useCallback((e: React.TouchEvent) => {
+        if (!currentClassData?.teacherSignature) return;
+        sigLongPressTimer.current = setTimeout(() => {
+            const touch = e.touches[0];
+            setSigContextMenu({ x: touch.clientX, y: touch.clientY });
+        }, 500);
+    }, [currentClassData?.teacherSignature]);
+
+    const handleSigTouchEnd = useCallback(() => {
+        if (sigLongPressTimer.current) {
+            clearTimeout(sigLongPressTimer.current);
+            sigLongPressTimer.current = null;
+        }
+    }, []);
 
     React.useEffect(() => {
         if (isModalOpen && firstInputRef.current) {
@@ -564,8 +621,19 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
                             <div className="bg-gray-50 p-2 sm:p-3 rounded-lg border border-gray-100">
                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-tight mb-2">Teacher's Signature</label>
                                 <div className="flex items-center space-x-3 sm:space-x-4">
+                                    {/* Preview with right-click / long-press to download */}
                                     <div className="relative group flex-shrink-0">
-                                        <img src={currentClassData.teacherSignature || SIGNATURE_PLACEHOLDER} alt="Signature Preview" className="h-10 w-28 sm:h-12 sm:w-36 object-contain border p-1 rounded-md bg-white shadow-sm" />
+                                        <img
+                                            src={currentClassData.teacherSignature || SIGNATURE_PLACEHOLDER}
+                                            alt="Signature Preview"
+                                            title={currentClassData.teacherSignature ? 'Right-click or long-press to download' : undefined}
+                                            className={`h-10 w-28 sm:h-12 sm:w-36 object-contain border p-1 rounded-md bg-white shadow-sm ${currentClassData.teacherSignature ? 'cursor-context-menu' : ''}`}
+                                            onContextMenu={handleSigContextMenu}
+                                            onTouchStart={handleSigTouchStart}
+                                            onTouchEnd={handleSigTouchEnd}
+                                            onTouchMove={handleSigTouchEnd}
+                                            draggable={false}
+                                        />
                                         {isEnhancing && (
                                             <div className="absolute inset-0 bg-black/10 rounded-md flex items-center justify-center">
                                                 <div className="h-4 w-4 border-2 border-blue-600 border-t-transparent animate-spin rounded-full"></div>
@@ -585,6 +653,17 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
                                                 Upload
                                             </label>
                                             <CameraCapture onCapture={handleCameraCapture} />
+                                            {/* Draw signature button */}
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowSignaturePad(true)}
+                                                className="text-[10px] bg-indigo-50 border border-indigo-200 px-2.5 py-1.5 rounded-full font-bold text-indigo-700 hover:bg-indigo-100 transition-colors shadow-sm flex items-center gap-1"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                                </svg>
+                                                Draw
+                                            </button>
                                             {currentClassData.teacherSignature && (
                                                 <button type="button" onClick={handleClearImage} className="text-red-500 text-[10px] font-bold hover:underline px-1">
                                                     Remove
@@ -611,6 +690,43 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
                     </div>
                 </div>
             )}
+            {/* Signature drawing pad modal */}
+            {showSignaturePad && (
+                <SignaturePad
+                    onSave={handleSignatureDrawSave}
+                    onClose={() => setShowSignaturePad(false)}
+                />
+            )}
+
+            {/* Signature context menu (right-click / long-press) */}
+            {sigContextMenu && (
+                <div
+                    ref={sigContextMenuRef}
+                    className="fixed z-[60] bg-white rounded-xl shadow-2xl border border-gray-100 py-1.5 min-w-[190px] overflow-hidden"
+                    style={{ top: sigContextMenu.y, left: sigContextMenu.x }}
+                >
+                    <button
+                        className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors gap-2.5"
+                        onClick={downloadTeacherSignature}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Download Signature
+                    </button>
+                    <div className="border-t border-gray-100 my-1" />
+                    <button
+                        className="flex items-center w-full px-4 py-2.5 text-sm text-gray-500 hover:bg-gray-50 transition-colors gap-2.5"
+                        onClick={() => setSigContextMenu(null)}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        Close
+                    </button>
+                </div>
+            )}
+
             <ConfirmationModal
                 isOpen={isConfirmOpen}
                 message="Are you sure you want to delete this entry? Its records will be hidden."

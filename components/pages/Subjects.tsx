@@ -1,4 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import CameraCapture from '../CameraCapture';
+import SignaturePad from '../SignaturePad';
 import { useData } from '../../context/DataContext';
 import type { Subject } from '../../types';
 import ConfirmationModal from '../ConfirmationModal';
@@ -7,6 +9,9 @@ import { useUser } from '../../context/UserContext';
 import { useUserAction } from '../../context/UserActionContext';
 import RestoreModal from '../modals/RestoreModal';
 import { DIRTY_INDICATOR_BG, DIRTY_INDICATOR_TEXT, DIRTY_INDICATOR_SECONDARY_TEXT, DIRTY_INDICATOR_HOVER_BG, DIRTY_INDICATOR_BORDER } from '../../constants';
+import { processImageForUpload, validateImageSize } from '../../utils/imageUtils';
+
+const SIGNATURE_PLACEHOLDER = 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTUwIDUwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0yIDI1LjVDMiAyNS41IDE1LjUgMTUuNSAyOS41IDI4QzQzLjUgNDAuNSA1MyAyNS41IDY2LjUgMjAuNUM4MCAxNS41IDg4LjUgMjkgMTAwIDI5QzExMS41IDI5IDEyMyAxNS41IDEzNyAyOS41IiBzdHJva2U9IiM5Y2EzYWYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+';
 
 const EMPTY_SUBJECT_FORM: Omit<Subject, 'id'> = {
     subject: '',
@@ -39,6 +44,92 @@ const Subjects: React.FC = () => {
     const [itemIdToDelete, setItemIdToDelete] = useState<number | null>(null);
     const [idToPermanentlyDelete, setIdToPermanentlyDelete] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [showSignaturePad, setShowSignaturePad] = useState(false);
+
+    // Context menu for subject signature download
+    const [sigContextMenu, setSigContextMenu] = useState<{ x: number; y: number } | null>(null);
+    const sigLongPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const sigContextMenuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (sigContextMenu && sigContextMenuRef.current && !sigContextMenuRef.current.contains(e.target as Node)) {
+                setSigContextMenu(null);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [sigContextMenu]);
+
+    const handleSignatureDrawSave = useCallback(async (dataUrl: string) => {
+        try {
+            const processed = await processImageForUpload(dataUrl);
+            setCurrentSubject(prev => prev ? { ...prev, signature: processed } : null);
+        } catch {
+            setCurrentSubject(prev => prev ? { ...prev, signature: dataUrl } : null);
+        }
+    }, []);
+
+    const handleSigFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            if (!validateImageSize(e.target.files[0])) { e.target.value = ''; return; }
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                const raw = event.target?.result as string;
+                try {
+                    const processed = await processImageForUpload(raw);
+                    setCurrentSubject(prev => prev ? { ...prev, signature: processed } : null);
+                } catch {
+                    setCurrentSubject(prev => prev ? { ...prev, signature: raw } : null);
+                }
+            };
+            reader.readAsDataURL(e.target.files[0]);
+        }
+    };
+
+    const handleSigCameraCapture = async (imageData: string) => {
+        try {
+            const processed = await processImageForUpload(imageData);
+            setCurrentSubject(prev => prev ? { ...prev, signature: processed } : null);
+        } catch {
+            setCurrentSubject(prev => prev ? { ...prev, signature: imageData } : null);
+        }
+    };
+
+    const handleClearSignature = () => {
+        setCurrentSubject(prev => prev ? { ...prev, signature: '' } : null);
+    };
+
+    const downloadSubjectSignature = useCallback(() => {
+        const src = currentSubject?.signature;
+        if (!src) return;
+        const a = document.createElement('a');
+        a.href = src;
+        a.download = 'subject-facilitator-signature.png';
+        a.click();
+        setSigContextMenu(null);
+    }, [currentSubject?.signature]);
+
+    const handleSigContextMenu = useCallback((e: React.MouseEvent) => {
+        if (!currentSubject?.signature) return;
+        e.preventDefault();
+        setSigContextMenu({ x: e.clientX, y: e.clientY });
+    }, [currentSubject?.signature]);
+
+    const handleSigTouchStart = useCallback((e: React.TouchEvent) => {
+        if (!currentSubject?.signature) return;
+        sigLongPressTimer.current = setTimeout(() => {
+            const touch = e.touches[0];
+            setSigContextMenu({ x: touch.clientX, y: touch.clientY });
+        }, 500);
+    }, [currentSubject?.signature]);
+
+    const handleSigTouchEnd = useCallback(() => {
+        if (sigLongPressTimer.current) {
+            clearTimeout(sigLongPressTimer.current);
+            sigLongPressTimer.current = null;
+        }
+    }, []);
 
     const inputStyles = "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500";
     const searchInputStyles = "w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
@@ -408,6 +499,56 @@ const Subjects: React.FC = () => {
 
                             {modalError && <p className="text-red-500 text-[10px] mt-0.5 font-bold animate-pulse">{modalError}</p>}
 
+                            {/* Facilitator Signature — hidden, reserved for future enhancement */}
+                            {false && <div className="bg-gray-50 p-2 sm:p-3 rounded-lg border border-gray-100">
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-tight mb-2">Facilitator's Signature <span className="font-normal normal-case text-gray-400">(optional)</span></label>
+                                <div className="flex items-center space-x-3 sm:space-x-4">
+                                    <div className="relative flex-shrink-0">
+                                        <img
+                                            src={currentSubject.signature || SIGNATURE_PLACEHOLDER}
+                                            alt="Signature Preview"
+                                            title={currentSubject.signature ? 'Right-click or long-press to download' : undefined}
+                                            className={`h-10 w-28 sm:h-12 sm:w-36 object-contain border p-1 rounded-md bg-white shadow-sm ${currentSubject.signature ? 'cursor-context-menu' : ''}`}
+                                            onContextMenu={handleSigContextMenu}
+                                            onTouchStart={handleSigTouchStart}
+                                            onTouchEnd={handleSigTouchEnd}
+                                            onTouchMove={handleSigTouchEnd}
+                                            draggable={false}
+                                        />
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="flex flex-wrap gap-2">
+                                            <input
+                                                type="file"
+                                                id="subject-signature-upload"
+                                                accept="image/*"
+                                                onChange={handleSigFileChange}
+                                                className="hidden"
+                                            />
+                                            <label htmlFor="subject-signature-upload" className="cursor-pointer text-[10px] bg-white border border-gray-300 px-2.5 py-1.5 rounded-full font-bold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm">
+                                                Upload
+                                            </label>
+                                            <CameraCapture onCapture={handleSigCameraCapture} />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowSignaturePad(true)}
+                                                className="text-[10px] bg-indigo-50 border border-indigo-200 px-2.5 py-1.5 rounded-full font-bold text-indigo-700 hover:bg-indigo-100 transition-colors shadow-sm flex items-center gap-1"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                                </svg>
+                                                Draw
+                                            </button>
+                                            {currentSubject.signature && (
+                                                <button type="button" onClick={handleClearSignature} className="text-red-500 text-[10px] font-bold hover:underline px-1">
+                                                    Remove
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>}
+
                             <div className="flex justify-end pt-2 space-x-2 border-t mt-2">
                                 <button type="button" onClick={handleCloseModal} className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-bold hover:bg-gray-200 transition-colors">Close</button>
                                 <button type="submit" className="px-5 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 shadow-sm transition-all active:scale-95">Commit</button>
@@ -417,6 +558,44 @@ const Subjects: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            {/* Signature drawing pad modal */}
+            {showSignaturePad && (
+                <SignaturePad
+                    onSave={handleSignatureDrawSave}
+                    onClose={() => setShowSignaturePad(false)}
+                />
+            )}
+
+            {/* Signature context menu (right-click / long-press) */}
+            {sigContextMenu && (
+                <div
+                    ref={sigContextMenuRef}
+                    className="fixed z-[60] bg-white rounded-xl shadow-2xl border border-gray-100 py-1.5 min-w-[210px] overflow-hidden"
+                    style={{ top: sigContextMenu.y, left: sigContextMenu.x }}
+                >
+                    <button
+                        className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors gap-2.5"
+                        onClick={downloadSubjectSignature}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Download Signature
+                    </button>
+                    <div className="border-t border-gray-100 my-1" />
+                    <button
+                        className="flex items-center w-full px-4 py-2.5 text-sm text-gray-500 hover:bg-gray-50 transition-colors gap-2.5"
+                        onClick={() => setSigContextMenu(null)}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        Close
+                    </button>
+                </div>
+            )}
+
             <ConfirmationModal
                 isOpen={isConfirmOpen}
                 message="Are you sure you want to delete this subject? Its records will be hidden."
