@@ -597,7 +597,7 @@ const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ stu
             className={`
                 bg-white/95 backdrop-blur-sm border-gray-200 z-20 transition-transform duration-500 ease-in-out
                 lg:fixed lg:top-28 lg:right-6 lg:w-96 lg:p-6 lg:rounded-xl lg:shadow-2xl lg:border lg:transform-none lg:left-auto lg:bottom-auto
-                fixed bottom-0 inset-x-0 w-full p-4 rounded-t-2xl shadow-2xl border-t
+                fixed bottom-[88px] inset-x-0 w-full p-4 rounded-t-2xl shadow-2xl border-t
                 ${ // Mobile only: collapse logic
                 isCollapsed ? 'translate-y-[calc(100%-4rem)] lg:translate-x-0 lg:translate-y-0' : 'translate-y-0'
                 }
