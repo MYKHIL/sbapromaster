@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { User } from '../types';
 import { useData } from '../context/DataContext';
 
@@ -44,6 +44,37 @@ const GreetingToast: React.FC<GreetingToastProps> = ({ currentUser, currentPage 
     const { settings } = useData();
     const [hasShownAnnouncement, setHasShownAnnouncement] = useState(false);
 
+    // Refs to manage timers and prevent race conditions
+    const autoHideTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const navTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const isManuallyDismissedRef = useRef(false);
+
+    const handleClose = useCallback((e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        setIsVisible(false);
+        isManuallyDismissedRef.current = true;
+
+        // Clear all pending timers
+        if (autoHideTimerRef.current) clearTimeout(autoHideTimerRef.current);
+        if (navTimerRef.current) clearTimeout(navTimerRef.current);
+    }, []);
+
+    const showToast = useCallback(() => {
+        // Don't show if manually dismissed recently (prevents nav timers from re-opening)
+        if (isManuallyDismissedRef.current) return;
+
+        setIsVisible(true);
+
+        // Clear existing hide timer
+        if (autoHideTimerRef.current) clearTimeout(autoHideTimerRef.current);
+
+        // Auto-hide after 7 seconds
+        autoHideTimerRef.current = setTimeout(() => {
+            setIsVisible(false);
+            autoHideTimerRef.current = null;
+        }, 7000);
+    }, []);
+
     // Handle Login Greeting & Term Announcement
     useEffect(() => {
         // Trigger only when user is logged in, settings are available, and we haven't shown the session announcement yet
@@ -71,6 +102,11 @@ const GreetingToast: React.FC<GreetingToastProps> = ({ currentUser, currentPage 
 
     // Handle Page Navigation Greeting
     useEffect(() => {
+        // Reset manual dismissal flag when page changes to allow toast on new pages
+        if (currentPage !== lastPage) {
+            isManuallyDismissedRef.current = false;
+        }
+
         // Skip the first page load to allow the Login greeting to show without being overwritten
         if (lastPage === '') {
             setLastPage(currentPage);
@@ -78,44 +114,44 @@ const GreetingToast: React.FC<GreetingToastProps> = ({ currentUser, currentPage 
         }
 
         if (currentUser && currentPage !== lastPage) {
-            // Don't show if just logging in (let the login greeting take precedence if instantaneous)
-            // But usually login happens then dashboard mounts.
-
-            // If we are already showing a toast (e.g. login), maybe wait or overwrite?
-            // Let's overwrite for responsiveness.
-
             const msgs = PAGE_MESSAGES[currentPage] || ["Welcome to " + currentPage];
             const randomMsg = msgs[Math.floor(Math.random() * msgs.length)];
 
             setTitle(currentPage);
             setMessage(randomMsg);
 
+            // Clear any pending navigation timer
+            if (navTimerRef.current) clearTimeout(navTimerRef.current);
+
             // Slight delay to allow page render
-            const timer = setTimeout(() => {
+            navTimerRef.current = setTimeout(() => {
                 showToast();
+                navTimerRef.current = null;
             }, 500);
 
             setLastPage(currentPage);
-            return () => clearTimeout(timer);
+            return () => {
+                if (navTimerRef.current) clearTimeout(navTimerRef.current);
+            };
         }
-        setLastPage(currentPage); // Sync if no user (shouldn't happen due to parent check)
-    }, [currentPage, currentUser, lastPage]);
+        setLastPage(currentPage);
+    }, [currentPage, currentUser, lastPage, showToast]);
 
-    const showToast = () => {
-        setIsVisible(true);
-        const timer = setTimeout(() => {
-            setIsVisible(false);
-        }, 7000); // Show for 7 seconds
-        return () => clearTimeout(timer);
-    };
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            if (autoHideTimerRef.current) clearTimeout(autoHideTimerRef.current);
+            if (navTimerRef.current) clearTimeout(navTimerRef.current);
+        };
+    }, []);
 
     if (!currentUser || !isVisible) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none p-4">
             <div 
-                onClick={() => setIsVisible(false)}
-                className="pointer-events-auto bg-white/90 backdrop-blur-xl border border-white/40 shadow-2xl rounded-2xl p-6 max-w-sm flex items-start space-x-4 animate-bounce-in cursor-pointer"
+                onClick={() => handleClose()}
+                className="pointer-events-auto bg-white/95 backdrop-blur-xl border border-white/40 shadow-2xl rounded-2xl p-6 max-w-sm flex items-start space-x-4 animate-bounce-in cursor-pointer group active:scale-[0.98] transition-transform duration-150"
             >
                 <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full p-2 shadow-lg">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -138,10 +174,11 @@ const GreetingToast: React.FC<GreetingToastProps> = ({ currentUser, currentPage 
                     )}
                 </div>
                 <button
-                    onClick={() => setIsVisible(false)}
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                    onClick={handleClose}
+                    className="text-gray-400 hover:text-gray-600 hover:bg-gray-100/50 p-2 -mr-2 -mt-2 rounded-full transition-all duration-200"
+                    title="Close greeting"
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
