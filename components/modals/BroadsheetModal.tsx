@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { AppDataType, Student, Score } from '../../types';
+import React, { useMemo, useState } from 'react';
+import { AppDataType, Score } from '../../types';
 import jsPDF from 'jspdf';
 // @ts-ignore
 import autoTable from 'jspdf-autotable';
@@ -118,31 +118,6 @@ const BroadsheetModal: React.FC<BroadsheetModalProps> = ({ isOpen, onClose, term
 
         // Map to final display rows
         return studentAverages.map((student, index) => {
-            // Per Subject Rows? Or Flat List? 
-            // Request says: Student | Index | Class Ex | Class Test | ... | Sub Total A | Exam | Sub Total B | Total | Position
-            // This structure implies ONE ROW PER SUBJECT per student? Or aggregates?
-            // "we could have the list of students in each class for the term and their rawscores in each assessment type for that term"
-            // Usually a broadsheet is Subject-centric or Student-centric.
-            // If it's a "Class Broadsheet", it typically lists ALL Subjects for ALL Students, which is a massive grid.
-            // OR it lists Students and their aggregate performance.
-            // Re-reading request: "Student | Index Number | Class Exercise ... | Position"
-            // This looks like a per-subject breakdown calculation... BUT "Total (A+B)" usually implies Subject Final.
-            // IF it's per student, per subject, that's huge. 
-            // "list of students in each class for the term" -> implies rows are students.
-            // IF rows are students, then columns must be aggregated... BUT "rawscores in each assessment type" implies specific subject context?
-            // "in THAT term" - usually Broadsheets are PER SUBJECT or PER CLASS (Summary).
-            // Request: "rawscores in *each assessment type*... Class Exercise, Class Test..."
-            // These are assessment categories.
-            // If I have Math, English, Science... and Class Exercise in all of them...
-            // It's impossible to sum "Class Exercise" raw scores across DIFFERENT subjects meaningfully (different max scores).
-            // INTERPRETATION: The user probably wants a SUBJECT-SPECIFIC Broadsheet selector inside this modal, OR the view is PER SUBJECT.
-            // HOWEVER, the context is "Student Progress" -> "History Card" (Single Student Context).
-            // BUT user said: "separate implementation where we could have the LIST OF STUDENTS in each class".
-            // So this is for the WHOLE CLASS.
-            // It's a "Term Broadsheet".
-            // LIKELY SCENARIO: The Broadsheet needs to be filtered by SUBJECT. You can't show raw scores for "Homework" across 10 subjects in one cell.
-            // SO: I will add a Subject Dropdown in the Modal. Default to first subject.
-
             const position = index + 1;
             const suffix = (["st", "nd", "rd"][((position + 90) % 100 - 10) % 10 - 1] || "th");
 
@@ -151,7 +126,6 @@ const BroadsheetModal: React.FC<BroadsheetModalProps> = ({ isOpen, onClose, term
                 positionVal: position,
                 positionDisplay: `${position}${suffix}`,
             };
-
         });
     }, [termData, targetClass, filteredSubjects, assessments, classAssessments, examAssessment]);
 
@@ -216,7 +190,12 @@ const BroadsheetModal: React.FC<BroadsheetModalProps> = ({ isOpen, onClose, term
         });
     }, [tableData, classAssessments, examAssessment]);
 
-    const [selectedSubjectId, setSelectedSubjectId] = React.useState<number>(filteredSubjects[0]?.id || 0);
+    const [selectedSubjectId, setSelectedSubjectId] = useState<number>(filteredSubjects[0]?.id || 0);
+    const [exportConfig, setExportConfig] = useState<{ includeSummary: boolean, includeDetails: boolean, scope: 'all' | 'current' }>({ 
+        includeSummary: true, 
+        includeDetails: true,
+        scope: 'all' 
+    });
 
     // Filter table data for selected subject
     const finalRows = useMemo(() => {
@@ -226,57 +205,171 @@ const BroadsheetModal: React.FC<BroadsheetModalProps> = ({ isOpen, onClose, term
         return generateRowsForSubject(selectedSubjectId);
     }, [generateRowsForSubject, selectedSubjectId, filteredSubjects]);
 
+    // Helper to generate a single subject page
+    const drawSubjectPage = (doc: any, subjectId: number, isFirstPage: boolean) => {
+        const subject = filteredSubjects.find(s => s.id === subjectId);
+        if (!subject) return;
 
-    const handlePrint = () => {
-        const doc = new jsPDF('l', 'mm', 'a4');
+        if (!isFirstPage) doc.addPage();
 
-        filteredSubjects.forEach((subject, index) => {
-            if (index > 0) doc.addPage();
+        const subjectRows = generateRowsForSubject(subject.id);
 
-            const subjectRows = generateRowsForSubject(subject.id);
+        doc.setFontSize(16);
+        doc.text(`Broadsheet: ${termData.settings.academicYear} - ${termData.settings.academicTerm}`, 14, 15);
+        doc.setFontSize(12);
+        doc.text(`Class: ${targetClass} | Subject: ${subject.subject}`, 14, 22);
 
-            doc.setFontSize(16);
-            doc.text(`Broadsheet: ${termData.settings.academicYear} - ${termData.settings.academicTerm}`, 14, 15);
-            doc.setFontSize(12);
-            doc.text(`Class: ${targetClass} | Subject: ${subject.subject}`, 14, 22);
+        const headers = [
+            'Name',
+            'Index No',
+            ...classAssessments.map(a => a.name),
+            'Sub Total\n(A)',
+            examAssessment?.name || 'Exam',
+            'Sub Total\n(B)',
+            'Total\n(A + B)',
+            'Position'
+        ];
 
-            // Columns: Name, Index, ...Class Assessments..., Sub A, Exam, Sub B, Total, Pos
-            const headers = [
-                'Name',
-                'Index No',
-                ...classAssessments.map(a => a.name),
-                'Sub Total\n(A)',
-                examAssessment?.name || 'Exam',
-                'Sub Total\n(B)',
-                'Total\n(A + B)',
-                'Position'
-            ];
+        const body = subjectRows.map(row => [
+            row.studentName,
+            row.indexNumber || '-',
+            ...classAssessments.map(a => row.rawScores[a.name]),
+            row.subTotalA.toFixed(1),
+            examAssessment ? row.rawScores[examAssessment.name] : '-',
+            row.subTotalB.toFixed(1),
+            row.total.toFixed(0),
+            row.position
+        ]);
 
-            const body = subjectRows.map(row => [
-                row.studentName,
-                row.indexNumber || '-',
-                ...classAssessments.map(a => row.rawScores[a.name]),
-                row.subTotalA.toFixed(1),
-                examAssessment ? row.rawScores[examAssessment.name] : '-',
-                row.subTotalB.toFixed(1),
-                row.total.toFixed(0),
-                row.position
-            ]);
+        (autoTable as any)(doc, {
+            startY: 30,
+            head: [headers],
+            body: body,
+            styles: { fontSize: 8, halign: 'center', valign: 'middle' },
+            columnStyles: {
+                0: { halign: 'left' },
+                1: { halign: 'left' }
+            },
+            theme: 'grid'
+        });
+    };
 
-            (autoTable as any)(doc, {
-                startY: 30,
-                head: [headers],
-                body: body,
-                styles: { fontSize: 8, halign: 'center', valign: 'middle' },
-                columnStyles: {
-                    0: { halign: 'left' },
-                    1: { halign: 'left' }
-                },
-                theme: 'grid'
+    // Helper to generate Master Summary page
+    const drawMasterSummaryPage = (doc: any) => {
+        doc.setFontSize(18);
+        doc.text(`Master Broadsheet Summary: ${targetClass}`, 14, 15);
+        doc.setFontSize(11);
+        doc.text(`${termData.settings.academicYear} - ${termData.settings.academicTerm}`, 14, 22);
+
+        const headers = [
+            'Student Name',
+            'Index',
+            ...filteredSubjects.map(s => s.subject),
+            'Total Score',
+            'Average',
+            'Position'
+        ];
+
+        const body = tableData.map(student => {
+            const subjectTotals = filteredSubjects.map(subj => {
+                const scoreObj = student.scores.find(s => s.subjectId === subj.id);
+                if (!scoreObj) return '-';
+
+                // Re-calc specific subject total (sum weighted)
+                const calcPart = (specificAsses: typeof assessments) => {
+                    return specificAsses.reduce((sum, ass) => {
+                        const rawStrs = scoreObj.assessmentScores?.[ass.id] || [];
+                        if (rawStrs.length === 0) return sum;
+                        const isExam = ass.name.toLowerCase().includes('exam');
+                        const rawSum = rawStrs.reduce((a, b) => a + (Number((b || '').toString().split('/')[0]) || 0), 0);
+                        if (isExam) {
+                            const avg = rawStrs.length > 0 ? rawSum / rawStrs.length : 0;
+                            return sum + (avg / 100 * ass.weight);
+                        } else {
+                            const maxSum = rawStrs.reduce((a, b) => a + (Number((b || '').toString().split('/')[1]) || ass.weight), 0);
+                            return sum + (maxSum === 0 ? 0 : (rawSum / maxSum * ass.weight));
+                        }
+                    }, 0);
+                };
+                const total = calcPart(classAssessments) + (examAssessment ? calcPart([examAssessment]) : 0);
+                return total > 0 ? total.toFixed(0) : '-';
             });
+
+            // Overall Total Across All Subjects
+            const overallTotalValue = filteredSubjects.reduce((sum, subj) => {
+                const scoreObj = student.scores.find(s => s.subjectId === subj.id);
+                if (!scoreObj) return sum;
+                const calcPart = (specificAsses: typeof assessments) => {
+                    return specificAsses.reduce((acc, ass) => {
+                        const rawStrs = scoreObj.assessmentScores?.[ass.id] || [];
+                        if (rawStrs.length === 0) return acc;
+                        const isExam = ass.name.toLowerCase().includes('exam');
+                        const rawSum = rawStrs.reduce((a, b) => a + (Number((b || '').toString().split('/')[0]) || 0), 0);
+                        if (isExam) {
+                            const avg = rawStrs.length > 0 ? rawSum / rawStrs.length : 0;
+                            return acc + (avg / 100 * ass.weight);
+                        } else {
+                            const maxSum = rawStrs.reduce((a, b) => a + (Number((b || '').toString().split('/')[1]) || ass.weight), 0);
+                            return acc + (maxSum === 0 ? 0 : (rawSum / maxSum * ass.weight));
+                        }
+                    }, 0);
+                };
+                return sum + calcPart(classAssessments) + (examAssessment ? calcPart([examAssessment]) : 0);
+            }, 0);
+
+            return [
+                student.name,
+                student.indexNumber || '-',
+                ...subjectTotals,
+                overallTotalValue.toFixed(0),
+                student.overallAvg.toFixed(1) + '%',
+                student.positionDisplay
+            ];
         });
 
-        doc.save(`Broadsheet_${targetClass}_ALL.pdf`);
+        (autoTable as any)(doc, {
+            startY: 30,
+            head: [headers],
+            body: body,
+            styles: { fontSize: 7, halign: 'center', valign: 'middle' },
+            columnStyles: {
+                0: { halign: 'left', fontStyle: 'bold' },
+                1: { halign: 'left' }
+            },
+            theme: 'grid',
+            headStyles: { fillColor: [41, 128, 185] }
+        });
+    };
+
+    const handlePrint = () => {
+        if (!exportConfig.includeSummary && !exportConfig.includeDetails) return;
+
+        const doc = new jsPDF('l', 'mm', 'a4');
+        let pageCount = 0;
+
+        // 1. Master Summary
+        if (exportConfig.includeSummary) {
+            drawMasterSummaryPage(doc);
+            pageCount++;
+        }
+
+        // 2. Individual Subject Breakdowns
+        if (exportConfig.includeDetails) {
+            if (exportConfig.scope === 'current') {
+                drawSubjectPage(doc, selectedSubjectId, pageCount === 0);
+            } else {
+                filteredSubjects.forEach((subject) => {
+                    drawSubjectPage(doc, subject.id, pageCount === 0);
+                    pageCount++;
+                });
+            }
+        }
+
+        const fileName = exportConfig.scope === 'current' 
+            ? `Broadsheet_${targetClass}_${filteredSubjects.find(s => s.id === selectedSubjectId)?.subject || 'Subject'}.pdf`
+            : `Broadsheet_${targetClass}_Full.pdf`;
+            
+        doc.save(fileName);
     };
 
     return (
@@ -298,13 +391,48 @@ const BroadsheetModal: React.FC<BroadsheetModalProps> = ({ isOpen, onClose, term
                                 <option key={s.id} value={s.id}>{s.subject}</option>
                             ))}
                         </select>
+                        <div className="flex items-center gap-4 bg-white px-3 py-1.5 rounded-lg border border-gray-200">
+                            <label className="flex items-center gap-2 text-xs font-semibold text-gray-600 cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    checked={exportConfig.includeSummary} 
+                                    onChange={(e) => setExportConfig(prev => ({ ...prev, includeSummary: e.target.checked }))}
+                                    className="w-4 h-4 rounded text-blue-600"
+                                />
+                                Summary
+                            </label>
+                            <div className="w-px h-4 bg-gray-200"></div>
+                            <label className="flex items-center gap-2 text-xs font-semibold text-gray-600 cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    checked={exportConfig.includeDetails} 
+                                    onChange={(e) => setExportConfig(prev => ({ ...prev, includeDetails: e.target.checked }))}
+                                    className="w-4 h-4 rounded text-blue-600"
+                                />
+                                Details
+                            </label>
+                            {exportConfig.includeDetails && (
+                                <>
+                                    <div className="w-px h-4 bg-gray-200 mx-1"></div>
+                                    <select 
+                                        value={exportConfig.scope}
+                                        onChange={(e) => setExportConfig(prev => ({ ...prev, scope: e.target.value as 'all' | 'current' }))}
+                                        className="text-[10px] font-bold text-blue-600 border-none bg-transparent focus:ring-0 cursor-pointer uppercase p-0"
+                                    >
+                                        <option value="all">All Subjects</option>
+                                        <option value="current">Current Only</option>
+                                    </select>
+                                </>
+                            )}
+                        </div>
                         <div className="flex items-center gap-2 w-full md:w-auto">
                             <button
                                 onClick={handlePrint}
-                                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm md:text-base rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                                disabled={!exportConfig.includeSummary && !exportConfig.includeDetails}
+                                className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm md:text-base rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap ${(!exportConfig.includeSummary && !exportConfig.includeDetails) ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                                Export PDF
+                                Export Broadsheet
                             </button>
                             <button
                                 onClick={onClose}
