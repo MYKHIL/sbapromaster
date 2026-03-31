@@ -272,7 +272,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.190"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.191"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -1186,6 +1186,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
                 console.log(`[DataContext] 📥 Real-time update for ${key}`);
                 
+                // PROTECTION: If there are local changes, don't overwrite them with remote data
+                if (dirtyFields.current.has(key as keyof AppDataType)) {
+                    console.log(`[DataContext] 🛡️ Ignoring real-time update for ${key} because there are unsaved local changes.`);
+                    return;
+                }
+
                 // Mark as remote update to prevent loopback marking it dirty
                 isRemoteUpdate.current = true;
                 stateSetter(data);
@@ -1194,6 +1200,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 if (originalData.current) {
                     originalData.current[key as keyof AppDataType] = Array.isArray(data) ? [...data] : {...data} as any;
                 }
+
+                // FORCE UNMARK: Ensure it is not falsely added to pending saves due to React batches
+                unmarkDirty(key as keyof AppDataType);
                 
                 setTimeout(() => { isRemoteUpdate.current = false; }, 100);
             }, (error) => {
