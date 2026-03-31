@@ -466,7 +466,6 @@ const StudentProgress: React.FC = () => {
     }, [students, searchQuery, selectedStudents]);
 
 
-    // --- Insights Logic for Single Student ---
     const calculateInsights = (history: StudentHistory[]) => {
         if (history.length === 0) return { strengths: [], weaknesses: [] };
         const subjectAggregates: { [key: string]: { total: number, count: number } } = {};
@@ -488,7 +487,16 @@ const StudentProgress: React.FC = () => {
         const weaknesses = averages.slice(-3).filter(s => s.avg < 60).reverse();
         return { strengths, weaknesses };
     };
-    const singleInsights = singleStudent ? calculateInsights(singleHistory) : { strengths: [], weaknesses: [] };
+
+    const insightsMap = useMemo(() => {
+        const map: Record<number, { strengths: any[], weaknesses: any[] }> = {};
+        selectedStudents.forEach(s => {
+            map[s.id] = calculateInsights(historiesMap[s.id] || []);
+        });
+        return map;
+    }, [selectedStudents, historiesMap]);
+
+    const singleInsights = singleStudent ? insightsMap[singleStudent.id] || { strengths: [], weaknesses: [] } : { strengths: [], weaknesses: [] };
 
 
     // --- Chart Data Preparation ---
@@ -1051,7 +1059,7 @@ const StudentProgress: React.FC = () => {
                                 <span 
                                     key={s.id} 
                                     onClick={() => setFocusedStudentId(s.id)}
-                                    className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium cursor-pointer transition-all ${focusedStudentId === s.id ? 'bg-blue-600 text-white ring-2 ring-blue-300 ring-offset-2' : 'bg-blue-100 text-blue-800 hover:bg-blue-200'}`}
+                                    className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium cursor-pointer transition-all ${focusedStudentId === s.id ? 'bg-blue-600 text-white ring-2 ring-blue-300 ring-offset-2' : 'bg-blue-100 text-blue-800 hover:bg-blue-200 shadow-sm'}`}
                                 >
                                     {s.name}
                                     <button 
@@ -1060,7 +1068,7 @@ const StudentProgress: React.FC = () => {
                                             handleRemoveStudent(s.id);
                                             if (focusedStudentId === s.id) setFocusedStudentId(null);
                                         }} 
-                                        className={`ml-2 focus:outline-none ${focusedStudentId === s.id ? 'text-blue-100 hover:text-white' : 'text-blue-600 hover:text-blue-900'}`}
+                                        className={`ml-2 focus:outline-none ${focusedStudentId === s.id ? 'text-blue-100 hover:text-white' : 'text-blue-400 hover:text-blue-900'}`}
                                     >
                                         ×
                                     </button>
@@ -1159,8 +1167,8 @@ const StudentProgress: React.FC = () => {
                                                 <h3 className="font-bold text-gray-800 text-lg group-hover:text-blue-600 transition-colors">{s.name}</h3>
                                                 <p className="text-xs text-gray-500">{s.class} • {termsWithData.length} term{termsWithData.length !== 1 ? 's' : ''}</p>
                                             </div>
-                                            <div className={`text-xl font-bold ${cumulativeAvg >= 70 ? 'text-green-600' : 'text-blue-600'}`}>
-                                                {cumulativeAvg.toFixed(1)}% <span className="text-xs font-normal text-gray-400 block text-right">Cumulative</span>
+                                            <div className={`text-xl font-bold ${cumulativeAvg >= 70 ? 'text-green-600' : 'text-blue-600'} text-right`}>
+                                                {cumulativeAvg.toFixed(1)}% <span className="text-[10px] font-bold text-gray-400 uppercase block leading-none mt-1">Overall Avg</span>
                                             </div>
                                         </div>
 
@@ -1171,10 +1179,15 @@ const StudentProgress: React.FC = () => {
                                             ) : (
                                                 // Reverse to show latest first
                                                 [...h].reverse().map((term) => (
-                                                    <div key={term.termId} className="flex items-center justify-between text-xs bg-gray-50 p-2 rounded border border-gray-100">
-                                                        <div>
+                                                    <div key={term.termId} className="flex items-center justify-between text-xs bg-gray-50 p-2 rounded border border-gray-100 hover:border-blue-200 transition-colors">
+                                                        <div className="flex-1">
                                                             <span className="font-semibold text-gray-700">{term.academicTerm}</span>
-                                                            <span className="text-gray-500 block text-[10px]">{term.academicYear}</span>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-gray-500 text-[10px]">{term.academicYear}</span>
+                                                                <span className={`px-1.5 py-0.5 rounded-full font-bold text-[9px] ${term.averageScore >= 70 ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-blue-100 text-blue-700 border border-blue-200'}`}>
+                                                                    Avg: {term.averageScore.toFixed(1)}%
+                                                                </span>
+                                                            </div>
                                                         </div>
                                                         {(() => {
                                                             const hasScores = term.rawTermData?.scores?.some(s => {
@@ -1204,6 +1217,41 @@ const StudentProgress: React.FC = () => {
                                                 ))
                                             )}
                                         </div>
+
+                                        {/* Cumulative Insights (Strengths/Weaknesses) */}
+                                        {(() => {
+                                            const insights = insightsMap[s.id];
+                                            if (!insights || (insights.strengths.length === 0 && insights.weaknesses.length === 0)) return null;
+
+                                            return (
+                                                <div className="mt-4 pt-4 border-t border-gray-100 space-y-3 bg-gray-50/50 -mx-4 px-4 pb-3">
+                                                    {insights.strengths.length > 0 && (
+                                                        <div>
+                                                            <p className="text-[10px] font-bold text-green-600 uppercase tracking-tight mb-1">Top Strengths</p>
+                                                            <div className="flex flex-wrap gap-1">
+                                                                {insights.strengths.map(st => (
+                                                                    <span key={st.name} className="px-1.5 py-0.5 bg-green-100 text-green-700 text-[10px] font-medium rounded border border-green-200">
+                                                                        {st.name}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {insights.weaknesses.length > 0 && (
+                                                        <div>
+                                                            <p className="text-[10px] font-bold text-red-600 uppercase tracking-tight mb-1">Focus Areas</p>
+                                                            <div className="flex flex-wrap gap-1">
+                                                                {insights.weaknesses.map(w => (
+                                                                    <span key={w.name} className="px-1.5 py-0.5 bg-red-100 text-red-700 text-[10px] font-medium rounded border border-red-200">
+                                                                        {w.name}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })()}
                                     </div>
                                 );
                             })}
