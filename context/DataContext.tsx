@@ -272,7 +272,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.195"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.196"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -3378,7 +3378,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             else return;
 
             markDirty(field, true);
-            // We don't need markItemDirty for deletion as getPendingUploadData detects missing IDs
+            
+            // FIX: Remove from baseline immediately to prevent ghost pending deletions
+            if (originalData.current && Array.isArray(originalData.current[field])) {
+                originalData.current[field] = (originalData.current[field] as any[]).filter(
+                    item => String(getItemId(item)) !== String(id)
+                ) as any;
+            }
+
             console.log(`[DataContext] 🗑️ Permanently deleted ${String(field)} item ${id}`);
         },
     };
