@@ -272,7 +272,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.192"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.193"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -1056,6 +1056,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }, []);
 
+    // Fields managed exclusively by their own subcollection listeners.
+    // These must NEVER be marked dirty by recheckDirtyStatus during a remote update,
+    // because the mismatch is transient (listener hasn't settled yet) not a real local edit.
+    const SUBCOLLECTION_FIELDS = new Set<keyof AppDataType>(['grades', 'classes', 'subjects', 'assessments', 'students']);
+
     // Check if current data actually differs from original cloud data
     const recheckDirtyStatus = React.useCallback((field: keyof AppDataType, currentValue: any) => {
         const originalValue = originalData.current[field];
@@ -1063,6 +1068,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // CRITICAL: If originalValue is undefined, we haven't loaded the cloud version for this field yet.
         // In this case, we cannot safely say the field is "dirty" compared to the cloud.
         if (originalValue === undefined) return;
+
+        // SAFETY: If a remote update is in progress, never mark subcollection-managed fields as dirty.
+        // The listener will update both state AND originalData atomically, so any transient mismatch
+        // seen here is a React batching artifact, not a real local change.
+        if (isRemoteUpdate.current && SUBCOLLECTION_FIELDS.has(field)) return;
 
         const isEqual = isDataEqual(currentValue, originalValue);
 
@@ -1075,8 +1085,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 setDirtyVersion(v => v + 1); // Force re-render
             }
         } else {
-            // Values differ, ensure it's marked dirty
-            markDirty(field, true);
+            // Values differ - only mark dirty if NOT a remote update.
+            // For subcollection fields, the listener handles dirty state via unmarkDirty().
+            if (!isRemoteUpdate.current || !SUBCOLLECTION_FIELDS.has(field)) {
+                markDirty(field, true);
+            }
         }
     }, [markDirty]);
 
@@ -1218,7 +1231,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (data) {
                 console.log(`[DataContext] 📥 Real-time update for School Main Doc`);
                 isRemoteUpdate.current = true;
-                loadImportedData(data, true);
+
+                // CRITICAL FIX: Strip out subcollection-managed fields before processing.
+                // grades, classes, subjects, assessments are managed by their own dedicated
+                // per-collection onSnapshot listeners. If we let the main doc pass these
+                // (potentially stale or legacy) fields into loadImportedData, it overwrites
+                // originalData.current with stale/deleted items, causing the dirty-tracking
+                // system to perpetually flag those collections as "pending save", ultimately
+                // causing permission-denied errors when the save payload includes deleted items.
+                const { grades: _g, classes: _c, subjects: _s, assessments: _a, students: _st, ...mainDocData } = data;
+
+                loadImportedData(mainDocData, true);
                 if (data.metadata?.lastUpdated) {
                     lastLoadedTimestamps.current = { ...data.metadata.lastUpdated };
                 }
