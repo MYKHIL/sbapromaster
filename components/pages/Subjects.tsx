@@ -9,7 +9,7 @@ import { useUser } from '../../context/UserContext';
 import { useUserAction } from '../../context/UserActionContext';
 import RestoreModal from '../modals/RestoreModal';
 import { DIRTY_INDICATOR_BG, DIRTY_INDICATOR_TEXT, DIRTY_INDICATOR_SECONDARY_TEXT, DIRTY_INDICATOR_HOVER_BG, DIRTY_INDICATOR_BORDER } from '../../constants';
-import { processImageForUpload, validateImageSize } from '../../utils/imageUtils';
+import { processAndUploadImage, validateImageSize } from '../../utils/imageUtils';
 
 const SIGNATURE_PLACEHOLDER = 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTUwIDUwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0yIDI1LjVDMiAyNS41IDE1LjUgMTUuNSAyOS41IDI4QzQzLjUgNDAuNSA1MyAyNS41IDY2LjUgMjAuNUM4MCAxNS41IDg4LjUgMjkgMTAwIDI5QzExMS41IDI5IDEyMyAxNS41IDEzNyAyOS41IiBzdHJva2U9IiM5Y2EzYWYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+';
 
@@ -45,6 +45,7 @@ const Subjects: React.FC = () => {
     const [idToPermanentlyDelete, setIdToPermanentlyDelete] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [showSignaturePad, setShowSignaturePad] = useState(false);
+    const [isUploadingSignature, setIsUploadingSignature] = useState(false);
 
     // Context menu for subject signature download
     const [sigContextMenu, setSigContextMenu] = useState<{ x: number; y: number } | null>(null);
@@ -62,25 +63,33 @@ const Subjects: React.FC = () => {
     }, [sigContextMenu]);
 
     const handleSignatureDrawSave = useCallback(async (dataUrl: string) => {
+        setIsUploadingSignature(true);
         try {
-            const processed = await processImageForUpload(dataUrl);
-            setCurrentSubject(prev => prev ? { ...prev, signature: processed } : null);
-        } catch {
-            setCurrentSubject(prev => prev ? { ...prev, signature: dataUrl } : null);
+            const url = await processAndUploadImage(dataUrl);
+            setCurrentSubject(prev => prev ? { ...prev, signature: url } : null);
+        } catch (error) {
+            console.error("Subject signature upload failed", error);
+            alert("Failed to upload signature. Please try again.");
+        } finally {
+            setIsUploadingSignature(false);
         }
     }, []);
 
     const handleSigFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             if (!validateImageSize(e.target.files[0])) { e.target.value = ''; return; }
+            setIsUploadingSignature(true);
             const reader = new FileReader();
             reader.onload = async (event) => {
                 const raw = event.target?.result as string;
                 try {
-                    const processed = await processImageForUpload(raw);
-                    setCurrentSubject(prev => prev ? { ...prev, signature: processed } : null);
-                } catch {
-                    setCurrentSubject(prev => prev ? { ...prev, signature: raw } : null);
+                    const url = await processAndUploadImage(raw);
+                    setCurrentSubject(prev => prev ? { ...prev, signature: url } : null);
+                } catch (error) {
+                    console.error("Subject signature file upload failed", error);
+                    alert("Failed to upload signature file.");
+                } finally {
+                    setIsUploadingSignature(false);
                 }
             };
             reader.readAsDataURL(e.target.files[0]);
@@ -88,11 +97,15 @@ const Subjects: React.FC = () => {
     };
 
     const handleSigCameraCapture = async (imageData: string) => {
+        setIsUploadingSignature(true);
         try {
-            const processed = await processImageForUpload(imageData);
-            setCurrentSubject(prev => prev ? { ...prev, signature: processed } : null);
-        } catch {
-            setCurrentSubject(prev => prev ? { ...prev, signature: imageData } : null);
+            const url = await processAndUploadImage(imageData);
+            setCurrentSubject(prev => prev ? { ...prev, signature: url } : null);
+        } catch (error) {
+            console.error("Subject signature camera capture failed", error);
+            alert("Failed to upload captured signature.");
+        } finally {
+            setIsUploadingSignature(false);
         }
     };
 
@@ -220,6 +233,11 @@ const Subjects: React.FC = () => {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!currentSubject) return;
+
+        if (isUploadingSignature) {
+            alert("Please wait for the signature to finish uploading.");
+            return;
+        }
 
         // DUPLICATE PREVENTION: Check if Subject Name already exists
         const isDuplicate = subjects.some(s =>
@@ -508,13 +526,18 @@ const Subjects: React.FC = () => {
                                             src={currentSubject.signature || SIGNATURE_PLACEHOLDER}
                                             alt="Signature Preview"
                                             title={currentSubject.signature ? 'Right-click or long-press to download' : undefined}
-                                            className={`h-10 w-28 sm:h-12 sm:w-36 object-contain border p-1 rounded-md bg-white shadow-sm ${currentSubject.signature ? 'cursor-context-menu' : ''}`}
+                                            className={`h-10 w-28 sm:h-12 sm:w-36 object-contain border p-1 rounded-md bg-white shadow-sm ${currentSubject.signature ? 'cursor-context-menu' : ''} ${isUploadingSignature ? 'opacity-40 animate-pulse' : ''}`}
                                             onContextMenu={handleSigContextMenu}
                                             onTouchStart={handleSigTouchStart}
                                             onTouchEnd={handleSigTouchEnd}
                                             onTouchMove={handleSigTouchEnd}
                                             draggable={false}
                                         />
+                                        {isUploadingSignature && (
+                                            <div className="absolute inset-0 bg-black/10 rounded-md flex items-center justify-center">
+                                                <div className="h-4 w-4 border-2 border-blue-600 border-t-transparent animate-spin rounded-full"></div>
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="flex-1">
                                         <div className="flex flex-wrap gap-2">
@@ -523,24 +546,26 @@ const Subjects: React.FC = () => {
                                                 id="subject-signature-upload"
                                                 accept="image/*"
                                                 onChange={handleSigFileChange}
+                                                disabled={isUploadingSignature}
                                                 className="hidden"
                                             />
-                                            <label htmlFor="subject-signature-upload" className="cursor-pointer text-[10px] bg-white border border-gray-300 px-2.5 py-1.5 rounded-full font-bold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm">
+                                            <label htmlFor="subject-signature-upload" className={`cursor-pointer text-[10px] bg-white border border-gray-300 px-2.5 py-1.5 rounded-full font-bold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm ${isUploadingSignature ? 'opacity-50 cursor-not-allowed' : ''}`}>
                                                 Upload
                                             </label>
-                                            <CameraCapture onCapture={handleSigCameraCapture} />
+                                            <CameraCapture onCapture={handleSigCameraCapture} disabled={isUploadingSignature} />
                                             <button
                                                 type="button"
                                                 onClick={() => setShowSignaturePad(true)}
-                                                className="text-[10px] bg-indigo-50 border border-indigo-200 px-2.5 py-1.5 rounded-full font-bold text-indigo-700 hover:bg-indigo-100 transition-colors shadow-sm flex items-center gap-1"
+                                                disabled={isUploadingSignature}
+                                                className="text-[10px] bg-indigo-50 border border-indigo-200 px-2.5 py-1.5 rounded-full font-bold text-indigo-700 hover:bg-indigo-100 transition-colors shadow-sm flex items-center gap-1 disabled:opacity-50"
                                             >
                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                                 </svg>
-                                                Draw
+                                                {isUploadingSignature ? "Uploading..." : "Draw"}
                                             </button>
                                             {currentSubject.signature && (
-                                                <button type="button" onClick={handleClearSignature} className="text-red-500 text-[10px] font-bold hover:underline px-1">
+                                                <button type="button" onClick={handleClearSignature} disabled={isUploadingSignature} className="text-red-500 text-[10px] font-bold hover:underline px-1 disabled:opacity-50">
                                                     Remove
                                                 </button>
                                             )}

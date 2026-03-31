@@ -272,7 +272,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.189"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.190"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -559,7 +559,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
         };
 
-        processField('settings', importedSettings, settings, setSettings);
+        if (importedSettings) {
+            const hasChanged = !isDataEqual(importedSettings, settings);
+            if (hasChanged) {
+                console.log(`[DataContext] ☁️ Settings Discrepancy Found. Cloud:`, importedSettings, `Local:`, settings);
+            }
+            processField('settings', importedSettings, settings, setSettings);
+        }
         processField('students', importedStudents, students, setStudents);
         processField('subjects', importedSubjects, subjects, setSubjects);
         processField('classes', importedClasses, classes, setClasses);
@@ -762,12 +768,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const isLocallyChangingContext = isSettingDirty('academicYear') || isSettingDirty('academicTerm');
 
         if (lastContextKey.current !== null && lastContextKey.current !== currentContextKey) {
-            if (isLocallyChangingContext) {
+            const lastSchoolId = lastContextKey.current.split('-')[0];
+            const isSchoolSwitch = lastSchoolId !== schoolId;
+
+            if (isLocallyChangingContext && !isSchoolSwitch) {
                 console.log("[DataContext] Context shift detected but marked as local edit. Skipping reset during typing.");
                 return;
             }
 
-            console.log(`[DataContext] 🔄 Context Change Detected: ${lastContextKey.current} -> ${currentContextKey}. Resetting collections.`);
+            console.log(`[DataContext] 🔄 ${isSchoolSwitch ? 'SCHOOL SWITCH' : 'Context'} Change Detected: ${lastContextKey.current} -> ${currentContextKey}. Resetting records.`);
 
             // 1. Reset collections, but PRESERVE global settings (District, Address, etc.)
             setStudents(INITIAL_STUDENTS);
@@ -780,6 +789,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setClassData(INITIAL_CLASS_DATA);
             setUserLogs([]);
             setActiveSessions({});
+            
+            // 1b. If it was a SCHOOL switch, also reset settings to default
+            // to ensure no cross-school logo/signature leakage before cloud load.
+            if (isSchoolSwitch) {
+                console.log("[DataContext] 🧹 School switch detected. Resetting shared settings...");
+                setSettings(INITIAL_SETTINGS);
+            }
 
             // 2. Clear tracking for collections, but NOT settings
             // This ensures if the user was typing a new Year, their 'settings' dirty mark stays!
@@ -794,11 +810,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             draftScores.current.clear();
             setDraftVersion(0);
             
-            // 3. Wipe non-settings baseline data to force a fresh cloud fetch
-            const settingsBaseline = originalData.current.settings;
-            originalData.current = {
-                settings: settingsBaseline
-            };
+            // 3. Wipe baseline data to force a fresh cloud fetch comparison
+            if (isSchoolSwitch) {
+                // HARD RESET for new school: No baseline preservation
+                originalData.current = {};
+            } else {
+                // Term/Year shift: Preserve global settings baseline (Logo, School Name, etc.)
+                const settingsBaseline = originalData.current.settings;
+                originalData.current = {
+                    settings: settingsBaseline
+                };
+            }
             lastLoadedTimestamps.current = {};
         }
         lastContextKey.current = currentContextKey;
@@ -1314,18 +1336,18 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // Previously, if we only had deletions (no updates), this block was skipped!
             if (Object.keys(transactionPayload).length > 0 || (transactionDeletions && Object.keys(transactionDeletions).length > 0)) {
                 console.log('[DataContext] ☁️ Performing Universal Transactional Save...');
+                SyncLogger.log(`Universal Transactional Save started for ${schoolId}`);
                 
                 // Uses the new generalized transaction helper
                 await saveDataTransaction(schoolId, transactionPayload, transactionDeletions, stateRef.current.students);
+                console.log('[DataContext] ✅ Data saved to cloud successfully!');
             } else {
                 console.log('[DataContext] ℹ️ No actionable updates or deletions found for transaction.');
             }
 
-            console.log('[DataContext] ✅ Data saved to cloud successfully!');
-
             // OPTIMIZED: Skip refresh if we already have the data locally and just saved it.
             // This prevents the redundant "Get" immediately after "Create/Update".
-            // The local state is and originalData are already updated below.
+            // The local state and originalData are already updated below.
             if (!skipRefresh && isManualSave && false) { // DISABLED: Trust local state + originalData sync below.
                 console.log('[DataContext] 🔄 Auto-refreshing data from cloud (Granular)...');
                 const fieldsToRefresh = fieldsToSave as (keyof AppDataType)[];
@@ -1343,43 +1365,35 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 // CRITICAL: Update originalData to match the new server state
                 // This prevents the "Preview" from showing these items as changed in future saves
                 const key = field as keyof AppDataType;
+                
                 // CRITICAL: Update originalData to match the new server state.
-                // We MUST check transactionDeletions as well, because if a field has ONLY deletions,
-                // transactionPayload[key] will be undefined, but we still need to update the baseline.
-                const hasUpdates = transactionPayload[key] !== undefined;
-                const hasDeletions = transactionDeletions[key] !== undefined;
-
-                if (hasUpdates || hasDeletions) {
+                // We use deep cloning to ensure the baseline is completely independent.
+                try {
+                    const dataToClone = currentData[key];
+                    if (dataToClone !== undefined) {
+                        originalData.current[key] = JSON.parse(JSON.stringify(dataToClone));
+                    }
+                } catch (e) {
+                    console.warn(`[DataContext] ⚠️ Failed to deep clone baseline for ${key}:`, e);
+                    // Fallback to shallow clone
                     const dataToClone = currentData[key];
                     if (Array.isArray(dataToClone)) {
-                        // For arrays (collections)
                         originalData.current[key] = [...dataToClone] as any;
                     } else if (dataToClone && typeof dataToClone === 'object') {
-                        // For objects (settings, activeSessions)
                         originalData.current[key] = { ...dataToClone as any } as any;
-                    } else {
-                        // For primitives (if any)
-                        originalData.current[key] = dataToClone as any;
                     }
+                }
 
-                    // CRITICAL: Update the "Last Loaded" metadata timestamp to match the new server state.
-                    // This prevents loadStudents/loadMetadata from thinking the local data is stale 
-                    // and triggering a redundant fetch immediately after save.
-                    if (lastLoadedTimestamps.current[key]) {
-                        lastLoadedTimestamps.current[`_loaded_${String(key)}`] = lastLoadedTimestamps.current[key];
-                    }
+                // Update the "Last Loaded" metadata timestamp to match the new server state.
+                if (lastLoadedTimestamps.current[key]) {
+                    lastLoadedTimestamps.current[`_loaded_${String(key)}`] = lastLoadedTimestamps.current[key];
                 }
             });
 
             // Update hasLocalChanges based on remaining dirty fields
             setHasLocalChanges(dirtyFields.current.size > 0);
 
-            // FIX: Explicitly clear pending score changes and force pendingCount update
-            // This ensures that scores are no longer marked as "Pending" even if deepEqual logic has edge cases
-            if (fieldsToSave.includes('scores')) {
-                pendingChangesMap.current.scores.clear();
-            }
-            // Clear other maps if field was saved
+            // Explicitly clear pending changes maps
             fieldsToSave.forEach(field => {
                 if (pendingChangesMap.current[field]) pendingChangesMap.current[field].clear();
             });
@@ -1391,11 +1405,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             console.error('[DataContext] ❌ Failed to save data to cloud:', error);
 
             // Show database error modal for critical errors
-            // Pass 'write' context so App.tsx knows to show Toast for quota errors
             showDatabaseError(error, 'write');
 
             // FIX: Don't add to offline queue if it's a permanent error like Quota Exceeded or Permission Denied
-            // These will never resolve by retrying immediately, and we don't want to clutter the queue
             if (isQuotaExhaustedError(error) || error?.code === 'permission-denied' || error?.message?.includes('permission-denied')) {
                 console.log('[DataContext] 🚫 Not adding to offline queue - Error is permanent (Quota/Permission)');
                 setIsSyncing(false);
@@ -1953,7 +1965,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // Update originalData baseline to the NEWly saved data
             // This prevents the UI from showing "Modified" highlights after a successful save
             if (field === 'settings') {
-                originalData.current.settings = { ...settings };
+                originalData.current.settings = { ...stateRef.current.settings };
             } else if (Array.isArray(data)) {
                 // Replace the baseline with the current live state after a successful save.
                 // CRITICAL: We must NOT use a merge-only Map here because deleted items would
@@ -2554,7 +2566,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     const settingsPayload: any = {};
                     pendingSet.forEach(key => {
                         const k = key as keyof SchoolSettings;
-                        settingsPayload[k] = settings[k];
+                        settingsPayload[k] = currentData.settings[k];
                     });
                     payload.settings = settingsPayload;
                     console.log(`[DataContext] ⚙️ settings granular payload:`, settingsPayload);

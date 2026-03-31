@@ -7,7 +7,7 @@ import { AI_FEATURES_ENABLED } from '../../constants';
 import ReadOnlyWrapper from '../ReadOnlyWrapper';
 import { useUser } from '../../context/UserContext';
 
-import { processImageForUpload, validateImageSize } from '../../utils/imageUtils';
+import { processAndUploadImage, validateImageSize } from '../../utils/imageUtils';
 import { SchoolSettings } from '../../types';
 
 const LOGO_PLACEHOLDER = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgdmlld0JveD0iMCAwIDEyOCAxMjgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiByeD0iOCIgZmlsbD0iI0YzRjRGNyIvPgo8cGF0aCBkPSJNNjQgMzBMMzQgNTBWOTRIOTRWNTBMNjQgMzBaIiBzdHJva2U9IiNEMUQ1REIiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+CjxwYXRoIGQ9Ik03OCA5OFY2OEM3OCA2NC42ODYzIDc1LjMxMzcgNjIgNzIgNjJINTZDNTAuNjg2MyA2MiA1MCA2NC42ODYzIDUwIDY4Vjk4IiBzdHJva2U9IiNEMUQ1REIiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjx0ZXh0IHg9IjY0IiB5PSIxMTQiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEwIiBmaWxsPSIjOUNBM0FGIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5VcGxvYWQgU2Nob29sIExvZ288L3RleHQ+Cjwvc3ZnPg==';
@@ -46,6 +46,8 @@ const Settings: React.FC = () => {
   const { settings, updateSettings, saveSettings, isDirty, isSettingDirty, isSyncing, isOnline } = useData();
   const [isEnhancingLogo, setIsEnhancingLogo] = useState(false);
   const [isEnhancingSignature, setIsEnhancingSignature] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isUploadingSignature, setIsUploadingSignature] = useState(false);
   const [formData, setFormData] = useState<SchoolSettings>(settings);
   const [showSignaturePad, setShowSignaturePad] = useState(false);
 
@@ -66,11 +68,17 @@ const Settings: React.FC = () => {
   }, [sigContextMenu]);
 
   const handleSignatureDrawSave = useCallback(async (dataUrl: string) => {
+    console.log(`[Settings] 🖌️ Received signature from pad. Length: ${dataUrl.length}`);
+    setIsUploadingSignature(true);
     try {
-      const processed = await processImageForUpload(dataUrl);
-      updateSettings({ headmasterSignature: processed });
-    } catch {
-      updateSettings({ headmasterSignature: dataUrl });
+      const url = await processAndUploadImage(dataUrl);
+      console.log(`[Settings] ✅ Signature processed/uploaded. Local Update:`, url);
+      updateSettings({ headmasterSignature: url });
+    } catch (error) {
+      console.error("[Settings] ❌ Signature upload failed", error);
+      alert("Failed to upload signature. Please try again.");
+    } finally {
+      setIsUploadingSignature(false);
     }
   }, [updateSettings]);
 
@@ -168,22 +176,25 @@ const Settings: React.FC = () => {
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, field: 'logo' | 'headmasterSignature') => {
     if (e.target.files && e.target.files[0]) {
-      // Validate file size (5MB max)
       if (!validateImageSize(e.target.files[0])) {
-        e.target.value = ''; // Reset input
+        e.target.value = '';
         return;
       }
+
+      const isLogo = field === 'logo';
+      isLogo ? setIsUploadingLogo(true) : setIsUploadingSignature(true);
 
       const reader = new FileReader();
       reader.onload = async (event) => {
         const rawBase64 = event.target?.result as string;
         try {
-          // Process image: upscale if too small, preserve quality
-          const processed = await processImageForUpload(rawBase64);
-          updateSettings({ [field]: processed });
+          const url = await processAndUploadImage(rawBase64);
+          updateSettings({ [field]: url });
         } catch (error) {
-          console.error("Image processing failed", error);
-          updateSettings({ [field]: rawBase64 });
+          console.error(`${field} upload failed`, error);
+          alert(`Failed to upload ${isLogo ? 'logo' : 'signature'}. Please try again.`);
+        } finally {
+          isLogo ? setIsUploadingLogo(false) : setIsUploadingSignature(false);
         }
       };
       reader.readAsDataURL(e.target.files[0]);
@@ -191,11 +202,16 @@ const Settings: React.FC = () => {
   };
 
   const handleCameraCapture = async (imageData: string, field: 'logo' | 'headmasterSignature') => {
+    const isLogo = field === 'logo';
+    isLogo ? setIsUploadingLogo(true) : setIsUploadingSignature(true);
     try {
-      const processed = await processImageForUpload(imageData);
-      updateSettings({ [field]: processed });
-    } catch {
-      updateSettings({ [field]: imageData });
+      const url = await processAndUploadImage(imageData);
+      updateSettings({ [field]: url });
+    } catch (error) {
+      console.error(`${field} camera capture upload failed`, error);
+      alert(`Failed to upload captured ${isLogo ? 'logo' : 'signature'}.`);
+    } finally {
+      isLogo ? setIsUploadingLogo(false) : setIsUploadingSignature(false);
     }
   };
 
@@ -467,20 +483,26 @@ const Settings: React.FC = () => {
             <div>
               <div className="flex items-center space-x-4">
                 <div className="relative">
-                  <img src={settings.logo || LOGO_PLACEHOLDER} alt="Logo Preview" className={`h-32 w-32 object-contain border p-2 rounded-lg bg-gray-50 transition-colors ${isSettingDirty('logo') ? 'border-amber-500' : ''}`} />
-                  {isSettingDirty('logo') && (
+                  <img src={settings.logo || LOGO_PLACEHOLDER} alt="Logo Preview" className={`h-32 w-32 object-contain border p-2 rounded-lg bg-gray-50 transition-colors ${isSettingDirty('logo') ? 'border-amber-500' : ''} ${isUploadingLogo ? 'opacity-40 animate-pulse' : ''}`} />
+                  {isUploadingLogo && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="h-8 w-8 border-4 border-blue-600 border-t-transparent animate-spin rounded-full"></div>
+                    </div>
+                  )}
+                  {isSettingDirty('logo') && !isUploadingLogo && (
                     <span className="absolute -top-2 -right-2 bg-yellow-400 text-black text-[10px] font-bold px-2 py-0.5 rounded shadow-sm uppercase tracking-wider">UNSAVED</span>
                   )}
                 </div>
                 {isAdmin && (
                   <div className="space-y-2 w-full">
-                    <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'logo')} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
-                    <CameraCapture onCapture={(img) => handleCameraCapture(img, 'logo')} label="Take Logo Photo" />
+                    <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'logo')} disabled={isUploadingLogo} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 disabled:opacity-50" />
+                    <CameraCapture onCapture={(img) => handleCameraCapture(img, 'logo')} label={isUploadingLogo ? "Uploading..." : "Take Logo Photo"} disabled={isUploadingLogo} />
                     {settings.logo && (
                       <button
                         type="button"
                         onClick={() => handleClearImage('logo')}
-                        className="delete-button flex items-center px-3 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors text-sm font-medium w-full justify-center"
+                        disabled={isUploadingLogo}
+                        className="delete-button flex items-center px-3 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors text-sm font-medium w-full justify-center disabled:opacity-50"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -508,37 +530,44 @@ const Settings: React.FC = () => {
                     src={settings.headmasterSignature || SIGNATURE_PLACEHOLDER}
                     alt="Signature Preview"
                     title={settings.headmasterSignature ? 'Right-click or long-press to download' : undefined}
-                    className={`h-12 w-36 object-contain border p-1 rounded-md bg-gray-50 transition-colors ${isSettingDirty('headmasterSignature') ? 'border-amber-500' : ''} ${settings.headmasterSignature ? 'cursor-context-menu' : ''}`}
+                    className={`h-12 w-36 object-contain border p-1 rounded-md bg-gray-50 transition-colors ${isSettingDirty('headmasterSignature') ? 'border-amber-500' : ''} ${settings.headmasterSignature ? 'cursor-context-menu' : ''} ${isUploadingSignature ? 'opacity-40 animate-pulse' : ''}`}
                     onContextMenu={handleSigContextMenu}
                     onTouchStart={handleSigTouchStart}
                     onTouchEnd={handleSigTouchEnd}
                     onTouchMove={handleSigTouchEnd}
                     draggable={false}
                   />
-                  {isSettingDirty('headmasterSignature') && (
+                  {isUploadingSignature && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="h-5 w-5 border-2 border-indigo-600 border-t-transparent animate-spin rounded-full"></div>
+                    </div>
+                  )}
+                  {isSettingDirty('headmasterSignature') && !isUploadingSignature && (
                     <span className="absolute -top-2 -right-2 bg-yellow-400 text-black text-[10px] font-bold px-2 py-0.5 rounded shadow-sm uppercase tracking-wider">UNSAVED</span>
                   )}
                 </div>
                 {isAdmin && (
                   <div className="space-y-2 w-full">
-                    <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'headmasterSignature')} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
-                    <CameraCapture onCapture={(img) => handleCameraCapture(img, 'headmasterSignature')} label="Take Signature Photo" />
+                    <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'headmasterSignature')} disabled={isUploadingSignature} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 disabled:opacity-50" />
+                    <CameraCapture onCapture={(img) => handleCameraCapture(img, 'headmasterSignature')} label={isUploadingSignature ? "Uploading..." : "Take Signature Photo"} disabled={isUploadingSignature} />
                     {/* Draw signature button */}
                     <button
                       type="button"
                       onClick={() => setShowSignaturePad(true)}
-                      className="flex items-center px-3 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-md hover:bg-indigo-100 transition-colors text-sm font-medium w-full justify-center"
+                      disabled={isUploadingSignature}
+                      className="flex items-center px-3 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-md hover:bg-indigo-100 transition-colors text-sm font-medium w-full justify-center disabled:opacity-50"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                       </svg>
-                      Draw Signature
+                      {isUploadingSignature ? "Uploading..." : "Draw Signature"}
                     </button>
                     {settings.headmasterSignature && (
                       <button
                         type="button"
                         onClick={() => handleClearImage('headmasterSignature')}
-                        className="delete-button flex items-center px-3 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors text-sm font-medium w-full justify-center"
+                        disabled={isUploadingSignature}
+                        className="delete-button flex items-center px-3 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors text-sm font-medium w-full justify-center disabled:opacity-50"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

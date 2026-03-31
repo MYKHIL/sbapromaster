@@ -44,8 +44,36 @@ function useLocalStorage<T,>(key: string, initialValue: T, persistenceEnabled: b
       }
     }
   }, [key, storedValue, persistenceEnabled]);
+  
+  // 3. useEffect to re-initialize the internal state if the 'key' prop changes.
+  // This is CRITICAL for context switching (e.g. switching schoolId).
+  useEffect(() => {
+    try {
+      if (typeof window === 'undefined') return;
+      const item = window.localStorage.getItem(key);
+      if (item) {
+        try {
+          const decompressed = LZ.decompress(item);
+          if (decompressed) {
+            setStoredValue(JSON.parse(decompressed));
+          } else {
+             // Fallback: try parsing as regular JSON
+             setStoredValue(JSON.parse(item));
+          }
+        } catch (e) {
+          // Fallback: try parsing as regular JSON
+          setStoredValue(JSON.parse(item));
+        }
+      } else {
+        setStoredValue(initialValue);
+      }
+    } catch (error) {
+      console.error(`[useLocalStorage] Error syncing for key "${key}":`, error);
+      setStoredValue(initialValue);
+    }
+  }, [key]);
 
-  // 3. useEffect to listen for changes to the same localStorage key from other tabs.
+  // 4. useEffect to listen for changes to the same localStorage key from other tabs.
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === key) {

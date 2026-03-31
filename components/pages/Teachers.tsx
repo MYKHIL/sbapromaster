@@ -10,7 +10,7 @@ import RestoreModal from '../modals/RestoreModal';
 import { AI_FEATURES_ENABLED, AUTO_SANITIZE_TEACHERS, DIRTY_INDICATOR_BG, DIRTY_INDICATOR_TEXT, DIRTY_INDICATOR_SECONDARY_TEXT, DIRTY_INDICATOR_HOVER_BG, DIRTY_INDICATOR_BORDER } from '../../constants';
 import ReadOnlyWrapper from '../ReadOnlyWrapper';
 import { useUser } from '../../context/UserContext';
-import { processImageForUpload, validateImageSize } from '../../utils/imageUtils';
+import { processAndUploadImage, validateImageSize } from '../../utils/imageUtils';
 import { exportToExcel, exportToPDF } from '../../utils/exportUtils';
 import { useUserAction } from '../../context/UserActionContext';
 import type { NavigationMeta } from '../../types';
@@ -48,6 +48,7 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
     const [isSessionListOpen, setIsSessionListOpen] = useState(false);
     const [modalError, setModalError] = useState<string | null>(null);
     const [showSignaturePad, setShowSignaturePad] = useState(false);
+    const [isUploadingSignature, setIsUploadingSignature] = useState(false);
 
     // Context menu state for teacher signature download
     const [sigContextMenu, setSigContextMenu] = useState<{ x: number; y: number } | null>(null);
@@ -65,11 +66,15 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
     }, [sigContextMenu]);
 
     const handleSignatureDrawSave = useCallback(async (dataUrl: string) => {
+        setIsUploadingSignature(true);
         try {
-            const processed = await processImageForUpload(dataUrl);
-            setCurrentClassData(prev => prev ? { ...prev, teacherSignature: processed } : null);
-        } catch {
-            setCurrentClassData(prev => prev ? { ...prev, teacherSignature: dataUrl } : null);
+            const url = await processAndUploadImage(dataUrl);
+            setCurrentClassData(prev => prev ? { ...prev, teacherSignature: url } : null);
+        } catch (error) {
+            console.error("Teacher signature upload failed", error);
+            alert("Failed to upload signature. Please try again.");
+        } finally {
+            setIsUploadingSignature(false);
         }
     }, []);
 
@@ -256,14 +261,18 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
                 e.target.value = '';
                 return;
             }
+            setIsUploadingSignature(true);
             const reader = new FileReader();
             reader.onload = async (event) => {
                 const raw = event.target?.result as string;
                 try {
-                    const processed = await processImageForUpload(raw);
-                    setCurrentClassData(prev => prev ? { ...prev, teacherSignature: processed } : null);
-                } catch {
-                    setCurrentClassData(prev => prev ? { ...prev, teacherSignature: raw } : null);
+                    const url = await processAndUploadImage(raw);
+                    setCurrentClassData(prev => prev ? { ...prev, teacherSignature: url } : null);
+                } catch (error) {
+                    console.error("Teacher signature file upload failed", error);
+                    alert("Failed to upload signature file.");
+                } finally {
+                    setIsUploadingSignature(false);
                 }
             };
             reader.readAsDataURL(e.target.files[0]);
@@ -271,11 +280,15 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
     };
 
     const handleCameraCapture = async (imageData: string) => {
+        setIsUploadingSignature(true);
         try {
-            const processed = await processImageForUpload(imageData);
-            setCurrentClassData(prev => prev ? { ...prev, teacherSignature: processed } : null);
-        } catch {
-            setCurrentClassData(prev => prev ? { ...prev, teacherSignature: imageData } : null);
+            const url = await processAndUploadImage(imageData);
+            setCurrentClassData(prev => prev ? { ...prev, teacherSignature: url } : null);
+        } catch (error) {
+            console.error("Teacher signature camera capture failed", error);
+            alert("Failed to upload captured signature.");
+        } finally {
+            setIsUploadingSignature(false);
         }
     };
 
@@ -303,6 +316,11 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!currentClassData) return;
+
+        if (isUploadingSignature) {
+            alert("Please wait for the signature to finish uploading.");
+            return;
+        }
 
         // DUPLICATE PREVENTION: Check if Class Name + Teacher Name already exists
         const isDuplicate = classes.some(cls =>
@@ -627,14 +645,14 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
                                             src={currentClassData.teacherSignature || SIGNATURE_PLACEHOLDER}
                                             alt="Signature Preview"
                                             title={currentClassData.teacherSignature ? 'Right-click or long-press to download' : undefined}
-                                            className={`h-10 w-28 sm:h-12 sm:w-36 object-contain border p-1 rounded-md bg-white shadow-sm ${currentClassData.teacherSignature ? 'cursor-context-menu' : ''}`}
+                                            className={`h-10 w-28 sm:h-12 sm:w-36 object-contain border p-1 rounded-md bg-white shadow-sm ${currentClassData.teacherSignature ? 'cursor-context-menu' : ''} ${isUploadingSignature ? 'opacity-40 animate-pulse' : ''}`}
                                             onContextMenu={handleSigContextMenu}
                                             onTouchStart={handleSigTouchStart}
                                             onTouchEnd={handleSigTouchEnd}
                                             onTouchMove={handleSigTouchEnd}
                                             draggable={false}
                                         />
-                                        {isEnhancing && (
+                                        {(isEnhancing || isUploadingSignature) && (
                                             <div className="absolute inset-0 bg-black/10 rounded-md flex items-center justify-center">
                                                 <div className="h-4 w-4 border-2 border-blue-600 border-t-transparent animate-spin rounded-full"></div>
                                             </div>
@@ -647,25 +665,27 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
                                                 id="signature-upload"
                                                 accept="image/*"
                                                 onChange={handleFileChange}
+                                                disabled={isUploadingSignature}
                                                 className="hidden"
                                             />
-                                            <label htmlFor="signature-upload" className="cursor-pointer text-[10px] bg-white border border-gray-300 px-2.5 py-1.5 rounded-full font-bold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm">
+                                            <label htmlFor="signature-upload" className={`cursor-pointer text-[10px] bg-white border border-gray-300 px-2.5 py-1.5 rounded-full font-bold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm ${isUploadingSignature ? 'opacity-50 cursor-not-allowed' : ''}`}>
                                                 Upload
                                             </label>
-                                            <CameraCapture onCapture={handleCameraCapture} />
+                                            <CameraCapture onCapture={handleCameraCapture} disabled={isUploadingSignature} />
                                             {/* Draw signature button */}
                                             <button
                                                 type="button"
                                                 onClick={() => setShowSignaturePad(true)}
-                                                className="text-[10px] bg-indigo-50 border border-indigo-200 px-2.5 py-1.5 rounded-full font-bold text-indigo-700 hover:bg-indigo-100 transition-colors shadow-sm flex items-center gap-1"
+                                                disabled={isUploadingSignature}
+                                                className="text-[10px] bg-indigo-50 border border-indigo-200 px-2.5 py-1.5 rounded-full font-bold text-indigo-700 hover:bg-indigo-100 transition-colors shadow-sm flex items-center gap-1 disabled:opacity-50"
                                             >
                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                                 </svg>
-                                                Draw
+                                                {isUploadingSignature ? "Uploading..." : "Draw"}
                                             </button>
                                             {currentClassData.teacherSignature && (
-                                                <button type="button" onClick={handleClearImage} className="text-red-500 text-[10px] font-bold hover:underline px-1">
+                                                <button type="button" onClick={handleClearImage} disabled={isUploadingSignature} className="text-red-500 text-[10px] font-bold hover:underline px-1 disabled:opacity-50">
                                                     Remove
                                                 </button>
                                             )}

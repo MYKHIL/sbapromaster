@@ -1,98 +1,39 @@
-Navigated to http://localhost:3000/
-client:789 [vite] connecting...
-react-dom-client.development.js:28004 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
-client:912 [vite] connected.
-firebaseService.ts:69 [2026-03-24T12:51:12.077Z]  @firebase/analytics: Analytics: Firebase Analytics is not supported in this environment. Wrap initialization of analytics in analytics.isSupported() to prevent initialization in unsupported environments. Details: (1) This is a browser extension environment. (analytics/invalid-analytics-context).
-defaultLogHandler @ logger.ts:115
-warn @ logger.ts:206
-warnOnBrowserContextMismatch @ factory.ts:169
-factory @ factory.ts:182
-(anonymous) @ index.ts:58
-getOrInitializeService @ provider.ts:318
-initialize @ provider.ts:242
-initializeAnalytics @ api.ts:112
-getAnalytics @ api.ts:85
-(anonymous) @ firebaseService.ts:69
-UserActionContext.tsx:48 Uncaught Error: useUserAction must be used within a UserActionProvider
-    at useUserAction (UserActionContext.tsx:48:15)
-    at DatabaseErrorProvider (DatabaseErrorContext.tsx:18:63)
-    at Object.react_stack_bottom_frame (react-dom-client.development.js:25904:20)
-    at renderWithHooks (react-dom-client.development.js:7662:22)
-    at updateFunctionComponent (react-dom-client.development.js:10166:19)
-    at beginWork (react-dom-client.development.js:11778:18)
-    at runWithFiberInDEV (react-dom-client.development.js:871:30)
-    at performUnitOfWork (react-dom-client.development.js:17641:22)
-    at workLoopSync (react-dom-client.development.js:17469:41)
-    at renderRootSync (react-dom-client.development.js:17450:11)
-useUserAction @ UserActionContext.tsx:48
-DatabaseErrorProvider @ DatabaseErrorContext.tsx:18
-react_stack_bottom_frame @ react-dom-client.development.js:25904
-renderWithHooks @ react-dom-client.development.js:7662
-updateFunctionComponent @ react-dom-client.development.js:10166
-beginWork @ react-dom-client.development.js:11778
-runWithFiberInDEV @ react-dom-client.development.js:871
-performUnitOfWork @ react-dom-client.development.js:17641
-workLoopSync @ react-dom-client.development.js:17469
-renderRootSync @ react-dom-client.development.js:17450
-performWorkOnRoot @ react-dom-client.development.js:16583
-performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:18957
-performWorkUntilDeadline @ scheduler.development.js:45
-<DatabaseErrorProvider>
-exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
-App @ App.tsx:304
-react_stack_bottom_frame @ react-dom-client.development.js:25904
-renderWithHooksAgain @ react-dom-client.development.js:7762
-renderWithHooks @ react-dom-client.development.js:7674
-updateFunctionComponent @ react-dom-client.development.js:10166
-beginWork @ react-dom-client.development.js:11778
-runWithFiberInDEV @ react-dom-client.development.js:871
-performUnitOfWork @ react-dom-client.development.js:17641
-workLoopSync @ react-dom-client.development.js:17469
-renderRootSync @ react-dom-client.development.js:17450
-performWorkOnRoot @ react-dom-client.development.js:16583
-performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:18957
-performWorkUntilDeadline @ scheduler.development.js:45
-<App>
-exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
-bootstrap @ index.tsx:106
-await in bootstrap
-(anonymous) @ index.tsx:123
-App.tsx:304 An error occurred in the <DatabaseErrorProvider> component.
-
-Consider adding an error boundary to your tree to customize error handling behavior.
-Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
-
-defaultOnUncaughtError @ react-dom-client.development.js:9362
-logUncaughtError @ react-dom-client.development.js:9431
-runWithFiberInDEV @ react-dom-client.development.js:871
-lane.callback @ react-dom-client.development.js:9461
-callCallback @ react-dom-client.development.js:7423
-commitCallbacks @ react-dom-client.development.js:7443
-runWithFiberInDEV @ react-dom-client.development.js:874
-commitLayoutEffectOnFiber @ react-dom-client.development.js:14047
-flushLayoutEffects @ react-dom-client.development.js:18138
-commitRoot @ react-dom-client.development.js:17954
-commitRootWhenReady @ react-dom-client.development.js:16824
-performWorkOnRoot @ react-dom-client.development.js:16722
-performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:18957
-performWorkUntilDeadline @ scheduler.development.js:45
-<DatabaseErrorProvider>
-exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
-App @ App.tsx:304
-react_stack_bottom_frame @ react-dom-client.development.js:25904
-renderWithHooksAgain @ react-dom-client.development.js:7762
-renderWithHooks @ react-dom-client.development.js:7674
-updateFunctionComponent @ react-dom-client.development.js:10166
-beginWork @ react-dom-client.development.js:11778
-runWithFiberInDEV @ react-dom-client.development.js:871
-performUnitOfWork @ react-dom-client.development.js:17641
-workLoopSync @ react-dom-client.development.js:17469
-renderRootSync @ react-dom-client.development.js:17450
-performWorkOnRoot @ react-dom-client.development.js:16583
-performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:18957
-performWorkUntilDeadline @ scheduler.development.js:45
-<App>
-exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
-bootstrap @ index.tsx:106
-await in bootstrap
-(anonymous) @ index.tsx:123
+DataContext.tsx:1287 [DataContext] ☁️ Syncing dirty fields: settings, activeSessions (Manual Save)
+DataContext.tsx:2572 [DataContext] ⚙️ settings granular payload: {headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png'}
+DataContext.tsx:1338 [DataContext] ☁️ Performing Universal Transactional Save...
+DataContext.tsx:2572 [DataContext] ⚙️ settings granular payload: {headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png'}
+DataContext.tsx:2572 [DataContext] ⚙️ settings granular payload: {headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png'}
+react-dom-client.development.js:18985 [Violation] 'click' handler took 162ms
+firebaseService.ts:1850 [Firebase] 📤 Saving Multi-Update to schools/gyewanidabasicschool_20252026_Second-Term: {settings.headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png', activeSessions: {…}, metadata.lastUpdated.settings: ___PRIVATE_ServerTimestampFieldValueImpl, metadata.lastUpdated.activeSessions: ___PRIVATE_ServerTimestampFieldValueImpl}
+firebaseService.ts:1864 [Firebase] 🚀 Executing batch with 1 operations...
+DataContext.tsx:2572 [DataContext] ⚙️ settings granular payload: {headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png'}
+DataContext.tsx:2572 [DataContext] ⚙️ settings granular payload: {headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png'}
+firebaseService.ts:1867 [Firebase] ✅ Batch save successful!
+DataContext.tsx:1343 [DataContext] ✅ Data saved to cloud successfully!
+DataContext.tsx:1356 [DataContext] ⏭️ Skipping redundant re-fetch - Local state is synced (Optimized)
+DataContext.tsx:1359 [DataContext] 🎉 Sync & Refresh complete - cleared dirty fields
+scheduler.development.js:14 [Violation] 'message' handler took 151ms
+DataContext.tsx:1210 [DataContext] 📥 Real-time update for School Main Doc
+DataContext.tsx:502 [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 0, …}
+DataContext.tsx:520 [DataContext] 🧠 Pre-empting context reset for: gyewanidabasicschool_20252026_Second-Term-2025/2026-Second Term
+DataContext.tsx:545 [DataContext] ✅ Updating userLogs
+DataContext.tsx:545 [DataContext] ✅ Updating activeSessions
+DataContext.tsx:699 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
+DataContext.tsx:733 [DataContext] 💾 Updated originalData baseline with merge strategy
+DataContext.tsx:1136 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:1084 [DataContext] ⚒️ Rebuilding item-level dirty map...
+scheduler.development.js:14 [Violation] 'message' handler took 178ms
+DataContext.tsx:1136 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:1084 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:2572 [DataContext] ⚙️ settings granular payload: {headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png'}
+DataContext.tsx:2572 [DataContext] ⚙️ settings granular payload: {headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png'}
+DataContext.tsx:2572 [DataContext] ⚙️ settings granular payload: {headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png'}
+DataContext.tsx:2572 [DataContext] ⚙️ settings granular payload: {headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png'}
+DataContext.tsx:2572 [DataContext] ⚙️ settings granular payload: {headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png'}
+DataContext.tsx:2572 [DataContext] ⚙️ settings granular payload: {headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png'}
+DataContext.tsx:1136 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:1084 [DataContext] ⚒️ Rebuilding item-level dirty map...
+DataContext.tsx:2572 [DataContext] ⚙️ settings granular payload: {headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png'}
+DataContext.tsx:2572 [DataContext] ⚙️ settings granular payload: {headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png'}
+DataContext.tsx:2572 [DataContext] ⚙️ settings granular payload: {headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png'}
+DataContext.tsx:2572 [DataContext] ⚙️ settings granular payload: {headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png'}

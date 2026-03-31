@@ -1779,6 +1779,15 @@ export const saveDataTransaction = async (
                         }
                     });
                 }
+            } else if (key === 'settings' && updates.settings && typeof updates.settings === 'object' && !Array.isArray(updates.settings)) {
+                // CRITICAL FIX: Flatten 'settings' into dot-notation keys for granular updates.
+                // This prevents Firestore's 'set(..., {merge: true})' from overwriting the ENTIRE 'settings' map
+                // if we only send a few fields (like a signature).
+                const settingsObj = updates.settings as any;
+                Object.keys(settingsObj).forEach(subkey => {
+                    const flatKey = `settings.${subkey}`;
+                    mainUpdates[flatKey] = settingsObj[subkey];
+                });
             } else if (MAIN_KEYS.includes(key) || key === 'userLogs' || key === 'activeSessions') {
                 const val = (updates as any)[key];
                 if (key === 'users' && Array.isArray(val) && val.length === 0) {
@@ -1804,18 +1813,10 @@ export const saveDataTransaction = async (
             };
 
             // Only include in bundle if actually being updated
-            if (updates.classes) {
-                bundleData.classes = updates.classes;
-            }
-            if (updates.subjects) {
-                bundleData.subjects = updates.subjects;
-            }
-            if (updates.assessments) {
-                bundleData.assessments = updates.assessments;
-            }
-            if (updates.grades) {
-                bundleData.grades = updates.grades;
-            }
+            if (updates.classes) bundleData.classes = updates.classes;
+            if (updates.subjects) bundleData.subjects = updates.subjects;
+            if (updates.assessments) bundleData.assessments = updates.assessments;
+            if (updates.grades) bundleData.grades = updates.grades;
 
             const bundleRef = doc(db, "schools", docId, "config", "metadata_bundle");
             operations.push((batch) => batch.set(bundleRef, bundleData, { merge: true }));
@@ -1842,22 +1843,28 @@ export const saveDataTransaction = async (
                 metadata[`metadata.lastUpdated.${key}`] = serverTimestamp();
             });
 
-            operations.push((batch) => batch.set(docRef, {
+            const finalPayload = {
                 ...sanitizeForFirestore(mainUpdates),
                 ...metadata
-            }, { merge: true }));
+            };
+            console.log(`[Firebase] 📤 Saving Multi-Update to schools/${docId}:`, finalPayload);
+
+            operations.push((batch) => batch.update(docRef, finalPayload));
         } else if (Object.keys(updates).length > 0) {
             const docRef = doc(db, "schools", docId);
             const metadata: Record<string, any> = {};
             Object.keys(updates).forEach(key => {
                 metadata[`metadata.lastUpdated.${key}`] = serverTimestamp();
             });
+            console.log(`[Firebase] 📤 Saving Metadata-Only Update to schools/${docId}:`, metadata);
             operations.push((batch) => batch.update(docRef, metadata));
         }
 
         if (operations.length > 0) {
+            console.log(`[Firebase] 🚀 Executing batch with ${operations.length} operations...`);
             trackFirebaseWrite('saveDataTransaction', 'multi', `Saving batch of ${operations.length} operations`);
             await executeBatch(operations);
+            console.log(`[Firebase] ✅ Batch save successful!`);
         }
 
 
