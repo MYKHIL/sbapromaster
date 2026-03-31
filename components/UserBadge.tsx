@@ -3,6 +3,7 @@ import { useUser } from '../context/UserContext';
 import { useData } from '../context/DataContext';
 import ConfirmationModal from './ConfirmationModal';
 import OnlineUsersModal from './OnlineUsersModal';
+import { getSchoolTermIds } from '../services/firebaseService';
 
 const UserBadge: React.FC = () => {
     const { currentUser, logout, switchAccount } = useUser();
@@ -10,15 +11,22 @@ const UserBadge: React.FC = () => {
     // Early return BEFORE other hooks to avoid React error #300
     if (!currentUser) return null;
 
-    const { isOnline, isSyncing, queuedCount, onlineUsers, settings, subjects, subscription } = useData();
+    const { isOnline, isSyncing, queuedCount, onlineUsers, settings, subjects, subscription, schoolId } = useData();
     const [showConfirm, setShowConfirm] = useState(false);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [showOnlineUsers, setShowOnlineUsers] = useState(false);
     const [showTermInfo, setShowTermInfo] = useState(false);
     const [showUserInfo, setShowUserInfo] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
+    
+    // Term Switching State
+    const [showTermSelect, setShowTermSelect] = useState(false);
+    const [availableTerms, setAvailableTerms] = useState<string[]>([]);
+    const [isLoadingTerms, setIsLoadingTerms] = useState(false);
+
     const termInfoRef = React.useRef<HTMLDivElement>(null);
     const userInfoRef = React.useRef<HTMLDivElement>(null);
+
 
     // Close on click outside
     useEffect(() => {
@@ -46,7 +54,34 @@ const UserBadge: React.FC = () => {
         // AuthOverlay will detect !isAuthenticated and switch to 'user-selection'
     };
 
+    const handleFetchTerms = async () => {
+        if (!schoolId) return;
+        setIsLoadingTerms(true);
+        setShowTermSelect(true);
+        try {
+            const prefix = schoolId.split('_')[0];
+            const ids = await getSchoolTermIds(prefix);
+            // Sort terms chronologically (approx by ID)
+            setAvailableTerms(ids.sort((a,b) => b.localeCompare(a)));
+        } catch (e) {
+            console.error("Failed to fetch terms:", e);
+        } finally {
+            setIsLoadingTerms(false);
+        }
+    };
+
+    const handleTermSelect = (targetTermId: string) => {
+        if (targetTermId === schoolId) return;
+        
+        // We set the target school ID. 
+        // Authentication uses the existing sba_school_password and sba_user_password in localStorage.
+        // If they differ, AuthOverlay will fail its auto-restore and prompt for the password.
+        localStorage.setItem('sba_school_id', targetTermId);
+        window.location.reload();
+    };
+
     // Full Logout (Return to School Selection)
+
     const handleFullLogout = () => {
         logout(); // Visual consistency + clear auth state
         // Force reload to completely reset AuthOverlay state and clear school context
@@ -295,78 +330,160 @@ const UserBadge: React.FC = () => {
                             {/* Term Info Popup */}
                             {showTermInfo && (
                                 <div
-                                    className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-xl border border-blue-100 p-4 z-[70] animate-in fade-in zoom-in-95 duration-200"
-                                    onClick={() => setShowTermInfo(false)}
+                                    className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-blue-100 p-4 z-[70] animate-in fade-in zoom-in-95 duration-200 overflow-hidden"
+                                    onClick={(e) => e.stopPropagation()} // Prevent closing
                                 >
-                                    <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
-                                        <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
-                                        </div>
-                                        <h3 className="font-semibold text-gray-800 text-sm">Current Term Details</h3>
-                                    </div>
+                                    {showTermSelect ? (
+                                        <div className="space-y-3">
+                                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
+                                                <button 
+                                                    onClick={() => setShowTermSelect(false)}
+                                                    className="p-1 rounded-lg hover:bg-gray-100 text-gray-500"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                                    </svg>
+                                                </button>
+                                                <h3 className="font-bold text-gray-800 text-sm">Select Term to Switch</h3>
+                                            </div>
 
-                                    <div className="space-y-3">
-                                        <div className="flex justify-between items-center text-sm">
-                                            <span className="font-medium text-blue-900 bg-blue-50 px-2 py-0.5 rounded">{settings?.schoolName.toUpperCase() || 'No School Name Set'}</span>
+                                            <div className="max-h-60 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                                                {isLoadingTerms ? (
+                                                   <div className="py-8 flex flex-col items-center justify-center gap-2">
+                                                       <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                                                       <span className="text-xs text-gray-400">Fetching available terms...</span>
+                                                   </div>
+                                                ) : availableTerms.length > 0 ? (
+                                                    availableTerms.map(termId => {
+                                                        const parts = termId.split('_');
+                                                        const isCurrent = termId === schoolId;
+                                                        // Format termId: schoolname_year_term -> Year, Term
+                                                        const label = parts.length >= 3 
+                                                            ? `${parts[1]} - ${parts[2].replace('term', 'Term ')}`
+                                                            : termId;
+                                                        
+                                                        return (
+                                                            <button
+                                                                key={termId}
+                                                                onClick={() => handleTermSelect(termId)}
+                                                                className={`w-full text-left p-3 rounded-xl transition-all duration-200 border ${
+                                                                    isCurrent 
+                                                                    ? 'bg-blue-50 border-blue-200 ring-1 ring-blue-100' 
+                                                                    : 'bg-gray-50 border-transparent hover:bg-white hover:border-blue-200 hover:shadow-sm'
+                                                                }`}
+                                                                disabled={isCurrent}
+                                                            >
+                                                                <div className="flex justify-between items-center">
+                                                                    <div className="flex flex-col">
+                                                                        <span className={`text-xs font-bold uppercase tracking-tight ${isCurrent ? 'text-blue-700' : 'text-gray-700'}`}>
+                                                                            {parts[1] || 'Unknown Year'}
+                                                                        </span>
+                                                                        <span className={`text-[11px] ${isCurrent ? 'text-blue-500 font-medium' : 'text-gray-500'}`}>
+                                                                            {parts[2]?.replace('term', 'Term ') || 'Term'}
+                                                                        </span>
+                                                                    </div>
+                                                                    {isCurrent && (
+                                                                        <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">Current</span>
+                                                                    )}
+                                                                </div>
+                                                            </button>
+                                                        );
+                                                    })
+                                                ) : (
+                                                    <div className="text-center py-4 text-xs text-gray-500">No other terms found</div>
+                                                )}
+                                            </div>
                                         </div>
-                                         {subscription?.expiryDate && (() => {
-                                            const expiry = subscription.expiryDate?.toDate ? subscription.expiryDate.toDate() : new Date(subscription.expiryDate);
-                                            const isExpired = expiry < new Date();
-                                            const daysLeft = Math.ceil((expiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-                                            return (
-                                                <div className={`rounded-lg px-3 py-2 space-y-1.5 ${isExpired ? 'bg-red-50 border border-red-200' : daysLeft <= 30 ? 'bg-orange-50 border border-orange-200' : 'bg-indigo-50 border border-indigo-100'}`}>
-                                                    <p className={`text-[10px] font-black uppercase tracking-widest ${isExpired ? 'text-red-400' : daysLeft <= 30 ? 'text-orange-400' : 'text-indigo-400'}`}>License</p>
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-xs text-gray-600">Expiry Date</span>
-                                                        <span className={`font-bold px-2 py-0.5 rounded text-xs ${isExpired ? 'text-red-700 bg-red-100' : daysLeft <= 30 ? 'text-orange-700 bg-orange-100' : 'text-indigo-700 bg-indigo-100'}`}>
-                                                            {expiry.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                    ) : (
+                                        <>
+                                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
+                                                <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                </div>
+                                                <h3 className="font-semibold text-gray-800 text-sm">Current Term Details</h3>
+                                            </div>
+
+                                            <div className="space-y-3">
+                                                <div className="flex justify-between items-center text-sm">
+                                                    <span className="font-medium text-blue-900 bg-blue-50 px-2 py-0.5 rounded text-xs truncate max-w-full">
+                                                        {settings?.schoolName.toUpperCase() || 'No School Name Set'}
+                                                    </span>
+                                                </div>
+                                                {subscription?.expiryDate && (() => {
+                                                    const expiry = subscription.expiryDate?.toDate ? subscription.expiryDate.toDate() : new Date(subscription.expiryDate);
+                                                    const isExpired = expiry < new Date();
+                                                    const daysLeft = Math.ceil((expiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                                                    return (
+                                                        <div className={`rounded-xl px-3 py-2 space-y-1.5 ${isExpired ? 'bg-red-50 border border-red-200' : daysLeft <= 30 ? 'bg-orange-50 border border-orange-200' : 'bg-indigo-50 border border-indigo-100'}`}>
+                                                            <p className={`text-[10px] font-black uppercase tracking-widest ${isExpired ? 'text-red-400' : daysLeft <= 30 ? 'text-orange-400' : 'text-indigo-400'}`}>License</p>
+                                                            <div className="flex justify-between items-center">
+                                                                <span className="text-xs text-gray-600">Expiry Date</span>
+                                                                <span className={`font-bold px-2 py-0.5 rounded text-xs ${isExpired ? 'text-red-700 bg-red-100' : daysLeft <= 30 ? 'text-orange-700 bg-orange-100' : 'text-indigo-700 bg-indigo-100'}`}>
+                                                                    {expiry.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                                </span>
+                                                            </div>
+                                                            {isExpired ? (
+                                                                <p className="text-[10px] text-red-600 font-semibold text-center">⚠️ License has expired</p>
+                                                            ) : daysLeft <= 30 ? (
+                                                                <p className="text-[10px] text-orange-600 font-medium text-center">{daysLeft} day{daysLeft !== 1 ? 's' : ''} remaining</p>
+                                                            ) : (
+                                                                <p className="text-[10px] text-indigo-500 font-medium text-center">✓ Active</p>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })()}
+                                                <div className="flex justify-between items-center text-sm">
+                                                    <span className="text-gray-500">Academic Year</span>
+                                                    <span className="font-medium text-gray-900 bg-gray-50 px-2 py-0.5 rounded">{settings?.academicYear || 'N/A'}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-sm">
+                                                    <span className="text-gray-500">Current Term</span>
+                                                    <span className="font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{settings?.academicTerm || 'N/A'}</span>
+                                                </div>
+
+                                                <div className="pt-2 border-t border-gray-50"></div>
+
+                                                <div className="space-y-2">
+                                                    <p className="text-[10px] text-gray-400 uppercase tracking-widest font-black">Dates</p>
+                                                    <div className="flex justify-between items-center text-xs py-0.5">
+                                                        <span className="text-gray-600">Vacation Date</span>
+                                                        <span className="font-semibold text-gray-900">
+                                                            {settings?.vacationDate ? new Date(settings.vacationDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not Set'}
                                                         </span>
                                                     </div>
-                                                    {isExpired ? (
-                                                        <p className="text-[10px] text-red-600 font-semibold text-center">⚠️ License has expired</p>
-                                                    ) : daysLeft <= 30 ? (
-                                                        <p className="text-[10px] text-orange-600 font-medium text-center">{daysLeft} day{daysLeft !== 1 ? 's' : ''} remaining</p>
-                                                    ) : (
-                                                        <p className="text-[10px] text-indigo-500 font-medium text-center">✓ Active</p>
-                                                    )}
+                                                    <div className="flex justify-between items-center text-xs py-0.5">
+                                                        <span className="text-gray-600">Reopening Date</span>
+                                                        <span className="font-semibold text-gray-900">
+                                                            {settings?.reopeningDate ? new Date(settings.reopeningDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not Set'}
+                                                        </span>
+                                                    </div>
                                                 </div>
-                                            );
-                                        })()}
-                                        <div className="flex justify-between items-center text-sm">
-                                            <span className="text-gray-500">Academic Year</span>
-                                            <span className="font-medium text-gray-900 bg-gray-50 px-2 py-0.5 rounded">{settings?.academicYear || 'N/A'}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-sm">
-                                            <span className="text-gray-500">Current Term</span>
-                                            <span className="font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{settings?.academicTerm || 'N/A'}</span>
-                                        </div>
 
-                                        <div className="pt-2 border-t border-gray-50"></div>
-
-                                        <div className="space-y-1">
-                                            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Important Dates</p>
-                                            <div className="flex justify-between items-center text-sm py-1">
-                                                <span className="text-gray-600">Vacation Date</span>
-                                                <span className="font-medium text-gray-900">
-                                                    {settings?.vacationDate ? new Date(settings.vacationDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not Set'}
-                                                </span>
+                                                <div className="pt-3 flex flex-col gap-2">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleFetchTerms();
+                                                        }}
+                                                        className="w-full py-2.5 px-4 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-lg shadow-blue-200"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                                        </svg>
+                                                        Switch Term
+                                                    </button>
+                                                    <p className="text-[9px] text-center text-gray-400">
+                                                        Manage dates in System Settings
+                                                    </p>
+                                                </div>
                                             </div>
-                                            <div className="flex justify-between items-center text-sm py-1">
-                                                <span className="text-gray-600">Reopening Date</span>
-                                                <span className="font-medium text-gray-900">
-                                                    {settings?.reopeningDate ? new Date(settings.reopeningDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not Set'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>                                       
-
-                                    <div className="mt-3 pt-2 text-[10px] text-center text-gray-400 border-t border-gray-50">
-                                        Dates are set in System Settings
-                                    </div>
+                                        </>
+                                    )}
                                 </div>
                             )}
+
                         </div>
 
                         {/* Always Visible Logout Button */}

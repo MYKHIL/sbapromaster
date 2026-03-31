@@ -108,6 +108,7 @@ const StudentProgress: React.FC = () => {
     const contentRef = React.useRef<HTMLDivElement>(null);
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
     const [expandedTermIds, setExpandedTermIds] = useState<string[]>([]);
+    const [focusedStudentId, setFocusedStudentId] = useState<number | null>(null);
     const [broadsheetModal, setBroadsheetModal] = useState<{ isOpen: boolean, termData?: AppDataType, targetClass?: string }>({ isOpen: false });
 
     const toggleTerm = (termId: string) => {
@@ -307,30 +308,34 @@ const StudentProgress: React.FC = () => {
                 let studentInTerm: Student | undefined;
                 const termStudents = (termData.students || []).filter(s => !s.deleted);
 
-                // 1. Index number + same class (strongest: index numbers are per-class in this school)
-                if (student.indexNumber && student.class) {
+                // 1. Explicit ID Matching (Most reliable if carried over)
+                studentInTerm = termStudents.find(s => String(s.id) === String(student.id));
+
+                // 2. Index number + same class (strongest legacy match: index numbers are per-class)
+                if (!studentInTerm && student.indexNumber && student.class) {
                     studentInTerm = termStudents.find(s =>
                         s.indexNumber === student.indexNumber &&
                         s.class === student.class
                     );
                 }
-                // 2. Index number only (fallback: student may have changed class between terms)
+                // 3. Index number only (fallback: student may have changed class between terms)
                 if (!studentInTerm && student.indexNumber) {
                     studentInTerm = termStudents.find(s => s.indexNumber === student.indexNumber);
                 }
-                // 3. Name + same class (for students without index numbers, or index number changed)
+                // 4. Name + same class (for students without index numbers, or index number changed)
                 if (!studentInTerm) {
                     studentInTerm = termStudents.find(s =>
                         s.name.trim().toLowerCase() === student.name.trim().toLowerCase() &&
                         s.class === student.class
                     );
                 }
-                // 4. Name only — last resort, most likely to produce a false match
+                // 5. Name only — last resort, most likely to produce a false match
                 if (!studentInTerm) {
                     studentInTerm = termStudents.find(s =>
                         s.name.trim().toLowerCase() === student.name.trim().toLowerCase()
                     );
                 }
+
 
                 if (studentInTerm) {
                     const termScores = termData.scores || [];
@@ -430,10 +435,15 @@ const StudentProgress: React.FC = () => {
     };
 
     // --- Render Logic Variables (Single vs Multi) ---
-    const isComparisonMode = selectedStudents.length > 1;
-    // For single mode, alias the first student
-    const singleStudent = selectedStudents.length === 1 ? selectedStudents[0] : null;
+    const isComparisonModeVisible = selectedStudents.length > 1 && !focusedStudentId;
+    
+    // For single mode, alias the first student or the focused one
+    const singleStudent = focusedStudentId 
+        ? selectedStudents.find(s => s.id === focusedStudentId) || null
+        : (selectedStudents.length === 1 ? selectedStudents[0] : null);
+        
     const singleHistory = singleStudent ? historiesMap[singleStudent.id] || [] : [];
+    const isComparisonMode = isComparisonModeVisible; // Keep original name for minimal diff if possible, or update usage
 
     // Filter and Sort students for search
     const filteredStudents = useMemo(() => {
@@ -1038,15 +1048,32 @@ const StudentProgress: React.FC = () => {
                     {selectedStudents.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-4">
                             {selectedStudents.map(s => (
-                                <span key={s.id} className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                                <span 
+                                    key={s.id} 
+                                    onClick={() => setFocusedStudentId(s.id)}
+                                    className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium cursor-pointer transition-all ${focusedStudentId === s.id ? 'bg-blue-600 text-white ring-2 ring-blue-300 ring-offset-2' : 'bg-blue-100 text-blue-800 hover:bg-blue-200'}`}
+                                >
                                     {s.name}
-                                    <button onClick={() => handleRemoveStudent(s.id)} className="ml-2 text-blue-600 hover:text-blue-900 focus:outline-none">
+                                    <button 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleRemoveStudent(s.id);
+                                            if (focusedStudentId === s.id) setFocusedStudentId(null);
+                                        }} 
+                                        className={`ml-2 focus:outline-none ${focusedStudentId === s.id ? 'text-blue-100 hover:text-white' : 'text-blue-600 hover:text-blue-900'}`}
+                                    >
                                         ×
                                     </button>
                                 </span>
                             ))}
                             {selectedStudents.length > 0 && (
-                                <button onClick={() => setSelectedStudents([])} className="text-xs text-gray-500 underline ml-2 hover:text-red-500">
+                                <button 
+                                    onClick={() => {
+                                        setSelectedStudents([]);
+                                        setFocusedStudentId(null);
+                                    }} 
+                                    className="text-xs text-gray-500 underline ml-2 hover:text-red-500"
+                                >
                                     Clear All
                                 </button>
                             )}
@@ -1122,10 +1149,14 @@ const StudentProgress: React.FC = () => {
                                 const change = prev ? cumulativeAvg - prev : 0;
 
                                 return (
-                                    <div key={s.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm relative overflow-hidden flex flex-col h-full">
+                                    <div 
+                                        key={s.id} 
+                                        onClick={() => setFocusedStudentId(s.id)}
+                                        className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm relative overflow-hidden flex flex-col h-full cursor-pointer hover:border-blue-300 hover:shadow-md transition-all group"
+                                    >
                                         <div className="flex justify-between items-start mb-4">
                                             <div>
-                                                <h3 className="font-bold text-gray-800 text-lg">{s.name}</h3>
+                                                <h3 className="font-bold text-gray-800 text-lg group-hover:text-blue-600 transition-colors">{s.name}</h3>
                                                 <p className="text-xs text-gray-500">{s.class} • {termsWithData.length} term{termsWithData.length !== 1 ? 's' : ''}</p>
                                             </div>
                                             <div className={`text-xl font-bold ${cumulativeAvg >= 70 ? 'text-green-600' : 'text-blue-600'}`}>
@@ -1182,15 +1213,28 @@ const StudentProgress: React.FC = () => {
                     /* --- SINGLE STUDENT VIEW (Preserved) --- */
                     <div className="space-y-8 animate-fade-in-up">
                         {/* Student Header */}
-                        <div className="flex items-center space-x-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
-                            <div className="h-16 w-16 rounded-full bg-blue-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
-                                {singleStudent.name.charAt(0)}
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                            <div className="flex items-center space-x-4">
+                                <div className="h-16 w-16 rounded-full bg-blue-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+                                    {singleStudent.name.charAt(0)}
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-bold text-gray-900">{singleStudent.name}</h2>
+                                    <p className="text-gray-600 text-sm">Index No: <span className="font-mono font-medium">{singleStudent.indexNumber}</span></p>
+                                    <p className="text-gray-600 text-sm">Current Class: <span className="font-medium">{singleStudent.class}</span></p>
+                                </div>
                             </div>
-                            <div>
-                                <h2 className="text-2xl font-bold text-gray-900">{singleStudent.name}</h2>
-                                <p className="text-gray-600">Index No: <span className="font-mono font-medium">{singleStudent.indexNumber}</span></p>
-                                <p className="text-gray-600">Current Class: <span className="font-medium">{singleStudent.class}</span></p>
-                            </div>
+                            {selectedStudents.length > 1 && (
+                                <button 
+                                    onClick={() => setFocusedStudentId(null)}
+                                    className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-all shadow-sm"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z" />
+                                    </svg>
+                                    Back to Comparison
+                                </button>
+                            )}
                         </div>
 
                         {singleHistory.length > 0 && (
