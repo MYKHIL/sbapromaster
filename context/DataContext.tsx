@@ -272,7 +272,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.193"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.194"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -1217,7 +1217,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 // FORCE UNMARK: Ensure it is not falsely added to pending saves due to React batches
                 unmarkDirty(key as keyof AppDataType);
                 
-                setTimeout(() => { isRemoteUpdate.current = false; }, 100);
+                setTimeout(() => { isRemoteUpdate.current = false; }, 1000);
             }, (error) => {
                 console.error(`[DataContext] ❌ Listener error for ${key}:`, error);
             });
@@ -1245,7 +1245,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 if (data.metadata?.lastUpdated) {
                     lastLoadedTimestamps.current = { ...data.metadata.lastUpdated };
                 }
-                setTimeout(() => { isRemoteUpdate.current = false; }, 100);
+                setTimeout(() => { isRemoteUpdate.current = false; }, 1000);
             }
         });
 
