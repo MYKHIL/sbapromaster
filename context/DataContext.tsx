@@ -272,7 +272,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.196"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.197"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -1069,10 +1069,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // In this case, we cannot safely say the field is "dirty" compared to the cloud.
         if (originalValue === undefined) return;
 
-        // SAFETY: If a remote update is in progress, never mark subcollection-managed fields as dirty.
-        // The listener will update both state AND originalData atomically, so any transient mismatch
-        // seen here is a React batching artifact, not a real local change.
-        if (isRemoteUpdate.current && SUBCOLLECTION_FIELDS.has(field)) return;
+        // SAFETY: If a remote update is in progress, never mark ANY fields as dirty.
+        // The listener updates originalData atomically, so any transient mismatch seen here
+        // (like closure lag from batching) is a React batch artifact, not a real local change.
+        if (isRemoteUpdate.current) return;
 
         const isEqual = isDataEqual(currentValue, originalValue);
 
@@ -1086,8 +1086,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
         } else {
             // Values differ - only mark dirty if NOT a remote update.
-            // For subcollection fields, the listener handles dirty state via unmarkDirty().
-            if (!isRemoteUpdate.current || !SUBCOLLECTION_FIELDS.has(field)) {
+            if (!isRemoteUpdate.current) {
                 markDirty(field, true);
             }
         }
@@ -1199,20 +1198,22 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
                 console.log(`[DataContext] 📥 Real-time update for ${key}`);
                 
-                // PROTECTION: If there are local changes, don't overwrite them with remote data
-                if (dirtyFields.current.has(key as keyof AppDataType)) {
-                    console.log(`[DataContext] 🛡️ Ignoring real-time update for ${key} because there are unsaved local changes.`);
-                    return;
-                }
+                // IMPORTANT: We bypass local dirty protection here. If we skip updating the UI 
+                // state but the main doc listener updates originalData (or vice versa), it causes 
+                // a "Baseline Lag" that results in a massive Reversal pending payload.
+                // We purposefully prioritize cloud consistency here without returning early.
 
                 // Mark as remote update to prevent loopback marking it dirty
                 isRemoteUpdate.current = true;
-                stateSetter(data);
                 
-                // Update baseline for dirty tracking
+                // 1. ATOMIC BASELINE SYNC: Update baseline FIRST before React queue
+                // This forces RecheckAllDirtyStatus to instantly compare the new baseline
                 if (originalData.current) {
                     originalData.current[key as keyof AppDataType] = Array.isArray(data) ? [...data] : {...data} as any;
                 }
+
+                // 2. Queue UI React State update
+                stateSetter(data);
 
                 // FORCE UNMARK: Ensure it is not falsely added to pending saves due to React batches
                 unmarkDirty(key as keyof AppDataType);
@@ -1240,6 +1241,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 // system to perpetually flag those collections as "pending save", ultimately
                 // causing permission-denied errors when the save payload includes deleted items.
                 const { grades: _g, classes: _c, subjects: _s, assessments: _a, students: _st, ...mainDocData } = data;
+
+                // ATOMIC BASELINE SYNC: Instantly force the baseline to match the incoming main doc data
+                // before loadImportedData captures closure state. This stops the async batch lag.
+                Object.entries(mainDocData).forEach(([key, val]) => {
+                    const validKey = key as keyof AppDataType;
+                    // Protect locally typed/unsaved settings from sudden clobbering, but sync otherwise
+                    if (originalData.current && val !== undefined && !dirtyFields.current.has(validKey)) {
+                        originalData.current[validKey] = Array.isArray(val) ? [...val] : JSON.parse(JSON.stringify(val));
+                    }
+                });
 
                 loadImportedData(mainDocData, true);
                 if (data.metadata?.lastUpdated) {
