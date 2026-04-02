@@ -1749,6 +1749,13 @@ export const saveDataTransaction = async (
             const subjectBuckets: Record<number, Record<string, Score>> = {};
 
             updates.scores.forEach(s => {
+                // SAFETY GUARD: Prevent bucketing scores with invalid subject IDs
+                // This prevents the 'subject_undefined' or 'subject_0' leaks.
+                if (s.subjectId === undefined || s.subjectId === null || s.subjectId === 0 || isNaN(Number(s.subjectId))) {
+                    console.error(`[Firebase] 🚨 DATA INTEGRITY ALERT: Rejecting score save with invalid subjectId.`, s);
+                    return;
+                }
+                
                 if (!subjectBuckets[s.subjectId]) subjectBuckets[s.subjectId] = {};
                 subjectBuckets[s.subjectId][s.id] = s;
             });

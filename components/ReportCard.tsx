@@ -195,7 +195,9 @@ const ReportCard: React.FC<{ student: Student }> = ({ student }) => {
                         {/* Row 4 */}
                         <div className="flex gap-x-4">
                             <div className="flex-1"><InfoItem label="Total Score" value={`${formatScore(totalScore)} / ${subjectResults.length * 100}`} /></div>
-                            <div className="flex-1"><InfoItem label="Aggregate" value={aggregateScore > 0 ? aggregateScore : '-'} /></div>
+                            {(settings.showAggregateScore && settings.aggregateScoreClasses?.includes(classInfo?.id || 0)) && (
+                                <div className="flex-1"><InfoItem label="Aggregate" value={aggregateScore > 0 ? aggregateScore : '-'} /></div>
+                            )}
                             <div className="flex-1"><InfoItem label="Position" value={`${getOrdinal(overallPosition)} out of ${numOnRoll} ${numOnRoll === 1 ? 'student' : 'students'}`} /></div>
                         </div>
 

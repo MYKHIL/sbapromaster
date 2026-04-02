@@ -38,6 +38,8 @@ export interface SchoolSettings {
   indexNumberPerClass?: boolean;
   indexNumberGlobalCounter?: number;
   indexNumberCounterDigits?: number;
+  showAggregateScore?: boolean;
+  aggregateScoreClasses?: number[];
 }
 
 export interface Subject {

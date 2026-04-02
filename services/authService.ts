@@ -63,7 +63,10 @@ export function checkPermission(
     if (resource.type === 'class') {
         return user.allowedClasses.includes(resource.name);
     } else {
-        return user.allowedSubjects.includes(resource.name);
+        // Hybrid check: Support both ID (numeric string) and Name
+        const id = Number(resource.name);
+        return (user.allowedSubjects as any)?.includes(resource.name) || 
+               (!isNaN(id) && user.allowedSubjects?.includes(id));
     }
 }
 
@@ -82,6 +85,7 @@ export function saveDeviceCredential(schoolId: string, userId: number): void {
     const credential: DeviceCredential = {
         deviceId,
         userId,
+        schoolId, // Fixed missing required property
         lastLogin: new Date().toISOString(),
     };
 
@@ -140,5 +144,10 @@ export function filterAllowedSubjects(allSubjects: string[], user: User): string
     if (user.role === 'Admin') {
         return allSubjects;
     }
-    return allSubjects.filter(subjectName => user.allowedSubjects.includes(subjectName));
+    // Hybrid check: Support both ID (numeric string) and Name
+    return allSubjects.filter(subjectName => {
+        const id = Number(subjectName);
+        return (user.allowedSubjects as any)?.includes(subjectName) || 
+               (!isNaN(id) && user.allowedSubjects?.includes(id));
+    });
 }

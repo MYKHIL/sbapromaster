@@ -213,14 +213,25 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
 
         // Row 3 (Stats)
         currentY += 8;
-        const totalScoreStr = `${formatScore(reportCalcData.totalScore)} / ${reportCalcData.subjectResults.length * 100}`;
-        addUnderlinedField("Total Score", totalScoreStr, leftColX, currentY, colWidth, 22);
+        const showAggregate = settings.showAggregateScore && settings.aggregateScoreClasses?.includes(classInfo?.id || 0);
 
-        const aggStr = reportCalcData.aggregateScore > 0 ? reportCalcData.aggregateScore.toString() : '-';
-        addUnderlinedField("Aggregate", aggStr, leftColX + colWidth + colGap, currentY, colWidth, 18);
+        if (showAggregate) {
+            const totalScoreStr = `${formatScore(reportCalcData.totalScore)} / ${reportCalcData.subjectResults.length * 100}`;
+            addUnderlinedField("Total Score", totalScoreStr, leftColX, currentY, colWidth, 22);
 
-        const posStr = `${getOrdinal(reportCalcData.overallPosition)} out of ${numOnRoll} ${numOnRoll === 1 ? 'student' : 'students'}`;
-        addUnderlinedField("Position", posStr, leftColX + (colWidth + colGap) * 2, currentY, colWidth, 16);
+            const aggStr = reportCalcData.aggregateScore > 0 ? reportCalcData.aggregateScore.toString() : '-';
+            addUnderlinedField("Aggregate", aggStr, leftColX + colWidth + colGap, currentY, colWidth, 18);
+
+            const posStr = `${getOrdinal(reportCalcData.overallPosition)} out of ${numOnRoll} ${numOnRoll === 1 ? 'student' : 'students'}`;
+            addUnderlinedField("Position", posStr, leftColX + (colWidth + colGap) * 2, currentY, colWidth, 16);
+        } else {
+            const duoColWidth = (infoWidth - colGap) / 2;
+            const totalScoreStr = `${formatScore(reportCalcData.totalScore)} / ${reportCalcData.subjectResults.length * 100}`;
+            addUnderlinedField("Total Score", totalScoreStr, leftColX, currentY, duoColWidth, 22);
+
+            const posStr = `${getOrdinal(reportCalcData.overallPosition)} out of ${numOnRoll} ${numOnRoll === 1 ? 'student' : 'students'}`;
+            addUnderlinedField("Position", posStr, leftColX + duoColWidth + colGap, currentY, duoColWidth, 16);
+        }
 
         // Row 4 (Dates)
         currentY += 8;

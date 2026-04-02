@@ -22,7 +22,10 @@ export const getAvailableClasses = (user: User | null, allClasses: Class[]): Cla
 export const getAvailableSubjects = (user: User | null, allSubjects: Subject[]): Subject[] => {
     if (!user) return [];
     if (user.role === 'Admin') return allSubjects;
-    return allSubjects.filter(s => user.allowedSubjects.includes(s.subject));
+    return allSubjects.filter(s => 
+        user.allowedSubjects?.includes(s.id) || 
+        (user.allowedSubjects as any)?.includes(s.subject)
+    );
 };
 
 /**
@@ -44,11 +47,18 @@ export const getSubjectsForUserAndClass = (
 
     if (classSubjects && classSubjects.length > 0) {
         // Use specific mapping for this class
-        return allSubjects.filter(s => classSubjects.includes(s.subject));
+        // Hybrid check: Support both ID (new) and Name (legacy/fallback)
+        return allSubjects.filter(s => 
+            classSubjects.includes(s.id) || 
+            (classSubjects as any).includes(s.subject)
+        );
     }
 
     // Fallback to global allowedSubjects (backward compatibility)
-    return allSubjects.filter(s => user.allowedSubjects.includes(s.subject));
+    return allSubjects.filter(s => 
+        user.allowedSubjects?.includes(s.id) || 
+        (user.allowedSubjects as any)?.includes(s.subject)
+    );
 };
 
 /**

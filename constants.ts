@@ -113,6 +113,8 @@ export const INITIAL_SETTINGS: SchoolSettings = {
   indexNumberPerClass: false,
   indexNumberGlobalCounter: 1,
   allowPersistence: true,
+  showAggregateScore: false,
+  aggregateScoreClasses: [],
 };
 
 export const INITIAL_STUDENTS: Student[] = [];

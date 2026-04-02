@@ -272,7 +272,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.197"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.198"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -2940,9 +2940,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         const currentOriginal = (originalData.current.scores || []) as Score[];
                         const originalMap = new Map<string, Score>(currentOriginal.map(s => [String(getItemId(s)), s]));
 
-                        // Remove all scores for this subject
+                        // Remove all scores for this subject from the existing originalBaseline map
+                        // FIX: Use Number() normalization to avoid string vs number mismatch leaks
                         for (const [key, score] of originalMap.entries()) {
-                            if (score.subjectId === subjectId) {
+                            if (Number(score.subjectId) === Number(subjectId)) {
                                 originalMap.delete(key);
                             }
                         }
@@ -2957,7 +2958,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         // 2. DISCARD LOCAL CHANGES if ignorePreservation is set (Global Refresh)
                         if (ignorePreservation) {
                             // Only replace scores for THIS subject to avoid wiped state on lazy loads
-                            const otherSubjectScores = prev.filter(s => s.subjectId !== subjectId);
+                            const otherSubjectScores = prev.filter(s => Number(s.subjectId) !== Number(subjectId));
                             return [...otherSubjectScores, ...newScores];
                         }
 
@@ -2990,7 +2991,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         const cloudIds = new Set(newScores.map(s => String(s.id)));
                         prev.forEach(localScore => {
                             // Only process scores for the current subject being verified
-                            if (localScore.subjectId === subjectId && !cloudIds.has(String(localScore.id))) {
+                            if (Number(localScore.subjectId) === Number(subjectId) && !cloudIds.has(String(localScore.id))) {
                                 const hasData = localScore.assessmentScores && Object.values(localScore.assessmentScores).some(s => Array.isArray(s) && s.some(v => v !== null && v !== undefined && String(v).trim() !== ''));
                                 if (hasData) {
                                     console.log(`[DataContext] ➕ Preservation: Keeping local-only score ${localScore.id} during lazy load`);

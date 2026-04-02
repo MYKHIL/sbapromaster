@@ -758,6 +758,7 @@ const DataManagement: React.FC = () => {
     const [isCreateTermModalOpen, setIsCreateTermModalOpen] = useState(false);
     const [isMergeUsersModalOpen, setIsMergeUsersModalOpen] = useState(false);
     const [isExportUsersModalOpen, setIsExportUsersModalOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState<'academic' | 'system' | 'backup'>('academic');
 
 
     const buttonStyles = "flex items-center justify-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-wait";
@@ -1324,302 +1325,339 @@ const DataManagement: React.FC = () => {
             <CreateTermModal isOpen={isCreateTermModalOpen} onClose={() => setIsCreateTermModalOpen(false)} setFeedback={setFeedback} />
             <ExportUsersModal isOpen={isExportUsersModalOpen} onClose={() => setIsExportUsersModalOpen(false)} currentUsers={users} setFeedback={setFeedback} />
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* LEFT COLUMN: Operations & Admin */}
-                <div className="space-y-8">
+            {/* Tabs Navigation */}
+            <div className="flex flex-wrap gap-2 p-1 bg-gray-100 rounded-xl w-fit mb-6">
+                {[
+                    { id: 'academic', label: 'Academic & Session', icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5S19.832 5.477 21 6.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg> },
+                    { id: 'system', label: 'System & Access', icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg> },
+                    { id: 'backup', label: 'Backup & Data', icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" /></svg> },
+                ].map((tab) => (
+                    <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id as any)}
+                        className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                            activeTab === tab.id
+                                ? 'bg-white text-blue-600 shadow-sm'
+                                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                        }`}
+                    >
+                        {tab.icon}
+                        {tab.label}
+                    </button>
+                ))}
+            </div>
 
-                    {/* 1. Academic Session Card */}
-                    {currentUser?.role === 'Admin' && (
+            <div className="animate-fade-in-up">
+                {/* 1. Academic Tab */}
+                {activeTab === 'academic' && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div className="space-y-8">
+                            {currentUser?.role === 'Admin' && (
+                                <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+                                    <div className="flex items-center mb-4">
+                                        <div className="p-2 bg-blue-100 rounded-lg mr-3">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            </svg>
+                                        </div>
+                                        <h2 className="text-xl font-bold text-gray-800">Academic Session</h2>
+                                    </div>
+
+                                    <div className="space-y-6">
+                                        <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg border border-gray-100">
+                                            <div>
+                                                <h3 className="font-semibold text-gray-800">Next Term Setup</h3>
+                                                <p className="text-sm text-gray-500 mt-1">Prepare for the upcoming academic term.</p>
+                                            </div>
+                                            <button
+                                                onClick={() => setIsCreateTermModalOpen(true)}
+                                                className="bg-purple-600 text-white px-4 py-2 rounded-lg shadow hover:bg-purple-700 transition-colors text-sm font-semibold flex items-center"
+                                            >
+                                                Start New Term
+                                            </button>
+                                        </div>
+
+                                        {SHOW_USER_EXPORT_BUTTON && (
+                                            <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg border border-gray-100">
+                                                <div>
+                                                    <h3 className="font-semibold text-gray-800">Export Users</h3>
+                                                    <p className="text-sm text-gray-500 mt-1">Copy current user list to another term.</p>
+                                                </div>
+                                                <button
+                                                    onClick={() => setIsExportUsersModalOpen(true)}
+                                                    className="bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-700 transition-colors text-sm font-semibold flex items-center"
+                                                >
+                                                    Export Users
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
+                                            <div>
+                                                <h3 className="font-semibold text-gray-800">Promotion Mode</h3>
+                                                <p className="text-sm text-gray-500 mt-1">Enable "Promoted To" field on reports.</p>
+                                            </div>
+                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={settings.isPromotionTerm || false}
+                                                    onChange={(e) => updateSettings({ isPromotionTerm: e.target.checked })}
+                                                    className="sr-only peer"
+                                                />
+                                                <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                            </label>
+                                        </div>
+
+                                        <div className="p-4 bg-gray-50 rounded-lg border border-gray-100 flex flex-col gap-4">
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <h3 className="font-semibold text-gray-800 text-sm md:text-base">Aggregate Score</h3>
+                                                    <p className="text-xs text-gray-500 mt-1">Show aggregate score on report cards.</p>
+                                                </div>
+                                                <label className="relative inline-flex items-center cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={settings.showAggregateScore ?? false}
+                                                        onChange={(e) => updateSettings({ showAggregateScore: e.target.checked })}
+                                                        className="sr-only peer"
+                                                    />
+                                                    <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                </label>
+                                            </div>
+
+                                            {settings.showAggregateScore && (
+                                                <div className="pt-3 border-t border-gray-200 animate-fade-in">
+                                                    <p className="text-xs font-semibold text-gray-600 mb-3 uppercase tracking-wider">Include for Classes:</p>
+                                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                                        {dataContext.classes.map((cls) => (
+                                                            <label key={cls.id} className="flex items-center group cursor-pointer">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    className="sr-only peer"
+                                                                    checked={settings.aggregateScoreClasses?.includes(cls.id) ?? false}
+                                                                    onChange={(e) => {
+                                                                        const current = settings.aggregateScoreClasses || [];
+                                                                        const updated = e.target.checked
+                                                                            ? [...current, cls.id]
+                                                                            : current.filter(id => id !== cls.id);
+                                                                        updateSettings({ aggregateScoreClasses: updated });
+                                                                    }}
+                                                                />
+                                                                <div className="w-5 h-5 border-2 border-gray-300 rounded peer-checked:bg-blue-600 peer-checked:border-blue-600 flex items-center justify-center">
+                                                                    <svg className={`h-3 w-3 text-white ${settings.aggregateScoreClasses?.includes(cls.id) ? 'block' : 'hidden'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                                                    </svg>
+                                                                </div>
+                                                                <span className="ml-2 text-sm text-gray-700">{cls.name}</span>
+                                                            </label>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        <div className="space-y-8">
+                            {currentUser && currentUser.role === 'Admin' && <IndexNumberConfig />}
+                        </div>
+                    </div>
+                )}
+
+                {/* 2. System Tab */}
+                {activeTab === 'system' && (
+                    <div className="max-w-4xl space-y-8">
                         <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
-                            <div className="flex items-center mb-4">
-                                <div className="p-2 bg-blue-100 rounded-lg mr-3">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            <div className="flex items-center mb-6">
+                                <div className="p-2 bg-gray-100 rounded-lg mr-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                                     </svg>
                                 </div>
-                                <h2 className="text-xl font-bold text-gray-800">Academic Session</h2>
+                                <h2 className="text-xl font-bold text-gray-800">System Administration</h2>
                             </div>
 
                             <div className="space-y-6">
-                                {/* Start New Term */}
-                                <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg border border-gray-100">
-                                    <div>
-                                        <h3 className="font-semibold text-gray-800">Next Term Setup</h3>
-                                        <p className="text-sm text-gray-500 mt-1">Prepare for the upcoming academic term.</p>
-                                    </div>
-                                    <button
-                                        onClick={() => setIsCreateTermModalOpen(true)}
-                                        className="bg-purple-600 text-white px-4 py-2 rounded-lg shadow hover:bg-purple-700 transition-colors text-sm font-semibold flex items-center"
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                        </svg>
-                                        Start New Term
-                                    </button>
-                                </div>
+                                {currentUser?.role === 'Admin' && (
+                                    <div className="pb-6 border-b border-gray-100">
+                                        <h3 className="font-semibold text-gray-800 mb-4">Access Control</h3>
+                                        <div className="grid gap-3">
+                                            <button
+                                                onClick={() => setIsUserManagementOpen(true)}
+                                                className="w-full flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-all group"
+                                            >
+                                                <div className="flex items-center">
+                                                    <span className="text-gray-700 font-medium group-hover:text-blue-600 transition-colors">Manage Users & Permissions</span>
+                                                </div>
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 group-hover:text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                                                </svg>
+                                            </button>
 
-                                {SHOW_USER_EXPORT_BUTTON && (
-                                    <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg border border-gray-100">
-                                        <div>
-                                            <h3 className="font-semibold text-gray-800">Export Users</h3>
-                                            <p className="text-sm text-gray-500 mt-1">Copy current user list to another term.</p>
+                                            {DEV_TOOLS_ENABLED && (
+                                                <button
+                                                    onClick={() => setIsMergeUsersModalOpen(true)}
+                                                    className="w-full flex items-center justify-between p-4 border border-dashed border-indigo-200 bg-indigo-50/50 rounded-lg hover:bg-indigo-50 transition-all"
+                                                >
+                                                    <div className="text-left font-medium text-indigo-700">Debug: Merge Users From Another Term</div>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-400" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                                                    </svg>
+                                                </button>
+                                            )}
                                         </div>
-                                        <button
-                                            onClick={() => setIsExportUsersModalOpen(true)}
-                                            className="bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-700 transition-colors text-sm font-semibold flex items-center"
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                                            </svg>
-                                            Export Users
-                                        </button>
                                     </div>
                                 )}
 
-
-                                {/* Promotion Toggle */}
-                                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
-                                    <div>
-                                        <h3 className="font-semibold text-gray-800">Promotion Mode</h3>
-                                        <p className="text-sm text-gray-500 mt-1">Enable "Promoted To" field on reports.</p>
-                                    </div>
-                                    <label className="relative inline-flex items-center cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={settings.isPromotionTerm || false}
-                                            onChange={(e) => updateSettings({ isPromotionTerm: e.target.checked })}
-                                            className="sr-only peer"
-                                        />
-                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* 2. System Administration Card */}
-                    <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
-
-                        <div className="flex items-center mb-6">
-                            <div className="p-2 bg-gray-100 rounded-lg mr-3">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                            </div>
-                            <h2 className="text-xl font-bold text-gray-800">System Administration</h2>
-                        </div>
-
-                        <div className="space-y-6">
-                            {/* Access Control */}
-                            {currentUser?.role === 'Admin' && (
-                                <div className="pb-6 border-b border-gray-100">
-                                    <h3 className="font-semibold text-gray-800 mb-2">Access Control</h3>
-                                    <button
-                                        onClick={() => setIsUserManagementOpen(true)}
-                                        className="w-full flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors group"
-                                    >
-                                        <div className="flex items-center">
-                                            <div className="bg-blue-50 p-2 rounded-full mr-3 group-hover:bg-blue-100 transition-colors">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                                                </svg>
+                                {currentUser?.role === 'Admin' && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="p-4 bg-gray-50 rounded-lg border border-gray-100 flex items-center justify-between">
+                                            <div>
+                                                <h3 className="font-semibold text-gray-800 text-sm">Student Progress View</h3>
+                                                <p className="text-xs text-gray-500 mt-1">Allow teachers to view student progress maps</p>
                                             </div>
-                                            <span className="text-gray-700 font-medium">Manage Users & Permissions</span>
-                                        </div>
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                                        </svg>
-                                    </button>
-
-                                    {/* Merge Users Tool (Debug Only) */}
-                                    {DEV_TOOLS_ENABLED && (
-                                        <button
-                                            onClick={() => setIsMergeUsersModalOpen(true)}
-                                            className="w-full mt-3 flex items-center justify-between p-3 border border-dashed border-indigo-300 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors group"
-                                        >
-                                            <div className="flex items-center">
-                                                <div className="bg-indigo-100 p-2 rounded-full mr-3 group-hover:bg-indigo-200 transition-colors">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                                                    </svg>
-                                                </div>
-                                                <div className="text-left">
-                                                    <span className="text-indigo-700 font-semibold text-sm block">Debug: Merge Users</span>
-                                                    <span className="text-indigo-500 text-xs">Import users from another term</span>
-                                                </div>
-                                            </div>
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-400" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                                            </svg>
-                                        </button>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* Student Progress Visibility Toggle */}
-                            {currentUser?.role === 'Admin' && (
-                                <div className="pb-6 border-b border-gray-100">
-                                    <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50">
-                                        <div>
-                                            <h3 className="font-semibold text-gray-800 text-sm">Student Progress View</h3>
-                                            <p className="text-xs text-gray-500 mt-1">Allow non-admin users to view progress page</p>
-                                        </div>
-                                        <label className="relative inline-flex items-center cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={settings.allowStudentProgressView || false}
-                                                onChange={(e) => updateSettings({ allowStudentProgressView: e.target.checked })}
-                                                className="sr-only peer"
-                                            />
-                                            <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-                                        </label>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Data Persistence Toggle */}
-                            {currentUser?.role === 'Admin' && (
-                                <div className="pb-6 border-b border-gray-100">
-                                    <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50">
-                                        <div>
-                                            <h3 className="font-semibold text-gray-800 text-sm">Allow Data Persistence</h3>
-                                            <p className="text-xs text-gray-500 mt-1">If disabled, local cache will be cleared upon app launch.</p>
-                                        </div>
-                                        <label className="relative inline-flex items-center cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={settings.allowPersistence ?? true}
-                                                onChange={(e) => updateSettings({ allowPersistence: e.target.checked })}
-                                                className="sr-only peer"
-                                            />
-                                            <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-                                        </label>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Data Operations */}
-                            {/* Admin Controls: School Password & Logging */}
-                            {currentUser?.role === 'Admin' && (
-                                <div className="pb-6 border-b border-gray-100">
-                                    <h3 className="font-semibold text-gray-800 mb-2">School Credentials & Logging</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                        <div className="col-span-1 md:col-span-2">
-                                            <label className="block text-sm font-medium text-gray-700">School Password</label>
-                                            <div className="mt-1 relative rounded-md shadow-sm">
+                                            <label className="relative inline-flex items-center cursor-pointer">
                                                 <input
-                                                    type={showSchoolPassword ? "text" : "password"}
-                                                    value={schoolPassword}
-                                                    onChange={(e) => setSchoolPassword(e.target.value)}
-                                                    className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-10"
-                                                    placeholder="Enter school password"
-                                                    disabled={isFetchingSchoolPassword}
+                                                    type="checkbox"
+                                                    checked={settings.allowStudentProgressView || false}
+                                                    onChange={(e) => updateSettings({ allowStudentProgressView: e.target.checked })}
+                                                    className="sr-only peer"
                                                 />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowSchoolPassword(!showSchoolPassword)}
-                                                    className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600"
-                                                    aria-label={showSchoolPassword ? "Hide password" : "Show password"}
-                                                >
-                                                    {showSchoolPassword ? (
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                                                            <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-                                                        </svg>
-                                                    ) : (
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                                            <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
-                                                            <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.742L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.064 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
-                                                        </svg>
-                                                    )}
-                                                </button>
+                                                <div className="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                                            </label>
+                                        </div>
+
+                                        <div className="p-4 bg-gray-50 rounded-lg border border-gray-100 flex items-center justify-between">
+                                            <div>
+                                                <h3 className="font-semibold text-gray-800 text-sm">Data Persistence</h3>
+                                                <p className="text-xs text-gray-500 mt-1">Enable local cache for faster loading</p>
                                             </div>
-                                            <div className="mt-2 flex items-center gap-3">
+                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={settings.allowPersistence ?? true}
+                                                    onChange={(e) => updateSettings({ allowPersistence: e.target.checked })}
+                                                    className="sr-only peer"
+                                                />
+                                                <div className="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {currentUser?.role === 'Admin' && (
+                                    <div className="pt-6 border-t border-gray-100">
+                                        <h3 className="font-semibold text-gray-800 mb-4">School Credentials</h3>
+                                        <div className="max-w-md">
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Update School Password</label>
+                                            <div className="flex gap-2">
+                                                <div className="relative flex-grow">
+                                                    <input
+                                                        type={showSchoolPassword ? "text" : "password"}
+                                                        value={schoolPassword}
+                                                        onChange={(e) => setSchoolPassword(e.target.value)}
+                                                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                                        placeholder="Enter new password"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowSchoolPassword(!showSchoolPassword)}
+                                                        className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400"
+                                                    >
+                                                        {showSchoolPassword ? <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></svg> : <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                                                    </button>
+                                                </div>
                                                 <button
                                                     onClick={handleSaveSchoolPassword}
-                                                    disabled={isSavingSchoolPassword}
-                                                    className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 text-sm disabled:bg-gray-300"
+                                                    disabled={isSavingSchoolPassword || !schoolPassword}
+                                                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 font-medium transition-colors"
                                                 >
-                                                    {isSavingSchoolPassword ? 'Saving...' : 'Save Password'}
+                                                    {isSavingSchoolPassword ? 'Saving...' : 'Update'}
                                                 </button>
-                                                <span className="text-sm text-gray-500">Updates the active school's login password.</span>
                                             </div>
                                         </div>
                                     </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* 3. Backup Tab */}
+                {activeTab === 'backup' && (
+                    <div className="max-w-4xl space-y-8">
+                        <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+                            <div className="flex items-center mb-6">
+                                <div className="p-2 bg-green-100 rounded-lg mr-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                                    </svg>
                                 </div>
-                            )}
+                                <h2 className="text-xl font-bold text-gray-800">Database Tools</h2>
+                            </div>
 
-                            <div>
-                                <h3 className="font-semibold text-gray-800 mb-3">Data Backup & Recovery</h3>
-                                <div className="grid grid-cols-2 gap-3">
-                                    {/* Import - Only Admin */}
-                                    {currentUser?.role === 'Admin' && (
-                                        <>
-                                            <input
-                                                type="file"
-                                                accept=".sdlx"
-                                                onChange={handleFileSelect}
-                                                className="hidden"
-                                                ref={fileInputRef}
-                                            />
-                                            <button
-                                                onClick={handleImportClick}
-                                                disabled={processingAction !== null}
-                                                className="flex flex-col items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-orange-50 hover:border-orange-200 transition-all text-center group"
-                                            >
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-orange-500 mb-1 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                                                </svg>
-                                                <span className="text-xs font-semibold text-gray-700">Import Data</span>
-                                            </button>
-                                        </>
-                                    )}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {currentUser?.role === 'Admin' && (
+                                    <div className="p-4 border border-gray-100 bg-gray-50 rounded-xl">
+                                        <h3 className="font-semibold text-gray-800 mb-2">Import Data</h3>
+                                        <p className="text-sm text-gray-500 mb-4">Restore from a previous backup file (.sdlx)</p>
+                                        <button
+                                            onClick={handleImportClick}
+                                            disabled={processingAction !== null}
+                                            className="w-full flex items-center justify-center bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors font-medium shadow-sm"
+                                        >
+                                            <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                                            Import .sdlx
+                                        </button>
+                                        <input type="file" accept=".sdlx" onChange={handleFileSelect} className="hidden" ref={fileInputRef} />
+                                    </div>
+                                )}
 
-                                    {/* Export */}
+                                <div className="p-4 border border-gray-100 bg-gray-50 rounded-xl">
+                                    <h3 className="font-semibold text-gray-800 mb-2">Export Backup</h3>
+                                    <p className="text-sm text-gray-500 mb-4">Save all school data to your local device</p>
                                     <button
                                         onClick={handleExport}
                                         disabled={processingAction !== null}
-                                        className="flex flex-col items-center justify-center p-3 border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-200 transition-all text-center group"
+                                        className="w-full flex items-center justify-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm"
                                     >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-600 mb-1 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                        </svg>
-                                        <span className="text-xs font-semibold text-gray-700">Export Backup</span>
+                                        <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                        Download .sdlx
                                     </button>
+                                </div>
 
-                                    {/* Share */}
+                                <div className="col-span-1 md:col-span-2 p-6 border-2 border-green-100 bg-green-50/30 rounded-xl">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div>
+                                            <h3 className="font-bold text-green-800">Quick WhatsApp Share</h3>
+                                            <p className="text-sm text-green-600">Instantly share your backup file with colleagues or developers</p>
+                                        </div>
+                                        <div className="bg-green-100 p-2 rounded-full">
+                                            <svg className="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 16 16"><path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326z"/></svg>
+                                        </div>
+                                    </div>
                                     <button
                                         onClick={() => setIsShareModalOpen(true)}
                                         disabled={processingAction !== null}
-                                        className="col-span-2 flex items-center justify-center p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-all text-center group"
+                                        className="w-full py-3 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition-all shadow-md active:scale-95"
                                     >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
-                                        </svg>
-                                        <span className="text-sm font-semibold text-gray-700">Share via WhatsApp</span>
+                                        Share Platform
                                     </button>
                                 </div>
                             </div>
 
                             {DEV_TOOLS_ENABLED && (
-                                <div className="pt-4 border-t border-gray-100">
-                                    <button onClick={handleGenerateWpfProject} className="w-full py-2 text-xs text-indigo-600 hover:text-indigo-800 underline">
-                                        Generate WPF Project (Dev)
+                                <div className="mt-8 pt-6 border-t border-gray-100 text-center">
+                                    <button onClick={handleGenerateWpfProject} className="text-indigo-600 hover:text-indigo-800 font-medium text-sm flex items-center justify-center mx-auto">
+                                        <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></svg>
+                                        Generate WPF Project Blueprint
                                     </button>
                                 </div>
                             )}
                         </div>
                     </div>
-                </div>
-
-                {/* RIGHT COLUMN: Configuration */}
-                <div className="space-y-8">
-                    {/* Index Number Config (Renders its own card) */}
-                    {currentUser && currentUser.role === 'Admin' && (
-                        <IndexNumberConfig />
-                    )}
-                </div>
+                )}
             </div>
 
 

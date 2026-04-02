@@ -247,6 +247,16 @@ const ScoreEntry: React.FC = () => {
     const filteredStudents = useMemo(() => {
         if (!students) return [];
 
+        // FAIL-SAFE: If a class is selected, ensure the selectedSubjectId is valid for that class
+        // This prevents the 'mismatch window' during transitions from showing or saving data.
+        if (selectedClass && selectedSubjectId && currentUser?.role !== 'Admin') {
+            const isValid = subjects.some(s => s.id === selectedSubjectId);
+            if (!isValid) {
+                console.warn(`[ScoreEntry] 🛡️ Fail-safe triggered: Subject ${selectedSubjectId} not valid for class ${selectedClass}.`);
+                return [];
+            }
+        }
+
         let results = [...students];
 
         // Apply standardized sort: Gender (Desc) -> Name (Asc)
@@ -347,6 +357,16 @@ const ScoreEntry: React.FC = () => {
     const handleCloseModal = () => {
         setIsModalOpen(false);
         setModalData(null);
+    };
+
+    const handleScoreChange = (studentId: number, assessmentId: number, index: number, value: string) => {
+        if (!selectedSubjectId) {
+            console.warn('[ScoreEntry] Blocked score change: No subject selected.');
+            return;
+        }
+        const currentScores = [...(getStudentScores(studentId, selectedSubjectId, assessmentId) || [])];
+        currentScores[index] = value;
+        updateStudentScores(studentId, selectedSubjectId, assessmentId, currentScores);
     };
 
     const handleAddScore = (score: string) => {
@@ -539,10 +559,25 @@ const ScoreEntry: React.FC = () => {
                                 id="class-select"
                                 value={selectedClass}
                                 onChange={(e) => {
-                                    if (scoreModified) commitScore();
-                                    const newValue = e.target.value;
-                                    setSelectedClass(newValue);
-                                    localStorage.setItem('scoreEntry_selectedClass', newValue);
+                                    if (hasLocalChanges) saveToCloud();
+                                    const newClassName = e.target.value;
+                                    
+                                    // SMART ATOMIC TRANSITION:
+                                    // 1. Calculate valid subjects for the NEW class
+                                    const nextSubjects = getSubjectsForUserAndClass(currentUser, newClassName, allSubjects);
+                                    
+                                    // 2. Check if current subject still exists in new class
+                                    const stillValid = nextSubjects.find(s => s.id === selectedSubjectId);
+                                    
+                                    // 3. Update BOTH in one cycle to prevent mismatched render leaks
+                                    setSelectedClass(newClassName);
+                                    localStorage.setItem('scoreEntry_selectedClass', newClassName);
+                                    
+                                    if (!stillValid && nextSubjects.length > 0) {
+                                        const firstSubjectId = nextSubjects[0].id;
+                                        setSelectedSubjectId(firstSubjectId);
+                                        localStorage.setItem('scoreEntry_selectedSubjectId', String(firstSubjectId));
+                                    }
                                 }}
                                 className={getSelectStyles(useMobileView)}
                             >
@@ -555,20 +590,36 @@ const ScoreEntry: React.FC = () => {
                             </select>
                         </div>
                         <div className="flex-1">
-                            <label htmlFor="subject-select" className={`block font-medium text-gray-700 ${useMobileView ? 'text-sm mb-1' : 'text-[10px] mb-0'} lg:text-sm lg:mb-1`}>Select Subject</label>
-                            <select
-                                id="subject-select"
-                                value={selectedSubjectId}
-                                onChange={(e) => {
-                                    if (scoreModified) commitScore();
-                                    const newValue = Number(e.target.value);
-                                    setSelectedSubjectId(newValue);
-                                    localStorage.setItem('scoreEntry_selectedSubjectId', String(newValue));
-                                }}
-                                className={getSelectStyles(useMobileView)}
-                            >
-                                {subjects.map(s => <option key={s.id} value={s.id}>{s.subject}</option>)}
-                            </select>
+                            <label htmlFor="subject-select" className={`block font-medium text-gray-700 ${useMobileView ? 'text-sm mb-1' : 'text-[10px] mb-0'} lg:text-sm lg:mb-1 ${subjects.length === 0 ? 'text-red-500' : ''}`}>
+                                {subjects.length === 0 ? 'No Subjects Found' : 'Select Subject'}
+                            </label>
+                            <div className="relative">
+                                <select
+                                    id="subject-select"
+                                    value={selectedSubjectId || ''}
+                                    onChange={(e) => {
+                                        if (hasLocalChanges) saveToCloud();
+                                        const newValue = Number(e.target.value);
+                                        setSelectedSubjectId(newValue);
+                                        localStorage.setItem('scoreEntry_selectedSubjectId', String(newValue));
+                                    }}
+                                    className={`${getSelectStyles(useMobileView)} ${subjects.length === 0 ? 'border-red-300 bg-red-50' : ''}`}
+                                    disabled={subjects.length === 0}
+                                >
+                                    {subjects.length === 0 && <option value="">No subjects assigned to this class</option>}
+                                    {subjects.map(s => <option key={s.id} value={s.id}>{s.subject}</option>)}
+                                </select>
+                                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-400">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 lg:h-5 lg:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </div>
+                            </div>
+                            {subjects.length === 0 && (
+                                <p className="mt-1 text-[9px] text-red-500 font-medium italic">
+                                    Please contact Admin to assign subjects to you for this class.
+                                </p>
+                            )}
                         </div>
                     </div>
 
@@ -814,7 +865,7 @@ const ScoreEntry: React.FC = () => {
                                 {filteredStudents.length > 0 ? (
                                     filteredStudents.map((student, index) => (
                                         <InlineScoreInput
-                                            key={student.id}
+                                            key={`${student.id}-${selectedSubjectId}`}
                                             index={index + 1}
                                             student={student}
                                             subjectId={selectedSubjectId}
