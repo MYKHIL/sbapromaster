@@ -239,3 +239,42 @@ export const processAndUploadImage = async (
         throw error;
     }
 };
+/**
+ * Triggers a browser download for an image URL.
+ * Bypasses CORS restrictions on the 'download' attribute by fetching as a blob.
+ */
+export const triggerDownload = async (url: string, filename: string) => {
+    try {
+        if (!url) return;
+        
+        // If it's already a Data URL, we can download it directly
+        if (url.startsWith('data:')) {
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            return;
+        }
+
+        // For remote URLs, fetch as blob to bypass cross-origin download restrictions
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Clean up
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+    } catch (error) {
+        console.error('Download failed:', error);
+        // Fallback: just open in new tab if fetch fails
+        window.open(url, '_blank');
+    }
+};

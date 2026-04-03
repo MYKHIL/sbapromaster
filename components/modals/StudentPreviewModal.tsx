@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Student } from '../../types';
+import { triggerDownload } from '../../utils/imageUtils';
 
 interface StudentPreviewModalProps {
     isOpen: boolean;
@@ -9,6 +10,52 @@ interface StudentPreviewModalProps {
 }
 
 const StudentPreviewModal: React.FC<StudentPreviewModalProps> = ({ isOpen, onClose, title, students }) => {
+    // Context menu state for student photo download
+    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; student: Student } | null>(null);
+    const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const contextMenuRef = useRef<HTMLDivElement>(null);
+
+    // Close context menu when clicking outside
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (contextMenu && contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
+                setContextMenu(null);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [contextMenu]);
+
+    const downloadPhoto = useCallback(async () => {
+        if (!contextMenu) return;
+        const { student } = contextMenu;
+        if (!student.picture) return;
+        
+        await triggerDownload(student.picture, `student-${student.name.toLowerCase().replace(/\s+/g, '-')}.png`);
+        setContextMenu(null);
+    }, [contextMenu]);
+
+    const handleContextMenu = useCallback((e: React.MouseEvent, student: Student) => {
+        if (!student.picture) return;
+        e.preventDefault();
+        setContextMenu({ x: e.clientX, y: e.clientY, student });
+    }, []);
+
+    const handleTouchStart = useCallback((e: React.TouchEvent, student: Student) => {
+        if (!student.picture) return;
+        longPressTimer.current = setTimeout(() => {
+            const touch = e.touches[0];
+            setContextMenu({ x: touch.clientX, y: touch.clientY, student });
+        }, 500);
+    }, []);
+
+    const handleTouchEnd = useCallback(() => {
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current);
+            longPressTimer.current = null;
+        }
+    }, []);
+
     if (!isOpen) return null;
 
     return (
@@ -56,7 +103,16 @@ const StudentPreviewModal: React.FC<StudentPreviewModalProps> = ({ isOpen, onClo
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center gap-3">
                                                 {student.picture ? (
-                                                    <img src={student.picture} alt="" className="w-8 h-8 rounded-full object-cover border border-gray-200" />
+                                                    <img 
+                                                        src={student.picture} 
+                                                        alt="" 
+                                                        className="w-8 h-8 rounded-full object-cover border border-gray-200 cursor-context-menu" 
+                                                        onContextMenu={(e) => handleContextMenu(e, student)}
+                                                        onTouchStart={(e) => handleTouchStart(e, student)}
+                                                        onTouchEnd={handleTouchEnd}
+                                                        onTouchMove={handleTouchEnd}
+                                                        draggable={false}
+                                                    />
                                                 ) : (
                                                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${student.gender === 'Male' ? 'bg-blue-100 text-blue-600' : 'bg-rose-100 text-rose-600'}`}>
                                                         {student.name.charAt(0)}
@@ -95,6 +151,35 @@ const StudentPreviewModal: React.FC<StudentPreviewModalProps> = ({ isOpen, onClo
                     </button>
                 </div>
             </div>
+
+            {/* Photo context menu (right-click / long-press) */}
+            {contextMenu && (
+                <div
+                    ref={contextMenuRef}
+                    className="fixed z-[70] bg-white rounded-xl shadow-2xl border border-gray-100 py-1.5 min-w-[180px] overflow-hidden animate-in fade-in zoom-in duration-100"
+                    style={{ top: contextMenu.y, left: contextMenu.x }}
+                >
+                    <button
+                        className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors gap-2.5"
+                        onClick={downloadPhoto}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Download Photo
+                    </button>
+                    <div className="border-t border-gray-100 my-1" />
+                    <button
+                        className="flex items-center w-full px-4 py-2.5 text-sm text-gray-500 hover:bg-gray-50 transition-colors gap-2.5"
+                        onClick={() => setContextMenu(null)}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        Close
+                    </button>
+                </div>
+            )}
         </div>
     );
 };

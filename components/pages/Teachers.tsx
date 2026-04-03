@@ -10,7 +10,7 @@ import RestoreModal from '../modals/RestoreModal';
 import { AI_FEATURES_ENABLED, AUTO_SANITIZE_TEACHERS, DIRTY_INDICATOR_BG, DIRTY_INDICATOR_TEXT, DIRTY_INDICATOR_SECONDARY_TEXT, DIRTY_INDICATOR_HOVER_BG, DIRTY_INDICATOR_BORDER } from '../../constants';
 import ReadOnlyWrapper from '../ReadOnlyWrapper';
 import { useUser } from '../../context/UserContext';
-import { processAndUploadImage, validateImageSize } from '../../utils/imageUtils';
+import { processAndUploadImage, validateImageSize, triggerDownload } from '../../utils/imageUtils';
 import { exportToExcel, exportToPDF } from '../../utils/exportUtils';
 import { useUserAction } from '../../context/UserActionContext';
 import type { NavigationMeta } from '../../types';
@@ -78,13 +78,13 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
         }
     }, []);
 
-    const downloadTeacherSignature = useCallback(() => {
+    const downloadTeacherSignature = useCallback(async () => {
         const src = currentClassData?.teacherSignature;
         if (!src) return;
-        const a = document.createElement('a');
-        a.href = src;
-        a.download = 'teacher-signature.png';
-        a.click();
+        
+        // Use the cross-origin friendly download utility
+        await triggerDownload(src, 'teacher-signature.png');
+        
         setSigContextMenu(null);
     }, [currentClassData?.teacherSignature]);
 

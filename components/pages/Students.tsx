@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import CameraCapture from '../CameraCapture';
 import { useData } from '../../context/DataContext';
 import type { Student } from '../../types';
@@ -10,7 +10,7 @@ import { AI_FEATURES_ENABLED, DIRTY_INDICATOR_BG, DIRTY_INDICATOR_TEXT, DIRTY_IN
 import { useUser } from '../../context/UserContext';
 import ReadOnlyWrapper from '../ReadOnlyWrapper';
 import { getAvailableClasses, canManageStudentsInClass } from '../../utils/permissions';
-import { processImageForUpload, validateImageSize } from '../../utils/imageUtils';
+import { processImageForUpload, validateImageSize, triggerDownload } from '../../utils/imageUtils';
 import { generateIndexNumber } from '../../utils/indexNumberGenerator';
 import { getNextAvailableCounter } from '../../utils/indexNumberCounter';
 import { sortClassesByName } from '../../utils/classSort';
@@ -76,6 +76,53 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
     const [sortConfig, setSortConfig] = useState<{ key: keyof Student | null; dir: 'asc' | 'desc' }>({ key: 'gender', dir: 'desc' });
     const [showPdfOptions, setShowPdfOptions] = useState(false);
     const [pdfOptions, setPdfOptions] = useState<PdfExportOptions>(DEFAULT_STUDENT_PDF_OPTIONS);
+    
+    // Context menu state for student photo download
+    const [photoContextMenu, setPhotoContextMenu] = useState<{ x: number; y: number } | null>(null);
+    const photoLongPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const photoContextMenuRef = useRef<HTMLDivElement>(null);
+
+    // Close context menu when clicking outside
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (photoContextMenu && photoContextMenuRef.current && !photoContextMenuRef.current.contains(e.target as Node)) {
+                setPhotoContextMenu(null);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [photoContextMenu]);
+
+    const downloadStudentPhoto = useCallback(async () => {
+        const src = currentStudent?.picture;
+        if (!src) return;
+        
+        // Use the cross-origin friendly download utility
+        await triggerDownload(src, `student-${currentStudent.name.toLowerCase().replace(/\s+/g, '-') || 'photo'}.png`);
+        
+        setPhotoContextMenu(null);
+    }, [currentStudent]);
+
+    const handlePhotoContextMenu = useCallback((e: React.MouseEvent) => {
+        if (!currentStudent?.picture) return;
+        e.preventDefault();
+        setPhotoContextMenu({ x: e.clientX, y: e.clientY });
+    }, [currentStudent]);
+
+    const handlePhotoTouchStart = useCallback((e: React.TouchEvent) => {
+        if (!currentStudent?.picture) return;
+        photoLongPressTimer.current = setTimeout(() => {
+            const touch = e.touches[0];
+            setPhotoContextMenu({ x: touch.clientX, y: touch.clientY });
+        }, 500);
+    }, [currentStudent]);
+
+    const handlePhotoTouchEnd = useCallback(() => {
+        if (photoLongPressTimer.current) {
+            clearTimeout(photoLongPressTimer.current);
+            photoLongPressTimer.current = null;
+        }
+    }, []);
 
     const handleSort = (key: keyof Student) => {
         setSortConfig(prev => ({
@@ -700,7 +747,17 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-tight mb-2">Student Photo</label>
                                 <div className="flex items-center space-x-3 sm:space-x-4">
                                     <div className="relative group">
-                                        <img src={currentStudent.picture || USER_PLACEHOLDER} alt="Preview" className="h-16 w-16 sm:h-20 sm:w-20 rounded-full object-cover bg-gray-200 border-2 border-white shadow-sm" />
+                                        <img
+                                            src={currentStudent.picture || USER_PLACEHOLDER}
+                                            alt="Preview"
+                                            title={currentStudent.picture ? 'Right-click or long-press to download' : undefined}
+                                            className={`h-16 w-16 sm:h-20 sm:w-20 rounded-full object-cover bg-gray-200 border-2 border-white shadow-sm ${currentStudent.picture ? 'cursor-context-menu' : ''}`}
+                                            onContextMenu={handlePhotoContextMenu}
+                                            onTouchStart={handlePhotoTouchStart}
+                                            onTouchEnd={handlePhotoTouchEnd}
+                                            onTouchMove={handlePhotoTouchEnd}
+                                            draggable={false}
+                                        />
                                         {isEnhancing && (
                                             <div className="absolute inset-0 bg-black/30 rounded-full flex items-center justify-center">
                                                 <div className="h-4 w-4 border-2 border-white border-t-transparent animate-spin rounded-full"></div>
@@ -1000,6 +1057,34 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
                 variant="danger"
                 confirmText="Yes, Delete Permanently"
             />
+            {/* Student photo context menu (right-click / long-press) */}
+            {photoContextMenu && (
+                <div
+                    ref={photoContextMenuRef}
+                    className="fixed z-[70] bg-white rounded-xl shadow-2xl border border-gray-100 py-1.5 min-w-[200px] overflow-hidden"
+                    style={{ top: photoContextMenu.y, left: photoContextMenu.x }}
+                >
+                    <button
+                        className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors gap-2.5"
+                        onClick={downloadStudentPhoto}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Download Photo
+                    </button>
+                    <div className="border-t border-gray-100 my-1" />
+                    <button
+                        className="flex items-center w-full px-4 py-2.5 text-sm text-gray-500 hover:bg-gray-50 transition-colors gap-2.5"
+                        onClick={() => setPhotoContextMenu(null)}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        Close
+                    </button>
+                </div>
+            )}
         </div>
     );
 };

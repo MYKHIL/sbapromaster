@@ -7,7 +7,7 @@ import { AI_FEATURES_ENABLED } from '../../constants';
 import ReadOnlyWrapper from '../ReadOnlyWrapper';
 import { useUser } from '../../context/UserContext';
 
-import { processAndUploadImage, validateImageSize } from '../../utils/imageUtils';
+import { processAndUploadImage, validateImageSize, triggerDownload } from '../../utils/imageUtils';
 import { SchoolSettings } from '../../types';
 
 const LOGO_PLACEHOLDER = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgdmlld0JveD0iMCAwIDEyOCAxMjgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiByeD0iOCIgZmlsbD0iI0YzRjRGNyIvPgo8cGF0aCBkPSJNNjQgMzBMMzQgNTBWOTRIOTRWNTBMNjQgMzBaIiBzdHJva2U9IiNEMUQ1REIiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+CjxwYXRoIGQ9Ik03OCA5OFY2OEM3OCA2NC42ODYzIDc1LjMxMzcgNjIgNzIgNjJINTZDNTAuNjg2MyA2MiA1MCA2NC42ODYzIDUwIDY4Vjk4IiBzdHJva2U9IiNEMUQ1REIiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjx0ZXh0IHg9IjY0IiB5PSIxMTQiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEwIiBmaWxsPSIjOUNBM0FGIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5VcGxvYWQgU2Nob29sIExvZ288L3RleHQ+Cjwvc3ZnPg==';
@@ -51,8 +51,8 @@ const Settings: React.FC = () => {
   const [formData, setFormData] = useState<SchoolSettings>(settings);
   const [showSignaturePad, setShowSignaturePad] = useState(false);
 
-  // Context menu state for signature image download
-  const [sigContextMenu, setSigContextMenu] = useState<{ x: number; y: number } | null>(null);
+  // Context menu state for logo and signature image download
+  const [sigContextMenu, setSigContextMenu] = useState<{ x: number; y: number; type: 'logo' | 'signature' } | null>(null);
   const sigLongPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sigContextMenuRef = useRef<HTMLDivElement>(null);
 
@@ -82,29 +82,34 @@ const Settings: React.FC = () => {
     }
   }, [updateSettings]);
 
-  const downloadSignature = useCallback(() => {
-    const src = settings.headmasterSignature;
+  const downloadImage = useCallback(async () => {
+    if (!sigContextMenu) return;
+    const type = sigContextMenu.type;
+    const src = type === 'logo' ? settings.logo : settings.headmasterSignature;
     if (!src) return;
-    const a = document.createElement('a');
-    a.href = src;
-    a.download = 'headmaster-signature.png';
-    a.click();
+    
+    // Use the cross-origin friendly download utility
+    const filename = type === 'logo' ? 'school-logo.png' : 'headmaster-signature.png';
+    await triggerDownload(src, filename);
+    
     setSigContextMenu(null);
-  }, [settings.headmasterSignature]);
+  }, [sigContextMenu, settings.logo, settings.headmasterSignature]);
 
-  const handleSigContextMenu = useCallback((e: React.MouseEvent) => {
-    if (!settings.headmasterSignature) return;
+  const handleImageContextMenu = useCallback((e: React.MouseEvent, type: 'logo' | 'signature') => {
+    const src = type === 'logo' ? settings.logo : settings.headmasterSignature;
+    if (!src) return;
     e.preventDefault();
-    setSigContextMenu({ x: e.clientX, y: e.clientY });
-  }, [settings.headmasterSignature]);
+    setSigContextMenu({ x: e.clientX, y: e.clientY, type });
+  }, [settings.logo, settings.headmasterSignature]);
 
-  const handleSigTouchStart = useCallback((e: React.TouchEvent) => {
-    if (!settings.headmasterSignature) return;
+  const handleImageTouchStart = useCallback((e: React.TouchEvent, type: 'logo' | 'signature') => {
+    const src = type === 'logo' ? settings.logo : settings.headmasterSignature;
+    if (!src) return;
     sigLongPressTimer.current = setTimeout(() => {
       const touch = e.touches[0];
-      setSigContextMenu({ x: touch.clientX, y: touch.clientY });
+      setSigContextMenu({ x: touch.clientX, y: touch.clientY, type });
     }, 500);
-  }, [settings.headmasterSignature]);
+  }, [settings.logo, settings.headmasterSignature]);
 
   const handleSigTouchEnd = useCallback(() => {
     if (sigLongPressTimer.current) {
@@ -483,7 +488,17 @@ const Settings: React.FC = () => {
             <div>
               <div className="flex items-center space-x-4">
                 <div className="relative">
-                  <img src={settings.logo || LOGO_PLACEHOLDER} alt="Logo Preview" className={`h-32 w-32 object-contain border p-2 rounded-lg bg-gray-50 transition-colors ${isSettingDirty('logo') ? 'border-amber-500' : ''} ${isUploadingLogo ? 'opacity-40 animate-pulse' : ''}`} />
+                  <img
+                    src={settings.logo || LOGO_PLACEHOLDER}
+                    alt="Logo Preview"
+                    title={settings.logo ? 'Right-click or long-press to download' : undefined}
+                    className={`h-32 w-32 object-contain border p-2 rounded-lg bg-gray-50 transition-colors ${isSettingDirty('logo') ? 'border-amber-500' : ''} ${settings.logo ? 'cursor-context-menu' : ''} ${isUploadingLogo ? 'opacity-40 animate-pulse' : ''}`}
+                    onContextMenu={(e) => handleImageContextMenu(e, 'logo')}
+                    onTouchStart={(e) => handleImageTouchStart(e, 'logo')}
+                    onTouchEnd={handleSigTouchEnd}
+                    onTouchMove={handleSigTouchEnd}
+                    draggable={false}
+                  />
                   {isUploadingLogo && (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="h-8 w-8 border-4 border-blue-600 border-t-transparent animate-spin rounded-full"></div>
@@ -531,8 +546,8 @@ const Settings: React.FC = () => {
                     alt="Signature Preview"
                     title={settings.headmasterSignature ? 'Right-click or long-press to download' : undefined}
                     className={`h-12 w-36 object-contain border p-1 rounded-md bg-gray-50 transition-colors ${isSettingDirty('headmasterSignature') ? 'border-amber-500' : ''} ${settings.headmasterSignature ? 'cursor-context-menu' : ''} ${isUploadingSignature ? 'opacity-40 animate-pulse' : ''}`}
-                    onContextMenu={handleSigContextMenu}
-                    onTouchStart={handleSigTouchStart}
+                    onContextMenu={(e) => handleImageContextMenu(e, 'signature')}
+                    onTouchStart={(e) => handleImageTouchStart(e, 'signature')}
                     onTouchEnd={handleSigTouchEnd}
                     onTouchMove={handleSigTouchEnd}
                     draggable={false}
@@ -607,12 +622,12 @@ const Settings: React.FC = () => {
         >
           <button
             className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors gap-2.5"
-            onClick={downloadSignature}
+            onClick={downloadImage}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            Download Signature
+            Download {sigContextMenu.type === 'logo' ? 'Logo' : 'Signature'}
           </button>
           <div className="border-t border-gray-100 my-1" />
           <button

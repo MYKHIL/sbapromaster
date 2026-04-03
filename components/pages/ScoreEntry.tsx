@@ -559,7 +559,6 @@ const ScoreEntry: React.FC = () => {
                                 id="class-select"
                                 value={selectedClass}
                                 onChange={(e) => {
-                                    if (hasLocalChanges) saveToCloud();
                                     const newClassName = e.target.value;
                                     
                                     // SMART ATOMIC TRANSITION:
@@ -598,7 +597,6 @@ const ScoreEntry: React.FC = () => {
                                     id="subject-select"
                                     value={selectedSubjectId || ''}
                                     onChange={(e) => {
-                                        if (hasLocalChanges) saveToCloud();
                                         const newValue = Number(e.target.value);
                                         setSelectedSubjectId(newValue);
                                         localStorage.setItem('scoreEntry_selectedSubjectId', String(newValue));
