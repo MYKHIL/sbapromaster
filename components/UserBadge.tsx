@@ -199,84 +199,11 @@ const UserBadge: React.FC = () => {
                                     {getInitials(currentUser.name)}
                                 </button>
 
-                                {/* User Info Popup */}
-                                {showUserInfo && (
-                                    <div
-                                        className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-2xl border border-gray-100 p-5 z-[70] animate-in fade-in zoom-in-95 duration-200"
-                                        onClick={(e) => e.stopPropagation()}
-                                    >
-                                        <div className="flex flex-col items-center mb-4 pb-4 border-b border-gray-50">
-                                            <div className={`p-4 rounded-full mb-3 shadow-inner ${getRoleColor(currentUser.role)} bg-opacity-30`}>
-                                                <svg
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    className="h-10 w-10"
-                                                    viewBox="0 0 20 20"
-                                                    fill="currentColor"
-                                                >
-                                                    <path
-                                                        fillRule="evenodd"
-                                                        d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                                                        clipRule="evenodd"
-                                                    />
-                                                </svg>
-                                            </div>
-                                            <h3 className="font-bold text-gray-800 text-lg leading-tight text-center">{currentUser.name}</h3>
-                                            <span className={`mt-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${getRoleColor(currentUser.role)}`}>
-                                                {currentUser.role}
-                                            </span>
-                                        </div>
-
-                                        <div className="space-y-4">
-                                            {/* Assigned Classes */}
-                                            <div>
-                                                <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
-                                                    Class Access
-                                                </p>
-                                                {isAdmin ? (
-                                                    <p className="text-sm font-medium text-green-600 bg-green-50 px-2 py-1 rounded-lg inline-block">Full Institution Access</p>
-                                                ) : (currentUser.allowedClasses || []).length > 0 ? (
-                                                    <div className="flex flex-wrap gap-1.5">
-                                                        {(currentUser.allowedClasses || []).map((cls, idx) => (
-                                                            <span key={idx} className="text-xs font-semibold bg-gray-100 text-gray-700 px-2.5 py-1 rounded-md border border-gray-200">
-                                                                {cls}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                ) : (
-                                                    <p className="text-xs italic text-gray-400">No classes assigned</p>
-                                                )}
-                                            </div>
-
-                                            {/* Assigned Subjects */}
-                                            <div>
-                                                <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-                                                    Subject Access
-                                                </p>
-                                                {isAdmin ? (
-                                                    <p className="text-sm font-medium text-green-600 bg-green-50 px-2 py-1 rounded-lg inline-block">All Registered Subjects</p>
-                                                ) : assignedSubjects.length > 0 ? (
-                                                    <div className="flex flex-wrap gap-1.5">
-                                                        {assignedSubjects.map((sub, idx) => (
-                                                            <span key={idx} className="text-xs font-semibold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md border border-blue-100">
-                                                                {sub}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                ) : (
-                                                    <p className="text-xs italic text-gray-400">No subjects assigned</p>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        <div className="mt-5 pt-4 text-[10px] text-center text-gray-400 border-t border-gray-50 italic">
-                                            Contact Admin to update your account permissions
-                                        </div>
-                                    </div>
-                                )}
                             </div>
                         )}
+
+                        {/* Online Users Count (Admin only) - Commented out per user request */}
+
 
                         {/* Online Users Count (Admin only) - Commented out per user request */}
                         {/* {isAdmin && (
@@ -326,163 +253,6 @@ const UserBadge: React.FC = () => {
                                     </span>
                                 </div>
                             </button>
-
-                            {/* Term Info Popup */}
-                            {showTermInfo && (
-                                <div
-                                    className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-blue-100 p-4 z-[70] animate-in fade-in zoom-in-95 duration-200 overflow-hidden"
-                                    onClick={(e) => e.stopPropagation()} // Prevent closing
-                                >
-                                    {showTermSelect ? (
-                                        <div className="space-y-3">
-                                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
-                                                <button 
-                                                    onClick={() => setShowTermSelect(false)}
-                                                    className="p-1 rounded-lg hover:bg-gray-100 text-gray-500"
-                                                >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                                    </svg>
-                                                </button>
-                                                <h3 className="font-bold text-gray-800 text-sm">Select Term to Switch</h3>
-                                            </div>
-
-                                            <div className="max-h-60 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-                                                {isLoadingTerms ? (
-                                                   <div className="py-8 flex flex-col items-center justify-center gap-2">
-                                                       <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                                                       <span className="text-xs text-gray-400">Fetching available terms...</span>
-                                                   </div>
-                                                ) : availableTerms.length > 0 ? (
-                                                    availableTerms.map(termId => {
-                                                        const parts = termId.split('_');
-                                                        const isCurrent = termId === schoolId;
-                                                        // Format termId: schoolname_year_term -> Year, Term
-                                                        const label = parts.length >= 3 
-                                                            ? `${parts[1]} - ${parts[2].replace('term', 'Term ')}`
-                                                            : termId;
-                                                        
-                                                        return (
-                                                            <button
-                                                                key={termId}
-                                                                onClick={() => handleTermSelect(termId)}
-                                                                className={`w-full text-left p-3 rounded-xl transition-all duration-200 border ${
-                                                                    isCurrent 
-                                                                    ? 'bg-blue-50 border-blue-200 ring-1 ring-blue-100' 
-                                                                    : 'bg-gray-50 border-transparent hover:bg-white hover:border-blue-200 hover:shadow-sm'
-                                                                }`}
-                                                                disabled={isCurrent}
-                                                            >
-                                                                <div className="flex justify-between items-center">
-                                                                    <div className="flex flex-col">
-                                                                        <span className={`text-xs font-bold uppercase tracking-tight ${isCurrent ? 'text-blue-700' : 'text-gray-700'}`}>
-                                                                            {parts[1] || 'Unknown Year'}
-                                                                        </span>
-                                                                        <span className={`text-[11px] ${isCurrent ? 'text-blue-500 font-medium' : 'text-gray-500'}`}>
-                                                                            {parts[2]?.replace('term', 'Term ') || 'Term'}
-                                                                        </span>
-                                                                    </div>
-                                                                    {isCurrent && (
-                                                                        <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">Current</span>
-                                                                    )}
-                                                                </div>
-                                                            </button>
-                                                        );
-                                                    })
-                                                ) : (
-                                                    <div className="text-center py-4 text-xs text-gray-500">No other terms found</div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
-                                                <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                    </svg>
-                                                </div>
-                                                <h3 className="font-semibold text-gray-800 text-sm">Current Term Details</h3>
-                                            </div>
-
-                                            <div className="space-y-3">
-                                                <div className="flex justify-between items-center text-sm">
-                                                    <span className="font-medium text-blue-900 bg-blue-50 px-2 py-0.5 rounded text-xs truncate max-w-full">
-                                                        {settings?.schoolName.toUpperCase() || 'No School Name Set'}
-                                                    </span>
-                                                </div>
-                                                {subscription?.expiryDate && (() => {
-                                                    const expiry = subscription.expiryDate?.toDate ? subscription.expiryDate.toDate() : new Date(subscription.expiryDate);
-                                                    const isExpired = expiry < new Date();
-                                                    const daysLeft = Math.ceil((expiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-                                                    return (
-                                                        <div className={`rounded-xl px-3 py-2 space-y-1.5 ${isExpired ? 'bg-red-50 border border-red-200' : daysLeft <= 30 ? 'bg-orange-50 border border-orange-200' : 'bg-indigo-50 border border-indigo-100'}`}>
-                                                            <p className={`text-[10px] font-black uppercase tracking-widest ${isExpired ? 'text-red-400' : daysLeft <= 30 ? 'text-orange-400' : 'text-indigo-400'}`}>License</p>
-                                                            <div className="flex justify-between items-center">
-                                                                <span className="text-xs text-gray-600">Expiry Date</span>
-                                                                <span className={`font-bold px-2 py-0.5 rounded text-xs ${isExpired ? 'text-red-700 bg-red-100' : daysLeft <= 30 ? 'text-orange-700 bg-orange-100' : 'text-indigo-700 bg-indigo-100'}`}>
-                                                                    {expiry.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                                                </span>
-                                                            </div>
-                                                            {isExpired ? (
-                                                                <p className="text-[10px] text-red-600 font-semibold text-center">⚠️ License has expired</p>
-                                                            ) : daysLeft <= 30 ? (
-                                                                <p className="text-[10px] text-orange-600 font-medium text-center">{daysLeft} day{daysLeft !== 1 ? 's' : ''} remaining</p>
-                                                            ) : (
-                                                                <p className="text-[10px] text-indigo-500 font-medium text-center">✓ Active</p>
-                                                            )}
-                                                        </div>
-                                                    );
-                                                })()}
-                                                <div className="flex justify-between items-center text-sm">
-                                                    <span className="text-gray-500">Academic Year</span>
-                                                    <span className="font-medium text-gray-900 bg-gray-50 px-2 py-0.5 rounded">{settings?.academicYear || 'N/A'}</span>
-                                                </div>
-                                                <div className="flex justify-between items-center text-sm">
-                                                    <span className="text-gray-500">Current Term</span>
-                                                    <span className="font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{settings?.academicTerm || 'N/A'}</span>
-                                                </div>
-
-                                                <div className="pt-2 border-t border-gray-50"></div>
-
-                                                <div className="space-y-2">
-                                                    <p className="text-[10px] text-gray-400 uppercase tracking-widest font-black">Dates</p>
-                                                    <div className="flex justify-between items-center text-xs py-0.5">
-                                                        <span className="text-gray-600">Vacation Date</span>
-                                                        <span className="font-semibold text-gray-900">
-                                                            {settings?.vacationDate ? new Date(settings.vacationDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not Set'}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex justify-between items-center text-xs py-0.5">
-                                                        <span className="text-gray-600">Reopening Date</span>
-                                                        <span className="font-semibold text-gray-900">
-                                                            {settings?.reopeningDate ? new Date(settings.reopeningDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not Set'}
-                                                        </span>
-                                                    </div>
-                                                </div>
-
-                                                <div className="pt-3 flex flex-col gap-2">
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleFetchTerms();
-                                                        }}
-                                                        className="w-full py-2.5 px-4 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-lg shadow-blue-200"
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                                                        </svg>
-                                                        Switch Term
-                                                    </button>
-                                                    <p className="text-[9px] text-center text-gray-400">
-                                                        Manage dates in System Settings
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            )}
 
                         </div>
 
@@ -591,7 +361,190 @@ const UserBadge: React.FC = () => {
                 </div>
             </div>
 
+            {/* Mobile Backdrop for Popups */}
+            {(showUserInfo || showTermInfo) && (
+                <div 
+                    className="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-[65] md:hidden"
+                    onClick={() => {
+                        setShowUserInfo(false);
+                        setShowTermInfo(false);
+                    }}
+                />
+            )}
+
+            {/* User Info Popup - Centered on Mobile */}
+            {showUserInfo && (
+                <div
+                    className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-[320px] bg-white rounded-xl shadow-2xl border border-gray-100 p-5 z-[70] animate-in fade-in zoom-in-95 duration-200 md:absolute md:top-full md:right-0 md:mt-2 md:translate-x-0 md:translate-y-0 md:left-auto md:w-72"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <div className="flex flex-col items-center mb-4 pb-4 border-b border-gray-50">
+                        <div className={`p-4 rounded-full mb-3 shadow-inner ${getRoleColor(currentUser.role)} bg-opacity-30`}>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                            </svg>
+                        </div>
+                        <h3 className="font-bold text-gray-800 text-lg leading-tight text-center">{currentUser.name}</h3>
+                        <span className={`mt-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${getRoleColor(currentUser.role)}`}>
+                            {currentUser.role}
+                        </span>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div>
+                            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                                Class Access
+                            </p>
+                            {isAdmin ? (
+                                <p className="text-sm font-medium text-green-600 bg-green-50 px-2 py-1 rounded-lg inline-block">Full Institution Access</p>
+                            ) : (currentUser.allowedClasses || []).length > 0 ? (
+                                <div className="flex flex-wrap gap-1.5">
+                                    {(currentUser.allowedClasses || []).map((cls, idx) => (
+                                        <span key={idx} className="text-xs font-semibold bg-gray-100 text-gray-700 px-2.5 py-1 rounded-md border border-gray-200">
+                                            {cls}
+                                        </span>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-xs italic text-gray-400">No classes assigned</p>
+                            )}
+                        </div>
+
+                        <div>
+                            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                                Subject Access
+                            </p>
+                            {isAdmin ? (
+                                <p className="text-sm font-medium text-green-600 bg-green-50 px-2 py-1 rounded-lg inline-block">All Registered Subjects</p>
+                            ) : assignedSubjects.length > 0 ? (
+                                <div className="flex flex-wrap gap-1.5">
+                                    {assignedSubjects.map((sub, idx) => (
+                                        <span key={idx} className="text-xs font-semibold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md border border-blue-100">
+                                            {sub}
+                                        </span>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-xs italic text-gray-400">No subjects assigned</p>
+                            )}
+                        </div>
+                    </div>
+                    <div className="mt-5 pt-4 text-[10px] text-center text-gray-400 border-t border-gray-50 italic md:hidden">
+                        Tap anywhere outside to close
+                    </div>
+                </div>
+            )}
+
+            {/* Term Info Popup - Centered on Mobile */}
+            {showTermInfo && (
+                <div
+                    className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-[320px] bg-white rounded-2xl shadow-2xl border border-blue-100 p-4 z-[70] animate-in fade-in zoom-in-95 duration-200 overflow-hidden md:absolute md:top-full md:right-0 md:mt-2 md:translate-x-0 md:translate-y-0 md:left-auto md:w-72"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {showTermSelect ? (
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
+                                <button onClick={() => setShowTermSelect(false)} className="p-1 rounded-lg hover:bg-gray-100 text-gray-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                    </svg>
+                                </button>
+                                <h3 className="font-bold text-gray-800 text-sm">Select Term to Switch</h3>
+                            </div>
+                            <div className="max-h-60 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                                {isLoadingTerms ? (
+                                    <div className="py-8 flex flex-col items-center justify-center gap-2">
+                                        <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                                        <span className="text-xs text-gray-400">Fetching available terms...</span>
+                                    </div>
+                                ) : availableTerms.length > 0 ? (
+                                    availableTerms.map(termId => {
+                                        const parts = termId.split('_');
+                                        const isCurrent = termId === schoolId;
+                                        return (
+                                            <button key={termId} onClick={() => handleTermSelect(termId)} className={`w-full text-left p-3 rounded-xl transition-all duration-200 border ${isCurrent ? 'bg-blue-50 border-blue-200 ring-1 ring-blue-100' : 'bg-gray-50 border-transparent hover:bg-white hover:border-blue-200 hover:shadow-sm'}`} disabled={isCurrent}>
+                                                <div className="flex justify-between items-center">
+                                                    <div className="flex flex-col">
+                                                        <span className={`text-xs font-bold uppercase tracking-tight ${isCurrent ? 'text-blue-700' : 'text-gray-700'}`}>{parts[1] || 'Unknown Year'}</span>
+                                                        <span className={`text-[11px] ${isCurrent ? 'text-blue-500 font-medium' : 'text-gray-500'}`}>{parts[2]?.replace('term', 'Term ') || 'Term'}</span>
+                                                    </div>
+                                                    {isCurrent && <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">Current</span>}
+                                                </div>
+                                            </button>
+                                        );
+                                    })
+                                ) : (
+                                    <div className="text-center py-4 text-xs text-gray-500">No other terms found</div>
+                                )}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
+                                <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <h3 className="font-semibold text-gray-800 text-sm">Current Term Details</h3>
+                            </div>
+                            <div className="space-y-3">
+                                <div className="flex justify-between items-center text-sm">
+                                    <span className="font-medium text-blue-900 bg-blue-50 px-2 py-0.5 rounded text-xs truncate max-w-full">{settings?.schoolName.toUpperCase() || 'No School Name Set'}</span>
+                                </div>
+                                {subscription?.expiryDate && (() => {
+                                    const expiry = subscription.expiryDate?.toDate ? subscription.expiryDate.toDate() : new Date(subscription.expiryDate);
+                                    const isExpired = expiry < new Date();
+                                    const daysLeft = Math.ceil((expiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                                    return (
+                                        <div className={`rounded-xl px-3 py-2 space-y-1.5 ${isExpired ? 'bg-red-50 border border-red-200' : daysLeft <= 30 ? 'bg-orange-50 border border-orange-200' : 'bg-indigo-50 border border-indigo-100'}`}>
+                                            <p className={`text-[10px] font-black uppercase tracking-widest ${isExpired ? 'text-red-400' : daysLeft <= 30 ? 'text-orange-400' : 'text-indigo-400'}`}>License</p>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-xs text-gray-600">Expiry Date</span>
+                                                <span className={`font-bold px-2 py-0.5 rounded text-xs ${isExpired ? 'text-red-700 bg-red-100' : daysLeft <= 30 ? 'text-orange-700 bg-orange-100' : 'text-indigo-700 bg-indigo-100'}`}>{expiry.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                                            </div>
+                                            {isExpired ? <p className="text-[10px] text-red-600 font-semibold text-center">⚠️ License has expired</p> : daysLeft <= 30 ? <p className="text-[10px] text-orange-600 font-medium text-center">{daysLeft} day{daysLeft !== 1 ? 's' : ''} remaining</p> : <p className="text-[10px] text-indigo-500 font-medium text-center">✓ Active</p>}
+                                        </div>
+                                    );
+                                })()}
+                                <div className="flex justify-between items-center text-sm">
+                                    <span className="text-gray-500">Academic Year</span>
+                                    <span className="font-medium text-gray-900 bg-gray-50 px-2 py-0.5 rounded">{settings?.academicYear || 'N/A'}</span>
+                                </div>
+                                <div className="flex justify-between items-center text-sm">
+                                    <span className="text-gray-500">Current Term</span>
+                                    <span className="font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{settings?.academicTerm || 'N/A'}</span>
+                                </div>
+                                <div className="pt-2 border-t border-gray-50" />
+                                <div className="space-y-2">
+                                    <p className="text-[10px] text-gray-400 uppercase tracking-widest font-black">Dates</p>
+                                    <div className="flex justify-between items-center text-xs py-0.5">
+                                        <span className="text-gray-600">Vacation Date</span>
+                                        <span className="font-semibold text-gray-900">{settings?.vacationDate ? new Date(settings.vacationDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not Set'}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-xs py-0.5">
+                                        <span className="text-gray-600">Reopening Date</span>
+                                        <span className="font-semibold text-gray-900">{settings?.reopeningDate ? new Date(settings.reopeningDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not Set'}</span>
+                                    </div>
+                                </div>
+                                <div className="pt-3 flex flex-col gap-2">
+                                    <button onClick={(e) => { e.stopPropagation(); handleFetchTerms(); }} className="w-full py-2.5 px-4 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-lg shadow-blue-200">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                        </svg>
+                                        Switch Term
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* Switch User Modal */}
+
             <ConfirmationModal
                 isOpen={showConfirm}
                 onClose={() => setShowConfirm(false)}

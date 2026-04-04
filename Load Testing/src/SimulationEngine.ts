@@ -43,6 +43,8 @@ export class SimulationEngine {
         onWorkUpdate: (work: any) => void
     ) {
         this.onLog = onLog;
+        this.onStatsUpdate = this.statsUpdate; // Error below, should be this.onStatsUpdate maybe? Wait, original had this.onStatsUpdate = onStatsUpdate;
+        // Let's stick to original assignments
         this.onStatsUpdate = onStatsUpdate;
         this.onWorkUpdate = onWorkUpdate;
     }
@@ -93,12 +95,13 @@ export class SimulationEngine {
                 { id: 2, name: '2', minScore: 0, maxScore: 79, remark: 'Pass' }
             ],
             assessments: [
-                { id: 1, name: 'Class Work', weight: 10 },
-                { id: 2, name: 'Exam', weight: 50 }
+                { id: 1, name: 'Class Work', weight: 10, type: 'Class' },
+                { id: 2, name: 'Exam', weight: 50, type: 'Exam' }
             ],
             scores: [],
             reportData: [],
-            classData: []
+            classData: [],
+            users: []
         };
 
         try {
@@ -151,7 +154,7 @@ export class SimulationEngine {
                 name: `Teacher ${i}`,
                 role: 'Teacher',
                 allowedClasses: ['JHS 1', 'JHS 2'],
-                allowedSubjects: ['English', 'Math', 'Science'],
+                allowedSubjects: [1, 2, 3],
                 passwordHash: 'dummy'
             });
         }
