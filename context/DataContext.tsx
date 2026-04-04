@@ -272,7 +272,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.201"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.202"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -357,6 +357,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const isItemDirty = React.useCallback((field: keyof AppDataType, id: string | number) => {
         const currentItems = stateRef.current[field];
         const originalItems = originalData.current[field];
+
+        // CRITICAL PROTECTION: If originalItems is undefined, we haven't loaded the cloud version for this field yet.
+        // Returning true here would trigger "Unsaved" tag before we even know the cloud state.
+        if (originalItems === undefined) return false;
 
         if (!Array.isArray(currentItems) || !Array.isArray(originalItems)) return false;
 
@@ -894,33 +898,38 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // 3. Objects
         if (typeof data === 'object') {
             const normalized: any = {};
-            // Filter out system-generated keys that shouldn't trigger "unsaved changes"
-            const keys = Object.keys(data)
-                .filter(k => !['_seconds', '_nanoseconds', 'createdAt', 'updatedAt', '__v', '_firestore'].includes(k))
-                .sort();
+                // Filter out system-generated keys that shouldn't trigger "unsaved changes"
+                const keys = Object.keys(data)
+                    .filter(k => !['_seconds', '_nanoseconds', 'createdAt', 'updatedAt', '__v', '_firestore', '_isLocallyCreated'].includes(k))
+                    .sort();
 
-            for (const key of keys) {
-                // EXCEPTION: Convert 'id', 'studentId', 'classId', and 'age' to string to ensure consistent comparison
-                const lowerKey = key.toLowerCase();
-                if (lowerKey === 'id' || lowerKey.endsWith('id') || lowerKey === 'studentid' || lowerKey === 'classid' || lowerKey === 'age') {
-                    normalized[key] = data[key] !== null && data[key] !== undefined ? String(data[key]) : data[key];
-                    continue;
+                for (const key of keys) {
+                    // EXCEPTION: Convert 'id', 'studentId', 'classId', and 'age' to string to ensure consistent comparison
+                    const lowerKey = key.toLowerCase();
+                    if (lowerKey === 'id' || lowerKey.endsWith('id') || lowerKey === 'studentid' || lowerKey === 'classid' || lowerKey === 'age') {
+                        normalized[key] = data[key] !== null && data[key] !== undefined ? String(data[key]) : data[key];
+                        continue;
+                    }
+
+                    const value = normalizeData(data[key]);
+                    // Only include meaningful values (not null, undefined, or empty string)
+                    // Filter out empty arrays and objects as well to ensure semantic equality
+                    const isMeaningfulValue = (v: any, k: string) => {
+                        if (v === null || v === undefined || v === '') return false;
+                        
+                        // Semantic comparison for booleans: 'false' is equivalent to 'undefined/missing' for soft-delete flags in the baseline
+                        // This prevents cloud (missing field) vs local (deleted: false) from triggering dirty status
+                        if (k === 'deleted' && v === false) return false;
+
+                        if (Array.isArray(v) && v.length === 0) return false;
+                        if (typeof v === 'object' && Object.keys(v).length === 0) return false;
+                        return true;
+                    };
+
+                    if (isMeaningfulValue(value, key)) {
+                        normalized[key] = value;
+                    }
                 }
-
-                const value = normalizeData(data[key]);
-                // Only include meaningful values (not null, undefined, or empty string)
-                // Filter out empty arrays and objects as well to ensure semantic equality
-                const isMeaningfulValue = (v: any) => {
-                    if (v === null || v === undefined || v === '') return false;
-                    if (Array.isArray(v) && v.length === 0) return false;
-                    if (typeof v === 'object' && Object.keys(v).length === 0) return false;
-                    return true;
-                };
-
-                if (isMeaningfulValue(value)) {
-                    normalized[key] = value;
-                }
-            }
 
             // Special handling for Scores to normalize assessmentScores keys
             if ('assessmentScores' in data && typeof data.assessmentScores === 'object') {
