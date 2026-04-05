@@ -13,6 +13,7 @@ export const SHOW_SYNC_OVERLAY = false;
 
 export const AI_FEATURES_ENABLED = false;
 export const DEV_TOOLS_ENABLED = false;
+export const ENABLE_ERUDA_CONSOLE = false;
 export const MULTI_SCORE_ENTRY_ENABLED = false;
 export const SHOW_PDF_DOWNLOAD_BUTTON = true;
 export const SHOW_USER_EXPORT_BUTTON = false;

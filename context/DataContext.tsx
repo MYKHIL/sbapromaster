@@ -273,7 +273,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.211"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.212"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -2409,6 +2409,38 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const draftScores = useRef<Map<string, string>>(new Map());
     const [draftVersion, setDraftVersion] = useState(0); // Used to force updates in subscribers
 
+    // Load draft scores from persistent storage on boot to survive rapid tab discards while typing
+    useEffect(() => {
+        if (!schoolId) return;
+        try {
+            const compressed = localStorage.getItem(getKey('draft-scores-map'));
+            if (compressed) {
+                // @ts-ignore - LZ is available globally or imported
+                const jsonString = LZ.decompress(compressed);
+                if (jsonString) {
+                    const parsed = JSON.parse(jsonString);
+                    draftScores.current = new Map(Object.entries(parsed));
+                    setDraftVersion(v => v + 1);
+                }
+            }
+        } catch (error) {
+            console.warn("[DataContext] Failed to restore draft scores:", error);
+        }
+    }, [schoolId]);
+
+    // Helper to persist draft scores synchronously
+    const persistDraftScoresSync = React.useCallback(() => {
+        try {
+            const obj = Object.fromEntries(draftScores.current);
+            const jsonString = JSON.stringify(obj);
+            // @ts-ignore - LZ is available globally or imported
+            const compressed = LZ.compress(jsonString);
+            localStorage.setItem(getKey('draft-scores-map'), compressed);
+        } catch (error) {
+            // Memory constrained, silent fail
+        }
+    }, [schoolId]);
+
     // Cache for loaded subjects to prevent redundant fetches
     const loadedSubjects = useRef<Set<number>>(new Set());
 
@@ -2416,6 +2448,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const updateDraftScore = (studentId: number, subjectId: number, assessmentId: number, value: string) => {
         const key = `${studentId}-${subjectId}-${assessmentId}`;
         draftScores.current.set(key, value);
+
+        // Immediate Write-Through
+        persistDraftScoresSync();
 
         // Update derived state
         setHasLocalChanges(true);
@@ -2427,6 +2462,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const removeDraftScore = (studentId: number, subjectId: number, assessmentId: number) => {
         const key = `${studentId}-${subjectId}-${assessmentId}`;
         if (draftScores.current.delete(key)) {
+            // Immediate Write-Through
+            persistDraftScoresSync();
+
             // Only update if it actually existed
             if (draftScores.current.size === 0 && dirtyFields.current.size === 0) {
                 setHasLocalChanges(false);

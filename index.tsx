@@ -33,7 +33,7 @@ if (!rootElement) {
   throw new Error("Could not find root element to mount to");
 }
 
-import { setFirebaseConfigs, setSchoolDatabaseMapping, setActivationHash, setPaystackPublicKey, API_BASE_URL, FIREBASE_CONFIGS } from './constants';
+import { setFirebaseConfigs, setSchoolDatabaseMapping, setActivationHash, setPaystackPublicKey, API_BASE_URL, FIREBASE_CONFIGS, ENABLE_ERUDA_CONSOLE } from './constants';
 
 const loadFirebaseConfig = async () => {
   try {
@@ -75,6 +75,18 @@ const loadFirebaseConfig = async () => {
 const bootstrap = async () => {
 
   try {
+    // 0. Inject Eruda Mobile Console if enabled
+    if (ENABLE_ERUDA_CONSOLE) {
+      0 && console.log('[Bootstrap] Eruda console enabled. Injecting script...');
+      const script = document.createElement('script');
+      script.src = "https://cdn.jsdelivr.net/npm/eruda";
+      script.onload = () => {
+        // @ts-ignore
+        if (window.eruda) window.eruda.init();
+      };
+      document.head.appendChild(script);
+    }
+
     // 1. Fetch Configuration
     0 && console.log('[Bootstrap] Environment:', {
       isGitHubPages: window.location.hostname.includes('github.io'),

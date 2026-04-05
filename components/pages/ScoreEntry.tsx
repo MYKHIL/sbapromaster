@@ -111,11 +111,8 @@ const ScoreEntry: React.FC = () => {
     // Safe initialization for selectedClass (must be before subjects useMemo)
     const [selectedClass, setSelectedClass] = useState<string>(() => {
         try {
-            const availableNames = getAvailableClasses(currentUser, allClasses).map(c => c.name);
             const saved = localStorage.getItem('scoreEntry_selectedClass');
-            if (saved === '' && currentUser?.role === 'Admin') return '';
-            if (saved !== null && availableNames.includes(saved)) return saved;
-            return availableNames.length > 0 ? availableNames[0] : '';
+            return saved !== null ? saved : ''; // Initialize directly from localStorage, delay validation
         } catch (e) {
             return '';
         }
@@ -123,14 +120,23 @@ const ScoreEntry: React.FC = () => {
 
     // Validation Effect: If currentUser or allClasses changes, ensure current selection is still valid
     useEffect(() => {
+        // Prevent aggressive overwrite during initial hydration when allClasses hasn't loaded
+        if (allClasses.length === 0) return;
+
         // Allow empty string for Admins ("All Classes" mode) - it is a valid selection
         if (selectedClass === '' && currentUser?.role === 'Admin') return;
+        
         const availableNames = getAvailableClasses(currentUser, allClasses).map(c => c.name);
+        
         if (selectedClass && !availableNames.includes(selectedClass)) {
             const fallback = availableNames.length > 0 ? availableNames[0] : '';
             setSelectedClass(fallback);
             if (fallback) localStorage.setItem('scoreEntry_selectedClass', fallback);
             else localStorage.removeItem('scoreEntry_selectedClass');
+        } else if (!selectedClass && availableNames.length > 0 && currentUser?.role !== 'Admin') {
+            const fallback = availableNames[0];
+            setSelectedClass(fallback);
+            localStorage.setItem('scoreEntry_selectedClass', fallback);
         }
     }, [currentUser, allClasses, selectedClass]);
 
@@ -144,12 +150,27 @@ const ScoreEntry: React.FC = () => {
     const [selectedSubjectId, setSelectedSubjectId] = useState<number>(() => {
         try {
             const saved = localStorage.getItem('scoreEntry_selectedSubjectId');
-            if (saved && subjects.find(s => s.id === Number(saved))) return Number(saved);
-            return subjects.length > 0 ? subjects[0].id : 0;
+            return saved ? Number(saved) : 0; // Initialize directly from localStorage
         } catch (e) {
             return 0;
         }
     });
+
+    // Validation for Subject
+    useEffect(() => {
+        if (subjects.length === 0) return; // Wait for hydration
+        if (selectedSubjectId) {
+            const isValid = subjects.some(s => s.id === selectedSubjectId);
+            if (!isValid) {
+                const fallback = subjects[0].id;
+                setSelectedSubjectId(fallback);
+                localStorage.setItem('scoreEntry_selectedSubjectId', String(fallback));
+            }
+        } else if (!selectedSubjectId && subjects.length > 0) {
+            setSelectedSubjectId(subjects[0].id);
+            localStorage.setItem('scoreEntry_selectedSubjectId', String(subjects[0].id));
+        }
+    }, [subjects, selectedSubjectId]);
 
     // Lazy Load Scores when Class or Subject changes
     useEffect(() => {
@@ -233,12 +254,27 @@ const ScoreEntry: React.FC = () => {
     const [selectedAssessmentId, setSelectedAssessmentId] = useState<number>(() => {
         try {
             const saved = localStorage.getItem('scoreEntry_selectedAssessmentId');
-            if (saved) return Number(saved);
-            return assessments.length > 0 ? assessments[0].id : 0;
+            return saved ? Number(saved) : 0; // Initialize directly
         } catch (e) {
-            return assessments.length > 0 ? assessments[0].id : 0;
+            return 0;
         }
     });
+
+    // Validation for Assessment
+    useEffect(() => {
+        if (assessments.length === 0) return;
+        if (selectedAssessmentId) {
+            const isValid = assessments.some(a => a.id === selectedAssessmentId);
+            if (!isValid) {
+                const fallback = assessments[0].id;
+                setSelectedAssessmentId(fallback);
+                localStorage.setItem('scoreEntry_selectedAssessmentId', String(fallback));
+            }
+        } else if (!selectedAssessmentId && assessments.length > 0) {
+            setSelectedAssessmentId(assessments[0].id);
+            localStorage.setItem('scoreEntry_selectedAssessmentId', String(assessments[0].id));
+        }
+    }, [assessments, selectedAssessmentId]);
 
     const sortedAssessments = useMemo(() => {
         return [...assessments].sort((a, b) => {
