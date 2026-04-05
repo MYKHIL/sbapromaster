@@ -9,6 +9,7 @@ import { offlineQueue } from '../services/offlineQueue';
 import { useDatabaseError } from './DatabaseErrorContext';
 import { useFirebaseAnalytics } from './FirebaseAnalyticsContext';
 import { isQuotaExhaustedError } from '../utils/databaseErrorHandler';
+import * as LZ from 'lz-string';
 import type { Student, Subject, Class, Grade, Assessment, Score, SchoolSettings, ReportSpecificData, ClassSpecificData, User, UserLog, OnlineUser, Page, AppDataType } from '../types';
 import {
     INITIAL_SETTINGS,
@@ -272,7 +273,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.207"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.208"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -363,18 +364,32 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         pendingChangesMap.current[field].add(id);
 
-        // Persist to localStorage
-        setPersistedPendingMap(prev => {
-            const currentIds = prev[field as keyof typeof prev] || [];
-            if (currentIds.includes(id)) return prev;
-            return {
-                ...prev,
-                [field]: [...currentIds, id]
-            };
-        });
+        // Immediate Write-Through for Mobile Reliability
+        // We update React state AND immediately force a synchronous write to disk.
+        // This ensures the "intent" survives a mobile browser tab discard.
+        const nextIds = Array.from(pendingChangesMap.current[field]);
+        
+        setPersistedPendingMap(prev => ({
+            ...prev,
+            [field]: nextIds
+        }));
+
+        try {
+            const currentFullMap = { ...persistedPendingMap, [field]: nextIds };
+            const jsonString = JSON.stringify(currentFullMap);
+            const compressed = LZ.compress(jsonString);
+            localStorage.setItem(getKey('pending-changes-map'), compressed);
+        } catch (error) {
+            if (isQuotaExhaustedError(error)) {
+                showDatabaseError({
+                    message: "Device storage is full. Your manual edits cannot be saved locally and may be lost on refresh.",
+                    code: 'QUOTA_EXCEEDED'
+                }, 'write');
+            }
+        }
 
         markDirty(field as keyof AppDataType, true);
-    }, [setPersistedPendingMap, markDirty]);
+    }, [setPersistedPendingMap, markDirty, persistedPendingMap, showDatabaseError]);
 
     const markItemClean = React.useCallback((field: string, itemOrId: any) => {
         const id = typeof itemOrId === 'object' ? getItemId(itemOrId) : String(itemOrId);
@@ -385,20 +400,27 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             pendingChangesMap.current[field].delete(id);
         }
 
+        const nextIds = Array.from(pendingChangesMap.current[field] || []);
+
         // Persist deletion
-        setPersistedPendingMap(prev => {
-            const currentIds = prev[field as keyof typeof prev] || [];
-            if (!currentIds.includes(id)) return prev;
-            return {
-                ...prev,
-                [field]: currentIds.filter(cid => cid !== id)
-            };
-        });
+        setPersistedPendingMap(prev => ({
+            ...prev,
+            [field]: nextIds
+        }));
+
+        try {
+            const currentFullMap = { ...persistedPendingMap, [field]: nextIds };
+            const jsonString = JSON.stringify(currentFullMap);
+            const compressed = LZ.compress(jsonString);
+            localStorage.setItem(getKey('pending-changes-map'), compressed);
+        } catch (error) {
+            // Error handling for clean is less critical but same pattern
+        }
 
         if (pendingChangesMap.current[field]?.size === 0) {
             unmarkDirty(field as keyof AppDataType);
         }
-    }, [setPersistedPendingMap, unmarkDirty]);
+    }, [setPersistedPendingMap, unmarkDirty, persistedPendingMap]);
 
     const isItemDirty = React.useCallback((field: keyof AppDataType, id: string | number) => {
         const currentItems = stateRef.current[field];
@@ -503,6 +525,42 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             activeSessions
         };
     }, [settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions]);
+
+    // -------------------------------------------------------------------------
+    // MOBILE RELIABILITY: Lifecycle & Persistence Guards
+    // -------------------------------------------------------------------------
+    
+    // Pagehide Listener for Robust Tab Termination
+    useEffect(() => {
+        const handleForceBackup = () => {
+            // Note: visibilityState === 'hidden' or 'pagehide' means the JavaScript
+            // environment could be terminated at any moment on a mobile device.
+            // We force a final, synchronous write-through for intentionality.
+            console.log('[DataContext] 📱 Mobile Lifecycle event detected. Forcing immediate data backup...');
+            
+            try {
+                // 1. Back up Pending Changes Map
+                const mapData = JSON.stringify(persistedPendingMap);
+                localStorage.setItem(getKey('pending-changes-map'), LZ.compress(mapData));
+                
+                // 2. Back up dirty fields (as a failsafe for reload comparison)
+                const dirtySet = Array.from(dirtyFields.current);
+                localStorage.setItem(getKey('dirty-fields-failsafe'), JSON.stringify(dirtySet));
+            } catch (e) {
+                // Silently fail in lifecycle hook to avoid blocking page transition
+                console.error('[DataContext] Failed to backup during tab close:', e);
+            }
+        };
+
+        window.addEventListener('pagehide', handleForceBackup);
+        window.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') handleForceBackup();
+        });
+        
+        return () => {
+            window.removeEventListener('pagehide', handleForceBackup);
+        };
+    }, [persistedPendingMap]);
 
     // Track last loaded collection timestamps to prevent redundant fetches
     const lastLoadedTimestamps = React.useRef<Record<string, any>>({});
@@ -2906,6 +2964,32 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 // START_LOAD_IMPORTED_DATA
     const loadImportedData = React.useCallback((data: Partial<AppDataType>, isRemote: boolean = false, sub?: any) => {
         if (sub) setSubscription(sub);
+        
+        // 1. INITIALIZATION GUARD: On initial launch sync, force-verify intentionality from disk.
+        // This ensures local edits made in previous sessions survive the initial cloud merge 
+        // even if React state hydration hasn't completed.
+        if (isRemote && isInitialSyncing.current) {
+            console.log('[DataContext] 🛡️ Initial Cloud Sync Guard: Verifying intentionality from disk...');
+            try {
+                const rawMap = localStorage.getItem(getKey('pending-changes-map'));
+                if (rawMap) {
+                    const decompressed = LZ.decompress(rawMap);
+                    if (decompressed) {
+                        const diskMap = JSON.parse(decompressed);
+                        Object.keys(diskMap).forEach(field => {
+                            if (Array.isArray(diskMap[field])) {
+                                if (!pendingChangesMap.current[field]) pendingChangesMap.current[field] = new Set();
+                                diskMap[field].forEach((id: string) => {
+                                    pendingChangesMap.current[field].add(id);
+                                });
+                            }
+                        });
+                    }
+                }
+            } catch (e) {
+                console.error('[DataContext] Failed to re-initialize intentionality from disk:', e);
+            }
+        }
         // CRITICAL: Mark this as a remote update to prevent syncing back to cloud
         // ONLY if it's a remote update. If it's a local file import, we WANT to mark as dirty.
         if (isRemote) {
