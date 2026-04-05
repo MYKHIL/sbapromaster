@@ -272,7 +272,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.204"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.205"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -1071,7 +1071,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const SUBCOLLECTION_FIELDS = new Set<keyof AppDataType>(['grades', 'classes', 'subjects', 'assessments', 'students']);
 
     // Check if current data actually differs from original cloud data
-    const recheckDirtyStatus = React.useCallback((field: keyof AppDataType, currentValue: any) => {
+    const recheckDirtyStatus = React.useCallback((field: keyof AppDataType, currentValue: any, force: boolean = false) => {
         const originalValue = originalData.current[field];
 
         // CRITICAL: If originalValue is undefined, we haven't loaded the cloud version for this field yet.
@@ -1081,7 +1081,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // SAFETY: If a remote update is in progress, never mark ANY fields as dirty.
         // The listener updates originalData atomically, so any transient mismatch seen here
         // (like closure lag from batching) is a React batch artifact, not a real local change.
-        if (isRemoteUpdate.current) return;
+        // BUT: If force is true (e.g., we explicitly call this after a fetch), we allow the check to run
+        // so that dirty flags can be cleared if the new cloud data matches our state.
+        if (isRemoteUpdate.current && !force) return;
 
         const isEqual = isDataEqual(currentValue, originalValue);
 
@@ -1162,7 +1164,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         for (const field of fieldsToCheck) {
             const val = dataOverride?.[field] !== undefined ? dataOverride[field] : stateRef.current[field];
-            recheckDirtyStatus(field, val);
+            // If dataOverride is provided, we FORCE the recheck to ensure flags are cleared after a load
+            recheckDirtyStatus(field, val, !!dataOverride);
         }
 
         // Also rebuild item-level map
@@ -1249,7 +1252,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 // originalData.current with stale/deleted items, causing the dirty-tracking
                 // system to perpetually flag those collections as "pending save", ultimately
                 // causing permission-denied errors when the save payload includes deleted items.
-                const { grades: _g, classes: _c, subjects: _s, assessments: _a, students: _st, ...mainDocData } = data;
+                const { grades: _g, classes: _c, subjects: _s, assessments: _a, students: _st, scores: _sc, reportData: _rd, classData: _cd, ...mainDocData } = data;
 
                 // ATOMIC BASELINE SYNC: Instantly force the baseline to match the incoming main doc data
                 // before loadImportedData captures closure state. This stops the async batch lag.
@@ -2947,6 +2950,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     loadedSubjects.current.add(subjectId);
 
                     console.log(`[DataContext] ✅ Loaded ${newScores.length} scores for Subject ${subjectId}.`);
+                    let finalScoresToRecheck: Score[] = [];
                     setScores(prev => {
                         // 1. Update originalData first (Baseline)
                         // CRITICAL: We must remove any scores for this subject from the baseline first,
@@ -2973,24 +2977,26 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         if (ignorePreservation) {
                             // Only replace scores for THIS subject to avoid wiped state on lazy loads
                             const otherSubjectScores = prev.filter(s => Number(s.subjectId) !== Number(subjectId));
-                            return [...otherSubjectScores, ...newScores];
+                            finalScoresToRecheck = [...otherSubjectScores, ...newScores];
+                            return finalScoresToRecheck;
                         }
 
                         // 3. Perform Smart Merge to preserve local changes
-                        const prevMap = new Map(prev.map(s => [String(getItemId(s)), s]));
+                        const prevMap = new Map<string, Score>(prev.map(s => [String(getItemId(s)), s]));
 
                         newScores.forEach(cloudScore => {
                             const sid = getItemId(cloudScore);
                             if (!sid) return;
-                            const local = prevMap.get(sid) as Score | undefined;
+                            const local = prevMap.get(sid);
 
                             // Preserve local if it differs from cloud AND is meaningful
                             if (local && !isDataEqual(local, cloudScore)) {
+                                // REFINED: If in initial sync, cloud data ALWAYS wins over empty local state
                                 const hasMeaningfulLocalChange = Object.values(local.assessmentScores || {}).some(
                                     s => Array.isArray(s) && s.some(v => v !== null && v !== undefined && String(v).trim() !== '')
                                 );
 
-                                if (hasMeaningfulLocalChange) {
+                                if (hasMeaningfulLocalChange && !isInitialSyncing.current) {
                                     console.log(`[DataContext] 🛡️ Preservation: Keeping local version of score ${cloudScore.id} during lazy load`);
                                     markItemDirty('scores', cloudScore.id);
                                     return; // Don't overwrite local with cloud
@@ -3007,18 +3013,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                             // Only process scores for the current subject being verified
                             if (Number(localScore.subjectId) === Number(subjectId) && !cloudIds.has(String(localScore.id))) {
                                 const hasData = localScore.assessmentScores && Object.values(localScore.assessmentScores).some(s => Array.isArray(s) && s.some(v => v !== null && v !== undefined && String(v).trim() !== ''));
-                                if (hasData) {
+                                if (hasData && !isInitialSyncing.current) {
                                     console.log(`[DataContext] ➕ Preservation: Keeping local-only score ${localScore.id} during lazy load`);
                                     markItemDirty('scores', localScore.id);
                                 }
                             }
                         });
 
-                        return Array.from(prevMap.values());
+                        finalScoresToRecheck = Array.from(prevMap.values());
+                        return finalScoresToRecheck;
                     });
 
-                    // Recalculate dirty states now that originalData is updated
-                    recheckAllDirtyStatus();
+                    // Recalculate dirty states using the NEW data directly to avoid React state batching race conditions
+                    recheckAllDirtyStatus({ scores: finalScoresToRecheck });
                 }
             } catch (e) {
                 console.error("Failed to load scores", e);
