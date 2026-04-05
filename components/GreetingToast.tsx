@@ -148,40 +148,74 @@ const GreetingToast: React.FC<GreetingToastProps> = ({ currentUser, currentPage 
     if (!currentUser || !isVisible) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            {/* Backdrop with Blur */}
             <div 
-                onClick={() => handleClose()}
-                className="pointer-events-auto bg-white/95 backdrop-blur-xl border border-white/40 shadow-2xl rounded-2xl p-6 max-w-sm flex items-start space-x-4 animate-bounce-in cursor-pointer group active:scale-[0.98] transition-transform duration-150"
+                className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 pointer-events-auto"
+                onClick={handleClose}
+            />
+
+            {/* Modal Container */}
+            <div 
+                className="relative bg-white rounded-2xl shadow-2xl border border-gray-100 w-[90%] max-w-[380px] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-300 z-10 pointer-events-auto"
+                onClick={(e) => e.stopPropagation()}
             >
-                <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full p-2 shadow-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                    </svg>
+                {/* Header Section (Gradient) */}
+                <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-6 text-center relative">
+                    <button
+                        onClick={handleClose}
+                        className="absolute top-3 right-3 text-white/70 hover:text-white hover:bg-white/20 p-1.5 rounded-full transition-colors"
+                        title="Close"
+                    >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                    
+                    <div className="mx-auto bg-white/20 w-14 h-14 flex items-center justify-center rounded-full mb-3 shadow-inner border border-white/30 backdrop-blur-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                        </svg>
+                    </div>
+                    <h3 className="text-xl font-bold text-white tracking-wide">{title}</h3>
                 </div>
-                <div className="flex-1">
-                    <h4 className="font-bold text-gray-800 text-lg leading-tight">{title}</h4>
+
+                {/* Body Section */}
+                <div className="p-6 bg-white">
                     {message.includes('|') ? (
-                        <div className="mt-2 space-y-1">
-                            <p className="text-blue-800 font-extrabold text-base leading-snug">
-                                {message.split('|')[0]}
-                            </p>
-                            <p className="text-indigo-600 font-semibold text-sm bg-indigo-50/50 px-2 py-1 rounded border border-indigo-100/50">
-                                {message.split('|')[1]}
-                            </p>
+                        <div className="space-y-4">
+                            <div className="text-center pb-4 border-b border-gray-100">
+                                <p className="text-gray-800 font-extrabold text-lg leading-tight">
+                                    {message.split('|')[0]}
+                                </p>
+                            </div>
+                            <div className="bg-indigo-50 border border-indigo-100/60 rounded-xl p-3 flex gap-3 items-center shadow-sm">
+                                <div className="text-indigo-500 bg-white p-2 rounded-lg shadow-sm border border-indigo-50 shrink-0">
+                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                                    </svg>
+                                </div>
+                                <p className="text-indigo-800 font-semibold text-sm leading-snug">
+                                    {message.split('|')[1]}
+                                </p>
+                            </div>
                         </div>
                     ) : (
-                        <p className="text-gray-600 text-sm mt-1">{message}</p>
+                        <div className="text-center py-2">
+                            <p className="text-gray-600 font-medium text-base">{message}</p>
+                        </div>
                     )}
                 </div>
-                <button
-                    onClick={handleClose}
-                    className="text-gray-400 hover:text-gray-600 hover:bg-gray-100/50 p-2 -mr-2 -mt-2 rounded-full transition-all duration-200"
-                    title="Close greeting"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
+
+                {/* Footer Section */}
+                <div className="bg-gray-50 p-4 border-t border-gray-100 flex justify-center">
+                    <button
+                        onClick={handleClose}
+                        className="px-6 py-2 bg-white text-gray-700 font-bold text-sm shadow-sm border border-gray-200 rounded-full hover:bg-gray-50 hover:text-gray-900 transition-all active:scale-95"
+                    >
+                        Continue
+                    </button>
+                </div>
             </div>
         </div>
     );
