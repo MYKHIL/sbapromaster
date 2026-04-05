@@ -272,7 +272,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.205"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.206"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -311,37 +311,94 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Flag to track if we are in the initial sync phase after login
     const isInitialSyncing = React.useRef(true);
 
+    const markDirty = React.useCallback((field: keyof AppDataType, force: boolean = false) => {
+        // Only mark dirty if it's NOT a remote update OR forced (manual user action)
+        if (force || !isRemoteUpdate.current) {
+            // Prevent infinite loops and unnecessary re-renders: Only update if NOT already dirty
+            if (!dirtyFields.current.has(field)) {
+                dirtyFields.current.add(field);
+                setHasLocalChanges(true); // Enable Save button globally
+                setDirtyVersion(v => v + 1); // Force re-render
+            }
+        }
+    }, []);
+
+    const unmarkDirty = React.useCallback((field: keyof AppDataType) => {
+        if (dirtyFields.current.has(field)) {
+            // console.log(`[DataContext] ⚪ Unmark Dirty: ${field}`);
+            dirtyFields.current.delete(field);
+            setHasLocalChanges(dirtyFields.current.size > 0);
+            setDirtyVersion(v => v + 1); // Force re-render
+        }
+    }, []);
+
     // Track pending (uncommitted) changes for individual items in collections
-    // Format: Record<field, Set<item_id>>
-    const pendingChangesMap = React.useRef<Record<string, Set<string>>>({
-        students: new Set(),
-        subjects: new Set(),
-        classes: new Set(),
-        grades: new Set(),
-        assessments: new Set(),
-        scores: new Set(),
-        reportData: new Set(),
-        classData: new Set(),
-        users: new Set(),
-        settings: new Set(),
-    });
+    // Persisted to localStorage to survive page refreshes and protect manual edits
+    const [persistedPendingMap, setPersistedPendingMap] = useLocalStorage<Record<string, string[]>>(
+        getKey('pending-changes-map'),
+        {
+            students: [], subjects: [], classes: [], grades: [],
+            assessments: [], scores: [], reportData: [], classData: [],
+            users: [], settings: [],
+        }
+    );
+
+    // Provide the 'Set' based interface the existing logic expects.
+    // We wrap it in a pseudo-ref object to match the 'pendingChangesMap.current' API.
+    const pendingChangesMap = React.useMemo(() => {
+        const map: Record<string, Set<string>> = {};
+        Object.keys(persistedPendingMap).forEach(key => {
+            map[key] = new Set(persistedPendingMap[key as keyof typeof persistedPendingMap]);
+        });
+        return { current: map };
+    }, [persistedPendingMap]);
 
     const markItemDirty = React.useCallback((field: string, itemOrId: any) => {
         const id = typeof itemOrId === 'object' ? getItemId(itemOrId) : String(itemOrId);
         if (!id || id === 'undefined' || id === 'null') return;
+
+        // Synchronously update the Set for immediate logic access
         if (!pendingChangesMap.current[field]) pendingChangesMap.current[field] = new Set();
+        if (pendingChangesMap.current[field].has(id)) return;
+        
         pendingChangesMap.current[field].add(id);
+
+        // Persist to localStorage
+        setPersistedPendingMap(prev => {
+            const currentIds = prev[field as keyof typeof prev] || [];
+            if (currentIds.includes(id)) return prev;
+            return {
+                ...prev,
+                [field]: [...currentIds, id]
+            };
+        });
+
         markDirty(field as keyof AppDataType, true);
-    }, []);
+    }, [setPersistedPendingMap, markDirty]);
 
     const markItemClean = React.useCallback((field: string, itemOrId: any) => {
         const id = typeof itemOrId === 'object' ? getItemId(itemOrId) : String(itemOrId);
-        if (!id || !pendingChangesMap.current[field]) return;
-        pendingChangesMap.current[field].delete(id);
-        if (pendingChangesMap.current[field].size === 0) {
+        if (!id) return;
+
+        // Synchronously update the Set
+        if (pendingChangesMap.current[field]) {
+            pendingChangesMap.current[field].delete(id);
+        }
+
+        // Persist deletion
+        setPersistedPendingMap(prev => {
+            const currentIds = prev[field as keyof typeof prev] || [];
+            if (!currentIds.includes(id)) return prev;
+            return {
+                ...prev,
+                [field]: currentIds.filter(cid => cid !== id)
+            };
+        });
+
+        if (pendingChangesMap.current[field]?.size === 0) {
             unmarkDirty(field as keyof AppDataType);
         }
-    }, []);
+    }, [setPersistedPendingMap, unmarkDirty]);
 
     const isItemDirty = React.useCallback((field: keyof AppDataType, id: string | number) => {
         const currentItems = stateRef.current[field];
@@ -451,314 +508,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const lastLoadedTimestamps = React.useRef<Record<string, any>>({});
     const inflightPromises = React.useRef<Map<string, Promise<any>>>(new Map());
 
-    const loadImportedData = (data: Partial<AppDataType>, isRemote: boolean = false, sub?: any) => {
-        if (sub) setSubscription(sub);
-        // CRITICAL: Mark this as a remote update to prevent syncing back to cloud
-        // ONLY if it's a remote update. If it's a local file import, we WANT to mark as dirty.
-        if (isRemote) {
-            isRemoteUpdate.current = true;
-            // Automatically reset after 1000ms (increased from 500ms) to allow all effects to settle
-            setTimeout(() => {
-                isRemoteUpdate.current = false;
-            }, 1000);
-        }
-
-        const importedSettings = data.settings;
-        // IMPORTANT: Context is determined by academicYear and academicTerm ONLY.
-        // schoolName is intentionally excluded because it is a user-editable field.
-        // Including it would incorrectly flag a school name edit as a school context shift,
-        // causing all local data to be discarded. Actual school-level switching is handled
-        // by the schoolId-based context reset in the useEffect below.
-        const currentCtx = `${settings.academicYear || ''}-${settings.academicTerm || ''}`;
-        const newCtx = `${importedSettings?.academicYear || ''}-${importedSettings?.academicTerm || ''}`;
-
-        // CRITICAL: If context (Year/Term) changed, we skip preservation
-        const isContextShift = currentCtx !== newCtx && settings.academicYear !== '';
-        if (isContextShift) {
-            console.log(`[DataContext] 🔄 Context shift detected (${currentCtx} -> ${newCtx}). Skipping preservation.`);
-        }
-
-        // SMART MERGING: Only update state if imported data is ACTUALLY provided and not empty
-        // This prevents replacing valid local data with undefined/empty cloud data
-        const {
-            students: importedStudents,
-            subjects: importedSubjects,
-            classes: importedClasses,
-            grades: importedGrades,
-            assessments: importedAssessments,
-            scores: importedScores,
-            reportData: importedReportData,
-            classData: importedClassData,
-            users: importedUsers,
-        } = data;
-
-        console.log(`[DataContext] 📦 loadImportedData called (isRemote=${isRemote}) with:`, {
-            hasSettings: !!importedSettings,
-            studentsCount: importedStudents?.length || 0,
-            subjectsCount: importedSubjects?.length || 0,
-            classesCount: importedClasses?.length || 0,
-            gradesCount: importedGrades?.length || 0,
-            assessmentsCount: importedAssessments?.length || 0,
-            scoresCount: importedScores?.length || 0,
-            reportDataCount: importedReportData?.length || 0,
-            classDataCount: importedClassData?.length || 0,
-            usersCount: importedUsers?.length || 0
-        });
-
-        // CRITICAL: Update lastContextKey ref to match THE INCOMING DATA
-        // This prevents the useEffect reset from firing and wiping out
-        // the data we are about to load.
-        if (isRemote && importedSettings && lastContextKey.current !== null) {
-            const nextCtx = `${schoolId}-${importedSettings.academicYear || ''}-${importedSettings.academicTerm || ''}`;
-            console.log(`[DataContext] 🧠 Pre-empting context reset for: ${nextCtx}`);
-            lastContextKey.current = nextCtx;
-        }
-
-        // ✅ DETERMINING INITIAL LAUNCH: 
-        // A launch is "initial" if originalData is empty OR if we are still in the initial syncing phase.
-        // Once isInitialSyncing is set to false (at end of refreshFromCloud), standard mid-session diffing begins.
-        const isInitialLaunch = isRemote && (Object.keys(originalData.current).length === 0 || isInitialSyncing.current);
-
-        // If it's the initial launch, ensure we start with a clean dirty slate
-        if (isInitialLaunch) {
-            dirtyFields.current.clear();
-            pendingChangesMap.current = {
-                students: new Set(), subjects: new Set(), classes: new Set(), grades: new Set(),
-                assessments: new Set(), scores: new Set(), reportData: new Set(), classData: new Set(),
-                users: new Set(), settings: new Set(),
-            };
-            setHasLocalChanges(false);
-        }
-
-        const nextState: Partial<AppDataType> = {
-            settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions
-        };
-
-        const processField = (field: keyof AppDataType, imported: any, current: any, setter: any) => {
-            if (imported === undefined) return; // Only process if imported data is provided
-
-            // PROTECTION: If this is a remote sync (not initial launch) and the field
-            // already has local pending changes, DO NOT overwrite local state.
-            // originalData will be updated to the cloud version below, so recheckAllDirtyStatus
-            // will correctly detect and retain the dirty flag on the next run.
-            if (isRemote && !isInitialLaunch && dirtyFields.current.has(field)) {
-                console.log(`[DataContext] 🛡️ Remote Sync: Preserving local changes to '${String(field)}' — field is dirty. Skipping overwrite.`);
-                return;
-            }
-
-            // Regular update or remote sync
-            if (!isDataEqual(imported, current)) {
-                console.log(`[DataContext] ✅ Updating ${String(field)}`);
-                let dataToSet = imported;
-                // If it's a local import, tag all items with _isLocallyCreated so they get uploaded
-                if (!isRemote && Array.isArray(imported)) {
-                    dataToSet = imported.map((item: any) => ({ ...item, _isLocallyCreated: true }));
-                }
-                setter(dataToSet);
-                (nextState as any)[field] = dataToSet; // Track next state for recheck
-
-                // CRITICAL: Only mark dirty if it's NOT a remote sync.
-                // Remote syncs are the baseline, not "new local changes".
-                if (!isRemote) {
-                    markDirty(field, true);
-                }
-            }
-        };
-
-        if (importedSettings) {
-            const hasChanged = !isDataEqual(importedSettings, settings);
-            if (hasChanged) {
-                console.log(`[DataContext] ☁️ Settings Discrepancy Found. Cloud:`, importedSettings, `Local:`, settings);
-            }
-            processField('settings', importedSettings, settings, setSettings);
-        }
-        processField('students', importedStudents, students, setStudents);
-        processField('subjects', importedSubjects, subjects, setSubjects);
-        processField('classes', importedClasses, classes, setClasses);
-        processField('grades', importedGrades, grades, setGrades);
-        processField('assessments', importedAssessments, assessments, setAssessments);
-        processField('reportData', importedReportData, reportData, setReportData);
-        processField('classData', importedClassData, classData, setClassData);
-        processField('userLogs', data.userLogs, userLogs, setUserLogs);
-        processField('activeSessions', data.activeSessions, activeSessions, setActiveSessions);
-        processField('users', importedUsers, users, setUsers);
-
-        // SCORES: Custom Logic to handle preservation of specific IDs
-        if (importedScores && importedScores.length > 0) {
-            let finalScores = importedScores;
-
-            if (isInitialLaunch) {
-                console.log('[DataContext] 🔍 Initial Cloud Load: Checking for uncommitted local scores...');
-                finalScores = importedScores.map(cloudScore => {
-                    const sid = getItemId(cloudScore);
-                    const local = scores.find(s => getItemId(s) === sid);
-                    if (local && !isDataEqual(local, cloudScore) && !isContextShift) {
-                        // Only preserve if local has actual uncommitted data
-                        const hasData = local.assessmentScores && Object.values(local.assessmentScores).some(s => Array.isArray(s) && s.some(v => v && String(v).trim() !== ''));
-
-                        if (hasData) {
-                            console.log(`[DataContext] 🛡️ Preservation: Keeping local uncommitted version of score ${sid}`);
-                            if (sid) markItemDirty('scores', sid);
-                            return local;
-                        }
-                    }
-                    return cloudScore;
-                });
-
-                // Add any Local-Only scores (not in cloud yet)
-                // BUT skip if context shifted (don't bring Term 1 scores to Term 2)
-                const cloudIds = new Set(importedScores.map(s => getItemId(s)));
-                if (!isContextShift) {
-                    scores.forEach(localScore => {
-                        const sid = getItemId(localScore);
-                        if (sid && !cloudIds.has(sid)) {
-                            const hasData = localScore.assessmentScores && Object.values(localScore.assessmentScores).some(s => Array.isArray(s) && s.some(v => v && String(v).trim() !== ''));
-                            if (hasData) {
-                                console.log(`[DataContext] ➕ Preservation: Keeping local-only score ${sid}`);
-                                finalScores.push(localScore);
-                                markItemDirty('scores', sid);
-                            }
-                        }
-                    });
-                }
-            } else if (isRemote && pendingChangesMap.current.scores.size > 0) {
-                // Standard Smart Merge for mid-session remote updates
-                console.log(`[DataContext] 🛡️ Smart Merge: Preserving ${pendingChangesMap.current.scores.size} local score edits`);
-
-                // Map Cloud scores but override with Local if pending
-                finalScores = importedScores.map(cloudScore => {
-                    if (pendingChangesMap.current.scores.has(String(cloudScore.id))) {
-                        // Keep local version (find it in current state)
-                        const local = scores.find(s => String(s.id) === String(cloudScore.id));
-                        return local || cloudScore; // Fallback to cloud if local missing
-                    }
-                    return cloudScore;
-                });
-
-                // Add any Local-Only scores
-                const cloudIds = new Set(importedScores.map(s => s.id));
-                scores.forEach(localScore => {
-                    if (pendingChangesMap.current.scores.has(String(localScore.id)) && !cloudIds.has(localScore.id)) {
-                        finalScores.push(localScore);
-                    }
-                });
-            }
-
-            if (!isDataEqual(finalScores, scores)) {
-                console.log(`[DataContext] ✅ Updating scores: ${finalScores.length} (Merged)`);
-                setScores(finalScores);
-                nextState.scores = finalScores; // Track next state
-                if (!isRemote) markDirty('scores');
-                else if (isInitialLaunch && pendingChangesMap.current.scores.size > 0) markDirty('scores', true);
-            }
-        } else if (importedScores && importedScores.length === 0) {
-            // Explicit empty array update
-            if (scores.length > 0) {
-                setScores([]);
-                nextState.scores = []; // Track next state
-                if (!isRemote) markDirty('scores');
-            }
-        }
-
-        // Sync users if present
-        if (importedUsers) {
-            SyncLogger.log(`loadImportedData: Loading users from document. Count: ${importedUsers.length}`);
-            if (isInitialLaunch && !isDataEqual(importedUsers, users)) {
-                console.log(`[DataContext] 🛡️ Preservation: Discrepancy in users. Keeping local.`);
-                // markDirty('users', true);
-                // nextState.users remains current
-            } else if (!isDataEqual(importedUsers, users)) {
-                console.log('[DataContext] ✅ Updating users:', importedUsers.length);
-                setUsers(importedUsers);
-                nextState.users = importedUsers; // Track next state
-                // if (!isRemote) markDirty('users');
-            }
-        }
-
-        if (isRemote) {
-            // FIX: SELECTIVE CLEARING of dirty fields
-            // We only clear the dirty flag for a field if we actually received data for it from the cloud.
-            // This prevents "Ghost" updates or partial syncs from wiping out valid local changes in unrelated fields.
-            // REFINED: We clear the flag if data arrived, even if empty (since cloud is baseline), 
-            // especially if we are in the initial sync phase.
-
-            if (importedSettings) dirtyFields.current.delete('settings');
-            if (importedStudents !== undefined) dirtyFields.current.delete('students');
-            if (importedSubjects !== undefined) dirtyFields.current.delete('subjects');
-            if (importedClasses !== undefined) dirtyFields.current.delete('classes');
-            if (importedGrades !== undefined) dirtyFields.current.delete('grades');
-            if (importedAssessments !== undefined) dirtyFields.current.delete('assessments');
-            if (importedScores !== undefined) {
-                // For scores, we only clear if NOT preserving pending local edits
-                if (!isInitialLaunch || pendingChangesMap.current.scores.size === 0) {
-                    dirtyFields.current.delete('scores');
-                }
-            }
-            if (importedReportData !== undefined) dirtyFields.current.delete('reportData');
-            if (importedClassData !== undefined) dirtyFields.current.delete('classData');
-            if (importedUsers !== undefined) dirtyFields.current.delete('users');
-            if (data.userLogs !== undefined) dirtyFields.current.delete('userLogs');
-            if (data.activeSessions !== undefined) dirtyFields.current.delete('activeSessions');
-
-            console.log('[DataContext] 🧹 Selectively cleared dirty fields after remote data load');
-            // Recalculate global dirty state
-            setHasLocalChanges(dirtyFields.current.size > 0);
-
-            // Store original cloud data for smart dirty detection
-            // We ONLY update originalData if it came from the cloud!
-            // If we import a file, that file is effectively "New Local Changes" vs "Old Cloud Data"
-
-            // SECURITY: Deep clone/Immutable merge for arrays to prevent reference sharing
-            const mergeArrays = (field: keyof AppDataType, incoming: any[]) => {
-                if (!incoming) return;
-                // Since this is called when loading remote data, the cloud is the source of truth.
-                // We should NOT merge with the existing local baseline, because that preserves items deleted from the cloud.
-                const map = new Map();
-                incoming.forEach(item => {
-                    const id = getItemId(item);
-                    if (id) map.set(id, item);
-                });
-                originalData.current[field] = Array.from(map.values()) as any;
-            };
-
-            if (importedSettings) originalData.current.settings = importedSettings;
-            if (importedStudents) mergeArrays('students', importedStudents);
-            if (importedSubjects) mergeArrays('subjects', importedSubjects);
-            if (importedClasses) mergeArrays('classes', importedClasses);
-            if (importedGrades) mergeArrays('grades', importedGrades);
-            if (importedAssessments) mergeArrays('assessments', importedAssessments);
-            if (importedScores) mergeArrays('scores', importedScores);
-            if (importedReportData) mergeArrays('reportData', importedReportData);
-            if (importedClassData) mergeArrays('classData', importedClassData);
-            if (importedUsers) mergeArrays('users', importedUsers);
-            if (data.userLogs) originalData.current.userLogs = data.userLogs;
-            if (data.activeSessions) originalData.current.activeSessions = data.activeSessions;
-
-            console.log('[DataContext] 💾 Updated originalData baseline with merge strategy');
-
-            // Perform a full dirty recheck after remote data is loaded and originalData is updated.
-            // We pass nextState to ensure the check uses the newly loaded/merged data rather than stale React state.
-            recheckAllDirtyStatus(nextState);
-
-            // Also force a delayed recheck just in case any effects had side effects
-            setTimeout(() => {
-                recheckAllDirtyStatus();
-            }, 1000);
-        } else {
-            console.log('[DataContext] 💾 Local file import: Marking fields as dirty for verification');
-            // We intentionally do NOT update originalData.current here.
-            // Why? Because we want the Diff Logic (saveToCloud) to compare our NEW imported data
-            // against the OLD originalData from the server, and detect EVERYTHING as "Changed".
-            // However, our Diff Logic relies on IDs. 
-            // If the imported file is identical to the server, Diff = 0.
-            // If the imported file is totally different, Diff = Huge.
-            // But wait, if we markDirty, saveToCloud will run.
-            // saveToCloud calls getPendingUploadData which uses originalData to diff.
-            // If originalData is empty (first load), it detects changes.
-            // If originalData is populated, it will diff.
-            // This is exactly what we want.
-        }
-    };
+    // loadImportedData relocated below to resolve TDZ issues
 
     // CRITICAL: When the Context (School, Year, or Term) changes, reset all state
     // to prevent legacy data from contaminating the new context.
@@ -1044,26 +794,61 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
     }, [settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions]);
 
-    const markDirty = React.useCallback((field: keyof AppDataType, force: boolean = false) => {
-        // Only mark dirty if it's NOT a remote update OR forced (manual user action)
-        if (force || !isRemoteUpdate.current) {
-            // Prevent infinite loops and unnecessary re-renders: Only update if NOT already dirty
-            if (!dirtyFields.current.has(field)) {
-                dirtyFields.current.add(field);
-                setHasLocalChanges(true); // Enable Save button globally
-                setDirtyVersion(v => v + 1); // Force re-render
-            }
-        }
-    }, []);
 
-    const unmarkDirty = React.useCallback((field: keyof AppDataType) => {
-        if (dirtyFields.current.has(field)) {
-            // console.log(`[DataContext] ⚪ Unmark Dirty: ${field}`);
-            dirtyFields.current.delete(field);
-            setHasLocalChanges(dirtyFields.current.size > 0);
-            setDirtyVersion(v => v + 1); // Force re-render
+
+    /**
+     * Smart Merge Helper: Reconciles an incoming cloud collection with the local state.
+     * Prioritizes cloud truth unless an item is explicitly marked as "dirty" (manually edited).
+     */
+    const reconcileCollection = React.useCallback((field: keyof AppDataType, cloudItems: any[], localItems: any[]): any[] => {
+        if (!Array.isArray(cloudItems)) return localItems || [];
+        if (!Array.isArray(localItems)) return cloudItems || [];
+
+        const cloudIds = new Set(cloudItems.map(item => String(getItemId(item))));
+        const dirtyIds = pendingChangesMap.current[field] || new Set<string>();
+
+        // 1. Ghost Deletion Guard: Check if cloud is suspiciously smaller than local
+        // This prevents mass data loss if a network request returns a partial array.
+        const isSuspiciousDeletion = cloudItems.length < localItems.length * 0.5 && localItems.length > 5;
+        if (isSuspiciousDeletion) {
+            console.warn(`[DataContext] ⚠️ Ghost Deletion Guard triggered for ${field}. Cloud: ${cloudItems.length}, Local: ${localItems.length}. Merging instead of discarding.`);
+            const mergedMap = new Map(localItems.map(item => [String(getItemId(item)), item]));
+            cloudItems.forEach(item => mergedMap.set(String(getItemId(item)), item));
+            return Array.from(mergedMap.values());
         }
-    }, []);
+
+        // 2. Reconciliation Loop: Re-anchor local edits or adopt cloud truth
+        const reconciled = cloudItems.map(cloudItem => {
+            const id = String(getItemId(cloudItem));
+            const isDirty = dirtyIds.has(id);
+            const localVersion = localItems.find(l => String(getItemId(l)) === id);
+
+            if (isDirty && localVersion) {
+                // VALUE-AWARE RE-ANCHORING: If local edit now matches cloud truth, clear dirty flag
+                if (isDataEqual(localVersion, cloudItem)) {
+                    console.log(`[DataContext] ⚓ Re-anchoring ${field}:${id}: Local edit now matches Cloud. Item is clean.`);
+                    dirtyIds.delete(id);
+                    if (dirtyIds.size === 0) unmarkDirty(field);
+                    return cloudItem;
+                }
+                // console.log(`[DataContext] 🛡️ Preservation: Keeping local version of ${field}:${id}`);
+                return localVersion;
+            }
+            return cloudItem;
+        });
+
+        // 3. New Local Additions: Keep local-only items if they are marked dirty
+        const localOnly = localItems.filter(localItem => {
+            const id = String(getItemId(localItem));
+            return !cloudIds.has(id) && dirtyIds.has(id);
+        });
+
+        if (dirtyIds.size > 0 || localOnly.length > 0) {
+            console.log(`[DataContext] ⚒️ Reconciled ${field}: cloud=${cloudItems.length}, local=${localItems.length}, preserved=${dirtyIds.size} edits, kept=${localOnly.length} local-only`);
+        }
+
+        return [...reconciled, ...localOnly];
+    }, [isDataEqual, unmarkDirty, pendingChangesMap]);
 
     // Fields managed exclusively by their own subcollection listeners.
     // These must NEVER be marked dirty by recheckDirtyStatus during a remote update,
@@ -1104,12 +889,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, [markDirty]);
 
     const rebuildItemDirtyMap = React.useCallback((dataOverride?: Partial<AppDataType>) => {
-        console.log('[DataContext] ⚒️ Rebuilding item-level dirty map...');
+        // console.log('[DataContext] ⚒️ Rebuilding item-level dirty map...');
         const collections: (keyof AppDataType)[] = [
             'students', 'subjects', 'classes', 'grades', 'assessments', 'reportData', 'classData'
         ];
 
-        let anyItemDirty = false;
+        let anyMapChanged = false;
+        const newMapState = { ...persistedPendingMap };
 
         collections.forEach(field => {
             const current = dataOverride?.[field] || stateRef.current[field];
@@ -1117,43 +903,48 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             if (!Array.isArray(current) || !Array.isArray(original)) return;
 
-            // Clear previous map for this field
-            if (!pendingChangesMap.current[field]) pendingChangesMap.current[field] = new Set();
-            pendingChangesMap.current[field].clear();
-
+            const currentDirtyIds = new Set<string>();
             current.forEach((item: any) => {
                 const itemId = getItemId(item);
                 if (!itemId) return;
                 const origItem = original.find((o: any) => getItemId(o) === itemId);
 
                 if (!origItem || !isDataEqual(item, origItem)) {
-                    pendingChangesMap.current[field].add(itemId);
-                    anyItemDirty = true;
+                    currentDirtyIds.add(itemId);
                 }
             });
+
+            const prevDirtyIds = persistedPendingMap[field as string] || [];
+            if (!isDataEqual(Array.from(currentDirtyIds).sort(), [...prevDirtyIds].sort())) {
+                newMapState[field as string] = Array.from(currentDirtyIds);
+                anyMapChanged = true;
+            }
         });
 
         // 2. Settings (Non-array granular tracking)
         const currentSettings = dataOverride?.settings || stateRef.current.settings;
         const originalSettings = originalData.current.settings;
         if (currentSettings && originalSettings) {
-             if (!pendingChangesMap.current.settings) pendingChangesMap.current.settings = new Set();
-             pendingChangesMap.current.settings.clear();
-             
+             const currentDirtyKeys: string[] = [];
              Object.keys(currentSettings).forEach(key => {
                  const k = key as keyof SchoolSettings;
-                 const isEq = deepEqual(currentSettings[k], originalSettings[k]);
-                 if (!isEq) {
-                     pendingChangesMap.current.settings.add(key);
-                     anyItemDirty = true;
+                 if (!deepEqual(currentSettings[k], originalSettings[k])) {
+                     currentDirtyKeys.push(key);
                  }
              });
+
+             const prevDirtyKeys = persistedPendingMap.settings || [];
+             if (!isDataEqual(currentDirtyKeys.sort(), [...prevDirtyKeys].sort())) {
+                 newMapState.settings = currentDirtyKeys;
+                 anyMapChanged = true;
+             }
         }
 
-        if (anyItemDirty) {
+        if (anyMapChanged) {
+            setPersistedPendingMap(newMapState);
             setDirtyVersion(v => v + 1);
         }
-    }, [isDataEqual]);
+    }, [isDataEqual, persistedPendingMap, setPersistedPendingMap]);
 
     const recheckAllDirtyStatus = React.useCallback((dataOverride?: Partial<AppDataType>) => {
         console.log('[DataContext] 🔍 Performing full dirty recheck against cloud baseline...');
@@ -1171,6 +962,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Also rebuild item-level map
         rebuildItemDirtyMap(dataOverride);
     }, [recheckDirtyStatus, rebuildItemDirtyMap]);
+
+// loadImportedData relocated below
 
     // Reactive effect to auto-recheck dirty status when data changes
     React.useEffect(() => {
@@ -1416,6 +1209,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // Clear dirty fields only for the fields that were actually saved
             fieldsToSave.forEach(field => {
                 dirtyFields.current.delete(field);
+                
+                // Post-Save Handshake: Persist clearing of dirty map
+                setPersistedPendingMap(prev => ({
+                    ...prev,
+                    [field as string]: []
+                }));
+
+                // Synchronously clear the Set map
+                if (pendingChangesMap.current[field]) {
+                    pendingChangesMap.current[field].clear();
+                }
 
                 // CRITICAL: Update originalData to match the new server state
                 // This prevents the "Preview" from showing these items as changed in future saves
@@ -1488,129 +1292,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Throttling Ref
     const lastGlobalRefresh = React.useRef<number>(0);
 
-    const refreshFromCloud = async (ignoreSyncLock: boolean = false, keysToRefresh?: (keyof AppDataType)[]): Promise<'throttled' | 'success' | 'error'> => {
-        if (!schoolId) return 'error';
-
-        // THROTTLING: Prevent spamming refresh (10s cooldown) unless specific keys are requested (programmatic refresh)
-        const now = Date.now();
-        if (!keysToRefresh && (now - lastGlobalRefresh.current < 10000)) {
-            console.log(`[DataContext] 🛑 Refresh throttled. Please wait ${Math.ceil((10000 - (now - lastGlobalRefresh.current)) / 1000)}s.`);
-            return 'throttled';
-        }
-
-        if (isSyncingRef.current && !ignoreSyncLock) {
-            console.log("Sync already in progress, skipping manual refresh");
-            return 'throttled';
-        }
-
-        if (!keysToRefresh) lastGlobalRefresh.current = now;
-
-        try {
-            isSyncingRef.current = true;
-            setIsFetching(true);
-            const refreshType = keysToRefresh ? `Partial (${keysToRefresh.join(', ')})` : 'FULL';
-            console.log(`[DataContext] 📥 Manual refresh initiated - fetching data from cloud [${refreshType}]...`);
-
-            // Capture loaded subjects before any clearing occurs
-            const subjectsToFetch = Array.from(loadedSubjects.current) as number[];
-
-            // Revert all local pending changes before fetching fresh data
-            revertAllPendingChanges();
-
-            // 1. Fetch Main Document (settings, users, access codes)
-            const data = await getSchoolData(schoolId, keysToRefresh);
-
-            if (data) {
-                console.log('[DataContext] ✅ Main document fetched, applying updates...');
-
-                // 2. Clear relevant pending states
-                if (!keysToRefresh) {
-                    Object.keys(pendingChangesMap.current).forEach(k => {
-                        pendingChangesMap.current[k].clear();
-                    });
-                    loadedSubjects.current.clear();
-                    console.log('[DataContext] 🧹 Cleared all pending changes and score cache for manual refresh');
-                } else if (keysToRefresh.includes('scores')) {
-                    pendingChangesMap.current.scores.clear();
-                    // CRITICAL FIX: Clear the score cache so fresh scores are fetched when user navigates back
-                    loadedSubjects.current.clear();
-                    console.log('[DataContext] 🧹 Cleared score subject cache to force fresh fetch on next load');
-                }
-
-                // 3. Mark as remote update & Apply Main Doc Data
-                isRemoteUpdate.current = true;
-                loadImportedData(data, true);
-
-                // 4. Force Fetch Subcollections (The "Missing Link" for Global Refresh)
-                // This ensures we actually download fresh Students, Classes, etc.
-                const promises: Promise<any>[] = [];
-
-                // A) Metadata (Classes, Subjects, Assessments)
-                if (!keysToRefresh || keysToRefresh.some(k => ['classes', 'subjects', 'assessments'].includes(k))) {
-                    console.log('[DataContext] 🔄 Force refreshing Metadata (Classes, Subjects, Assessments)...');
-                    promises.push(loadMetadata(true, true));
-                }
-
-                // B) Students (Only if requested or FULL refresh)
-                if (!keysToRefresh || keysToRefresh.includes('students')) {
-                    console.log('[DataContext] 🔄 Force refreshing Students subcollection...');
-                    promises.push(loadStudents(undefined, true, true));
-                }
-
-                // C) Scores - Reload any currently viewed scores to show fresh data immediately
-                if (!keysToRefresh || keysToRefresh.includes('scores')) {
-                    console.log('[DataContext] 🔄 Force refreshing Score Buckets for loaded subjects...');
-                    const loadedSubjectsArray = subjectsToFetch;
-                    if (loadedSubjectsArray.length > 0) {
-                        console.log(`[DataContext] 📊 Reloading ${loadedSubjectsArray.length} subject score buckets`);
-                        const scoreRefreshPromises = loadedSubjectsArray.map((subjectId: number) =>
-                            loadScores(undefined, subjectId, true, true)
-                        );
-                        promises.push(Promise.all(scoreRefreshPromises));
-                    }
-                }
-
-                // D) Users - Loaded via Main Document (No Subcollection)
-
-
-                await Promise.all(promises);
-
-                console.log('[DataContext] 🎉 Manual refresh complete');
-
-                // 5. Cleanup Local State
-                draftScores.current.clear();
-                if (keysToRefresh) {
-                    keysToRefresh.forEach(k => dirtyFields.current.delete(k));
-                } else {
-                    dirtyFields.current.clear();
-                }
-
-                setHasLocalChanges(dirtyFields.current.size > 0);
-                setDraftVersion(v => v + 1);
-
-                if (!keysToRefresh) {
-                    setRefreshVersion(v => v + 1); // Trigger UI hard reset for manual refresh
-                    
-                    // CRITICAL: Initial sync is now definitively complete.
-                    // Subsequent snapshots or edits will follow mid-session diffing rules.
-                    isInitialSyncing.current = false;
-                    console.log('[DataContext] ⭐ Initial Sync Phase COMPLETE. Transitioning to mid-session diff mode.');
-                }
-
-                return 'success';
-            } else {
-                console.log('[DataContext] ⚠️ No data found for this school ID');
-                return 'error';
-            }
-        } catch (error) {
-            console.error('[DataContext] ❌ Failed to refresh data from cloud:', error);
-            showDatabaseError(error, 'read');
-            return 'error';
-        } finally {
-            setIsFetching(false);
-            isSyncingRef.current = false;
-        }
-    };
+    // refreshFromCloud relocated below
 
     // Track initial mount to prevent auto-save before data is loaded from cloud
     const isInitialMount = React.useRef(true);
@@ -2036,6 +1718,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
 
             // Clear granular dirty map for this field
+            setPersistedPendingMap(prev => ({
+                ...prev,
+                [field as string]: []
+            }));
+
             if (pendingChangesMap.current[field]) {
                 pendingChangesMap.current[field].clear();
             }
@@ -2915,7 +2602,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         inflightPromises.current.set(cacheKey, fetchPromise);
         return fetchPromise;
-    }, [schoolId]); // STABILIZED: Removed students.length dependency
+    }, [schoolId, reconcileCollection, recheckAllDirtyStatus, showDatabaseError]); // STABILIZED: Removed students.length dependency
 
     // loadUsers removed - users now in main document
 
@@ -2952,21 +2639,18 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     console.log(`[DataContext] ✅ Loaded ${newScores.length} scores for Subject ${subjectId}.`);
                     let finalScoresToRecheck: Score[] = [];
                     setScores(prev => {
-                        // 1. Update originalData first (Baseline)
-                        // CRITICAL: We must remove any scores for this subject from the baseline first,
-                        // because initializeOriginalData might have prepopulated it with offline edits.
+                        // 1. ATOMIC BASELINE SYNC: Update originalData for this subject
                         const currentOriginal = (originalData.current.scores || []) as Score[];
                         const originalMap = new Map<string, Score>(currentOriginal.map(s => [String(getItemId(s)), s]));
 
-                        // Remove all scores for this subject from the existing originalBaseline map
-                        // FIX: Use Number() normalization to avoid string vs number mismatch leaks
+                        // Clear existing baseline for this subject to avoid duplicates/stale items
                         for (const [key, score] of originalMap.entries()) {
                             if (Number(score.subjectId) === Number(subjectId)) {
                                 originalMap.delete(key);
                             }
                         }
 
-                        // Add the true cloud scores
+                        // Add the new cloud baseline
                         newScores.forEach(s => {
                             const sid = getItemId(s);
                             if (sid) originalMap.set(sid, s);
@@ -2974,53 +2658,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         originalData.current.scores = Array.from(originalMap.values());
 
                         // 2. DISCARD LOCAL CHANGES if ignorePreservation is set (Global Refresh)
+                        const otherSubjectScores = prev.filter(s => Number(s.subjectId) !== Number(subjectId));
                         if (ignorePreservation) {
-                            // Only replace scores for THIS subject to avoid wiped state on lazy loads
-                            const otherSubjectScores = prev.filter(s => Number(s.subjectId) !== Number(subjectId));
                             finalScoresToRecheck = [...otherSubjectScores, ...newScores];
                             return finalScoresToRecheck;
                         }
 
-                        // 3. Perform Smart Merge to preserve local changes
-                        const prevMap = new Map<string, Score>(prev.map(s => [String(getItemId(s)), s]));
+                        // 3. SMART MERGE: Reconcile ONLY scores for this subject
+                        const currentSubjectScores = prev.filter(s => Number(s.subjectId) === Number(subjectId));
+                        const reconciledForSubject = reconcileCollection('scores', newScores, currentSubjectScores);
 
-                        newScores.forEach(cloudScore => {
-                            const sid = getItemId(cloudScore);
-                            if (!sid) return;
-                            const local = prevMap.get(sid);
-
-                            // Preserve local if it differs from cloud AND is meaningful
-                            if (local && !isDataEqual(local, cloudScore)) {
-                                // REFINED: If in initial sync, cloud data ALWAYS wins over empty local state
-                                const hasMeaningfulLocalChange = Object.values(local.assessmentScores || {}).some(
-                                    s => Array.isArray(s) && s.some(v => v !== null && v !== undefined && String(v).trim() !== '')
-                                );
-
-                                if (hasMeaningfulLocalChange && !isInitialSyncing.current) {
-                                    console.log(`[DataContext] 🛡️ Preservation: Keeping local version of score ${cloudScore.id} during lazy load`);
-                                    markItemDirty('scores', cloudScore.id);
-                                    return; // Don't overwrite local with cloud
-                                }
-                            }
-
-                            // Otherwise adoption cloud version
-                            prevMap.set(String(cloudScore.id), cloudScore);
-                        });
-
-                        // Ensure local-only scores are also marked dirty
-                        const cloudIds = new Set(newScores.map(s => String(s.id)));
-                        prev.forEach(localScore => {
-                            // Only process scores for the current subject being verified
-                            if (Number(localScore.subjectId) === Number(subjectId) && !cloudIds.has(String(localScore.id))) {
-                                const hasData = localScore.assessmentScores && Object.values(localScore.assessmentScores).some(s => Array.isArray(s) && s.some(v => v !== null && v !== undefined && String(v).trim() !== ''));
-                                if (hasData && !isInitialSyncing.current) {
-                                    console.log(`[DataContext] ➕ Preservation: Keeping local-only score ${localScore.id} during lazy load`);
-                                    markItemDirty('scores', localScore.id);
-                                }
-                            }
-                        });
-
-                        finalScoresToRecheck = Array.from(prevMap.values());
+                        finalScoresToRecheck = [...otherSubjectScores, ...reconciledForSubject];
                         return finalScoresToRecheck;
                     });
 
@@ -3038,7 +2686,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         inflightPromises.current.set(cacheKey, fetchPromise);
         return fetchPromise;
-    }, [schoolId]);
+    }, [schoolId, reconcileCollection, recheckAllDirtyStatus, showDatabaseError]);
 
     // Load Critical Metadata (Classes, Subjects, Assessments)
     const loadMetadata = React.useCallback(async (force: boolean = false, ignorePreservation: boolean = false) => {
@@ -3250,6 +2898,405 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Load Critical Metadata (Classes, Subjects, Assessments)
     // Should be called on Dashboard or App Init
+
+    
+
+    // --- Synchronization Orchestrators (Relocated to bottom to avoid TDZ) ---
+
+// START_LOAD_IMPORTED_DATA
+    const loadImportedData = React.useCallback((data: Partial<AppDataType>, isRemote: boolean = false, sub?: any) => {
+        if (sub) setSubscription(sub);
+        // CRITICAL: Mark this as a remote update to prevent syncing back to cloud
+        // ONLY if it's a remote update. If it's a local file import, we WANT to mark as dirty.
+        if (isRemote) {
+            isRemoteUpdate.current = true;
+            // Automatically reset after 1000ms (increased from 500ms) to allow all effects to settle
+            setTimeout(() => {
+                isRemoteUpdate.current = false;
+            }, 1000);
+        }
+
+        const importedSettings = data.settings;
+        // IMPORTANT: Context is determined by academicYear and academicTerm ONLY.
+        // schoolName is intentionally excluded because it is a user-editable field.
+        // Including it would incorrectly flag a school name edit as a school context shift,
+        // causing all local data to be discarded. Actual school-level switching is handled
+        // by the schoolId-based context reset in the useEffect below.
+        const currentCtx = `${settings.academicYear || ''}-${settings.academicTerm || ''}`;
+        const newCtx = `${importedSettings?.academicYear || ''}-${importedSettings?.academicTerm || ''}`;
+
+        // CRITICAL: If context (Year/Term) changed, we skip preservation
+        const isContextShift = currentCtx !== newCtx && settings.academicYear !== '';
+        if (isContextShift) {
+            console.log(`[DataContext] 🔄 Context shift detected (${currentCtx} -> ${newCtx}). Skipping preservation.`);
+        }
+
+        // SMART MERGING: Only update state if imported data is ACTUALLY provided and not empty
+        // This prevents replacing valid local data with undefined/empty cloud data
+        const {
+            students: importedStudents,
+            subjects: importedSubjects,
+            classes: importedClasses,
+            grades: importedGrades,
+            assessments: importedAssessments,
+            scores: importedScores,
+            reportData: importedReportData,
+            classData: importedClassData,
+            users: importedUsers,
+        } = data;
+
+        console.log(`[DataContext] 📦 loadImportedData called (isRemote=${isRemote}) with:`, {
+            hasSettings: !!importedSettings,
+            studentsCount: importedStudents?.length || 0,
+            subjectsCount: importedSubjects?.length || 0,
+            classesCount: importedClasses?.length || 0,
+            gradesCount: importedGrades?.length || 0,
+            assessmentsCount: importedAssessments?.length || 0,
+            scoresCount: importedScores?.length || 0,
+            reportDataCount: importedReportData?.length || 0,
+            classDataCount: importedClassData?.length || 0,
+            usersCount: importedUsers?.length || 0
+        });
+
+        // CRITICAL: Update lastContextKey ref to match THE INCOMING DATA
+        // This prevents the useEffect reset from firing and wiping out
+        // the data we are about to load.
+        if (isRemote && importedSettings && lastContextKey.current !== null) {
+            const nextCtx = `${schoolId}-${importedSettings.academicYear || ''}-${importedSettings.academicTerm || ''}`;
+            console.log(`[DataContext] 🧠 Pre-empting context reset for: ${nextCtx}`);
+            lastContextKey.current = nextCtx;
+        }
+
+        // ✅ DETERMINING INITIAL LAUNCH: 
+        // A launch is "initial" if originalData is empty OR if we are still in the initial syncing phase.
+        // Once isInitialSyncing is set to false (at end of refreshFromCloud), standard mid-session diffing begins.
+        const isInitialLaunch = isRemote && (Object.keys(originalData.current).length === 0 || isInitialSyncing.current);
+
+        // If it's the initial launch, ensure the global dirty list is clear to enable standard diffing.
+        // HOWEVER: We no longer wipe pendingChangesMap.current here, as it was blowing away
+        // the persistent intentionality restored from localStorage.
+        if (isInitialLaunch) {
+            dirtyFields.current.clear();
+            setHasLocalChanges(false);
+        }
+
+        const nextState: Partial<AppDataType> = {
+            settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions
+        };
+
+        const updateCollection = (field: keyof AppDataType, imported: any[] | undefined, current: any[], setter: (data: any) => void) => {
+            if (imported === undefined) return;
+            
+            // ATOMIC BASELINE SYNC: Update originalData first so following checks detect correct delta
+            if (isRemote) {
+                originalData.current[field] = [...imported];
+            }
+
+            const reconciled = (isRemote && !isContextShift)
+                ? reconcileCollection(field, imported, current)
+                : imported; // Local imports (JSON) or academic Year/Term Context Shift overwrite everything
+
+            if (!isDataEqual(reconciled, current)) {
+                console.log(`[DataContext] ✅ ${isRemote ? 'Merged' : 'Imported'} collection: ${field}`);
+                
+                // If it's a local import, tag all items with _isLocallyCreated so they get uploaded
+                let dataToSet = reconciled;
+                if (!isRemote && Array.isArray(reconciled)) {
+                    dataToSet = reconciled.map((item: any) => ({ ...item, _isLocallyCreated: true }));
+                }
+
+                setter(dataToSet);
+                (nextState as any)[field] = dataToSet;
+                if (!isRemote) markDirty(field, true);
+            }
+        };
+
+        const processField = (field: keyof AppDataType, imported: any, current: any, setter: any) => {
+            if (imported === undefined) return;
+            if (isRemote) {
+                originalData.current[field] = Array.isArray(imported) ? [...imported] : { ...imported } as any;
+            }
+            if (!isDataEqual(imported, current)) {
+                console.log(`[DataContext] ✅ Updating ${String(field)}`);
+                setter(imported);
+                (nextState as any)[field] = imported;
+                if (!isRemote) markDirty(field, true);
+            }
+        };
+
+        if (importedSettings) {
+            processField('settings', importedSettings, settings, setSettings);
+        }
+
+        updateCollection('students', importedStudents, students, setStudents);
+        updateCollection('subjects', importedSubjects, subjects, setSubjects);
+        updateCollection('classes', importedClasses, classes, setClasses);
+        updateCollection('grades', importedGrades, grades, setGrades);
+        updateCollection('assessments', importedAssessments, assessments, setAssessments);
+        updateCollection('reportData', importedReportData, reportData, setReportData);
+        updateCollection('classData', importedClassData, classData, setClassData);
+        
+        processField('userLogs', data.userLogs, userLogs, setUserLogs);
+        processField('activeSessions', data.activeSessions, activeSessions, setActiveSessions);
+        updateCollection('users', importedUsers, users, setUsers);
+
+        // SCORES: Custom Logic using the same Smart Merge pattern
+        if (importedScores !== undefined) {
+            // ATOMIC BASELINE SYNC: Update originalData first
+            if (isRemote) {
+                originalData.current.scores = [...importedScores];
+            }
+
+            const reconciledScores = (isRemote && !isContextShift)
+                ? reconcileCollection('scores', importedScores, scores)
+                : importedScores;
+
+            if (!isDataEqual(reconciledScores, scores)) {
+                console.log(`[DataContext] ✅ ${isRemote ? 'Merged' : 'Imported'} scores`);
+                setScores(reconciledScores);
+                (nextState as any).scores = reconciledScores;
+                
+                if (!isRemote) {
+                    markDirty('scores', true);
+                } else if (isInitialLaunch && pendingChangesMap.current.scores.size > 0) {
+                    // During initial load, if we preserved local scores, the field remains dirty
+                    markDirty('scores', true);
+                }
+            }
+        } else if (isRemote && importedScores && importedScores.length === 0) {
+            // Explicit empty array update from cloud
+            if (scores.length > 0) {
+                setScores([]);
+                nextState.scores = [];
+                // Update baseline as well
+                originalData.current.scores = [];
+            }
+        }
+
+        // Sync users if present
+        if (importedUsers) {
+            SyncLogger.log(`loadImportedData: Loading users from document. Count: ${importedUsers.length}`);
+            if (isInitialLaunch && !isDataEqual(importedUsers, users)) {
+                console.log(`[DataContext] 🛡️ Preservation: Discrepancy in users. Keeping local.`);
+                // markDirty('users', true);
+                // nextState.users remains current
+            } else if (!isDataEqual(importedUsers, users)) {
+                console.log('[DataContext] ✅ Updating users:', importedUsers.length);
+                setUsers(importedUsers);
+                nextState.users = importedUsers; // Track next state
+                // if (!isRemote) markDirty('users');
+            }
+        }
+
+        if (isRemote) {
+            // FIX: SELECTIVE CLEARING of dirty fields
+            // We only clear the dirty flag for a field if we actually received data for it from the cloud.
+            // This prevents "Ghost" updates or partial syncs from wiping out valid local changes in unrelated fields.
+            // REFINED: We clear the flag if data arrived, even if empty (since cloud is baseline), 
+            // especially if we are in the initial sync phase.
+
+            if (importedSettings) dirtyFields.current.delete('settings');
+            if (importedStudents !== undefined) dirtyFields.current.delete('students');
+            if (importedSubjects !== undefined) dirtyFields.current.delete('subjects');
+            if (importedClasses !== undefined) dirtyFields.current.delete('classes');
+            if (importedGrades !== undefined) dirtyFields.current.delete('grades');
+            if (importedAssessments !== undefined) dirtyFields.current.delete('assessments');
+            if (importedScores !== undefined) {
+                // For scores, we only clear if NOT preserving pending local edits
+                if (!isInitialLaunch || pendingChangesMap.current.scores.size === 0) {
+                    dirtyFields.current.delete('scores');
+                }
+            }
+            if (importedReportData !== undefined) dirtyFields.current.delete('reportData');
+            if (importedClassData !== undefined) dirtyFields.current.delete('classData');
+            if (importedUsers !== undefined) dirtyFields.current.delete('users');
+            if (data.userLogs !== undefined) dirtyFields.current.delete('userLogs');
+            if (data.activeSessions !== undefined) dirtyFields.current.delete('activeSessions');
+
+            console.log('[DataContext] 🧹 Selectively cleared dirty fields after remote data load');
+            // Recalculate global dirty state
+            setHasLocalChanges(dirtyFields.current.size > 0);
+
+            // Store original cloud data for smart dirty detection
+            // We ONLY update originalData if it came from the cloud!
+            // If we import a file, that file is effectively "New Local Changes" vs "Old Cloud Data"
+
+            // SECURITY: Deep clone/Immutable merge for arrays to prevent reference sharing
+            const mergeArrays = (field: keyof AppDataType, incoming: any[]) => {
+                if (!incoming) return;
+                // Since this is called when loading remote data, the cloud is the source of truth.
+                // We should NOT merge with the existing local baseline, because that preserves items deleted from the cloud.
+                const map = new Map();
+                incoming.forEach(item => {
+                    const id = getItemId(item);
+                    if (id) map.set(id, item);
+                });
+                originalData.current[field] = Array.from(map.values()) as any;
+            };
+
+            if (importedSettings) originalData.current.settings = importedSettings;
+            if (importedStudents) mergeArrays('students', importedStudents);
+            if (importedSubjects) mergeArrays('subjects', importedSubjects);
+            if (importedClasses) mergeArrays('classes', importedClasses);
+            if (importedGrades) mergeArrays('grades', importedGrades);
+            if (importedAssessments) mergeArrays('assessments', importedAssessments);
+            if (importedScores) mergeArrays('scores', importedScores);
+            if (importedReportData) mergeArrays('reportData', importedReportData);
+            if (importedClassData) mergeArrays('classData', importedClassData);
+            if (importedUsers) mergeArrays('users', importedUsers);
+            if (data.userLogs) originalData.current.userLogs = data.userLogs;
+            if (data.activeSessions) originalData.current.activeSessions = data.activeSessions;
+
+            console.log('[DataContext] 💾 Updated originalData baseline with merge strategy');
+
+            // Perform a full dirty recheck after remote data is loaded and originalData is updated.
+            // We pass nextState to ensure the check uses the newly loaded/merged data rather than stale React state.
+            recheckAllDirtyStatus(nextState);
+
+            // Also force a delayed recheck just in case any effects had side effects
+            setTimeout(() => {
+                recheckAllDirtyStatus();
+            }, 1000);
+        } else {
+            console.log('[DataContext] 💾 Local file import: Marking fields as dirty for verification');
+            // We intentionally do NOT update originalData.current here.
+            // Why? Because we want the Diff Logic (saveToCloud) to compare our NEW imported data
+            // against the OLD originalData from the server, and detect EVERYTHING as "Changed".
+            // However, our Diff Logic relies on IDs. 
+            // If the imported file is identical to the server, Diff = 0.
+            // If the imported file is totally different, Diff = Huge.
+            // But wait, if we markDirty, saveToCloud will run.
+            // saveToCloud calls getPendingUploadData which uses originalData to diff.
+            // If originalData is empty (first load), it detects changes.
+            // If originalData is populated, it will diff.
+            // This is exactly what we want.
+        }
+    }, [schoolId, settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions, reconcileCollection, recheckAllDirtyStatus, unmarkDirty, markDirty, persistedPendingMap]);
+    // END_LOAD_IMPORTED_DATA
+
+const refreshFromCloud = React.useCallback(async (ignoreSyncLock: boolean = false, keysToRefresh?: (keyof AppDataType)[]): Promise<'throttled' | 'success' | 'error'> => {
+        if (!schoolId) return 'error';
+
+        // THROTTLING: Prevent spamming refresh (10s cooldown) unless specific keys are requested (programmatic refresh)
+        const now = Date.now();
+        if (!keysToRefresh && (now - lastGlobalRefresh.current < 10000)) {
+            console.log(`[DataContext] 🛑 Refresh throttled. Please wait ${Math.ceil((10000 - (now - lastGlobalRefresh.current)) / 1000)}s.`);
+            return 'throttled';
+        }
+
+        if (isSyncingRef.current && !ignoreSyncLock) {
+            console.log("Sync already in progress, skipping manual refresh");
+            return 'throttled';
+        }
+
+        if (!keysToRefresh) lastGlobalRefresh.current = now;
+
+        try {
+            isSyncingRef.current = true;
+            setIsFetching(true);
+            const refreshType = keysToRefresh ? `Partial (${keysToRefresh.join(', ')})` : 'FULL';
+            console.log(`[DataContext] 📥 Manual refresh initiated - fetching data from cloud [${refreshType}]...`);
+
+            // Capture loaded subjects before any clearing occurs
+            const subjectsToFetch = Array.from(loadedSubjects.current) as number[];
+
+            // Revert all local pending changes before fetching fresh data
+            revertAllPendingChanges();
+
+            // 1. Fetch Main Document (settings, users, access codes)
+            const data = await getSchoolData(schoolId, keysToRefresh);
+
+            if (data) {
+                console.log('[DataContext] ✅ Main document fetched, applying updates...');
+
+                // 2. Clear relevant pending states
+                if (!keysToRefresh) {
+                    Object.keys(pendingChangesMap.current).forEach(k => {
+                        pendingChangesMap.current[k].clear();
+                    });
+                    loadedSubjects.current.clear();
+                    console.log('[DataContext] 🧹 Cleared all pending changes and score cache for manual refresh');
+                } else if (keysToRefresh.includes('scores')) {
+                    pendingChangesMap.current.scores.clear();
+                    // CRITICAL FIX: Clear the score cache so fresh scores are fetched when user navigates back
+                    loadedSubjects.current.clear();
+                    console.log('[DataContext] 🧹 Cleared score subject cache to force fresh fetch on next load');
+                }
+
+                // 3. Mark as remote update & Apply Main Doc Data
+                isRemoteUpdate.current = true;
+                loadImportedData(data, true);
+
+                // 4. Force Fetch Subcollections (The "Missing Link" for Global Refresh)
+                // This ensures we actually download fresh Students, Classes, etc.
+                const promises: Promise<any>[] = [];
+
+                // A) Metadata (Classes, Subjects, Assessments)
+                if (!keysToRefresh || keysToRefresh.some(k => ['classes', 'subjects', 'assessments'].includes(k))) {
+                    console.log('[DataContext] 🔄 Force refreshing Metadata (Classes, Subjects, Assessments)...');
+                    promises.push(loadMetadata(true, true));
+                }
+
+                // B) Students (Only if requested or FULL refresh)
+                if (!keysToRefresh || keysToRefresh.includes('students')) {
+                    console.log('[DataContext] 🔄 Force refreshing Students subcollection...');
+                    promises.push(loadStudents(undefined, true, true));
+                }
+
+                // C) Scores - Reload any currently viewed scores to show fresh data immediately
+                if (!keysToRefresh || keysToRefresh.includes('scores')) {
+                    console.log('[DataContext] 🔄 Force refreshing Score Buckets for loaded subjects...');
+                    const loadedSubjectsArray = subjectsToFetch;
+                    if (loadedSubjectsArray.length > 0) {
+                        console.log(`[DataContext] 📊 Reloading ${loadedSubjectsArray.length} subject score buckets`);
+                        const scoreRefreshPromises = loadedSubjectsArray.map((subjectId: number) =>
+                            loadScores(undefined, subjectId, true, true)
+                        );
+                        promises.push(Promise.all(scoreRefreshPromises));
+                    }
+                }
+
+                // D) Users - Loaded via Main Document (No Subcollection)
+
+
+                await Promise.all(promises);
+
+                console.log('[DataContext] 🎉 Manual refresh complete');
+
+                // 5. Cleanup Local State
+                draftScores.current.clear();
+                if (keysToRefresh) {
+                    keysToRefresh.forEach(k => dirtyFields.current.delete(k));
+                } else {
+                    dirtyFields.current.clear();
+                }
+
+                setHasLocalChanges(dirtyFields.current.size > 0);
+                setDraftVersion(v => v + 1);
+
+                if (!keysToRefresh) {
+                    setRefreshVersion(v => v + 1); // Trigger UI hard reset for manual refresh
+                    
+                    // CRITICAL: Initial sync is now definitively complete.
+                    // Subsequent snapshots or edits will follow mid-session diffing rules.
+                    isInitialSyncing.current = false;
+                    console.log('[DataContext] ⭐ Initial Sync Phase COMPLETE. Transitioning to mid-session diff mode.');
+                }
+
+                return 'success';
+            } else {
+                console.log('[DataContext] ⚠️ No data found for this school ID');
+                return 'error';
+            }
+        } catch (error) {
+            console.error('[DataContext] ❌ Failed to refresh data from cloud:', error);
+            showDatabaseError(error, 'read');
+            return 'error';
+        } finally {
+            setIsFetching(false);
+            isSyncingRef.current = false;
+        }
+    }, [schoolId, loadImportedData, loadMetadata, loadStudents, loadScores, revertAllPendingChanges, showDatabaseError]);
 
     const value: DataContextType = {
         users, setUsers,

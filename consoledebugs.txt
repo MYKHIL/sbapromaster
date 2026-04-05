@@ -1,39 +1,101 @@
-DataContext.tsx:1287 [DataContext] ☁️ Syncing dirty fields: settings, activeSessions (Manual Save)
-DataContext.tsx:2572 [DataContext] ⚙️ settings granular payload: {headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png'}
-DataContext.tsx:1338 [DataContext] ☁️ Performing Universal Transactional Save...
-DataContext.tsx:2572 [DataContext] ⚙️ settings granular payload: {headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png'}
-DataContext.tsx:2572 [DataContext] ⚙️ settings granular payload: {headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png'}
-react-dom-client.development.js:18985 [Violation] 'click' handler took 162ms
-firebaseService.ts:1850 [Firebase] 📤 Saving Multi-Update to schools/gyewanidabasicschool_20252026_Second-Term: {settings.headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png', activeSessions: {…}, metadata.lastUpdated.settings: ___PRIVATE_ServerTimestampFieldValueImpl, metadata.lastUpdated.activeSessions: ___PRIVATE_ServerTimestampFieldValueImpl}
-firebaseService.ts:1864 [Firebase] 🚀 Executing batch with 1 operations...
-DataContext.tsx:2572 [DataContext] ⚙️ settings granular payload: {headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png'}
-DataContext.tsx:2572 [DataContext] ⚙️ settings granular payload: {headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png'}
-firebaseService.ts:1867 [Firebase] ✅ Batch save successful!
-DataContext.tsx:1343 [DataContext] ✅ Data saved to cloud successfully!
-DataContext.tsx:1356 [DataContext] ⏭️ Skipping redundant re-fetch - Local state is synced (Optimized)
-DataContext.tsx:1359 [DataContext] 🎉 Sync & Refresh complete - cleared dirty fields
-scheduler.development.js:14 [Violation] 'message' handler took 151ms
-DataContext.tsx:1210 [DataContext] 📥 Real-time update for School Main Doc
-DataContext.tsx:502 [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 0, …}
-DataContext.tsx:520 [DataContext] 🧠 Pre-empting context reset for: gyewanidabasicschool_20252026_Second-Term-2025/2026-Second Term
-DataContext.tsx:545 [DataContext] ✅ Updating userLogs
-DataContext.tsx:545 [DataContext] ✅ Updating activeSessions
-DataContext.tsx:699 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
-DataContext.tsx:733 [DataContext] 💾 Updated originalData baseline with merge strategy
-DataContext.tsx:1136 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
-DataContext.tsx:1084 [DataContext] ⚒️ Rebuilding item-level dirty map...
-scheduler.development.js:14 [Violation] 'message' handler took 178ms
-DataContext.tsx:1136 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
-DataContext.tsx:1084 [DataContext] ⚒️ Rebuilding item-level dirty map...
-DataContext.tsx:2572 [DataContext] ⚙️ settings granular payload: {headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png'}
-DataContext.tsx:2572 [DataContext] ⚙️ settings granular payload: {headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png'}
-DataContext.tsx:2572 [DataContext] ⚙️ settings granular payload: {headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png'}
-DataContext.tsx:2572 [DataContext] ⚙️ settings granular payload: {headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png'}
-DataContext.tsx:2572 [DataContext] ⚙️ settings granular payload: {headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png'}
-DataContext.tsx:2572 [DataContext] ⚙️ settings granular payload: {headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png'}
-DataContext.tsx:1136 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
-DataContext.tsx:1084 [DataContext] ⚒️ Rebuilding item-level dirty map...
-DataContext.tsx:2572 [DataContext] ⚙️ settings granular payload: {headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png'}
-DataContext.tsx:2572 [DataContext] ⚙️ settings granular payload: {headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png'}
-DataContext.tsx:2572 [DataContext] ⚙️ settings granular payload: {headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png'}
-DataContext.tsx:2572 [DataContext] ⚙️ settings granular payload: {headmasterSignature: 'https://i.ibb.co/bj5sZRb9/9d8c983bae6c.png'}
+[Violation] 'input' handler took 693ms
+scheduler.development.js:14 [Violation] 'message' handler took 623ms
+Navigated to http://localhost:3000/
+client:789 [vite] connecting...
+react-dom-client.development.js:28004 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+client:912 [vite] connected.
+firebaseService.ts:69 [2026-04-05T18:30:58.540Z]  @firebase/analytics: Analytics: Firebase Analytics is not supported in this environment. Wrap initialization of analytics in analytics.isSupported() to prevent initialization in unsupported environments. Details: (1) This is a browser extension environment. (analytics/invalid-analytics-context).
+defaultLogHandler @ logger.ts:115
+warn @ logger.ts:206
+warnOnBrowserContextMismatch @ factory.ts:169
+factory @ factory.ts:182
+(anonymous) @ index.ts:58
+getOrInitializeService @ provider.ts:318
+initialize @ provider.ts:242
+initializeAnalytics @ api.ts:112
+getAnalytics @ api.ts:85
+(anonymous) @ firebaseService.ts:69
+DataContext.tsx:2361 [DataContext] Sync PAUSED
+DataContext.tsx:2361 [DataContext] Sync PAUSED
+[Violation] 'message' handler took <N>ms
+[Violation] 'message' handler took <N>ms
+[Violation] 'message' handler took <N>ms
+[Violation] 'message' handler took <N>ms
+[Violation] 'message' handler took <N>ms
+[Violation] 'message' handler took <N>ms
+[Violation] 'message' handler took <N>ms
+[Violation] 'message' handler took <N>ms
+[Violation] 'message' handler took <N>ms
+[Violation] 'message' handler took <N>ms
+[Violation] 'message' handler took <N>ms
+[Violation] 'message' handler took <N>ms
+[Violation] 'message' handler took <N>ms
+DataContext.tsx:2361 [DataContext] Sync PAUSED
+DataContext.tsx:552 [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 0, …}
+DataContext.tsx:570 [DataContext] 🧠 Pre-empting context reset for: ayirebida_2025-2026_Second-Term-2025-2026-Second Term
+ [DataContext] ✅ Updating userLogs
+ [DataContext] ✅ Updating activeSessions
+ [DataContext] ✅ Merged collection: users
+DataContext.tsx:687 [DataContext] 🛡️ Preservation: Discrepancy in users. Keeping local.
+DataContext.tsx:723 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
+DataContext.tsx:757 [DataContext] 💾 Updated originalData baseline with merge strategy
+DataContext.tsx:1216 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:552 [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 0, …}
+DataContext.tsx:570 [DataContext] 🧠 Pre-empting context reset for: ayirebida_2025-2026_Second-Term-2025-2026-Second Term
+DataContext.tsx:627 [DataContext] ✅ Updating userLogs
+DataContext.tsx:627 [DataContext] ✅ Updating activeSessions
+DataContext.tsx:607 [DataContext] ✅ Merged collection: users
+DataContext.tsx:687 [DataContext] 🛡️ Preservation: Discrepancy in users. Keeping local.
+DataContext.tsx:723 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
+DataContext.tsx:757 [DataContext] 💾 Updated originalData baseline with merge strategy
+DataContext.tsx:1216 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:2361 [DataContext] Sync PAUSED
+DataContext.tsx:1216 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:2361 [DataContext] Sync PAUSED
+DataContext.tsx:1216 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:1216 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:2361 [DataContext] Sync PAUSED
+DataContext.tsx:1216 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:2368 [DataContext] Sync RESUMED
+DataContext.tsx:2673 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1775413863809 for userLogs
+DataContext.tsx:2673 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1775413863809 for userLogs
+DataContext.tsx:2673 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1775413863809 for userLogs
+DataContext.tsx:2673 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1775413863809 for userLogs
+DataContext.tsx:2673 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1775413863809 for userLogs
+DataContext.tsx:2673 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1775413863809 for userLogs
+DataContext.tsx:3015 [DataContext] 📥 Lazy Loading Scores for Subject 5...
+DataContext.tsx:1216 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:1256 [DataContext] 🛰️ Setting up True Listeners for ayirebida_2025-2026_Second-Term...
+DataContext.tsx:2286 [DataContext] 📦 Checking student bucket existence for ayirebida_2025-2026_Second-Term...
+DataContext.tsx:3008 [DataContext] ⏳ Scores fetch for Subject 5 already in progress. Deduping...
+react-dom-client.development.js:18985 [Violation] 'click' handler took 730ms
+DataContext.tsx:2673 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1775413863809 for userLogs
+DataContext.tsx:2673 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1775413863809 for userLogs
+DataContext.tsx:2673 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1775413863809 for userLogs
+DataContext.tsx:2673 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1775413863809 for userLogs
+DataContext.tsx:2673 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1775413863809 for userLogs
+DataContext.tsx:2673 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1775413863809 for userLogs
+DataContext.tsx:1302 [DataContext] 📥 Real-time update for School Main Doc
+DataContext.tsx:552 [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 0, …}
+DataContext.tsx:570 [DataContext] 🧠 Pre-empting context reset for: ayirebida_2025-2026_Second-Term-2025-2026-Second Term
+DataContext.tsx:627 [DataContext] ✅ Updating userLogs
+DataContext.tsx:627 [DataContext] ✅ Updating activeSessions
+DataContext.tsx:723 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
+DataContext.tsx:757 [DataContext] 💾 Updated originalData baseline with merge strategy
+DataContext.tsx:1216 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:1216 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:1216 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:1268 [DataContext] 📥 Real-time update for students
+DataContext.tsx:1216 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:1268 [DataContext] 📥 Real-time update for classes
+DataContext.tsx:3008 [DataContext] ⏳ Scores fetch for Subject 5 already in progress. Deduping...
+DataContext.tsx:1216 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:1268 [DataContext] 📥 Real-time update for subjects
+DataContext.tsx:1216 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:1268 [DataContext] 📥 Real-time update for assessments
+DataContext.tsx:1216 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:1268 [DataContext] 📥 Real-time update for grades
+DataContext.tsx:1216 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:3025 [DataContext] ✅ Loaded 160 scores for Subject 5.
+DataContext.tsx:1216 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:1216 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
