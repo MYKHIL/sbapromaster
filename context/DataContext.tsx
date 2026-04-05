@@ -272,7 +272,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.203"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.204"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -307,20 +307,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, []);
 
     // Track original cloud data to compare against current state
-    const originalData = React.useRef<Partial<AppDataType>>({
-        settings: INITIAL_SETTINGS,
-        students: undefined,
-        subjects: undefined,
-        classes: undefined,
-        grades: undefined,
-        assessments: undefined,
-        scores: undefined,
-        reportData: undefined,
-        classData: undefined,
-        users: undefined,
-        userLogs: undefined,
-        activeSessions: {}
-    });
+    const originalData = React.useRef<Partial<AppDataType>>({});
+    // Flag to track if we are in the initial sync phase after login
+    const isInitialSyncing = React.useRef(true);
 
     // Track pending (uncommitted) changes for individual items in collections
     // Format: Record<field, Set<item_id>>
@@ -525,8 +514,21 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             lastContextKey.current = nextCtx;
         }
 
-        // ✅ ONLY update if imported data is ACTUALLY provided, not empty, AND different from current state
-        const isInitialLaunch = isRemote && Object.keys(originalData.current).length === 0;
+        // ✅ DETERMINING INITIAL LAUNCH: 
+        // A launch is "initial" if originalData is empty OR if we are still in the initial syncing phase.
+        // Once isInitialSyncing is set to false (at end of refreshFromCloud), standard mid-session diffing begins.
+        const isInitialLaunch = isRemote && (Object.keys(originalData.current).length === 0 || isInitialSyncing.current);
+
+        // If it's the initial launch, ensure we start with a clean dirty slate
+        if (isInitialLaunch) {
+            dirtyFields.current.clear();
+            pendingChangesMap.current = {
+                students: new Set(), subjects: new Set(), classes: new Set(), grades: new Set(),
+                assessments: new Set(), scores: new Set(), reportData: new Set(), classData: new Set(),
+                users: new Set(), settings: new Set(),
+            };
+            setHasLocalChanges(false);
+        }
 
         const nextState: Partial<AppDataType> = {
             settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions
@@ -677,28 +679,26 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // FIX: SELECTIVE CLEARING of dirty fields
             // We only clear the dirty flag for a field if we actually received data for it from the cloud.
             // This prevents "Ghost" updates or partial syncs from wiping out valid local changes in unrelated fields.
+            // REFINED: We clear the flag if data arrived, even if empty (since cloud is baseline), 
+            // especially if we are in the initial sync phase.
 
-            if (importedSettings && !deepEqual(importedSettings, settings)) dirtyFields.current.delete('settings');
-            if (importedStudents && importedStudents.length > 0 && !deepEqual(importedStudents, students)) dirtyFields.current.delete('students');
-            if (importedSubjects && importedSubjects.length > 0 && !deepEqual(importedSubjects, subjects)) dirtyFields.current.delete('subjects');
-            if (importedClasses && importedClasses.length > 0 && !deepEqual(importedClasses, classes)) dirtyFields.current.delete('classes');
-            if (importedGrades && importedGrades.length > 0 && !deepEqual(importedGrades, grades)) dirtyFields.current.delete('grades');
-            if (importedAssessments && importedAssessments.length > 0 && !deepEqual(importedAssessments, assessments)) dirtyFields.current.delete('assessments');
-            if (importedScores && importedScores.length > 0) {
-                // Only clear dirty flags if we DON'T have pending local changes to preserve
-                if (pendingChangesMap.current.scores.size === 0) {
-                    if (!deepEqual(importedScores, scores)) {
-                        dirtyFields.current.delete('scores');
-                    }
-                } else {
-                    console.log('[DataContext] ⚠️ Retaining dirty flag for scores due to pending local changes');
+            if (importedSettings) dirtyFields.current.delete('settings');
+            if (importedStudents !== undefined) dirtyFields.current.delete('students');
+            if (importedSubjects !== undefined) dirtyFields.current.delete('subjects');
+            if (importedClasses !== undefined) dirtyFields.current.delete('classes');
+            if (importedGrades !== undefined) dirtyFields.current.delete('grades');
+            if (importedAssessments !== undefined) dirtyFields.current.delete('assessments');
+            if (importedScores !== undefined) {
+                // For scores, we only clear if NOT preserving pending local edits
+                if (!isInitialLaunch || pendingChangesMap.current.scores.size === 0) {
+                    dirtyFields.current.delete('scores');
                 }
             }
-            if (importedReportData && importedReportData.length > 0 && !deepEqual(importedReportData, reportData)) dirtyFields.current.delete('reportData');
-            if (importedClassData && importedClassData.length > 0 && !deepEqual(importedClassData, classData)) dirtyFields.current.delete('classData');
-            if (importedUsers && importedUsers.length > 0 && !deepEqual(importedUsers, users)) dirtyFields.current.delete('users');
-            if (data.userLogs) dirtyFields.current.delete('userLogs');
-            if (data.activeSessions) dirtyFields.current.delete('activeSessions');
+            if (importedReportData !== undefined) dirtyFields.current.delete('reportData');
+            if (importedClassData !== undefined) dirtyFields.current.delete('classData');
+            if (importedUsers !== undefined) dirtyFields.current.delete('users');
+            if (data.userLogs !== undefined) dirtyFields.current.delete('userLogs');
+            if (data.activeSessions !== undefined) dirtyFields.current.delete('activeSessions');
 
             console.log('[DataContext] 🧹 Selectively cleared dirty fields after remote data load');
             // Recalculate global dirty state
@@ -1587,6 +1587,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
                 if (!keysToRefresh) {
                     setRefreshVersion(v => v + 1); // Trigger UI hard reset for manual refresh
+                    
+                    // CRITICAL: Initial sync is now definitively complete.
+                    // Subsequent snapshots or edits will follow mid-session diffing rules.
+                    isInitialSyncing.current = false;
+                    console.log('[DataContext] ⭐ Initial Sync Phase COMPLETE. Transitioning to mid-session diff mode.');
                 }
 
                 return 'success';
