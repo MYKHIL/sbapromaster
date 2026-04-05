@@ -36,6 +36,18 @@ const ScoreEntry: React.FC = () => {
     const MobileControls = ({ className = "", compact = false }: { className?: string, compact?: boolean }) => (
         <div className="flex flex-col items-end">
             <div className={`flex items-center ${compact ? 'gap-1' : 'gap-2'} ${className}`}>
+                {/* Refresh Button */}
+                <button
+                    onClick={() => refreshFromCloud()}
+                    disabled={isSyncing || isFetching || !isOnline}
+                    className={`${compact ? 'p-1' : 'p-1.5'} text-gray-500 hover:text-green-600 bg-gray-100 hover:bg-green-50 rounded-lg transition-colors border border-gray-200 ${(isSyncing || isFetching || !isOnline) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    title="Refresh"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className={`${compact ? 'h-4 w-4' : 'h-5 w-5'} ${(isSyncing || isFetching) ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                </button>
+
                 {/* Preview Button */}
                 {pendingCount > 0 && (
                     <button
@@ -50,23 +62,11 @@ const ScoreEntry: React.FC = () => {
                     </button>
                 )}
 
-                {/* Refresh Button */}
-                <button
-                    onClick={() => refreshFromCloud()}
-                    disabled={isSyncing || !isOnline}
-                    className={`${compact ? 'p-1' : 'p-1.5'} text-gray-500 hover:text-green-600 bg-gray-100 hover:bg-green-50 rounded-lg transition-colors border border-gray-200 ${(isSyncing || !isOnline) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    title="Refresh"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" className={`${compact ? 'h-4 w-4' : 'h-5 w-5'} ${isSyncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                </button>
-
                 {/* Save Button */}
                 <button
                     onClick={() => saveToCloud(true)}
-                    disabled={pendingCount === 0 || isSyncing || !isOnline}
-                    className={`flex items-center ${compact ? 'gap-1 px-2 py-1' : 'gap-2 px-3 py-1.5'} rounded-lg transition-all shadow-sm ${(pendingCount === 0 || isSyncing || !isOnline)
+                    disabled={pendingCount === 0 || isSyncing || isFetching || !isOnline}
+                    className={`flex items-center ${compact ? 'gap-1 px-2 py-1' : 'gap-2 px-3 py-1.5'} rounded-lg transition-all shadow-sm ${(pendingCount === 0 || isSyncing || isFetching || !isOnline)
                         ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                         : 'bg-blue-600 text-white hover:bg-blue-700'
                         }`}
