@@ -273,7 +273,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.215"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.216"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -984,6 +984,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 const origItem = original.find((o: any) => getItemId(o) === itemId);
 
                 if (!origItem || !isDataEqual(item, origItem)) {
+                    // ATOMIC SANITIZATION: If both the cloud and local state agree the item is soft-deleted,
+                    // silently evict it from the pending changes map. 
+                    // This prevents Firestore Security Rules from rejecting an unnecessary 'deleted: true' update.
+                    const origAny = origItem as any;
+                    const itemAny = item as any;
+                    if (origAny && origAny.deleted === true && itemAny.deleted === true) {
+                        return; // Skip adding to currentDirtyIds (Silently drop)
+                    }
                     currentDirtyIds.add(itemId);
                 }
             });
@@ -1017,6 +1025,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (anyMapChanged) {
             setPersistedPendingMap(newMapState);
             setDirtyVersion(v => v + 1);
+            
+            // PERSISTENCE SYNC: Immediately update localStorage with the sanitized map
+            // to prevent the deleted items from re-appearing on the next refresh/load out of sync.
+            try {
+                const mapData = JSON.stringify(newMapState);
+                localStorage.setItem(getKey('pending-changes-map'), LZ.compress(mapData));
+            } catch (e) {
+                console.error("[DataContext] Could not sync sanitized map to localStorage", e);
+            }
         }
     }, [isDataEqual, persistedPendingMap, setPersistedPendingMap]);
 
@@ -2348,12 +2365,26 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 const updates = currentVal.filter(item => {
                     const itemId = getItemId(item);
                     if (itemId) {
+                        const originalItem = originalVal.find((o: any) => getItemId(o) === itemId);
+
+                        // ATOMIC PAYLOAD SANITIZATION: Prevents Firestore Security Rule Rejection
+                        // If taking actions mid-app instantly adds the item to the pending set before background sanitization can run,
+                        // we must forcefully intercept it right before it hits the payload.
+                        // If the server knows it's softly deleted, and we also know it's softly deleted, NEVER upload it.
+                        const origAny = originalItem as any;
+                        const itemAny = item as any;
+                        if (origAny && origAny.deleted === true && itemAny.deleted === true) {
+                            // Optionally cleanup the set since we actively caught it
+                            if (pendingChangesMap.current[field]) {
+                                pendingChangesMap.current[field].delete(itemId);
+                            }
+                            return false; // Drop from update payload immediately
+                        }
+
                         // PREVIEW FIX: If it's explicitly in the pendingChangesMap, include it
                         // This handles cases like "Restore System Default" where data might match cloud but is statefully unsaved
                         const pendingSet = pendingChangesMap.current[field];
                         if (pendingSet && pendingSet.has(itemId)) return true;
-
-                        const originalItem = originalVal.find((o: any) => getItemId(o) === itemId);
 
                         if (!originalItem) {
                             // Zombie Data Prevention: If it wasn't created locally in this session, drop it!
