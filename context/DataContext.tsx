@@ -273,7 +273,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.212"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.213"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -548,6 +548,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             console.log('[DataContext] 📱 Mobile Lifecycle event detected. Forcing immediate data backup...');
             
             try {
+                // Force any active inputs to blur and commit their React state before we backup
+                if (document.activeElement && 'blur' in document.activeElement) {
+                    (document.activeElement as HTMLElement).blur();
+                }
+
                 // 1. Back up Pending Changes Map
                 const mapData = JSON.stringify(persistedPendingMap);
                 localStorage.setItem(getKey('pending-changes-map'), LZ.compress(mapData));
@@ -561,12 +566,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
         };
 
+        window.addEventListener('beforeunload', handleForceBackup);
         window.addEventListener('pagehide', handleForceBackup);
         window.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') handleForceBackup();
         });
         
         return () => {
+            window.removeEventListener('beforeunload', handleForceBackup);
             window.removeEventListener('pagehide', handleForceBackup);
         };
     }, [persistedPendingMap]);
