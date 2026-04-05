@@ -273,7 +273,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.208"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.209"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -345,13 +345,22 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
 
     // Provide the 'Set' based interface the existing logic expects.
-    // We wrap it in a pseudo-ref object to match the 'pendingChangesMap.current' API.
-    const pendingChangesMap = React.useMemo(() => {
-        const map: Record<string, Set<string>> = {};
+    // Converted to useRef to act as an Absolute Synchronous Source of Truth, preventing
+    // stale closures when multiple edits happen rapidly on slow mobile devices.
+    const pendingChangesMap = React.useRef<Record<string, Set<string>>>({
+        students: new Set(), subjects: new Set(), classes: new Set(), grades: new Set(),
+        assessments: new Set(), scores: new Set(), reportData: new Set(), classData: new Set(),
+        users: new Set(), settings: new Set(),
+    });
+
+    // Keep the fast synchronous ref in sync with the persistent React state (handles hydration and cross-tab)
+    useEffect(() => {
         Object.keys(persistedPendingMap).forEach(key => {
-            map[key] = new Set(persistedPendingMap[key as keyof typeof persistedPendingMap]);
+            const vals = persistedPendingMap[key as keyof typeof persistedPendingMap];
+            if (Array.isArray(vals)) {
+                pendingChangesMap.current[key] = new Set(vals);
+            }
         });
-        return { current: map };
     }, [persistedPendingMap]);
 
     const markItemDirty = React.useCallback((field: string, itemOrId: any) => {
@@ -364,19 +373,18 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         pendingChangesMap.current[field].add(id);
 
-        // Immediate Write-Through for Mobile Reliability
-        // We update React state AND immediately force a synchronous write to disk.
-        // This ensures the "intent" survives a mobile browser tab discard.
-        const nextIds = Array.from(pendingChangesMap.current[field]);
+        // Collect ALL current sets into a single atomic full map
+        const nextFullMap: Record<string, string[]> = {};
+        Object.keys(pendingChangesMap.current).forEach(k => {
+            nextFullMap[k] = Array.from(pendingChangesMap.current[k]);
+        });
         
-        setPersistedPendingMap(prev => ({
-            ...prev,
-            [field]: nextIds
-        }));
+        // Update React State UI
+        setPersistedPendingMap(nextFullMap);
 
+        // Immediate Write-Through built purely from synchronous ref
         try {
-            const currentFullMap = { ...persistedPendingMap, [field]: nextIds };
-            const jsonString = JSON.stringify(currentFullMap);
+            const jsonString = JSON.stringify(nextFullMap);
             const compressed = LZ.compress(jsonString);
             localStorage.setItem(getKey('pending-changes-map'), compressed);
         } catch (error) {
@@ -389,7 +397,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
 
         markDirty(field as keyof AppDataType, true);
-    }, [setPersistedPendingMap, markDirty, persistedPendingMap, showDatabaseError]);
+    }, [setPersistedPendingMap, markDirty, showDatabaseError]);
 
     const markItemClean = React.useCallback((field: string, itemOrId: any) => {
         const id = typeof itemOrId === 'object' ? getItemId(itemOrId) : String(itemOrId);
@@ -400,27 +408,28 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             pendingChangesMap.current[field].delete(id);
         }
 
-        const nextIds = Array.from(pendingChangesMap.current[field] || []);
+        // Collect atomic state
+        const nextFullMap: Record<string, string[]> = {};
+        Object.keys(pendingChangesMap.current).forEach(k => {
+            nextFullMap[k] = Array.from(pendingChangesMap.current[k]);
+        });
 
-        // Persist deletion
-        setPersistedPendingMap(prev => ({
-            ...prev,
-            [field]: nextIds
-        }));
+        // Update React State UI
+        setPersistedPendingMap(nextFullMap);
 
+        // Synchronous Write-Through
         try {
-            const currentFullMap = { ...persistedPendingMap, [field]: nextIds };
-            const jsonString = JSON.stringify(currentFullMap);
+            const jsonString = JSON.stringify(nextFullMap);
             const compressed = LZ.compress(jsonString);
             localStorage.setItem(getKey('pending-changes-map'), compressed);
         } catch (error) {
-            // Error handling for clean is less critical but same pattern
+            // Failsafe
         }
 
         if (pendingChangesMap.current[field]?.size === 0) {
             unmarkDirty(field as keyof AppDataType);
         }
-    }, [setPersistedPendingMap, unmarkDirty, persistedPendingMap]);
+    }, [setPersistedPendingMap, unmarkDirty]);
 
     const isItemDirty = React.useCallback((field: keyof AppDataType, id: string | number) => {
         const currentItems = stateRef.current[field];

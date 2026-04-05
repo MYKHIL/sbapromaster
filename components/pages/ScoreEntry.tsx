@@ -167,28 +167,66 @@ const ScoreEntry: React.FC = () => {
     }, [selectedClass, selectedSubjectId, allClasses, loadScores, currentUser?.role]);
 
     // Mobile View State
-    // PERSISTENCE: Initialize from localStorage
-    const [selectedStudentIndex, setSelectedStudentIndex] = useState(() => {
+    const filteredStudents = useMemo(() => {
+        if (!students) return [];
+
+        // FAIL-SAFE: If a class is selected, ensure the selectedSubjectId is valid for that class
+        // This prevents the 'mismatch window' during transitions from showing or saving data.
+        if (selectedClass && selectedSubjectId && currentUser?.role !== 'Admin') {
+            const isValid = subjects.some(s => s.id === selectedSubjectId);
+            if (!isValid) {
+                console.warn(`[ScoreEntry] 🛡️ Fail-safe triggered: Subject ${selectedSubjectId} not valid for class ${selectedClass}.`);
+                return [];
+            }
+        }
+
+        let results = [...students];
+
+        // Apply standardized sort: Gender (Desc) -> Name (Asc)
+        results.sort((a, b) => {
+            if (a.gender !== b.gender) {
+                return b.gender.localeCompare(a.gender);
+            }
+            return a.name.localeCompare(b.name);
+        });
+
+        // If no class selected:
+        if (!selectedClass) {
+            // Admins see all students (All Classes mode)
+            if (currentUser?.role === 'Admin') return results;
+            // Others see nothing until they select a class
+            return [];
+        }
+
+        return results.filter(student => student.class === selectedClass);
+    }, [students, selectedClass, currentUser, selectedSubjectId, subjects]);
+
+    // PERSISTENCE: Initialize from localStorage via Student ID
+    const [persistedStudentId, setPersistedStudentId] = useState<number | null>(() => {
         try {
-            const saved = localStorage.getItem('scoreEntry_selectedStudentIndex');
-            return saved ? Number(saved) : 0;
+            const saved = localStorage.getItem('scoreEntry_persistedStudentId');
+            return saved ? Number(saved) : null;
         } catch (e) {
-            return 0;
+            return null;
         }
     });
 
-    // PERSISTENCE: Save on change
-    useEffect(() => {
-        localStorage.setItem('scoreEntry_selectedStudentIndex', String(selectedStudentIndex));
-    }, [selectedStudentIndex]);
+    const selectedStudentIndex = useMemo(() => {
+        if (filteredStudents.length === 0) return 0;
+        if (persistedStudentId !== null) {
+            const index = filteredStudents.findIndex(s => s.id === persistedStudentId);
+            return index !== -1 ? index : 0;
+        }
+        return 0;
+    }, [filteredStudents, persistedStudentId]);
 
-    // FIX: Reset mobile student index when class or subject changes.
-    // The index is positional, so if the student list changes (e.g. students added/sorted differently
-    // between sessions), an old persisted index could point to the WRONG student.
-    // Resetting to 0 on context change ensures correct student is always targeted.
-    useEffect(() => {
-        setSelectedStudentIndex(0);
-    }, [selectedClass, selectedSubjectId]);
+    const handleStudentIndexChange = (newIndex: number) => {
+        if (filteredStudents[newIndex]) {
+            const newId = filteredStudents[newIndex].id;
+            setPersistedStudentId(newId);
+            localStorage.setItem('scoreEntry_persistedStudentId', String(newId));
+        }
+    };
 
 
     // Safe initialization for selectedAssessmentId
@@ -244,46 +282,9 @@ const ScoreEntry: React.FC = () => {
         }
     }, [assessments, selectedAssessmentId]);
 
-    const filteredStudents = useMemo(() => {
-        if (!students) return [];
 
-        // FAIL-SAFE: If a class is selected, ensure the selectedSubjectId is valid for that class
-        // This prevents the 'mismatch window' during transitions from showing or saving data.
-        if (selectedClass && selectedSubjectId && currentUser?.role !== 'Admin') {
-            const isValid = subjects.some(s => s.id === selectedSubjectId);
-            if (!isValid) {
-                console.warn(`[ScoreEntry] 🛡️ Fail-safe triggered: Subject ${selectedSubjectId} not valid for class ${selectedClass}.`);
-                return [];
-            }
-        }
 
-        let results = [...students];
-
-        // Apply standardized sort: Gender (Desc) -> Name (Asc)
-        results.sort((a, b) => {
-            if (a.gender !== b.gender) {
-                return b.gender.localeCompare(a.gender);
-            }
-            return a.name.localeCompare(b.name);
-        });
-
-        // If no class selected:
-        if (!selectedClass) {
-            // Admins see all students (All Classes mode)
-            if (currentUser?.role === 'Admin') return results;
-            // Others see nothing until they select a class
-            return [];
-        }
-
-        return results.filter(student => student.class === selectedClass);
-    }, [students, selectedClass, currentUser]);
-
-    // Reset student index if it goes out of bounds (e.g. class change)
-    useEffect(() => {
-        if (selectedStudentIndex >= filteredStudents.length && filteredStudents.length > 0) {
-            setSelectedStudentIndex(0);
-        }
-    }, [filteredStudents.length, selectedStudentIndex]);
+    // Reset student selection if filtering changes and causes out of bounds (handled by useMemo, but we can clean up any errors here if needed)
 
     const unfilledCount = useMemo(() => {
         if (!filteredStudents || !selectedSubjectId || !selectedAssessmentId) return 0;
@@ -633,7 +634,7 @@ const ScoreEntry: React.FC = () => {
                                                 value={selectedStudentIndex}
                                                 onChange={(e) => {
                                                     if (scoreModified) commitScore();
-                                                    setSelectedStudentIndex(Number(e.target.value));
+                                                    handleStudentIndexChange(Number(e.target.value));
                                                 }}
                                                 className={getSelectStyles(true)}
                                             >
@@ -677,7 +678,7 @@ const ScoreEntry: React.FC = () => {
                                                             }
 
                                                             if (nextIndex !== -1) {
-                                                                setSelectedStudentIndex(nextIndex);
+                                                                handleStudentIndexChange(nextIndex);
                                                                 setMobileScoreError('');
                                                             }
                                                         }}
@@ -800,7 +801,7 @@ const ScoreEntry: React.FC = () => {
                                         <button
                                             onClick={() => {
                                                 if (scoreModified) commitScore();
-                                                setSelectedStudentIndex(prev => Math.max(0, prev - 1));
+                                                handleStudentIndexChange(Math.max(0, selectedStudentIndex - 1));
                                             }}
                                             disabled={selectedStudentIndex === 0}
                                             className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -810,7 +811,7 @@ const ScoreEntry: React.FC = () => {
                                         <button
                                             onClick={() => {
                                                 if (scoreModified) commitScore();
-                                                setSelectedStudentIndex(prev => Math.min(filteredStudents.length - 1, prev + 1));
+                                                handleStudentIndexChange(Math.min(filteredStudents.length - 1, selectedStudentIndex + 1));
                                             }}
                                             disabled={selectedStudentIndex === filteredStudents.length - 1}
                                             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
