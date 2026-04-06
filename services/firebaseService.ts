@@ -66,7 +66,16 @@ import { getApp, getApps } from "firebase/app";
 
 const app = getApps().length > 0 ? getApp() : initializeApp(selectedConfig);
 export const auth = getAuth(app);
-const analytics = getAnalytics(app);
+// Firebase Analytics — wrapped in try/catch because getAnalytics() can throw
+// in Firefox with Enhanced Tracking Protection enabled (it blocks cookie and
+// beacon access). A failure here is non-fatal; the app works without analytics.
+let analytics: ReturnType<typeof getAnalytics> | null = null;
+try {
+    analytics = getAnalytics(app);
+} catch (analyticsError) {
+    console.warn('[Firebase] Analytics unavailable (browser privacy settings):', analyticsError);
+}
+
 
 // ENABLE OFFLINE PERSISTENCE (The #1 Fix)
 // We use initializeFirestore with IndexedDB-backed persistent cache for best
