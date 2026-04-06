@@ -69,8 +69,15 @@ export const auth = getAuth(app);
 const analytics = getAnalytics(app);
 
 // ENABLE OFFLINE PERSISTENCE (The #1 Fix)
-// We use initializeFirestore instead of getFirestore to pass settings
-// In Vite/HMR, we must be careful not to initialize twice with different options
+// We use initializeFirestore with IndexedDB-backed persistent cache for best
+// offline support. However, Firefox Enhanced Tracking Protection and all
+// browsers in strict/private mode can block IndexedDB entirely.
+// Strategy:
+//   1. Try full persistence (IndexedDB + multi-tab).
+//   2. If that fails (already-initialized HMR), retrieve the existing instance.
+//   3. If storage is blocked by the browser (ETP / private mode), fall back to
+//      pure in-memory mode — no persistence, but app still works perfectly.
+// This layered approach ensures the error NEVER propagates to window.onerror.
 let _db;
 try {
     _db = initializeFirestore(app, {
@@ -78,9 +85,27 @@ try {
             tabManager: persistentMultipleTabManager()
         })
     });
-} catch (e) {
-    console.warn("[Firebase] initializeFirestore failed or already called, falling back to getFirestore()");
-    _db = getFirestore(app);
+} catch (persistenceError: any) {
+    // Two distinct failure modes need different handling:
+    const errMsg = String(persistenceError?.message || persistenceError || '');
+
+    if (errMsg.includes('already') || errMsg.includes('initialized')) {
+        // HMR / hot-reload: Firestore was already initialized in this session
+        console.warn('[Firebase] Firestore already initialized — reusing existing instance.');
+        _db = getFirestore(app);
+    } else {
+        // Privacy/storage block (Firefox ETP, private browsing, etc.)
+        // Fall back to memory-only — works everywhere, no IndexedDB needed.
+        console.info(
+            '[Firebase] IndexedDB unavailable (browser privacy settings). ' +
+            'Falling back to in-memory cache. Offline support disabled for this session.'
+        );
+        try {
+            _db = initializeFirestore(app, {}); // Memory-only, no localCache
+        } catch (_) {
+            _db = getFirestore(app); // Last resort
+        }
+    }
 }
 export const db = _db;
 

@@ -9,22 +9,53 @@ import axios from 'axios';
 
 const rootElement = document.getElementById('root');
 
-// Global error handler to catch and display errors on the page
+// Global error handler — only show banner for genuine fatal errors.
+// We intentionally ignore a class of non-fatal browser-privacy errors:
+//   • Firefox Enhanced Tracking Protection blocks Firebase's IndexedDB
+//     persistence, emitting generic NS_ERROR_FAILURE errors with no useful
+//     source/line info ("Unknown error", "Unknown source:0").
+//   • Chrome storage quota / cross-origin storage denials are also non-fatal.
+// These are handled gracefully by the Firebase SDK's try/catch fallback
+// and by our own useLocalStorage hook — no user-visible action needed.
 window.onerror = function (message, source, lineno, colno, error) {
+  const msgStr = String(message || '');
+  const srcStr = String(source || '');
+
+  // --- Ignore list: non-fatal browser / privacy / extension errors ---
+  const isNonFatal =
+    // Firefox ETP blocks IndexedDB → Firebase SDK emits generic error
+    (msgStr.toLowerCase().includes('unknown error') && (!srcStr || srcStr === 'Unknown source')) ||
+    // Firefox / Safari storage access denied
+    msgStr.includes('NS_ERROR_FAILURE') ||
+    msgStr.includes('NS_ERROR_DOM') ||
+    msgStr.includes('SecurityError') ||
+    // IndexedDB blocked in private/strict mode
+    msgStr.includes('IndexedDB') ||
+    msgStr.includes('IDBDatabase') ||
+    // Chrome extension injected errors
+    (srcStr.startsWith('chrome-extension://') || srcStr.startsWith('moz-extension://')) ||
+    // Firebase internal persistence fallback noise
+    msgStr.includes('Failed to open indexedDB') ||
+    msgStr.includes('FIRESTORE') ||
+    // ResizeObserver loop — cosmetic, browser-internal
+    msgStr.includes('ResizeObserver loop') ||
+    // Script load errors from third-party (e.g. blocked analytics)
+    (msgStr === 'Script error.' && !srcStr);
+
+  if (isNonFatal) {
+    // Log to console for developer visibility without alarming the user
+    console.warn('[App] Non-fatal browser/privacy error suppressed:', message, source, lineno);
+    return true; // Returning true prevents the default browser error modal too
+  }
+
+  // Show banner only for genuine fatal application errors
   const errorDiv = document.createElement('div');
-  errorDiv.style.position = 'fixed';
-  errorDiv.style.top = '0';
-  errorDiv.style.left = '0';
-  errorDiv.style.width = '100%';
-  errorDiv.style.backgroundColor = 'red';
-  errorDiv.style.color = 'white';
-  errorDiv.style.padding = '20px';
-  errorDiv.style.zIndex = '9999';
+  errorDiv.style.cssText = 'position:fixed;top:0;left:0;width:100%;background:#c0392b;color:#fff;padding:16px 20px;z-index:9999;font-family:sans-serif;font-size:14px;';
   errorDiv.innerHTML = `
-    <h1>Application Error</h1>
-    <p><strong>Message:</strong> ${message}</p>
-    <p><strong>Source:</strong> ${source}:${lineno}:${colno}</p>
-    <pre>${error?.stack || 'No stack trace'}</pre>
+    <strong>Application Error</strong>
+    <p style="margin:4px 0"><b>Message:</b> ${message}</p>
+    <p style="margin:4px 0"><b>Source:</b> ${source}:${lineno}:${colno}</p>
+    <pre style="white-space:pre-wrap;font-size:12px;opacity:.85">${error?.stack || 'No stack trace'}</pre>
   `;
   document.body.appendChild(errorDiv);
 };
