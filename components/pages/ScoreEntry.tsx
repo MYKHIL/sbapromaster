@@ -435,6 +435,7 @@ const ScoreEntry: React.FC = () => {
     const scoreInputRef = useRef<HTMLInputElement>(null);
     const [localScore, setLocalScore] = useState('');
     const [scoreModified, setScoreModified] = useState(false);
+    const mobileDebounceTimer = useRef<NodeJS.Timeout | null>(null);
 
     // Clear error only when student, subject, or assessment changes
     useEffect(() => {
@@ -446,14 +447,25 @@ const ScoreEntry: React.FC = () => {
         const student = filteredStudents[selectedStudentIndex];
         if (student && selectedSubjectId && selectedAssessmentId) {
             const val = getComputedScore(student.id, selectedSubjectId, selectedAssessmentId);
+            
+            // CRITICAL: If the user is currently typing/modified, DO NOT sync from context
+            // to prevent clearing typed data.
+            if (scoreModified) return;
+
             if (localScore !== val) {
                 setLocalScore(val);
                 setScoreModified(false);
             }
         }
-    }, [selectedStudentIndex, selectedSubjectId, selectedAssessmentId, filteredStudents, draftVersion, scores, localScore, getComputedScore]);
+    }, [selectedStudentIndex, selectedSubjectId, selectedAssessmentId, filteredStudents, draftVersion, scores, getComputedScore]); // Removed localScore and scoreModified from deps to prevent re-triggering during typing
 
     const commitScore = () => {
+        // Clear any pending debounce
+        if (mobileDebounceTimer.current) {
+            clearTimeout(mobileDebounceTimer.current);
+            mobileDebounceTimer.current = null;
+        }
+
         if (!scoreModified) return;
         const student = filteredStudents[selectedStudentIndex];
         if (!student) return;
@@ -763,10 +775,18 @@ const ScoreEntry: React.FC = () => {
                                                                 const filtered = e.target.value.replace(/[^0-9/.]/g, '');
                                                                 setLocalScore(filtered);
                                                                 setScoreModified(true);
-                                                                const student = filteredStudents[selectedStudentIndex];
-                                                                if (student) {
-                                                                    updateDraftScore(student.id, selectedSubjectId, selectedAssessmentId, filtered);
+                                                                
+                                                                // Debounce the global draft update
+                                                                if (mobileDebounceTimer.current) {
+                                                                    clearTimeout(mobileDebounceTimer.current);
                                                                 }
+
+                                                                mobileDebounceTimer.current = setTimeout(() => {
+                                                                    const student = filteredStudents[selectedStudentIndex];
+                                                                    if (student) {
+                                                                        updateDraftScore(student.id, selectedSubjectId, selectedAssessmentId, filtered);
+                                                                    }
+                                                                }, 500);
                                                             }}
                                                             onBlur={commitScore}
                                                             onKeyDown={(e) => {

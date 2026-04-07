@@ -52,6 +52,8 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
     const [inlineValues, setInlineValues] = useState<{ [key: number]: string }>({});
     const [errors, setErrors] = useState<{ [key: number]: string | undefined }>({});
     const [modifiedFields, setModifiedFields] = useState<Set<number>>(new Set()); // Track which fields user has modified
+    const [focusedAssessmentId, setFocusedAssessmentId] = useState<number | null>(null);
+    const debounceTimer = useRef<{ [key: number]: NodeJS.Timeout }>({});
     const originalValues = useRef<{ [key: number]: string }>({}); // Track original values for comparison
 
     // Reset original values when student or subject changes or when a manual refresh occurs
@@ -67,14 +69,16 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
             // PASS subjectId to ensure we get the correct draft for this subject
             const val = getComputedScore(student.id, subjectId, assessment.id);
 
+            // CRITICAL: Prevent overwriting the value while the user is typing/focused
+            if (focusedAssessmentId === assessment.id) {
+                return;
+            }
+
             // Should we update? Only if meaningful change to avoid cursor jumps?
-            // Since we control local state, we can just sync.
-            // But checking if it matches current state prevents redundant updates
             if (inlineValues[assessment.id] !== val) {
                 initialValues[assessment.id] = val;
             }
             // Store ORIGINAL saved value (not draft) for comparison
-            // CRITICAL FIX: Only initialize once - do not update on every effect run
             if (!(assessment.id in originalValues.current)) {
                 const savedScores = getStudentScores(student.id, subjectId, assessment.id);
                 const savedVal = savedScores[0] || '';
@@ -82,10 +86,10 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
             }
         });
 
-        // Merge with existing values to keep untouched fields stable? 
-        // No, we want to overwrite if draftVersion changes (meaning someone else updated it)
-        setInlineValues(prev => ({ ...prev, ...initialValues }));
-    }, [student, subjectId, assessments, draftVersion, scores]); // Listen to draftVersion and scores for external changes
+        if (Object.keys(initialValues).length > 0) {
+            setInlineValues(prev => ({ ...prev, ...initialValues }));
+        }
+    }, [student.id, subjectId, assessments, draftVersion, scores]); // Listen to draftVersion and scores for external changes
 
     // NEW: Clear errors when switching rows/subjects
     useEffect(() => {
@@ -109,26 +113,28 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
 
         setInlineValues(prev => ({ ...prev, [assessmentId]: filteredValue }));
 
-        // Check against original value
-        const originalVal = originalValues.current[assessmentId] || '';
-        // Consider empty string and '0' as potentially equivalent if needed, but for now strict string equality
-        // Or better: normalized comparison
-        const isActuallyChanged = filteredValue !== originalVal;
-
-        if (isActuallyChanged) {
-            setModifiedFields(prev => new Set(prev).add(assessmentId)); // Mark as modified
-            // Update global draft
-            updateDraftScore(student.id, subjectId, assessmentId, filteredValue);
-        } else {
-            // Reverted to original
-            setModifiedFields(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(assessmentId);
-                return newSet;
-            });
-            // Remove from global draft (it matches saved)
-            removeDraftScore(student.id, subjectId, assessmentId);
+        // Debounce the global draft update to keep typing fluid
+        if (debounceTimer.current[assessmentId]) {
+            clearTimeout(debounceTimer.current[assessmentId]);
         }
+
+        debounceTimer.current[assessmentId] = setTimeout(() => {
+            // Check against original value
+            const originalVal = originalValues.current[assessmentId] || '';
+            const isActuallyChanged = filteredValue !== originalVal;
+
+            if (isActuallyChanged) {
+                setModifiedFields(prev => new Set(prev).add(assessmentId));
+                updateDraftScore(student.id, subjectId, assessmentId, filteredValue);
+            } else {
+                setModifiedFields(prev => {
+                    const newSet = new Set(prev);
+                    newSet.delete(assessmentId);
+                    return newSet;
+                });
+                removeDraftScore(student.id, subjectId, assessmentId);
+            }
+        }, 500);
 
         if (errors[assessmentId]) {
             setErrors(prev => ({ ...prev, [assessmentId]: undefined }));
@@ -136,6 +142,12 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
     };
 
     const handleSave = (assessmentId: number) => {
+        // Clear any pending debounce since we are committing now
+        if (debounceTimer.current[assessmentId]) {
+            clearTimeout(debounceTimer.current[assessmentId]);
+            delete debounceTimer.current[assessmentId];
+        }
+
         const assessment = assessments.find(a => a.id === assessmentId)!;
         const rawScoreInput = inlineValues[assessmentId]?.trim();
         const isExam = assessment.name.toLowerCase().includes('exam');
@@ -364,7 +376,11 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
                                     inputMode="decimal"
                                     value={inlineValues[assessment.id] || ''}
                                     onChange={(e) => handleValueChange(assessment.id, e.target.value)}
-                                    onBlur={() => handleSave(assessment.id)}
+                                    onFocus={() => setFocusedAssessmentId(assessment.id)}
+                                    onBlur={() => {
+                                        setFocusedAssessmentId(null);
+                                        handleSave(assessment.id);
+                                    }}
                                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSave(assessment.id); (e.target as HTMLInputElement).blur(); } }}
                                     placeholder={assessment.name.toLowerCase().includes('exam') ? 'e.g., 85' : 'Score'}
                                     className={`w-full p-1.5 text-center text-base lg:text-base font-mono border rounded-md shadow-sm transition-all focus:outline-none focus:ring-2 
