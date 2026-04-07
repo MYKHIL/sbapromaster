@@ -453,7 +453,22 @@ const ScoreEntry: React.FC = () => {
         }
     }, [selectedStudentIndex, selectedSubjectId, selectedAssessmentId, filteredStudents, draftVersion, scores, localScore, getComputedScore]);
 
+    const mobileDebounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+    // Cleanup timer on unmount
+    useEffect(() => {
+        return () => {
+            if (mobileDebounceTimer.current) clearTimeout(mobileDebounceTimer.current);
+        };
+    }, []);
+
     const commitScore = () => {
+        // Clear any pending debounce timers to prevent overwriting final save
+        if (mobileDebounceTimer.current) {
+            clearTimeout(mobileDebounceTimer.current);
+            mobileDebounceTimer.current = null;
+        }
+
         if (!scoreModified) return;
         const student = filteredStudents[selectedStudentIndex];
         if (!student) return;
@@ -763,9 +778,13 @@ const ScoreEntry: React.FC = () => {
                                                                 const filtered = e.target.value.replace(/[^0-9/.]/g, '');
                                                                 setLocalScore(filtered);
                                                                 setScoreModified(true);
+                                                                
                                                                 const student = filteredStudents[selectedStudentIndex];
                                                                 if (student) {
-                                                                    updateDraftScore(student.id, selectedSubjectId, selectedAssessmentId, filtered);
+                                                                    if (mobileDebounceTimer.current) clearTimeout(mobileDebounceTimer.current);
+                                                                    mobileDebounceTimer.current = setTimeout(() => {
+                                                                        updateDraftScore(student.id, selectedSubjectId, selectedAssessmentId, filtered);
+                                                                    }, 300);
                                                                 }
                                                             }}
                                                             onBlur={commitScore}

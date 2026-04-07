@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, memo } from 'react';
 import { useData } from '../context/DataContext';
 import type { Student, Assessment } from '../types';
 import { MULTI_SCORE_ENTRY_ENABLED, DIRTY_INDICATOR_BG, DIRTY_INDICATOR_TEXT, DIRTY_INDICATOR_SECONDARY_TEXT, DIRTY_INDICATOR_HOVER_BG, DIRTY_INDICATOR_BORDER } from '../constants';
@@ -46,13 +46,22 @@ const formatScore = (score: number): string => {
 };
 
 
-const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId, assessments, onOpenModal, readOnly, index, studentRank = '-', studentTotal = '0' }) => {
+const InlineScoreInput: React.FC<InlineScoreInputProps> = memo(({ student, subjectId, assessments, onOpenModal, readOnly, index, studentRank = '-', studentTotal = '0' }) => {
     const { scores, getStudentScores, updateStudentScores, setHasLocalChanges, updateDraftScore, removeDraftScore, getComputedScore, draftVersion, isScoreDirty, isDraftScore, refreshVersion } = useData();
 
     const [inlineValues, setInlineValues] = useState<{ [key: number]: string }>({});
     const [errors, setErrors] = useState<{ [key: number]: string | undefined }>({});
     const [modifiedFields, setModifiedFields] = useState<Set<number>>(new Set()); // Track which fields user has modified
     const originalValues = useRef<{ [key: number]: string }>({}); // Track original values for comparison
+    const debounceTimer = useRef<{ [key: number]: NodeJS.Timeout }>({});
+
+    // Cleanup timers on unmount
+    useEffect(() => {
+        const timers = debounceTimer.current;
+        return () => {
+            Object.values(timers).forEach(clearTimeout);
+        };
+    }, []);
 
     // Reset original values when student or subject changes or when a manual refresh occurs
     useEffect(() => {
@@ -96,39 +105,33 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
         const filteredValue = value.replace(/[^0-9/.]/g, '');
         const assessment = assessments.find(a => a.id === assessmentId);
 
-        0 && console.log('[InlineScoreInput] User input:', {
-            studentId: student.id,
-            studentName: student.name,
-            subjectId,
-            assessmentId,
-            assessmentName: assessment?.name,
-            rawInput: value,
-            filteredInput: filteredValue,
-            previousValue: inlineValues[assessmentId] || ''
-        });
-
         setInlineValues(prev => ({ ...prev, [assessmentId]: filteredValue }));
 
         // Check against original value
         const originalVal = originalValues.current[assessmentId] || '';
-        // Consider empty string and '0' as potentially equivalent if needed, but for now strict string equality
-        // Or better: normalized comparison
         const isActuallyChanged = filteredValue !== originalVal;
 
-        if (isActuallyChanged) {
-            setModifiedFields(prev => new Set(prev).add(assessmentId)); // Mark as modified
-            // Update global draft
-            updateDraftScore(student.id, subjectId, assessmentId, filteredValue);
-        } else {
-            // Reverted to original
-            setModifiedFields(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(assessmentId);
-                return newSet;
-            });
-            // Remove from global draft (it matches saved)
-            removeDraftScore(student.id, subjectId, assessmentId);
+        // Debounce global context update to ensure fluidity
+        if (debounceTimer.current[assessmentId]) {
+            clearTimeout(debounceTimer.current[assessmentId]);
         }
+
+        debounceTimer.current[assessmentId] = setTimeout(() => {
+            if (isActuallyChanged) {
+                setModifiedFields(prev => new Set(prev).add(assessmentId)); // Mark as modified
+                // Update global draft
+                updateDraftScore(student.id, subjectId, assessmentId, filteredValue);
+            } else {
+                // Reverted to original
+                setModifiedFields(prev => {
+                    const newSet = new Set(prev);
+                    newSet.delete(assessmentId);
+                    return newSet;
+                });
+                // Remove from global draft (it matches saved)
+                removeDraftScore(student.id, subjectId, assessmentId);
+            }
+        }, 300); // 300ms debounce for UI fluidity
 
         if (errors[assessmentId]) {
             setErrors(prev => ({ ...prev, [assessmentId]: undefined }));
@@ -136,39 +139,26 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
     };
 
     const handleSave = (assessmentId: number) => {
+        // Clear any pending debounce timers for this field to prevent overwriting the final save
+        if (debounceTimer.current[assessmentId]) {
+            clearTimeout(debounceTimer.current[assessmentId]);
+            delete debounceTimer.current[assessmentId];
+        }
+
         const assessment = assessments.find(a => a.id === assessmentId)!;
         const rawScoreInput = inlineValues[assessmentId]?.trim();
         const isExam = assessment.name.toLowerCase().includes('exam');
         const maxScore = isExam ? 100 : assessment.weight;
         const basis = isExam ? 100 : assessment.weight;
 
-        0 && console.log('[InlineScoreInput] handleSave called:', {
-            studentId: student.id,
-            studentName: student.name,
-            subjectId,
-            assessmentId,
-            assessmentName: assessment.name,
-            rawInput: rawScoreInput
-        });
-
         if (!rawScoreInput) {
-            0 && console.log('[InlineScoreInput] Empty score - clearing:', {
-                studentId: student.id,
-                studentName: student.name,
-                assessmentId,
-                subjectId
-            });
-
             // Explicitly clear the inline value to show empty field
             setInlineValues(prev => ({ ...prev, [assessmentId]: '' }));
 
             // Clear the score and keep it marked as modified so save button stays enabled
-            // FIX: Use [''] instead of [] to ensure DataContext treats this as an explicit "Empty" value
-            // that is different from "No Data" or legacy empty arrays.
             updateStudentScores(student.id, subjectId, assessment.id, ['']);
 
             // Update originalValues to the cleared state so future comparisons work correctly
-            // This ensures that if user moves away and returns, the cleared state is recognized as the baseline
             originalValues.current[assessmentId] = '';
 
             // Only mark as modified (if not already) to keep the global save button enabled
@@ -183,36 +173,30 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
         if (rawScoreInput.includes('/')) {
             const parts = rawScoreInput.split('/');
             if (parts.length !== 2) {
-                0 && console.log('[InlineScoreInput] Validation error: Invalid fraction format');
                 setErrors(prev => ({ ...prev, [assessmentId]: "Use 'x' or 'x/y'" }));
                 removeDraftScore(student.id, subjectId, assessmentId);
                 return;
             }
             const [x, y] = parts.map(Number);
             if (isNaN(x) || isNaN(y)) {
-                0 && console.log('[InlineScoreInput] Validation error: Non-numeric values in fraction');
                 setErrors(prev => ({ ...prev, [assessmentId]: "Numbers only" }));
                 removeDraftScore(student.id, subjectId, assessmentId);
                 return;
             }
             if (y === 0) {
-                0 && console.log('[InlineScoreInput] Validation error: Division by zero');
                 setErrors(prev => ({ ...prev, [assessmentId]: "Base cannot be 0" }));
                 removeDraftScore(student.id, subjectId, assessmentId);
                 return;
             }
             convertedScore = (x / y) * maxScore;
-            0 && console.log('[InlineScoreInput] Fraction conversion:', { x, y, maxScore, convertedScore });
         } else {
             const z = Number(rawScoreInput);
             if (isNaN(z)) {
-                0 && console.log('[InlineScoreInput] Validation error: Not a number');
                 setErrors(prev => ({ ...prev, [assessmentId]: "Score must be a number" }));
                 removeDraftScore(student.id, subjectId, assessmentId);
                 return;
             }
             convertedScore = z;
-            0 && console.log('[InlineScoreInput] Direct score:', { rawInput: z, convertedScore });
         }
 
         if (convertedScore / basis > 1 || convertedScore < 0) {
@@ -235,18 +219,6 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
         // Update original value to the new saved value
         originalValues.current[assessmentId] = finalScore;
 
-        0 && console.log('[InlineScoreInput] ✅ Score validated and formatted:', {
-            studentId: student.id,
-            studentName: student.name,
-            subjectId,
-            assessmentId,
-            assessmentName: assessment.name,
-            rawInput: rawScoreInput,
-            convertedScore,
-            finalScore
-        });
-
-        0 && console.log('[InlineScoreInput] 💾 Calling updateStudentScores (saving to local cache)...');
         updateStudentScores(student.id, subjectId, assessment.id, [finalScore]);
 
         // Clear modification flag after successful save
@@ -258,8 +230,6 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
 
         // Remove from global draft since it's now saved to local state
         removeDraftScore(student.id, subjectId, assessmentId);
-
-        0 && console.log('[InlineScoreInput] ✅ Score committed successfully');
     };
 
     const totalWeightedScoreForDisplay = assessments.reduce((total, assessment) => {
@@ -268,10 +238,8 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
         const displayScore = calculateDisplayScore(scores, assessment);
 
         if (isExam) {
-            // Convert average (which is out of 100) back to its weighted value for the total
             return total + (displayScore / 100 * assessment.weight);
         } else {
-            // Class work display score is already the weighted value
             return total + displayScore;
         }
     }, 0);
@@ -296,7 +264,6 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
                 const scores = getStudentScores(student.id, subjectId, assessment.id);
                 const isDirty = isScoreDirty(student.id, subjectId, assessment.id);
 
-                // SHARED CARD STYLE for mobile
                 const mobileCardStyles = "flex flex-col bg-blue-50/30 border border-blue-100 rounded-lg p-1.5 m-1.5 lg:m-0 lg:p-4 lg:bg-transparent lg:border-none lg:rounded-none";
 
                 if (scores.length > 1) {
@@ -309,7 +276,6 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
                                 </span>
                             )}
                             
-                            {/* Card Header (Mobile Only) */}
                             <div className="lg:hidden flex justify-between items-start mb-1.5">
                                 <span className="text-[9px] font-bold text-blue-600 uppercase tracking-tight leading-tight flex-1 pr-1">
                                     {assessment.name}
@@ -347,7 +313,6 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
                             </span>
                         )}
 
-                        {/* Card Header (Mobile Only) */}
                         <div className="lg:hidden flex justify-between items-start mb-1.5">
                             <span className="text-[9px] font-bold text-blue-600 uppercase tracking-tight leading-tight flex-1 pr-1">
                                 {assessment.name}
@@ -396,6 +361,6 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
             </td>
         </tr>
     );
-};
+});
 
 export default InlineScoreInput;
