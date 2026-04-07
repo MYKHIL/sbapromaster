@@ -273,7 +273,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.219"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.220"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -2466,29 +2466,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }, [schoolId]);
 
-    const persistTimer = useRef<NodeJS.Timeout | null>(null);
-
-    // Helper to persist draft scores synchronously (with optional debounce)
-    const persistDraftScoresSync = React.useCallback((debounce: boolean = false) => {
-        if (persistTimer.current) clearTimeout(persistTimer.current);
-
-        const performPersist = () => {
-            try {
-                const obj = Object.fromEntries(draftScores.current);
-                const jsonString = JSON.stringify(obj);
-                // @ts-ignore - LZ is available globally or imported
-                const compressed = LZ.compress(jsonString);
-                localStorage.setItem(getKey('draft-scores-map'), compressed);
-            } catch (error) {
-                // Memory constrained, silent fail
-                console.warn("[DataContext] Failed to persists drafts:", error);
-            }
-        };
-
-        if (debounce) {
-            persistTimer.current = setTimeout(performPersist, 500);
-        } else {
-            performPersist();
+    // Helper to persist draft scores synchronously
+    const persistDraftScoresSync = React.useCallback(() => {
+        try {
+            const obj = Object.fromEntries(draftScores.current);
+            const jsonString = JSON.stringify(obj);
+            // @ts-ignore - LZ is available globally or imported
+            const compressed = LZ.compress(jsonString);
+            localStorage.setItem(getKey('draft-scores-map'), compressed);
+        } catch (error) {
+            // Memory constrained, silent fail
         }
     }, [schoolId]);
 
@@ -2500,8 +2487,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const key = `${studentId}-${subjectId}-${assessmentId}`;
         draftScores.current.set(key, value);
 
-        // Debounced Write-Through for fluidity
-        persistDraftScoresSync(true);
+        // Immediate Write-Through
+        persistDraftScoresSync();
 
         // Update derived state
         setHasLocalChanges(true);
@@ -2513,8 +2500,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const removeDraftScore = (studentId: number, subjectId: number, assessmentId: number) => {
         const key = `${studentId}-${subjectId}-${assessmentId}`;
         if (draftScores.current.delete(key)) {
-            // Immediate Write-Through when removing/saving
-            persistDraftScoresSync(false);
+            // Immediate Write-Through
+            persistDraftScoresSync();
 
             // Only update if it actually existed
             if (draftScores.current.size === 0 && dirtyFields.current.size === 0) {
