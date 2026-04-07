@@ -275,7 +275,9 @@ const InlineScoreInput: React.FC<InlineScoreInputProps> = ({ student, subjectId,
     };
 
     const totalWeightedScoreForDisplay = assessments.reduce((total, assessment) => {
-        const scores = getStudentScores(student.id, subjectId, assessment.id);
+        // Use getComputedScore to include drafts in the row total
+        const scoreStr = getComputedScore(student.id, subjectId, assessment.id);
+        const scores = scoreStr ? [scoreStr] : [];
         const isExam = assessment.name.toLowerCase().includes('exam');
         const displayScore = calculateDisplayScore(scores, assessment);
 

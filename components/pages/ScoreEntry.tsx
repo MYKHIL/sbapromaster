@@ -332,30 +332,28 @@ const ScoreEntry: React.FC = () => {
 
     // NEW: Calculate rankings for all students in the filtered list
     // This allows us to display ranks even in non-compact mode
-    const allStudentsRankings = useMemo(() => {
+    const allStudentsRankings = useMemo<Record<number, { total: string; rank: string; rawRank: number }>>(() => {
         if (!filteredStudents.length || !selectedSubjectId || !assessments.length) return {};
 
         const studentStats = filteredStudents.map(student => {
-            const total = assessments.reduce((acc, assessment) => {
-                const scores = getStudentScores(student.id, selectedSubjectId, assessment.id);
-                // We use calculateDisplayScore from InlineScoreInput if we wanted to be identical,
-                // but for ranking we just need the weighted sum.
-                if (!scores || !scores[0]) return acc;
-                const scoreStr = (scores[0] || '').toString();
-                if (!scoreStr.includes('/')) return acc;
-                const [numerator, denominator] = scoreStr.split('/').map(Number);
-                const weight = assessment.weight;
+            let totalScore = 0;
+            assessments.forEach(assessment => {
+                // EXTREMELY CRITICAL: Use getComputedScore instead of getStudentScores
+                // to ensure drafts are included in the rankings/totals
+                const scoreStr = getComputedScore(student.id, selectedSubjectId, assessment.id);
+                if (!scoreStr) return;
 
-                if (assessment.name.toLowerCase().includes('exam')) {
-                    // Exams are out of 100
-                    return acc + (numerator / 100 * weight);
-                } else {
-                    // Classwork are out of weight
-                    return acc + (numerator / (denominator || weight) * weight);
+                const isExam = assessment.name.toLowerCase().includes('exam');
+                const [score, max] = scoreStr.split('/').map(Number);
+                const denominator = max || (isExam ? 100 : assessment.weight);
+
+                if (denominator > 0) {
+                    const normalizedScore = (score / denominator) * assessment.weight;
+                    totalScore += normalizedScore;
                 }
-            }, 0);
+            });
 
-            return { id: student.id, total };
+            return { id: student.id, total: totalScore };
         });
 
         // Filter out zero-score students if desired, or keep them
@@ -377,7 +375,7 @@ const ScoreEntry: React.FC = () => {
         });
 
         return rankings;
-    }, [filteredStudents, assessments, selectedSubjectId, getStudentScores, refreshVersion, scores]);
+    }, [filteredStudents, assessments, selectedSubjectId, getComputedScore, refreshVersion, scores, draftVersion]);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalData, setModalData] = useState<{ student: Student, assessment: Assessment, isExam: boolean } | null>(null);
@@ -540,40 +538,55 @@ const ScoreEntry: React.FC = () => {
 
         // If score modified, we calculate a local "Total" preview
         if (scoreModified) {
-            const baseline = allStudentsRankings[currentStudent.id] || { total: '0', rank: '-', rawRank: 0 };
-            
-            // Re-calculate total with the localScore
             let displayTotal = 0;
             assessments.forEach(assessment => {
                 let scoreStr = '';
                 if (assessment.id === selectedAssessmentId) {
                     scoreStr = localScore;
                 } else {
-                    const scores = getStudentScores(currentStudent.id, selectedSubjectId, assessment.id);
-                    scoreStr = scores[0] || '';
+                    const draft = getComputedScore(currentStudent.id, selectedSubjectId, assessment.id);
+                    scoreStr = draft || '';
                 }
 
                 if (!scoreStr) return;
                 
-                const scoreText = (scoreStr || '').toString();
-                if (!scoreText.includes('/')) return;
-                const [num, den] = scoreText.split('/').map(Number);
-                const weight = assessment.weight;
-                if (assessment.name.toLowerCase().includes('exam')) {
-                    displayTotal += (num / 100 * weight);
-                } else {
-                    displayTotal += (num / (den || weight) * weight);
+                const isExam = assessment.name.toLowerCase().includes('exam');
+                const [score, max] = scoreStr.split('/').map(Number);
+                const denominator = max || (isExam ? 100 : assessment.weight);
+
+                if (denominator > 0) {
+                    const normalizedScore = (score / denominator) * assessment.weight;
+                    displayTotal += normalizedScore;
                 }
             });
+
+            const finalTotalStr = displayTotal.toFixed(1).replace(/\.0$/, '');
             
+            // REAL-TIME RANKING: Compare new total against other students' saved totals
+            const otherTotals = Object.entries(allStudentsRankings)
+                .filter(([id]) => id !== currentStudent.id.toString())
+                .map(([, data]) => parseFloat(data.total));
+            
+            const currentTotalNum = parseFloat(finalTotalStr);
+            const allTotals = [...otherTotals, currentTotalNum].sort((a, b) => b - a);
+            const projectedRank = allTotals.indexOf(currentTotalNum) + 1;
+
+            const formatOrdinal = (n: number) => {
+                if (n % 10 === 1 && n % 100 !== 11) return `${n}st`;
+                if (n % 10 === 2 && n % 100 !== 12) return `${n}nd`;
+                if (n % 10 === 3 && n % 100 !== 13) return `${n}rd`;
+                return `${n}th`;
+            };
+
             return {
-                ...baseline,
-                total: displayTotal.toFixed(1).replace(/\.0$/, '')
+                total: finalTotalStr,
+                rank: formatOrdinal(projectedRank),
+                rawRank: projectedRank
             };
         }
 
         return allStudentsRankings[currentStudent.id] || null;
-    }, [allStudentsRankings, selectedStudentIndex, localScore, scoreModified, selectedClass, selectedSubjectId, selectedAssessmentId, assessments, getStudentScores]);
+    }, [allStudentsRankings, selectedStudentIndex, localScore, scoreModified, selectedClass, selectedSubjectId, selectedAssessmentId, assessments, getComputedScore]);
 
 
     const getSelectStyles = (isCompact: boolean) => `w-full ${isCompact ? 'p-2' : 'p-1 text-xs'} border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-all bg-white text-gray-900 font-medium lg:p-2 lg:text-base`;
