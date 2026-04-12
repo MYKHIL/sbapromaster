@@ -111,7 +111,7 @@ export const exportSubjectAnalysisExcel = async (
     worksheet.mergeCells(`A2:${String.fromCharCode(65 + gradeNames.length + 2)}2`);
     
     // Pass Mark Header Detail
-    const passDetailRow = worksheet.addRow([`Pass Aggregate: ≤ ${passMark} | Male Pass: ${passStats.Male.count} (${passStats.Male.percentage.toFixed(1)}%) | Female Pass: ${passStats.Female.count} (${passStats.Female.percentage.toFixed(1)}%)`]);
+    const passDetailRow = worksheet.addRow([`Pass Aggregate: <= ${passMark} | Male Pass: ${passStats.Male.count} (${passStats.Male.percentage.toFixed(1)}%) | Female Pass: ${passStats.Female.count} (${passStats.Female.percentage.toFixed(1)}%)`]);
     worksheet.mergeCells(`A3:${String.fromCharCode(65 + gradeNames.length + 2)}3`);
     passDetailRow.getCell(1).font = { italic: true, size: 10 };
     
