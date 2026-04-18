@@ -6,6 +6,11 @@ import type { Student, ReportSpecificData } from '../types';
 import { AI_FEATURES_ENABLED } from '../constants';
 import { useReportCardData } from '../hooks/useReportCardData';
 
+export interface ReportCustomizationPanelHandle {
+    hasUnsavedChanges: boolean;
+    handleSave: () => void;
+}
+
 interface ReportCustomizationPanelProps {
     student: Student;
     performanceSummary: string;
@@ -487,7 +492,7 @@ const InputWithOptions: React.FC<{
     );
 };
 
-const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ student, performanceSummary, onCollapseChange, classId, shouldAutoExpand = true, manualExpandTrigger = 0, onNavigate }) => {
+const ReportCustomizationPanel = React.forwardRef<ReportCustomizationPanelHandle, ReportCustomizationPanelProps>(({ student, performanceSummary, onCollapseChange, classId, shouldAutoExpand = true, manualExpandTrigger = 0, onNavigate }, ref) => {
     const { getReportData, updateReportData, getClassData, updateClassData, settings } = useData();
     const [data, setData] = useState<Partial<Omit<ReportSpecificData, 'totalSchoolDays'>>>({ attendance: '', conduct: '', interest: '', attitude: '', teacherRemark: '' });
     const [originalData, setOriginalData] = useState<Partial<Omit<ReportSpecificData, 'totalSchoolDays'>>>({});
@@ -497,6 +502,11 @@ const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ stu
     const [isCollapsed, setIsCollapsed] = useState(true);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const panelRef = useRef<HTMLDivElement>(null);
+
+    React.useImperativeHandle(ref, () => ({
+        hasUnsavedChanges,
+        handleSave
+    }));
 
     // Performance Data for Auto-Generation
     const { totalScore, overallPosition, getOrdinal, subjectResults, totalClassWeight, examWeight } = useReportCardData(student);
@@ -680,8 +690,8 @@ const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ stu
                 }
 
                 if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
-                    // Exempt portal clicks from closing the panel
-                    if ((event.target as HTMLElement).closest('.sba-portal')) {
+                    // Exempt portal and modal clicks from closing the panel
+                    if ((event.target as HTMLElement).closest('.sba-portal') || (event.target as HTMLElement).closest('.sba-modal')) {
                         return;
                     }
                     setIsCollapsed(true);
@@ -894,6 +904,6 @@ const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ stu
             </div>
         </div>
     );
-};
+});
 
 export default ReportCustomizationPanel;

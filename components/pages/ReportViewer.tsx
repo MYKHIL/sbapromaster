@@ -11,6 +11,8 @@ import { getAvailableClasses } from '../../utils/permissions';
 import PdfErrorModal from '../PdfErrorModal';
 import ReadOnlyWrapper from '../ReadOnlyWrapper';
 import { sortClassesByName } from '../../utils/classSort';
+import UnsavedChangesModal from '../UnsavedChangesModal';
+import { ReportCustomizationPanelHandle } from '../ReportCustomizationPanel';
 
 const PerformanceSummaryFetcher: React.FC<{ student: Student, children: (summary: string) => React.ReactNode }> = ({ student, children }) => {
   const { performanceSummary } = useReportCardData(student);
@@ -62,6 +64,15 @@ const ReportViewer: React.FC = () => {
 
   // State to handle manual expansion from the button
   const [manualExpandTrigger, setManualExpandTrigger] = useState(0);
+
+  // Unsaved Changes Navigation Guard State
+  const customizationPanelRef = useRef<ReportCustomizationPanelHandle>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingNav, setPendingNav] = useState<{
+    type: 'student' | 'class' | 'navigate';
+    value?: number | 'all';
+    direction?: 'prev' | 'next';
+  } | null>(null);
 
   const reportContainerRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -183,44 +194,6 @@ const ReportViewer: React.FC = () => {
     return () => window.removeEventListener('resize', calculateOptimalZoom);
   }, []);
 
-  const handleClassChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const classId = e.target.value ? Number(e.target.value) : '';
-    setSelectedClassId(classId);
-    localStorage.setItem('reportViewer_selectedClassId', String(classId));
-
-    // In comparison mode, switching class does NOT reset student selection
-    if (!isComparisonMode) {
-      setSelectedStudentId('all');
-      localStorage.setItem('reportViewer_selectedStudentId', 'all');
-      setManualExpandTrigger(0);
-    }
-  };
-
-  const handleStudentChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const val = e.target.value;
-    const newStudentId = val === 'all' ? 'all' : Number(val);
-
-    setSelectedStudentId(newStudentId);
-    localStorage.setItem('reportViewer_selectedStudentId', String(newStudentId));
-
-    if (isComparisonMode && newStudentId !== 'all') {
-      // Add to comparison list if not already there
-      const studentToAdd = students.find(s => s.id === newStudentId);
-      if (studentToAdd) {
-        setGeneratedReports(prev => {
-          if (prev.some(s => s.id === studentToAdd.id)) return prev;
-          return [...prev, studentToAdd];
-        });
-        // In comparison mode, we do NOT show the customization panel automatically.
-        setShowPanel(false);
-      }
-    } else {
-      // Standard Mode: Show panel when a student is selected
-      setShowPanel(true);
-      setManualExpandTrigger(0);
-    }
-  };
-
   const toggleComparisonMode = () => {
     setIsComparisonMode(prev => {
       const newState = !prev;
@@ -255,7 +228,61 @@ const ReportViewer: React.FC = () => {
     setGeneratedReports(prev => prev.filter(s => s.id !== studentId));
   };
 
+  const handleClassChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newClassId = Number(e.target.value) || '';
+
+    if (customizationPanelRef.current?.hasUnsavedChanges) {
+      setPendingNav({ type: 'class', value: newClassId });
+      setShowConfirmModal(true);
+      return;
+    }
+
+    setSelectedClassId(newClassId);
+    localStorage.setItem('reportViewer_selectedClassId', String(newClassId));
+
+    // In comparison mode, switching class does NOT reset student selection
+    if (!isComparisonMode) {
+      setSelectedStudentId('all');
+      localStorage.setItem('reportViewer_selectedStudentId', 'all');
+      setManualExpandTrigger(0);
+    }
+  };
+
+  const handleStudentChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    const newStudentId = val === 'all' ? 'all' : Number(val);
+
+    if (customizationPanelRef.current?.hasUnsavedChanges) {
+      setPendingNav({ type: 'student', value: newStudentId });
+      setShowConfirmModal(true);
+      return;
+    }
+
+    setSelectedStudentId(newStudentId);
+    localStorage.setItem('reportViewer_selectedStudentId', String(newStudentId));
+
+    if (isComparisonMode && newStudentId !== 'all') {
+      const studentToAdd = students.find(s => s.id === newStudentId);
+      if (studentToAdd) {
+        setGeneratedReports(prev => {
+          if (prev.some(s => s.id === studentToAdd.id)) return prev;
+          return [...prev, studentToAdd];
+        });
+        setShowPanel(false);
+      }
+    } else {
+      setShowPanel(true);
+      setManualExpandTrigger(0);
+    }
+  };
+
   const handleNavigateStudent = (direction: 'prev' | 'next') => {
+    if (customizationPanelRef.current?.hasUnsavedChanges) {
+      setPendingNav({ type: 'navigate', direction });
+      setShowConfirmModal(true);
+      return;
+    }
+
     if (studentsInClass.length <= 1 || selectedStudentId === 'all') return;
     
     const currentIndex = studentsInClass.findIndex(s => s.id === selectedStudentId);
@@ -276,6 +303,65 @@ const ReportViewer: React.FC = () => {
     // but here we are in the panel context (Standard Mode).
     setShowPanel(true);
     setManualExpandTrigger(0);
+  };
+
+  const executePendingNav = () => {
+    if (!pendingNav) return;
+
+    if (pendingNav.type === 'student') {
+        const newStudentId = pendingNav.value as number | 'all';
+        setSelectedStudentId(newStudentId);
+        localStorage.setItem('reportViewer_selectedStudentId', String(newStudentId));
+
+        if (isComparisonMode && newStudentId !== 'all') {
+          const studentToAdd = students.find(s => s.id === newStudentId);
+          if (studentToAdd) {
+            setGeneratedReports(prev => {
+              if (prev.some(s => s.id === studentToAdd.id)) return prev;
+              return [...prev, studentToAdd];
+            });
+            setShowPanel(false);
+          }
+        } else {
+          setShowPanel(true);
+          setManualExpandTrigger(0);
+        }
+    } else if (pendingNav.type === 'class') {
+        const newClassId = pendingNav.value as number | '';
+        setSelectedClassId(newClassId);
+        localStorage.setItem('reportViewer_selectedClassId', String(newClassId));
+        if (!isComparisonMode) {
+            setSelectedStudentId('all');
+            localStorage.setItem('reportViewer_selectedStudentId', 'all');
+            setManualExpandTrigger(0);
+        }
+    } else if (pendingNav.type === 'navigate') {
+        const currentIndex = studentsInClass.findIndex(s => s.id === (selectedStudentId as number));
+        if (currentIndex !== -1) {
+            let nextIndex;
+            if (pendingNav.direction === 'next') {
+                nextIndex = (currentIndex + 1) % studentsInClass.length;
+            } else {
+                nextIndex = (currentIndex - 1 + studentsInClass.length) % studentsInClass.length;
+            }
+            const nextStudent = studentsInClass[nextIndex];
+            setSelectedStudentId(nextStudent.id);
+            localStorage.setItem('reportViewer_selectedStudentId', String(nextStudent.id));
+            setManualExpandTrigger(0);
+            setShowPanel(true);
+        }
+    }
+    setPendingNav(null);
+    setShowConfirmModal(false);
+  };
+
+  const handleModalDiscard = () => {
+    executePendingNav();
+  };
+
+  const handleModalQueueAndMove = () => {
+    customizationPanelRef.current?.handleSave();
+    executePendingNav();
   };
 
   const selectedStudentForPanel = useMemo(() => {
@@ -431,6 +517,7 @@ const ReportViewer: React.FC = () => {
           {(summary) => (
             <ReadOnlyWrapper allowedRoles={['Admin', 'Teacher']}>
               <ReportCustomizationPanel
+                ref={customizationPanelRef}
                 student={selectedStudentForPanel}
                 performanceSummary={summary}
                 onCollapseChange={setIsPanelCollapsed}
@@ -560,6 +647,14 @@ const ReportViewer: React.FC = () => {
         error={pdfError}
         isOpen={!!pdfError}
         onClose={() => setPdfError(null)}
+      />
+
+      {/* Unsaved Changes Guard Modal */}
+      <UnsavedChangesModal
+        isOpen={showConfirmModal}
+        onStay={() => setShowConfirmModal(false)}
+        onDiscard={handleModalDiscard}
+        onQueueAndMove={handleModalQueueAndMove}
       />
     </div>
   );
