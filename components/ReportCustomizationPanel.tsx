@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { generateTeacherRemark } from '../services/geminiService';
 import type { Student, ReportSpecificData } from '../types';
 import { AI_FEATURES_ENABLED } from '../constants';
+import { useReportCardData } from '../hooks/useReportCardData';
 
 interface ReportCustomizationPanelProps {
     student: Student;
@@ -478,6 +479,60 @@ const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ stu
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const panelRef = useRef<HTMLDivElement>(null);
 
+    // Performance Data for Auto-Generation
+    const { totalScore, overallPosition, getOrdinal, subjectResults, totalClassWeight, examWeight } = useReportCardData(student);
+    const [overrideCategory, setOverrideCategory] = useState<string | null>(null);
+
+    const determinedCategory = useMemo(() => {
+        const totalPossiblePerSubject = (totalClassWeight || 0) + (examWeight || 0);
+        const activeSubjects = subjectResults.filter(r => r.totalScore > 0 || r.grade !== '-');
+        const maxScore = activeSubjects.length * totalPossiblePerSubject;
+
+        if (maxScore === 0) return 'Satisfactory';
+
+        const percentage = (totalScore / maxScore) * 100;
+        
+        // Get total students for position context
+        const allStudentsInClass = (data.students || []).filter(s => s.class === student.class);
+        const totalStudents = allStudentsInClass.length || 1;
+        const positionPercentile = (overallPosition / totalStudents) * 100;
+
+        // Mapping Points (0-5)
+        let scorePoints = 0;
+        if (percentage >= 85) scorePoints = 5;
+        else if (percentage >= 75) scorePoints = 4;
+        else if (percentage >= 65) scorePoints = 3;
+        else if (percentage >= 50) scorePoints = 2;
+        else if (percentage >= 40) scorePoints = 1;
+
+        let positionPoints = 0;
+        if (overallPosition <= 3) positionPoints = 5; // Top 3 always get a boost
+        else if (positionPercentile <= 10) positionPoints = 5;
+        else if (positionPercentile <= 25) positionPoints = 4;
+        else if (positionPercentile <= 50) positionPoints = 3;
+        else if (positionPercentile <= 75) positionPoints = 2;
+        else if (positionPercentile <= 90) positionPoints = 1;
+
+        const averagePoints = Math.round((scorePoints + positionPoints) / 2);
+
+        const categories: (keyof typeof REMARK_OPTIONS.attitude)[] = [
+            'Unsatisfactory', 
+            'Needs Improvement', 
+            'Satisfactory', 
+            'Good', 
+            'Excellent', 
+            'Outstanding'
+        ];
+        
+        let cat = categories[Math.min(averagePoints, 5)];
+        
+        // Special rule: Top 3 students with 70%+ score get boosted to Excellent/Outstanding
+        if (overallPosition <= 3 && percentage >= 70 && averagePoints < 4) {
+            cat = percentage >= 80 ? 'Outstanding' : 'Excellent';
+        }
+        return cat;
+    }, [totalScore, subjectResults, totalClassWeight, examWeight, overallPosition, student.class, data.students]);
+
     // Only load data when the student ID changes to prevent resetting while typing
     useEffect(() => {
         const existingData = getReportData(student.id);
@@ -492,6 +547,7 @@ const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ stu
         setOriginalTotalDays(days);
 
         setHasUnsavedChanges(false);
+        setOverrideCategory(null); // Reset override for new student
         
         // Auto-expand logic based on preference
         if (shouldAutoExpand) {
@@ -559,6 +615,39 @@ const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ stu
         setIsGeneratingTeacherRemark(false);
     };
 
+    const handleAutoGenerateMinimal = () => {
+        const category = overrideCategory || determinedCategory;
+
+        const getRandom = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+
+        const getFieldComment = (fieldName: keyof typeof REMARK_OPTIONS) => {
+            const pool = REMARK_OPTIONS[fieldName] as any;
+            let comments = pool[category];
+            
+            // Fallback for categories not present in a specific pool (like 'Outstanding' in conduct)
+            if (!comments) {
+                if (category === 'Outstanding') comments = pool['Excellent'];
+                if (!comments) {
+                    const availableKeys = Object.keys(pool).filter(k => k !== 'Specific areas');
+                    // Pick the highest available category if requested was too high, or lowest if too low
+                    comments = pool[availableKeys[availableKeys.length - 1]];
+                }
+            }
+            
+            return getRandom(comments);
+        };
+
+        const newData = {
+            ...data,
+            conduct: getFieldComment('conduct'),
+            interest: getFieldComment('interest'),
+            attitude: getFieldComment('attitude'),
+            teacherRemark: getFieldComment('teacherRemark'),
+        };
+
+        setData(newData as Partial<ReportSpecificData>);
+    };
+
     // Close panel when clicking outside on mobile
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -596,7 +685,7 @@ const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ stu
             ref={panelRef}
             className={`
                 bg-white/95 backdrop-blur-sm border-gray-200 z-20 transition-transform duration-500 ease-in-out
-                lg:fixed lg:top-28 lg:right-6 lg:w-96 lg:p-6 lg:rounded-xl lg:shadow-2xl lg:border lg:transform-none lg:left-auto lg:bottom-auto
+                lg:fixed lg:top-28 lg:right-24 lg:w-96 lg:p-6 lg:rounded-xl lg:shadow-2xl lg:border lg:transform-none lg:left-auto lg:bottom-auto
                 fixed bottom-[88px] inset-x-0 w-full p-4 rounded-t-2xl shadow-2xl border-t
                 ${ // Mobile only: collapse logic
                 isCollapsed ? 'translate-y-[calc(100%-4rem)] lg:translate-x-0 lg:translate-y-0' : 'translate-y-0'
@@ -621,25 +710,73 @@ const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ stu
             )}
 
             {/* Content Container */}
-            <div className={`transition-opacity duration-300 ${isCollapsed ? 'lg:opacity-100 opacity-100' : 'opacity-100'}`}>
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-xl font-bold text-gray-800">Performance Comments for {student.name}</h3>
-                    <button
-                        onClick={handleSave}
-                        disabled={!hasUnsavedChanges}
-                        className={`
-                            px-4 py-1.5 rounded-full text-sm font-semibold transition-all
-                            ${hasUnsavedChanges
-                                ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
-                                : 'bg-gray-100 text-gray-400 cursor-not-allowed'}
-                        `}
-                    >
-                        {hasUnsavedChanges ? 'Queue Changes' : 'Queued'}
-                    </button>
+            <div className={`flex flex-col h-full max-h-[80vh] lg:max-h-[calc(100vh-12rem)] transition-opacity duration-300 ${isCollapsed ? 'lg:opacity-100 opacity-100' : 'opacity-100'}`}>
+                {/* Fixed Header Section */}
+                <div className="flex-shrink-0 mb-4 space-y-3 p-1">
+                    <div>
+                        <h3 className="text-xl font-bold text-gray-800">{student.name}</h3>
+                        <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 text-gray-700 rounded-lg text-[10px] font-black uppercase tracking-widest border border-gray-200/50 shadow-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                </svg>
+                                Total Score: <span className="text-blue-600 tabular-nums">{totalScore.toFixed(1)}</span>
+                            </span>
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 text-amber-700 rounded-lg text-[10px] font-black uppercase tracking-widest border border-amber-200/50 shadow-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Position: <span className="text-amber-900">{getOrdinal(overallPosition)}</span>
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div className="space-y-3 bg-blue-50/30 p-3 rounded-xl border border-blue-100/50">
+                        <div className="flex items-center gap-2">
+                            <span className="text-[11px] font-bold text-blue-600 uppercase tracking-tight whitespace-nowrap">Mapping:</span>
+                            <select
+                                value={overrideCategory || determinedCategory}
+                                onChange={(e) => setOverrideCategory(e.target.value)}
+                                className="flex-1 text-xs bg-white border border-blue-100 rounded-lg px-2 py-1.5 font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all cursor-pointer shadow-sm"
+                            >
+                                <option value="Outstanding">🌟 Outstanding</option>
+                                <option value="Excellent">💎 Excellent</option>
+                                <option value="Good">👍 Good</option>
+                                <option value="Satisfactory">🆗 Satisfactory</option>
+                                <option value="Needs Improvement">🚀 Needs Improvement</option>
+                                <option value="Unsatisfactory">⚠️ Unsatisfactory</option>
+                            </select>
+                        </div>
+
+                        <div className="flex gap-2">
+                             <button
+                                onClick={handleAutoGenerateMinimal}
+                                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-all shadow-md active:scale-95"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                                Auto-Generate
+                            </button>
+                            
+                            <button
+                                onClick={handleSave}
+                                disabled={!hasUnsavedChanges}
+                                className={`
+                                    flex-1 px-4 py-2 rounded-lg text-xs font-bold transition-all
+                                    ${hasUnsavedChanges
+                                        ? 'bg-white text-blue-600 border border-blue-200 hover:bg-blue-50 shadow-sm'
+                                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'}
+                                `}
+                            >
+                                {hasUnsavedChanges ? 'Queue Changes' : 'Queued'}
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
-                {/* Fixed max-height for mobile to avoid obstructing report completely */}
-                <div className="space-y-4 max-h-[50vh] lg:max-h-[calc(100vh-12rem)] overflow-y-auto pr-2">
+                {/* Scrollable Fields Section */}
+                <div className="flex-grow overflow-y-auto pr-2 space-y-4 custom-scrollbar">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Total School Days</label>
                         <input

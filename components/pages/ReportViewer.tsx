@@ -489,7 +489,7 @@ const ReportViewer: React.FC = () => {
 
       {/* PDF Buttons remain unchanged */}
       {SHOW_PDF_DOWNLOAD_BUTTON && generatedReports.length > 0 && (
-        <div className={`fixed bottom-24 lg:bottom-6 z-20 flex-col items-center gap-4 transition-all duration-300 ${(selectedStudentForPanel && !isPanelCollapsed) ? 'hidden lg:flex' : 'flex'} ${selectedStudentForPanel ? 'lg:right-[27rem] right-6' : 'right-6'}`}>
+        <div className={`fixed bottom-24 lg:bottom-6 z-20 flex-col items-center gap-4 transition-all duration-300 ${(selectedStudentForPanel && !isPanelCollapsed) ? 'hidden lg:flex' : 'flex'} ${selectedStudentForPanel ? 'lg:right-[31.5rem] right-6' : 'right-6'}`}>
           <button
             onClick={handleDownloadPdf}
             disabled={isGeneratingPdf}
