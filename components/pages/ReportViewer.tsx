@@ -255,6 +255,29 @@ const ReportViewer: React.FC = () => {
     setGeneratedReports(prev => prev.filter(s => s.id !== studentId));
   };
 
+  const handleNavigateStudent = (direction: 'prev' | 'next') => {
+    if (studentsInClass.length <= 1 || selectedStudentId === 'all') return;
+    
+    const currentIndex = studentsInClass.findIndex(s => s.id === selectedStudentId);
+    if (currentIndex === -1) return;
+
+    let nextIndex;
+    if (direction === 'next') {
+      nextIndex = (currentIndex + 1) % studentsInClass.length;
+    } else {
+      nextIndex = (currentIndex - 1 + studentsInClass.length) % studentsInClass.length;
+    }
+
+    const nextStudent = studentsInClass[nextIndex];
+    setSelectedStudentId(nextStudent.id);
+    localStorage.setItem('reportViewer_selectedStudentId', String(nextStudent.id));
+    
+    // In comparison mode, switching student usually adds them, 
+    // but here we are in the panel context (Standard Mode).
+    setShowPanel(true);
+    setManualExpandTrigger(0);
+  };
+
   const selectedStudentForPanel = useMemo(() => {
     if (!currentUser || currentUser.role === 'Guest') return undefined;
     if (showPanel && selectedStudentId !== 'all') {
@@ -414,6 +437,7 @@ const ReportViewer: React.FC = () => {
                 classId={Number(selectedClassId)}
                 shouldAutoExpand={autoPopComments}
                 manualExpandTrigger={manualExpandTrigger}
+                onNavigate={handleNavigateStudent}
               />
             </ReadOnlyWrapper>
           )}

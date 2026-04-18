@@ -12,6 +12,7 @@ interface ReportCustomizationPanelProps {
     classId: number;
     shouldAutoExpand?: boolean;
     manualExpandTrigger?: number;
+    onNavigate?: (direction: 'prev' | 'next') => void;
 }
 
 const AIGenerateButton: React.FC<{ isGenerating: boolean; onClick: () => void; }> = ({ isGenerating, onClick }) => (
@@ -468,7 +469,7 @@ const InputWithOptions: React.FC<{
     );
 };
 
-const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ student, performanceSummary, onCollapseChange, classId, shouldAutoExpand = true, manualExpandTrigger = 0 }) => {
+const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ student, performanceSummary, onCollapseChange, classId, shouldAutoExpand = true, manualExpandTrigger = 0, onNavigate }) => {
     const { getReportData, updateReportData, getClassData, updateClassData, settings } = useData();
     const [data, setData] = useState<Partial<Omit<ReportSpecificData, 'totalSchoolDays'>>>({ attendance: '', conduct: '', interest: '', attitude: '', teacherRemark: '' });
     const [originalData, setOriginalData] = useState<Partial<Omit<ReportSpecificData, 'totalSchoolDays'>>>({});
@@ -748,29 +749,52 @@ const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ stu
                             </select>
                         </div>
 
-                        <div className="flex gap-2">
-                             <button
-                                onClick={handleAutoGenerateMinimal}
-                                className="flex-1 flex items-center justify-center gap-1 px-2 lg:px-3 py-1.5 lg:py-2 bg-blue-600 text-white rounded-lg text-[10px] lg:text-xs font-bold hover:bg-blue-700 transition-all shadow-md active:scale-95"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                </svg>
-                                Auto-Generate
-                            </button>
-                            
-                            <button
-                                onClick={handleSave}
-                                disabled={!hasUnsavedChanges}
-                                className={`
-                                    flex-1 px-2 lg:px-4 py-1.5 lg:py-2 rounded-lg text-[10px] lg:text-xs font-bold transition-all
-                                    ${hasUnsavedChanges
-                                        ? 'bg-white text-blue-600 border border-blue-200 hover:bg-blue-50 shadow-sm'
-                                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'}
-                                `}
-                            >
-                                {hasUnsavedChanges ? 'Queue Changes' : 'Queued'}
-                            </button>
+                        <div className="flex gap-1.5 items-center">
+                             <div className="flex gap-2 flex-1">
+                                 <button
+                                    onClick={handleAutoGenerateMinimal}
+                                    className="flex-1 flex items-center justify-center gap-1 px-2 lg:px-3 py-1.5 lg:py-2 bg-blue-600 text-white rounded-lg text-[10px] lg:text-xs font-bold hover:bg-blue-700 transition-all shadow-md active:scale-95"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                    </svg>
+                                    Auto-Generate
+                                </button>
+                                
+                                <button
+                                    onClick={handleSave}
+                                    disabled={!hasUnsavedChanges}
+                                    className={`
+                                        flex-1 px-2 lg:px-4 py-1.5 lg:py-2 rounded-lg text-[10px] lg:text-xs font-bold transition-all
+                                        ${hasUnsavedChanges
+                                            ? 'bg-white text-blue-600 border border-blue-200 hover:bg-blue-50 shadow-sm'
+                                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'}
+                                    `}
+                                >
+                                    {hasUnsavedChanges ? 'Queue Changes' : 'Queued'}
+                                </button>
+                            </div>
+
+                            <div className="flex gap-1">
+                                <button
+                                    onClick={() => onNavigate?.('prev')}
+                                    className="p-1.5 lg:p-2 bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 hover:text-blue-600 transition-all shadow-sm active:scale-95"
+                                    title="Previous Student"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                </button>
+                                <button
+                                    onClick={() => onNavigate?.('next')}
+                                    className="p-1.5 lg:p-2 bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 hover:text-blue-600 transition-all shadow-sm active:scale-95"
+                                    title="Next Student"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
