@@ -436,7 +436,7 @@ const InputWithOptions: React.FC<{
                 {showOptions && hasOptions && createPortal(
                     <div
                         ref={optionsRef}
-                        className="bg-white border border-gray-200 rounded-lg shadow-xl flex flex-col max-h-64 overflow-y-auto"
+                        className="sba-portal bg-white border border-gray-200 rounded-lg shadow-xl flex flex-col max-h-64 overflow-y-auto"
                         style={dropdownStyles}
                     >
                         {/* Context Menu Style: Categories as Items */}
@@ -680,6 +680,10 @@ const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ stu
                 }
 
                 if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
+                    // Exempt portal clicks from closing the panel
+                    if ((event.target as HTMLElement).closest('.sba-portal')) {
+                        return;
+                    }
                     setIsCollapsed(true);
                 }
             }
