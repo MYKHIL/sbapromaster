@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useData } from '../context/DataContext';
 import { generateTeacherRemark } from '../services/geminiService';
 import type { Student, ReportSpecificData } from '../types';
@@ -298,52 +299,72 @@ const InputWithOptions: React.FC<{
     const [showOptions, setShowOptions] = useState(false);
     const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
     const [dropUp, setDropUp] = useState(false);
-    const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
+    const [dropdownStyles, setDropdownStyles] = useState<React.CSSProperties>({});
     const optionsRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
 
-    // Close options when clicking outside
+    // Close options when clicking outside or scrolling
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (optionsRef.current && !optionsRef.current.contains(event.target as Node)) {
-                // Also check if we clicked the toggle button, to avoid immediate re-opening if handled there
-                if (buttonRef.current && buttonRef.current.contains(event.target as Node)) {
-                    return;
-                }
+                if (buttonRef.current && buttonRef.current.contains(event.target as Node)) return;
                 setShowOptions(false);
-                setExpandedCategory(null);
             }
         };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
+
+        const handleScroll = (e: Event) => {
+            if (optionsRef.current && optionsRef.current.contains(e.target as Node)) return;
+            setShowOptions(false);
+        };
+
+        if (showOptions) {
+            document.addEventListener("mousedown", handleClickOutside);
+            
+            // Find the closest scrollable parent to the button
+            let scrollParent: HTMLElement | null = buttonRef.current?.parentElement || null;
+            while (scrollParent && window.getComputedStyle(scrollParent).overflowY !== 'auto' && window.getComputedStyle(scrollParent).overflowY !== 'scroll') {
+                scrollParent = scrollParent.parentElement;
+            }
+            if (scrollParent) scrollParent.addEventListener('scroll', handleScroll);
+            window.addEventListener('scroll', handleScroll, true); // Catch global scroll too
+            
+            return () => {
+                document.removeEventListener("mousedown", handleClickOutside);
+                if (scrollParent) scrollParent.removeEventListener('scroll', handleScroll);
+                window.removeEventListener('scroll', handleScroll, true);
+            };
+        }
+    }, [showOptions]);
 
     const toggleOptions = () => {
         if (!showOptions) {
-            // Check position before opening
-            if (buttonRef.current) {
-                const rect = buttonRef.current.getBoundingClientRect();
+            if (buttonRef.current && containerRef.current) {
+                const comboRect = containerRef.current.getBoundingClientRect();
                 const windowHeight = window.innerHeight;
                 const windowWidth = window.innerWidth;
-                // Assume dropdown max height is roughly 320px (max-h-80)
-                const spaceBelow = windowHeight - rect.bottom;
+                
+                const dropdownWidth = 256;
+                const dropdownMaxHeight = 320;
+                
+                const spaceBelow = windowHeight - comboRect.bottom;
+                const spaceAbove = comboRect.top;
 
-                // Calculate position for fixed positioning
-                const right = windowWidth - rect.right;
+                const shouldDropUp = spaceBelow < dropdownMaxHeight && spaceAbove > spaceBelow;
+                setDropUp(shouldDropUp);
 
-                if (spaceBelow < 320) {
-                    setDropUp(true);
-                    setDropdownPosition({
-                        top: rect.top - 4, // 4px margin (mb-1)
-                        right: right
-                    });
-                } else {
-                    setDropUp(false);
-                    setDropdownPosition({
-                        top: rect.bottom + 4, // 4px margin (mt-1)
-                        right: right
-                    });
-                }
+                // Calculate safe left position
+                const targetLeft = comboRect.right - dropdownWidth;
+                const safeLeft = Math.max(8, Math.min(windowWidth - dropdownWidth - 8, targetLeft));
+
+                setDropdownStyles({
+                    position: 'fixed',
+                    top: shouldDropUp ? 'auto' : `${comboRect.bottom}px`,
+                    bottom: shouldDropUp ? `${windowHeight - comboRect.top}px` : 'auto',
+                    left: `${safeLeft}px`,
+                    width: `${dropdownWidth}px`,
+                    zIndex: 9999
+                });
             }
         }
         setShowOptions(!showOptions);
@@ -376,7 +397,7 @@ const InputWithOptions: React.FC<{
                 {label}
                 {showAI && onAIGenerate && <AIGenerateButton isGenerating={!!isGenerating} onClick={onAIGenerate} />}
             </label>
-            <div className="relative flex items-center">
+            <div ref={containerRef} className="relative flex items-center">
                 {isTextArea ? (
                     <textarea
                         name={name}
@@ -412,15 +433,11 @@ const InputWithOptions: React.FC<{
                     </button>
                 )}
 
-                {showOptions && hasOptions && (
+                {showOptions && hasOptions && createPortal(
                     <div
                         ref={optionsRef}
-                        className="fixed w-64 bg-white border border-gray-200 rounded-lg shadow-xl z-[9999] flex flex-col max-h-80 overflow-y-auto"
-                        style={{
-                            top: dropUp ? 'auto' : `${dropdownPosition.top}px`,
-                            bottom: dropUp ? `${window.innerHeight - dropdownPosition.top}px` : 'auto',
-                            right: `${dropdownPosition.right}px`
-                        }}
+                        className="bg-white border border-gray-200 rounded-lg shadow-xl flex flex-col max-h-64 overflow-y-auto"
+                        style={dropdownStyles}
                     >
                         {/* Context Menu Style: Categories as Items */}
                         <div className="py-1">
@@ -462,7 +479,8 @@ const InputWithOptions: React.FC<{
                                 );
                             })}
                         </div>
-                    </div>
+                    </div>,
+                    document.body
                 )}
             </div>
         </div>
