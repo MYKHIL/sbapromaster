@@ -710,19 +710,19 @@ const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ stu
             )}
 
             {/* Content Container */}
-            <div className={`flex flex-col h-full max-h-[80vh] lg:max-h-[calc(100vh-12rem)] transition-opacity duration-300 ${isCollapsed ? 'lg:opacity-100 opacity-100' : 'opacity-100'}`}>
+            <div className={`flex flex-col h-full max-h-[60vh] lg:max-h-[calc(100vh-12rem)] transition-opacity duration-300 ${isCollapsed ? 'lg:opacity-100 opacity-100' : 'opacity-100'}`}>
                 {/* Fixed Header Section */}
-                <div className="flex-shrink-0 mb-4 space-y-3 p-1">
+                <div className="flex-shrink-0 mb-2 lg:mb-4 space-y-2 lg:space-y-3 p-1">
                     <div>
                         <h3 className="text-xl font-bold text-gray-800">{student.name}</h3>
-                        <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 text-gray-700 rounded-lg text-[10px] font-black uppercase tracking-widest border border-gray-200/50 shadow-sm">
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1 lg:mt-1.5">
+                            <span className="inline-flex items-center gap-1 px-1.5 lg:px-2.5 py-0.5 lg:py-1 bg-gray-100 text-gray-700 rounded-lg text-[9px] lg:text-[10px] font-black uppercase tracking-widest border border-gray-200/50 shadow-sm">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                                 </svg>
                                 Total Score: <span className="text-blue-600 tabular-nums">{totalScore.toFixed(1)}</span>
                             </span>
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 text-amber-700 rounded-lg text-[10px] font-black uppercase tracking-widest border border-amber-200/50 shadow-sm">
+                            <span className="inline-flex items-center gap-1 px-1.5 lg:px-2.5 py-0.5 lg:py-1 bg-amber-50 text-amber-700 rounded-lg text-[9px] lg:text-[10px] font-black uppercase tracking-widest border border-amber-200/50 shadow-sm">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
@@ -731,13 +731,13 @@ const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ stu
                         </div>
                     </div>
                     
-                    <div className="space-y-3 bg-blue-50/30 p-3 rounded-xl border border-blue-100/50">
+                    <div className="space-y-2 lg:space-y-3 bg-blue-50/30 p-2 lg:p-3 rounded-xl border border-blue-100/50">
                         <div className="flex items-center gap-2">
-                            <span className="text-[11px] font-bold text-blue-600 uppercase tracking-tight whitespace-nowrap">Mapping:</span>
+                            <span className="text-[9px] lg:text-[11px] font-bold text-blue-600 uppercase tracking-tight whitespace-nowrap">Mapping:</span>
                             <select
                                 value={overrideCategory || determinedCategory}
                                 onChange={(e) => setOverrideCategory(e.target.value)}
-                                className="flex-1 text-xs bg-white border border-blue-100 rounded-lg px-2 py-1.5 font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all cursor-pointer shadow-sm"
+                                className="flex-1 text-[10px] lg:text-xs bg-white border border-blue-100 rounded-lg px-2 py-1 lg:py-1.5 font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all cursor-pointer shadow-sm"
                             >
                                 <option value="Outstanding">🌟 Outstanding</option>
                                 <option value="Excellent">💎 Excellent</option>
@@ -751,7 +751,7 @@ const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ stu
                         <div className="flex gap-2">
                              <button
                                 onClick={handleAutoGenerateMinimal}
-                                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-all shadow-md active:scale-95"
+                                className="flex-1 flex items-center justify-center gap-1 px-2 lg:px-3 py-1.5 lg:py-2 bg-blue-600 text-white rounded-lg text-[10px] lg:text-xs font-bold hover:bg-blue-700 transition-all shadow-md active:scale-95"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -763,7 +763,7 @@ const ReportCustomizationPanel: React.FC<ReportCustomizationPanelProps> = ({ stu
                                 onClick={handleSave}
                                 disabled={!hasUnsavedChanges}
                                 className={`
-                                    flex-1 px-4 py-2 rounded-lg text-xs font-bold transition-all
+                                    flex-1 px-2 lg:px-4 py-1.5 lg:py-2 rounded-lg text-[10px] lg:text-xs font-bold transition-all
                                     ${hasUnsavedChanges
                                         ? 'bg-white text-blue-600 border border-blue-200 hover:bg-blue-50 shadow-sm'
                                         : 'bg-gray-100 text-gray-400 cursor-not-allowed'}
