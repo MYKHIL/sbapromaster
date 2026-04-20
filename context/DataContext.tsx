@@ -21,6 +21,7 @@ import {
     INITIAL_SCORES,
     INITIAL_REPORT_DATA,
     INITIAL_CLASS_DATA,
+    MULTI_SCORE_ENTRY_ENABLED,
 } from '../constants';
 
 export interface DataContextType {
@@ -124,7 +125,7 @@ export interface DataContextType {
     isDirty: (...fields: (keyof AppDataType)[]) => boolean; // Check if specific fields have unsaved changes
 
     // Debug
-    getPendingUploadData: () => Partial<AppDataType>;
+    getPendingUploadData: (limitToFields?: (keyof AppDataType)[], dataOverride?: AppDataType) => any;
 
     // Draft score synchronization
     updateDraftScore: (studentId: number, subjectId: number, assessmentId: number, value: string) => void;
@@ -147,6 +148,7 @@ export interface DataContextType {
     markAllNotificationsAsRead: () => void;
     restoreItem: (field: keyof AppDataType, id: number) => void;
     permanentlyDeleteItem: (field: keyof AppDataType, id: number) => void;
+    mergeSubjects: (targetId: number, duplicateIds: number[]) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -273,7 +275,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.229"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.230"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -1243,11 +1245,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Remove _deletions from payload
         const { _deletions, ...transactionPayload } = pendingData;
 
-        // FIX: Arrays on the main document are completely overwritten by Firebase merge.
+        // FIX: Arrays on the main document or metadata bundle are completely overwritten by Firebase merge.
         // If they are in the payload (meaning they have changes), we MUST send the FULL array.
-        const MAIN_ARRAY_KEYS = ['reportData', 'classData', 'users', 'userLogs'];
-        MAIN_ARRAY_KEYS.forEach(k => {
-            if (transactionPayload[k] !== undefined) {
+        const FULL_ARRAY_KEYS = ['reportData', 'classData', 'users', 'userLogs', 'subjects', 'classes', 'assessments', 'grades'];
+        FULL_ARRAY_KEYS.forEach(k => {
+            if (transactionPayload[k] !== undefined || dirtyFields.current.has(k as keyof AppDataType)) {
                 transactionPayload[k] = currentData[k as keyof AppDataType];
             }
         });
@@ -1770,11 +1772,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 console.log(`[DELETE DEBUG] savePageData sending students deletions:`, _deletions.students);
             }
 
-            // FIX: Arrays on the main document are completely overwritten by Firebase merge.
+            // FIX: Arrays on the main document or metadata bundle are completely overwritten by Firebase merge.
             // If they are in the payload (meaning they have changes), we MUST send the FULL array.
-            const MAIN_ARRAY_KEYS = ['reportData', 'classData', 'users', 'userLogs'];
-            MAIN_ARRAY_KEYS.forEach(k => {
-                if (updates[k] !== undefined) {
+            const FULL_ARRAY_KEYS = ['reportData', 'classData', 'users', 'userLogs', 'subjects', 'classes', 'assessments', 'grades'];
+            FULL_ARRAY_KEYS.forEach(k => {
+                if (updates[k] !== undefined || (k === field)) {
                     updates[k] = stateRef.current[k as keyof AppDataType];
                 }
             });
@@ -2273,7 +2275,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     // Updated to support granular saves (preventing "Bleeding Save" bugs)
-    const getPendingUploadData = React.useCallback((limitToFields?: (keyof AppDataType)[]): any => {
+    const getPendingUploadData = React.useCallback((limitToFields?: (keyof AppDataType)[], dataOverride?: AppDataType): any => {
         if (dirtyFields.current.size === 0) {
             return {};
         }
@@ -2292,7 +2294,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Closure values (settings, scores, etc.) may be STALE if React state updates (e.g. from
         // draft score commits via setScores) haven't re-rendered yet when getPendingUploadData is called.
         // stateRef.current is kept in sync via a useEffect and is always up-to-date.
-        const currentData: AppDataType = stateRef.current;
+        const currentData: AppDataType = dataOverride || stateRef.current;
         const payload: any = {};
         const deletions: any = {};
 
@@ -2438,9 +2440,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
 
         return payload;
-    // FIX: Removed stale state vars from deps (settings, students, scores, etc.) since we now
-    // read from stateRef.current (a ref) which doesn't need to be in the dep array.
-    // schoolId is still needed because it drives user lookup context.
     }, [schoolId]);
 
     // Draft Score State
@@ -2515,7 +2514,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // This ensures the save button shows the actual number of scores that will be uploaded
     // UPDATE: Now counts ALL pending changes (students, subjects, etc.), not just scores.
     const pendingCount = useMemo(() => {
-        const payload = getPendingUploadData();
+        const payload = getPendingUploadData(undefined, {
+            settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions
+        } as AppDataType);
         let count = 0;
         Object.keys(payload).forEach(key => {
             // IGNORE activeSessions and userLogs for the pending count
@@ -2540,7 +2541,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         count += draftScores.current.size;
 
         return count;
-    }, [getPendingUploadData, dirtyVersion, draftVersion]);
+    }, [getPendingUploadData, dirtyVersion, draftVersion, settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions]);
 
     // Get the score to display: prefer draft, fallback to saved
     const getComputedScore = (studentId: number, subjectId: number, assessmentId: number): string => {
@@ -2556,10 +2557,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return savedScores.length > 0 ? savedScores[0] : '';
     };
 
-    // -------------------------------------------------------------------------
-    // PAGE-SPECIFIC DIRTY CHECKER
-    // -------------------------------------------------------------------------
-    const isPageDirty = React.useCallback((pageName: Page): boolean => {
+    const isPageDirty = React.useCallback((pageName: string): boolean => {
         const PAGE_DATA_MAPPING: Record<string, (keyof AppDataType)[]> = {
             'School Setup': ['settings'],
             'Classes & Teachers': ['classes', 'users'],
@@ -2578,10 +2576,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (!fields) return false;
 
         // 1. Check if any mapped field has ACTUAL pending changes
-        // This is more accurate than checking dirtyFields.current.has(field)
-        // because it filters out reverted or non-meaningful changes.
-        const pendingData = getPendingUploadData(fields);
-        const hasActualChanges = Object.keys(pendingData).length > 0;
+        const pendingData = getPendingUploadData(fields, {
+            settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions
+        } as AppDataType);
+        
+        const { _deletions, ...updates } = pendingData;
+        const hasActualChanges = Object.keys(updates).length > 0;
         if (hasActualChanges) return true;
 
         // 2. Special check for Score Entry (draft scores)
@@ -2590,7 +2590,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
 
         return false;
-    }, [getPendingUploadData, draftVersion]);
+    }, [getPendingUploadData, draftVersion, settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions]);
 
     // -------------------------------------------------------------------------
     // LAZY LOADING IMPLEMENTATION
@@ -3467,6 +3467,200 @@ const refreshFromCloud = React.useCallback(async (ignoreSyncLock: boolean = fals
         }
     }, [schoolId, loadImportedData, loadMetadata, loadStudents, loadScores, revertAllPendingChanges, showDatabaseError]);
 
+    const mergeSubjects = React.useCallback((targetId: number, duplicateIds: number[]) => {
+        if (!schoolId) return;
+
+        console.log(`[DataContext] 🧬 Merging subjects ${duplicateIds.join(', ')} into target ${targetId}`);
+
+        // 1. Merge Scores
+        setScores(prev => {
+            const next = [...prev];
+            const duplicateIdStrings = duplicateIds.map(String);
+            
+            // Find all scores for the duplicate subjects
+            const scoresToMerge = next.filter(s => duplicateIds.includes(s.subjectId));
+            
+            scoresToMerge.forEach(dupScore => {
+                const studentId = dupScore.studentId;
+                const targetScoreId = `${studentId}-${targetId}`;
+                
+                // Find if target already has a score for this student
+                let targetScoreIdx = next.findIndex(s => s.id === targetScoreId);
+                
+                if (targetScoreIdx !== -1) {
+                    const targetScore = next[targetScoreIdx];
+                    // Merge assessmentScores
+                    const mergedAssessmentScores = { ...targetScore.assessmentScores };
+                    
+                    Object.entries(dupScore.assessmentScores).forEach(([assessmentId, val]) => {
+                        const aid = Number(assessmentId);
+                        const existingVal = (mergedAssessmentScores[aid] || []) as any[];
+                        // Combine non-empty unique values
+                        let combined = Array.from(new Set([...existingVal, ...(val as any[])])).filter(v => v !== '');
+                        
+                        // If multi-score is not enabled, average the results
+                        if (!MULTI_SCORE_ENTRY_ENABLED && combined.length > 1) {
+                            const assessment = assessments.find(a => a.id === aid);
+                            const defaultBasis = assessment?.weight || 100;
+                            
+                            let totalPct = 0;
+                            let count = 0;
+                            let lastBasis = defaultBasis;
+                            
+                            combined.forEach(s => {
+                                if (!s) return;
+                                const parts = s.split('/');
+                                const num = Number(parts[0]);
+                                if (isNaN(num)) return;
+                                const den = parts[1] ? Number(parts[1]) : defaultBasis;
+                                totalPct += (num / den);
+                                count++;
+                                lastBasis = den;
+                            });
+                            
+                            if (count > 0) {
+                                const avgPct = totalPct / count;
+                                const avgScore = Number((avgPct * lastBasis).toFixed(1));
+                                combined = [`${avgScore}/${lastBasis}`];
+                            }
+                        }
+                        
+                        mergedAssessmentScores[aid] = combined;
+                    });
+                    
+                    // Update targetScore in place
+                    next[targetScoreIdx] = { ...targetScore, assessmentScores: mergedAssessmentScores };
+                    markItemDirty('scores', targetScoreId);
+                } else {
+                    // Target doesn't have a score, so just move this score to target
+                    // But we still need to average if dupScore has multiple values and multi-score is off
+                    const mergedAssessmentScores = { ...dupScore.assessmentScores };
+                    
+                    if (!MULTI_SCORE_ENTRY_ENABLED) {
+                        Object.entries(mergedAssessmentScores).forEach(([assessmentId, val]) => {
+                            const aid = Number(assessmentId);
+                            const scores = (val || []) as any[];
+                            if (scores.length > 1) {
+                                const assessment = assessments.find(a => a.id === aid);
+                                const defaultBasis = assessment?.weight || 100;
+                                
+                                let totalPct = 0;
+                                let count = 0;
+                                let lastBasis = defaultBasis;
+                                
+                                scores.forEach(s => {
+                                    if (!s) return;
+                                    const parts = s.split('/');
+                                    const num = Number(parts[0]);
+                                    if (isNaN(num)) return;
+                                    const den = parts[1] ? Number(parts[1]) : defaultBasis;
+                                    totalPct += (num / den);
+                                    count++;
+                                    lastBasis = den;
+                                });
+                                
+                                if (count > 0) {
+                                    const avgPct = totalPct / count;
+                                    const avgScore = Number((avgPct * lastBasis).toFixed(1));
+                                    mergedAssessmentScores[aid] = [`${avgScore}/${lastBasis}`];
+                                }
+                            }
+                        });
+                    }
+
+                    const newScore = { 
+                        ...dupScore, 
+                        id: targetScoreId, 
+                        subjectId: targetId,
+                        assessmentScores: mergedAssessmentScores,
+                        _isLocallyCreated: true // Mark as new so it uploads
+                    };
+                    next.push(newScore);
+                    markItemDirty('scores', targetScoreId);
+                }
+            });
+            
+            // Remove duplicate scores from the state
+            const final = next.filter(s => !duplicateIds.includes(s.subjectId));
+            
+            return final;
+        });
+
+        // 2. Update User Permissions
+        setUsers(prev => {
+            const nextUsers = prev.map(user => {
+                let changed = false;
+                
+                // allowedSubjects
+                let allowedSubjects = user.allowedSubjects || [];
+                // Support both ID and Name (legacy)
+                const targetSubject = subjects.find(s => s.id === targetId);
+                const duplicateSubjects = subjects.filter(s => duplicateIds.includes(s.id));
+                const duplicateNames = duplicateSubjects.map(s => s.subject);
+                
+                let newAllowed = allowedSubjects.map(s => {
+                    if (typeof s === 'number' && duplicateIds.includes(s)) {
+                        changed = true;
+                        return targetId;
+                    }
+                    if (typeof s === 'string' && duplicateNames.includes(s)) {
+                        changed = true;
+                        return targetId; // Map to ID
+                    }
+                    return s;
+                });
+                // De-duplicate
+                newAllowed = Array.from(new Set(newAllowed));
+                
+                // classSubjects
+                let classSubjects = user.classSubjects || {};
+                let newClassSubjects = { ...classSubjects };
+                let classSubjectsChanged = false;
+
+                Object.keys(newClassSubjects).forEach(cls => {
+                    let subjectsList = newClassSubjects[cls] || [];
+                    let updated = subjectsList.map(s => {
+                        if (typeof s === 'number' && duplicateIds.includes(s)) {
+                            changed = true;
+                            classSubjectsChanged = true;
+                            return targetId;
+                        }
+                        if (typeof s === 'string' && duplicateNames.includes(s)) {
+                            changed = true;
+                            classSubjectsChanged = true;
+                            return targetId; // Map to ID
+                        }
+                        return s;
+                    });
+                    newClassSubjects[cls] = Array.from(new Set(updated));
+                });
+                
+                if (changed) {
+                    markItemDirty('users', user.id);
+                    return { 
+                        ...user, 
+                        allowedSubjects: newAllowed as number[], 
+                        classSubjects: newClassSubjects as Record<string, number[]> 
+                    };
+                }
+                return user;
+            });
+            return nextUsers;
+        });
+
+        // 3. Delete Duplicate Subjects (Soft delete)
+        duplicateIds.forEach(id => {
+            deleteSubject(id);
+        });
+
+        markDirty('scores', true);
+        markDirty('users', true);
+        markDirty('subjects', true);
+        setHasLocalChanges(true);
+
+        console.log(`[DataContext] ✅ Subject merge complete locally. ${duplicateIds.length} subjects consolidated.`);
+    }, [schoolId, subjects, markDirty, markItemDirty, deleteSubject]);
+
     const value: DataContextType = {
         users, setUsers,
         settings, setSettings, updateSettings,
@@ -3627,16 +3821,11 @@ const refreshFromCloud = React.useCallback(async (ignoreSyncLock: boolean = fals
             else return;
 
             markDirty(field, true);
-            
-            // FIX: Remove from baseline immediately to prevent ghost pending deletions
-            if (originalData.current && Array.isArray(originalData.current[field])) {
-                originalData.current[field] = (originalData.current[field] as any[]).filter(
-                    item => String(getItemId(item)) !== String(id)
-                ) as any;
-            }
+            markItemDirty(field as string, id);
 
             console.log(`[DataContext] 🗑️ Permanently deleted ${String(field)} item ${id}`);
         },
+        mergeSubjects,
     };
 
     // Initialize originalData from local storage on load/schoolId change

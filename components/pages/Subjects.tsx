@@ -43,6 +43,12 @@ const Subjects: React.FC = () => {
     const [isPermanentConfirmOpen, setIsPermanentConfirmOpen] = useState(false);
     const [itemIdToDelete, setItemIdToDelete] = useState<number | null>(null);
     const [idToPermanentlyDelete, setIdToPermanentlyDelete] = useState<number | null>(null);
+    const [isDuplicateConfirmOpen, setIsDuplicateConfirmOpen] = useState(false);
+    const [duplicatePendingSubject, setDuplicatePendingSubject] = useState<Subject | Omit<Subject, 'id'> | null>(null);
+    const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
+    const [selectedMergeTarget, setSelectedMergeTarget] = useState<number | null>(null);
+    const [mergeDuplicates, setMergeDuplicates] = useState<number[]>([]);
+    const { mergeSubjects } = useData();
     const [searchQuery, setSearchQuery] = useState('');
     const [showSignaturePad, setShowSignaturePad] = useState(false);
     const [isUploadingSignature, setIsUploadingSignature] = useState(false);
@@ -162,6 +168,18 @@ const Subjects: React.FC = () => {
         return deletedSubjects.filter(s => s.deletedBy === currentUser.id);
     }, [deletedSubjects, currentUser]);
 
+    const duplicateGroups = useMemo(() => {
+        const groups: Record<string, Subject[]> = {};
+        subjects.forEach(s => {
+            const name = s.subject.trim().toLowerCase();
+            if (!groups[name]) groups[name] = [];
+            groups[name].push(s);
+        });
+        return Object.entries(groups)
+            .filter(([_, list]) => list.length > 1)
+            .map(([name, list]) => ({ name, subjects: list }));
+    }, [subjects]);
+
     const handleAddNew = () => {
         setModalError(null);
         setCurrentSubject(EMPTY_SUBJECT_FORM);
@@ -246,20 +264,25 @@ const Subjects: React.FC = () => {
         );
 
         if (isDuplicate) {
-            setModalError(`Subject "${currentSubject.subject}" already exists.`);
+            setDuplicatePendingSubject(currentSubject);
+            setIsDuplicateConfirmOpen(true);
             return;
         }
 
-        if ('id' in currentSubject) {
-            updateSubject(currentSubject);
+        executeSubmit(currentSubject);
+    };
+
+    const executeSubmit = (subject: Subject | Omit<Subject, 'id'>) => {
+        if ('id' in subject) {
+            updateSubject(subject);
         } else {
-            const newId = addSubject(currentSubject);
+            const newId = addSubject(subject);
             if (newId) {
                 setSessionAddedIds(prev => [newId, ...prev]);
             }
 
             // STAY OPEN ON ADD for continuous entry
-            setSaveFeedback(`Subject "${currentSubject.subject}" Added!`);
+            setSaveFeedback(`Subject "${subject.subject}" Added!`);
             setCurrentSubject(EMPTY_SUBJECT_FORM);
 
             // Explicit focus AND select for batch entry (after reset)
@@ -274,6 +297,24 @@ const Subjects: React.FC = () => {
             return;
         }
         handleCloseModal();
+    };
+
+    const handleMergeClick = (group: { name: string, subjects: Subject[] }) => {
+        const ids = group.subjects.map(s => s.id);
+        setMergeDuplicates(ids);
+        setSelectedMergeTarget(ids[0]);
+        setIsMergeModalOpen(true);
+    };
+
+    const executeMerge = () => {
+        if (selectedMergeTarget && mergeDuplicates.length > 1) {
+            const duplicatesToMerge = mergeDuplicates.filter(id => id !== selectedMergeTarget);
+            mergeSubjects(selectedMergeTarget, duplicatesToMerge);
+            setIsMergeModalOpen(false);
+            setMergeDuplicates([]);
+            setSelectedMergeTarget(null);
+            alert("Subjects merged successfully! All scores and user permissions have been updated.");
+        }
     };
 
 
@@ -319,6 +360,20 @@ const Subjects: React.FC = () => {
                                         </svg>
                                         <span className="hidden sm:inline">Restore</span>
                                     </button>
+                                )}
+                                {duplicateGroups.length > 0 && (
+                                    <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm animate-pulse">
+                                        <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                        </svg>
+                                        <span>Detected {duplicateGroups.length} duplicate subject groups.</span>
+                                        <button 
+                                            onClick={() => handleMergeClick(duplicateGroups[0])}
+                                            className="ml-2 font-bold underline hover:no-underline"
+                                        >
+                                            Fix Now
+                                        </button>
+                                    </div>
                                 )}
                             </div>
                         )}
@@ -657,9 +712,90 @@ const Subjects: React.FC = () => {
                     setIdToPermanentlyDelete(null);
                 }}
                 title="Permanent Deletion"
-                variant="danger"
-                confirmText="Yes, Delete Permanently"
+                variant={currentUser && currentUser.id === idToPermanentlyDelete ? "warning" : undefined}
             />
+
+            {/* Duplicate Confirmation Modal */}
+            <ConfirmationModal
+                isOpen={isDuplicateConfirmOpen}
+                onClose={() => setIsDuplicateConfirmOpen(false)}
+                onConfirm={() => {
+                    if (duplicatePendingSubject) executeSubmit(duplicatePendingSubject);
+                    setIsDuplicateConfirmOpen(false);
+                }}
+                title="Duplicate Subject Name"
+                message={`A subject with the name "${duplicatePendingSubject?.subject}" already exists. Are you sure you want to create another one? Having multiple subjects with the same name can cause confusion.`}
+                variant="warning"
+                confirmText="Yes, Create Duplicate"
+                cancelText="No, Change Name"
+            />
+
+            {/* Merge Modal */}
+            {isMergeModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-[60] p-4">
+                    <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-lg">
+                        <h2 className="text-2xl font-bold text-gray-800 mb-4">Merge Duplicate Subjects</h2>
+                        <p className="text-gray-600 mb-6">
+                            Consolidate multiple records for <span className="font-bold text-blue-600">"{duplicateGroups.find(g => g.subjects.some(s => s.id === mergeDuplicates[0]))?.name}"</span> into one master record.
+                        </p>
+                        
+                        <div className="space-y-4 mb-6">
+                            <label className="block text-sm font-medium text-gray-700">Select Master Subject (This ID will be kept):</label>
+                            <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-2">
+                                {mergeDuplicates.map(id => {
+                                    const s = subjects.find(sub => sub.id === id);
+                                    if (!s) return null;
+                                    return (
+                                        <label key={id} className={`flex items-center p-3 rounded-lg border cursor-pointer transition ${selectedMergeTarget === id ? 'bg-blue-50 border-blue-500' : 'hover:bg-gray-50 border-gray-200'}`}>
+                                            <input 
+                                                type="radio" 
+                                                name="mergeTarget" 
+                                                checked={selectedMergeTarget === id}
+                                                onChange={() => setSelectedMergeTarget(id)}
+                                                className="h-4 w-4 text-blue-600"
+                                            />
+                                            <div className="ml-3">
+                                                <div className="font-medium text-gray-900">{s.subject} (ID: {s.id})</div>
+                                                <div className="text-xs text-gray-500">{s.type} {s.facilitator ? `• ${s.facilitator}` : ''}</div>
+                                            </div>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+                            <h4 className="text-amber-800 font-bold flex items-center gap-2 text-sm">
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                CONSEQUENCES OF MERGING:
+                            </h4>
+                            <ul className="text-xs text-amber-700 list-disc list-inside mt-2 space-y-1">
+                                <li>All student scores from duplicate IDs will move to the Master ID.</li>
+                                <li>User permissions (Teacher access) will be updated to the Master ID.</li>
+                                <li>Duplicate subject records will be deleted.</li>
+                                <li><span className="font-bold">This action cannot be undone.</span></li>
+                            </ul>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button 
+                                onClick={() => setIsMergeModalOpen(false)}
+                                className="flex-1 py-3 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                onClick={executeMerge}
+                                className="flex-1 py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-lg transition font-bold"
+                            >
+                                Confirm Merge
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

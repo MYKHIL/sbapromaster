@@ -47,10 +47,15 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
     const [isRefreshing, setIsRefreshing] = useState(false);
     const { userLogs } = useData();
 
-    // CRITICAL FIX: Use useMemo to dynamically update when classes/subjects change
-    // This ensures we always have the latest data, not just the initial default values
-    const classNames = React.useMemo(() => Array.from(new Set(classes.map(c => (c.name || '').trim()))), [classes]);
-    const subjectNames = React.useMemo(() => subjects.map(s => s.subject), [subjects]);
+    const subjectList = React.useMemo(() => {
+        return subjects.map(s => ({
+            id: s.id,
+            name: s.subject,
+            displayName: s.subject // Only show the name as requested
+        }));
+    }, [subjects]);
+
+    const classNames = React.useMemo(() => classes.map(c => c.name), [classes]);
 
     // Ref for auto-scrolling to bottom of user list
     const userListRef = React.useRef<HTMLDivElement>(null);
@@ -120,12 +125,12 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         updateUser(index, 'allowedClasses', newClasses);
     };
 
-    const toggleSubject = (index: number, subjectName: string) => {
+    const toggleSubject = (index: number, subjectId: number) => {
         const user = users[index];
         const currentSubjects = user.allowedSubjects || [];
-        const newSubjects = currentSubjects.includes(subjectName)
-            ? currentSubjects.filter(s => s !== subjectName)
-            : [...currentSubjects, subjectName];
+        const newSubjects = currentSubjects.includes(subjectId)
+            ? currentSubjects.filter(s => s !== subjectId)
+            : [...currentSubjects, subjectId];
         updateUser(index, 'allowedSubjects', newSubjects);
     };
 
@@ -137,18 +142,25 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
 
     const toggleAllSubjects = (index: number) => {
         const user = users[index];
-        const allSelected = (user.allowedSubjects || []).length === subjectNames.length;
-        updateUser(index, 'allowedSubjects', allSelected ? [] : [...subjectNames]);
+        const allSelected = (user.allowedSubjects || []).length === subjectList.length;
+        updateUser(index, 'allowedSubjects', allSelected ? [] : subjectList.map(s => s.id));
     };
 
-    const toggleClassSubject = (userIndex: number, className: string, subjectName: string) => {
+    const toggleClassSubject = (userIndex: number, className: string, subjectId: number) => {
         const user = users[userIndex];
         const classSubjects = user.classSubjects || {};
-        const currentSubjects = classSubjects[className] || [];
+        const currentSubjectsRaw = classSubjects[className] || [];
 
-        const newSubjects = currentSubjects.includes(subjectName)
-            ? currentSubjects.filter(s => s !== subjectName)
-            : [...currentSubjects, subjectName];
+        // NORMALIZE: Ensure we are working with IDs
+        const currentSubjects = currentSubjectsRaw.map(s => {
+            if (typeof s === 'number') return s;
+            const found = subjects.find(sub => sub.subject === s);
+            return found ? found.id : null;
+        }).filter(s => s !== null) as number[];
+
+        const newSubjects = currentSubjects.includes(subjectId)
+            ? currentSubjects.filter(s => s !== subjectId)
+            : [...currentSubjects, subjectId];
 
         const newClassSubjects = { ...classSubjects, [className]: newSubjects };
         updateUser(userIndex, 'classSubjects', newClassSubjects);
@@ -222,7 +234,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                 name: u.name || '',  // Ensure string, not undefined
                 role: u.role || 'Teacher',  // Ensure role is defined
                 allowedClasses: u.role === 'Admin' ? classNames : (u.allowedClasses || []),
-                allowedSubjects: u.role === 'Admin' ? subjectNames : (u.allowedSubjects || []),
+                allowedSubjects: u.role === 'Admin' ? subjectList.map(s => s.id) : (u.allowedSubjects || []),
                 classSubjects: u.role === 'Admin' ? {} : (u.classSubjects || {}),  // Include classSubjects mapping
                 passwordHash: mode === 'setup' && index === 0
                     ? await hashPassword(adminPassword)
@@ -241,14 +253,28 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         }
         setEditingUserId(user.id);
 
-        // Fix for editing: If user has allowedSubjects but no classSubjects (legacy or simple mode),
-        // we need to materialize them into the classSubjects map for the UI to show them as selected.
-        const editingUser: User = { ...user };
+        // NORMALIZE: Convert name-based assignments to ID-based assignments
+        const normalizeSubjects = (subs: (number | string)[] = []) => {
+            return subs.map(s => {
+                if (typeof s === 'number') return s;
+                const found = subjects.find(sub => sub.subject === s);
+                return found ? found.id : null;
+            }).filter(s => s !== null) as number[];
+        };
 
-        // Ensure classSubjects object exists
-        if (!editingUser.classSubjects) {
-            editingUser.classSubjects = {};
+        const editingUser: User = { 
+            ...user,
+            allowedSubjects: normalizeSubjects(user.allowedSubjects)
+        };
+
+        // Ensure classSubjects object exists and is normalized
+        const newClassSubjects: Record<string, number[]> = {};
+        if (user.classSubjects) {
+            Object.entries(user.classSubjects).forEach(([cls, subs]) => {
+                newClassSubjects[cls] = normalizeSubjects(subs);
+            });
         }
+        editingUser.classSubjects = newClassSubjects;
 
         // Check if we need to auto-populate
         const hasGlobalSubjects = editingUser.allowedSubjects && editingUser.allowedSubjects.length > 0;
@@ -257,9 +283,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         if (hasGlobalSubjects && !hasClassMappings && editingUser.allowedClasses) {
             // Auto-populate: Assign all allowedSubjects to all allowedClasses
             editingUser.allowedClasses.forEach(className => {
-                if (editingUser.classSubjects) {
-                    editingUser.classSubjects[className] = [...editingUser.allowedSubjects];
-                }
+                editingUser.classSubjects![className] = [...editingUser.allowedSubjects!];
             });
             0 && console.log('[AdminSetup] Auto-populated classSubjects from allowedSubjects for editing:', editingUser.classSubjects);
         }
@@ -283,7 +307,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                     name: updatedUser.name!,
                     role: updatedUser.role!,
                     allowedClasses: updatedUser.role === 'Admin' ? classNames : (updatedUser.allowedClasses || []),
-                    allowedSubjects: updatedUser.role === 'Admin' ? subjectNames : (updatedUser.allowedSubjects || []),
+                    allowedSubjects: updatedUser.role === 'Admin' ? subjectList.map(s => s.id) : (updatedUser.allowedSubjects || []),
                     classSubjects: updatedUser.role === 'Admin' ? {} : (updatedUser.classSubjects || {}),  // Include classSubjects mapping
                 }
                 : u
@@ -378,7 +402,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                 name: newUser.name!,
                 role: newUser.role!,
                 allowedClasses: newUser.role === 'Admin' ? classNames : (newUser.allowedClasses || []),
-                allowedSubjects: newUser.role === 'Admin' ? subjectNames : (newUser.allowedSubjects || []),
+                allowedSubjects: newUser.role === 'Admin' ? subjectList.map(s => s.id) : (newUser.allowedSubjects || []),
                 classSubjects: newUser.role === 'Admin' ? {} : (newUser.classSubjects || {}),
                 passwordHash: '',
             };
@@ -681,22 +705,23 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                                             </div>
 
                                                             <div className="flex flex-wrap gap-2">
-                                                                {subjectNames.map(subjectName => {
+                                                                {subjectList.map(subject => {
                                                                     const classSubjects = user.classSubjects || {};
-                                                                    const subjects = classSubjects[className] || [];
-                                                                    const isSelected = subjects.includes(subjectName);
+                                                                    const assignedSubjects = classSubjects[className] || [];
+                                                                    // Highlight if ID matches OR Name matches (for legacy data)
+                                                                    const isSelected = assignedSubjects.some(s => s === subject.id || s === subject.name);
 
                                                                     return (
                                                                         <button
-                                                                            key={subjectName}
+                                                                            key={subject.id}
                                                                             type="button"
-                                                                            onClick={() => toggleClassSubject(index, className, subjectName)}
+                                                                            onClick={() => toggleClassSubject(index, className, subject.id)}
                                                                             className={`px-2 py-1 text-xs rounded transition ${isSelected
                                                                                 ? 'bg-green-600 text-white'
                                                                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                                                                 }`}
                                                                         >
-                                                                            {subjectName}
+                                                                            {subject.displayName}
                                                                         </button>
                                                                     );
                                                                 })}

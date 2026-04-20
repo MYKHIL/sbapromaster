@@ -565,7 +565,7 @@ const ScoreEntry: React.FC = () => {
             // REAL-TIME RANKING: Compare new total against other students' saved totals
             const otherTotals = Object.entries(allStudentsRankings)
                 .filter(([id]) => id !== currentStudent.id.toString())
-                .map(([, data]) => parseFloat(data.total));
+                .map(([, data]: [string, any]) => parseFloat(data.total));
             
             const currentTotalNum = parseFloat(finalTotalStr);
             const allTotals = [...otherTotals, currentTotalNum].sort((a, b) => b - a);
