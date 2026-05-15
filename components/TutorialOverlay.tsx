@@ -25,10 +25,25 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ isOpen, onClose }) =>
   const [animationProgress, setAnimationProgress] = useState(0);
   const [showSectionList, setShowSectionList] = useState(false);
   
+  // Reset position and show menu on mobile when opening
+  useEffect(() => {
+    if (isOpen) {
+      setPosition({ section: 0, step: 0 });
+      setIsAutoPlaying(isAutoPlayEnabled); // Reset autoplay to user preference
+      
+      // Auto-show menu on mobile
+      if (window.innerWidth < 1280) { // xl breakpoint
+        setShowSectionList(true);
+      } else {
+        setShowSectionList(false);
+      }
+    }
+  }, [isOpen]);
+
   // Persistent Settings
   const [isAutoPlayEnabled, setIsAutoPlayEnabled] = useState(() => {
     const saved = localStorage.getItem('tutorial_autoplay');
-    return saved !== null ? JSON.parse(saved) : true;
+    return saved !== null ? JSON.parse(saved) : false;
   });
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(() => {
     const saved = localStorage.getItem('tutorial_voice');
@@ -41,7 +56,7 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ isOpen, onClose }) =>
 
   useEffect(() => {
     localStorage.setItem('tutorial_autoplay', JSON.stringify(isAutoPlayEnabled));
-    setIsAutoPlaying(isAutoPlayEnabled);
+    if (isOpen) setIsAutoPlaying(isAutoPlayEnabled);
   }, [isAutoPlayEnabled]);
 
   useEffect(() => {
@@ -59,7 +74,9 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ isOpen, onClose }) =>
       } else if (prev.section < TUTORIAL_DATA.length - 1) {
         return { section: prev.section + 1, step: 0 };
       }
-      setIsAutoPlaying(false);
+      
+      // If we're at the very end and click next/finish
+      onClose();
       return prev;
     });
   };
@@ -211,7 +228,7 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ isOpen, onClose }) =>
             </div>
         </div>
 
-        {/* Floating Settings - Visible on Desktop, Hidden on Mobile (moved to bottom) */}
+        {/* Floating Settings - Visible on Desktop */}
         <div className="hidden md:flex absolute top-6 right-20 z-30 items-center gap-3">
             <div className="flex items-center gap-3 bg-white/90 backdrop-blur-md p-1.5 px-3 rounded-2xl border border-gray-100 shadow-sm">
                 <label className="flex items-center gap-2 cursor-pointer group">
@@ -285,7 +302,7 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ isOpen, onClose }) =>
               </div>
             </div>
 
-            {/* Step Description - Repositioned for Mobile */}
+            {/* Step Description */}
             <div className={`absolute bottom-[100px] left-4 right-4 md:left-auto md:bottom-24 md:right-10 z-30 transition-all duration-500 ${showSectionList ? 'opacity-0 translate-y-10' : 'opacity-100 translate-y-0'}`}>
                 <div className="bg-indigo-900/95 backdrop-blur-md text-white p-5 md:p-6 rounded-2xl md:rounded-[2rem] shadow-2xl border border-white/10 md:max-w-[300px]">
                     <h3 className="text-xs md:text-sm font-black mb-1.5 tracking-tight flex items-center gap-2">
@@ -296,7 +313,7 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ isOpen, onClose }) =>
                 </div>
             </div>
 
-            {/* Navigation Controls - Fixed at Bottom on Mobile */}
+            {/* Navigation Controls */}
             <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 md:p-0 md:bg-transparent md:border-none md:static md:flex items-center justify-between z-[70]">
               <div className="flex items-center justify-between md:absolute md:bottom-10 md:left-10 md:right-10">
                 <div className="flex items-center gap-2">
@@ -323,7 +340,7 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ isOpen, onClose }) =>
               </div>
             </div>
 
-            {/* Tutorial List - Desktop (Sidebar) and Mobile (Overlay Menu) */}
+            {/* Slide-out Menu */}
             <div className={`absolute left-0 top-0 bottom-0 z-[100] w-full max-w-xs bg-white shadow-2xl transition-transform duration-500 transform xl:hidden ${showSectionList ? 'translate-x-0' : '-translate-x-full'}`}>
               <div className="flex flex-col h-full">
                 <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-indigo-50">
