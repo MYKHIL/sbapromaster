@@ -168,11 +168,11 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage }) => {
         <div className={`mt-auto p-2 text-center text-xs text-gray-400 transition-opacity duration-300 flex-shrink-0 ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>
           <p>&copy; 2024 SBA Pro Master</p>
           <p>Version {APP_VERSION}</p>
-          <p>Developer: <a href="tel:0542410613" className="hover:text-indigo-600 transition-colors font-bold">0542410613</a></p>
+          <p className="animate-blink">Developer: <a href="tel:0542410613" className="hover:text-indigo-600 transition-colors font-bold">0542410613</a></p>
         </div>
       </aside> 
     </>
   );
 };
-
+ 
 export default Sidebar;
