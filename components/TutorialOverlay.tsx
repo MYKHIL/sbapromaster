@@ -23,7 +23,9 @@ interface TutorialOverlayProps {
 const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ isOpen, onClose }) => {
   const [position, setPosition] = useState({ section: 0, step: 0 });
   const [animationProgress, setAnimationProgress] = useState(0);
-  const [showSectionList, setShowSectionList] = useState(false);
+  const [showSectionList, setShowSectionList] = useState(() => {
+    return typeof window !== 'undefined' && window.innerWidth < 1280;
+  });
   
   // Reset position and show menu on mobile when opening
   useEffect(() => {
@@ -95,7 +97,10 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ isOpen, onClose }) =>
 
   // Voice Narration and Step Synchronization
   useEffect(() => {
-    if (!isOpen || !activeStep) return;
+    if (!isOpen || !activeStep || showSectionList) {
+        window.speechSynthesis.cancel();
+        return;
+    }
 
     try {
         window.speechSynthesis.cancel();
@@ -149,11 +154,11 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ isOpen, onClose }) =>
       window.speechSynthesis.cancel();
       if (window.speechSynthesis.onvoiceschanged) window.speechSynthesis.onvoiceschanged = null;
     };
-  }, [isOpen, position.section, position.step, isAutoPlaying, isVoiceEnabled]);
+  }, [isOpen, position.section, position.step, isAutoPlaying, isVoiceEnabled, showSectionList]);
 
   // Handle animation progress
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || showSectionList) return;
 
     setAnimationProgress(0);
     setIsClicking(false);
