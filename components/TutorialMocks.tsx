@@ -435,27 +435,75 @@ export const MockSetupPage: React.FC<{
   );
 };
 
-export const MockSubscription: React.FC<{ step: number }> = ({ step }) => (
-  <div className="p-4 space-y-4 h-full bg-white">
-    <div className="grid grid-cols-2 gap-2">
-      {[1, 2].map(i => (
-        <div key={i} className={`p-3 rounded-xl border-2 transition-all ${step > 30 && i === 2 ? 'border-indigo-500 bg-indigo-50' : 'border-gray-100'}`}>
-          <div className="w-4 h-4 rounded-full bg-gray-100 mb-2" />
-          <div className="h-2 w-12 bg-gray-200 rounded mb-1" />
-          <div className="h-3 w-16 bg-indigo-100 rounded" />
-        </div>
-      ))}
-    </div>
-    {step > 60 && (
-      <div className="bg-white p-4 rounded-xl shadow-lg border border-gray-100 animate-in slide-in-from-bottom duration-500">
-        <div className="flex justify-between items-center mb-4">
-          <div className="h-3 w-20 bg-gray-200 rounded" />
-          <div className="h-3 w-10 bg-indigo-600 rounded" />
-        </div>
-        <div className="h-8 w-full bg-indigo-600 rounded-lg flex items-center justify-center text-white text-[10px] gap-2 shadow-md">
-          <CreditCard size={12} /> Confirm Payment
-        </div>
+export const MockSubscription: React.FC<{ step: number }> = ({ step }) => {
+  const plans = [
+    { name: 'Basic', price: 'GH₵ 250', limit: 'Up to 100 Students', color: 'bg-blue-500', recommended: false },
+    { name: 'Premium', price: 'GH₵ 600', limit: 'Up to 500 Students', color: 'bg-indigo-600', recommended: true },
+    { name: 'Unlimited', price: 'GH₵ 1,200', limit: 'No Student Limit', color: 'bg-purple-600', recommended: false }
+  ];
+
+  return (
+    <div className="p-4 h-full bg-white flex flex-col gap-4 overflow-y-auto custom-scrollbar">
+      <div className="text-center mb-2">
+         <h2 className="text-[12px] font-black text-indigo-900 uppercase tracking-tight">Select School Plan</h2>
+         <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest">Termly Subscription</p>
       </div>
-    )}
-  </div>
-);
+
+      <div className="grid grid-cols-1 gap-3">
+        {plans.map((p, i) => (
+          <div 
+            key={p.name} 
+            className={`p-4 rounded-2xl border-2 transition-all relative overflow-hidden ${p.recommended ? 'border-indigo-600 bg-indigo-50/30 ring-4 ring-indigo-50 shadow-lg' : 'border-gray-50 bg-gray-50/30'}`}
+          >
+            {p.recommended && (
+              <div className="absolute top-0 right-0 bg-indigo-600 text-white text-[7px] font-black px-3 py-1 rounded-bl-xl uppercase tracking-tighter shadow-sm">Recommended</div>
+            )}
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <h3 className="text-[10px] font-black text-gray-800 uppercase tracking-tight">{p.name}</h3>
+                <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider">{p.limit}</span>
+              </div>
+              <div className="text-right">
+                <div className="text-[11px] font-black text-indigo-600">{p.price}</div>
+                <div className="text-[6px] font-black text-gray-400 uppercase tracking-widest">Per Term</div>
+              </div>
+            </div>
+            
+            <div className="space-y-1.5 mb-3">
+              {['Full Reports', 'Cloud Sync', 'SMS Alerts'].map(f => (
+                <div key={f} className="flex items-center gap-1.5">
+                  <div className={`w-3 h-3 rounded-full flex items-center justify-center text-white ${p.recommended ? 'bg-indigo-600' : 'bg-gray-200'}`}>
+                    <CheckCircle2 size={8} />
+                  </div>
+                  <span className="text-[8px] font-bold text-gray-600">{f}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className={`h-8 rounded-xl flex items-center justify-center text-white text-[9px] font-black uppercase tracking-widest shadow-md transition-all ${p.recommended ? 'bg-indigo-600' : 'bg-gray-300'}`}>
+              Select Plan
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {step > 50 && (
+        <div className="fixed bottom-4 left-4 right-4 bg-white p-5 rounded-[2rem] shadow-2xl border border-gray-100 animate-in slide-in-from-bottom duration-700 z-50">
+          <div className="flex justify-between items-center mb-4 border-b border-gray-50 pb-3">
+             <div>
+                <h4 className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Total Due</h4>
+                <div className="text-sm font-black text-indigo-600 tracking-tighter">GH₵ 600.00</div>
+             </div>
+             <div className="flex gap-1.5">
+                <div className="w-8 h-5 bg-gray-100 rounded-md border border-gray-200 flex items-center justify-center font-black text-[6px]">VISA</div>
+                <div className="w-8 h-5 bg-gray-100 rounded-md border border-gray-200 flex items-center justify-center font-black text-[6px]">MOMO</div>
+             </div>
+          </div>
+          <button className="w-full h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-indigo-100 flex items-center justify-center gap-2 transition-all active:scale-95">
+            <CreditCard size={14} /> Pay GH₵ 600.00 Now
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
