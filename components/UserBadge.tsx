@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { HelpCircle } from 'lucide-react';
 import { useUser } from '../context/UserContext';
 import { useData } from '../context/DataContext';
 import ConfirmationModal from './ConfirmationModal';
 import OnlineUsersModal from './OnlineUsersModal';
 import { getSchoolTermIds } from '../services/firebaseService';
 
-const UserBadge: React.FC = () => {
+const UserBadge: React.FC<{ onOpenTutorial?: () => void }> = ({ onOpenTutorial }) => {
     const { currentUser, logout, switchAccount } = useUser();
 
     // Early return BEFORE other hooks to avoid React error #300
@@ -198,7 +199,20 @@ const UserBadge: React.FC = () => {
                                 >
                                     {getInitials(currentUser.name)}
                                 </button>
-
+                                {onOpenTutorial && (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onOpenTutorial();
+                                        }}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-md active:scale-95 ml-2 group overflow-hidden relative"
+                                        title="Launch App Tutorial"
+                                    >
+                                        <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        <HelpCircle size={14} className="animate-pulse" />
+                                        <span className="text-[9px] font-black uppercase tracking-tighter">Tutorial</span>
+                                    </button>
+                                )}
                             </div>
                         )}
 
