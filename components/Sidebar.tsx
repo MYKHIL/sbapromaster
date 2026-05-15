@@ -170,7 +170,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage }) => {
           <p>Version {APP_VERSION}</p>
           <p>Developer: <a href="tel:0542410613" className="hover:text-indigo-600 transition-colors font-bold">0542410613</a></p>
         </div>
-      </aside>
+      </aside> 
     </>
   );
 };
