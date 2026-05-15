@@ -6,7 +6,7 @@ import { exportDatabase, importDatabase } from '../../services/databaseService';
 import { generateWpfProject } from '../../services/wpfProjectGenerator';
 import ConfirmationModal from '../ConfirmationModal';
 import AdminSetup from '../AdminSetup';
-import { DEV_TOOLS_ENABLED, WHATSAPP_DEVELOPER_NUMBER, SHOW_USER_EXPORT_BUTTON } from '../../constants';
+import { DEV_TOOLS_ENABLED, WHATSAPP_DEVELOPER_NUMBER, SHOW_USER_EXPORT_BUTTON, ACTIVATION_HASH } from '../../constants';
 import type { User, SchoolPeriod } from '../../types';
 import { generateIndexNumber, validateIndexNumberPattern } from '../../utils/indexNumberGenerator';
 import IndexNumberConfig from '../IndexNumberConfig';
@@ -145,8 +145,13 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
                 return { ...rest, isReadOnly: false }; // Explicitly set to false to be safe
             });
 
+            // Ensure schoolName is preserved even if missing from settings object
+            const finalSchoolName = newSettings.schoolName || (schoolId ? schoolId.split('_')[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Unknown School');
+            newSettings.schoolName = finalSchoolName;
+
             // Full data payload
-            const newData: AppDataType = {
+            const newData: any = {
+                schoolName: finalSchoolName, // Add at root for fallback grouping
                 settings: newSettings,
                 students: newStudents,
                 subjects: dataContext.subjects,
@@ -159,6 +164,7 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
                 users: unlockedUsers, // Copy existing users access (Unlocked)
                 password: password,
                 Access: true, // Enable access immediately
+                activationHash: ACTIVATION_HASH, // Ensure the new document is identified and authorized
                 activeSessions: {}, // Reset sessions
                 userLogs: [] // Reset logs
             };

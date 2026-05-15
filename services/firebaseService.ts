@@ -163,6 +163,52 @@ export const createDocumentId = (schoolName: string, academicYear: string, acade
     return `${sanitizedSchool}_${sanitizedYear}_${sanitizedTerm}`;
 };
 
+/**
+ * NORMALIZATION LAYER: Re-inflates flattened settings keys and handles legacy root-level fields.
+ * This ensures consistency between Firestore's storage-optimized "flat" format 
+ * and the application's expected "nested" AppDataType structure.
+ */
+export const normalizeSchoolData = (data: any): AppDataType => {
+    if (!data) return data;
+
+    // 1. Initialize settings if missing
+    if (!data.settings) {
+        data.settings = {} as SchoolSettings;
+    }
+
+    // 2. Re-inflate flattened settings (e.g., "settings.schoolName" -> data.settings.schoolName)
+    Object.keys(data).forEach(key => {
+        if (key.startsWith('settings.')) {
+            const subKey = key.split('.')[1];
+            if (subKey) {
+                data.settings[subKey] = data[key];
+                // We keep the flattened key at the root for Firestore-internal reference 
+                // but our app will use the nested one.
+            }
+        }
+    });
+
+    // 3. Legacy Fallback: Collect root fields into settings if they are missing in the settings object
+    // This handles schools created in very early versions of the app.
+    const settingFields = [
+        'schoolName', 'address', 'academicYear', 'academicTerm',
+        'headmasterName', 'district', 'logo', 'headmasterSignature',
+        'vacationDate', 'reopeningDate', 'allowStudentProgressView',
+        'isPromotionTerm', 'allowPersistence', 'isDataEntryLocked',
+        'indexNumberGlobalPrefix', 'indexNumberGlobalSuffix', 'indexNumberPerClass',
+        'indexNumberGlobalCounter', 'indexNumberCounterDigits', 'showAggregateScore',
+        'aggregateScoreClasses'
+    ];
+
+    settingFields.forEach(field => {
+        if (data[field] !== undefined && (data.settings[field] === undefined || data.settings[field] === '')) {
+            data.settings[field] = data[field];
+        }
+    });
+
+    return data as AppDataType;
+};
+
 // -----------------------------------------------------------------------------
 // READ/WRITE LOGGING HELPERS
 // -----------------------------------------------------------------------------
@@ -428,7 +474,8 @@ export const getSchoolData = async (docId: string, keysToFetch?: (keyof AppDataT
             const docSnap = await loggedGetDoc(docRef, `getSchoolData/${docId}`);
 
             if (docSnap.exists()) {
-                const data = docSnap.data() as AppDataType;
+                // Apply Normalization Layer to handle flattened/legacy formats
+                const data = normalizeSchoolData(docSnap.data());
 
                 // ---------------------------------------------------------
                 // OPTIMIZATION: STRIP HEAVY COLLECTIONS
@@ -646,7 +693,8 @@ export interface SchoolListItem {
     displayName: string;
     settings?: SchoolSettings;
     _databaseIndex?: number;
-    access?: boolean; // Added to track lock status
+    access?: boolean;
+    allPrefixes?: string[]; // Added to track all prefixes for this group
 }
 
 export interface SchoolPeriod {
@@ -707,12 +755,12 @@ export const getSchoolList = async (prefix?: string, includeLocked: boolean = fa
                     const snapshot = await loggedGetDocs(q, `getSchoolList/db${index}`);
                     const localList: SchoolListItem[] = [];
                     snapshot.forEach(doc => {
-                        const data = doc.data() as any;
+                        const data = normalizeSchoolData(doc.data());
                         if (!includeLocked && data.Access === false) return; // Skip locked schools unless requested
 
                         localList.push({
                             docId: doc.id,
-                            displayName: data.settings?.schoolName || data.schoolName || doc.id,
+                            displayName: data.settings?.schoolName || (data as any).schoolName || doc.id,
                             settings: data.settings,
                             _databaseIndex: index,
                             access: data.Access // Capture access status
@@ -735,24 +783,64 @@ export const getSchoolList = async (prefix?: string, includeLocked: boolean = fa
             const { SCHOOL_DATABASE_MAPPING } = await import('../constants');
 
             allSchools.forEach(item => {
-                const normalizedName = item.displayName.trim().toLowerCase();
-                if (!schoolGroups.has(normalizedName)) schoolGroups.set(normalizedName, []);
-                schoolGroups.get(normalizedName)?.push(item);
+                const schoolPrefix = item.docId.split('_')[0].toLowerCase();
+                if (!schoolGroups.has(schoolPrefix)) schoolGroups.set(schoolPrefix, []);
+                schoolGroups.get(schoolPrefix)?.push(item);
             });
 
+            // SECOND PASS: Merge groups that share the same sanitized displayName
+            // This handles cases where the docId prefix might have changed but the school name is identical.
+            const nameToPrefixMap = new Map<string, string>();
+            const prefixesToRemove = new Set<string>();
+
+            schoolGroups.forEach((items, prefix) => {
+                const bestItem = items.find(i => i.displayName && i.displayName !== i.docId) || items[0];
+                const sanitizedName = bestItem.displayName.trim().toLowerCase();
+                
+                if (nameToPrefixMap.has(sanitizedName)) {
+                    const targetPrefix = nameToPrefixMap.get(sanitizedName)!;
+                    if (targetPrefix !== prefix) {
+                        0 && console.log(`[Firebase] Merging school group ${prefix} into ${targetPrefix} (Name: ${sanitizedName})`);
+                        schoolGroups.get(targetPrefix)?.push(...items);
+                        prefixesToRemove.add(prefix);
+                    }
+                } else {
+                    nameToPrefixMap.set(sanitizedName, prefix);
+                }
+            });
+
+            prefixesToRemove.forEach(p => schoolGroups.delete(p));
+
             const finalSchools: SchoolListItem[] = [];
-            schoolGroups.forEach((items) => {
+            schoolGroups.forEach((items, prefix) => {
                 if (items.length === 0) return;
-                const referenceItem = items[0];
-                const prefixStr = referenceItem.docId.split('_')[0].toLowerCase();
+                
+                // Prioritize an item that has a real school name (not just docId)
+                const bestItem = items.find(i => i.displayName && i.displayName !== i.docId) || items[0];
+                const prefixStr = bestItem.docId.split('_')[0].toLowerCase();
                 const reservedIndex = SCHOOL_DATABASE_MAPPING[prefixStr];
 
+                // Collect ALL unique prefixes in this group to ensure all terms are found later
+                const allPrefixes = Array.from(new Set(items.map(i => i.docId.split('_')[0].toLowerCase())));
+
+                let selectedItem: SchoolListItem;
                 if (reservedIndex !== undefined) {
                     const validItem = items.find(i => i._databaseIndex === reservedIndex);
-                    if (validItem) finalSchools.push(validItem);
+                    if (validItem) {
+                        // Ensure the valid item also has the best display name if possible
+                        if (validItem.displayName === validItem.docId && bestItem.displayName !== bestItem.docId) {
+                            validItem.displayName = bestItem.displayName;
+                        }
+                        selectedItem = validItem;
+                    } else {
+                        selectedItem = bestItem;
+                    }
                 } else {
-                    finalSchools.push(items[0]);
+                    selectedItem = bestItem;
                 }
+
+                selectedItem.allPrefixes = allPrefixes;
+                finalSchools.push(selectedItem);
             });
 
             finalSchools.sort((a, b) => a.displayName.localeCompare(b.displayName));
@@ -994,10 +1082,11 @@ export const activateSchoolSubscriptionLocally = async (
  * Get all available years and terms for a specific school (CACHED 1hr per school)
          * Read Cost: 1 list operation per school (only on cache miss)
          */
-export const getSchoolYearsAndTerms = async (schoolName: string, databaseIndex?: number, docIdPrefix?: string): Promise<SchoolPeriod[]> => {
-    // Include database index in cache key to prevent cross-database collisions
+export const getSchoolYearsAndTerms = async (schoolName: string, databaseIndex?: number, docIdPrefix?: string | string[]): Promise<SchoolPeriod[]> => {
+    // Include database index and all prefixes in cache key to prevent cross-database collisions
+    const prefixKey = Array.isArray(docIdPrefix) ? docIdPrefix.sort().join(',') : (docIdPrefix || '');
     const dbSuffix = databaseIndex !== undefined ? `_db${databaseIndex}` : '';
-    const CACHE_KEY = `auth_periods_${sanitizeSchoolName(schoolName)}${dbSuffix}`;
+    const CACHE_KEY = `auth_periods_${sanitizeSchoolName(schoolName)}_${prefixKey}${dbSuffix}`;
     const TTL = 60 * 60 * 1000; // 1 hour
 
     // Try cache first
@@ -1040,37 +1129,45 @@ export const getSchoolYearsAndTerms = async (schoolName: string, databaseIndex?:
             }
 
             const schoolsRef = collection(targetDb, 'schools');
-            const sanitizedSchool = docIdPrefix || sanitizeSchoolName(schoolName);
-            const q = query(schoolsRef, where(documentId(), '>=', sanitizedSchool), where(documentId(), '<=', sanitizedSchool + '\uf8ff'));
-
-            trackFirebaseRead('getSchoolYearsAndTerms', 'schools', 0, `Fetching years/terms for pattern: ${sanitizedSchool}`);
-            const snapshot = await loggedGetDocs(q, `getSchoolYearsAndTerms/${sanitizedSchool}`);
-            trackFirebaseRead('getSchoolYearsAndTerms', 'schools', snapshot.size, `Fetched ${snapshot.size} potential term matches`);
-
+            const prefixes = Array.isArray(docIdPrefix) ? docIdPrefix : [docIdPrefix || sanitizeSchoolName(schoolName)];
+            
             const periods: SchoolPeriod[] = [];
+            const processedIds = new Set<string>();
 
-            snapshot.forEach(doc => {
-                const data = doc.data() as any;
-                const docSchoolName = data.settings?.schoolName;
-                const academicYear = data.settings?.academicYear;
-                const academicTerm = data.settings?.academicTerm;
+            for (const prefix of prefixes) {
+                const q = query(schoolsRef, where(documentId(), '>=', prefix), where(documentId(), '<=', prefix + '\uf8ff'));
+                trackFirebaseRead('getSchoolYearsAndTerms', 'schools', 0, `Fetching years/terms for pattern: ${prefix}`);
+                const snapshot = await loggedGetDocs(q, `getSchoolYearsAndTerms/${prefix}`);
+                trackFirebaseRead('getSchoolYearsAndTerms', 'schools', snapshot.size, `Fetched ${snapshot.size} potential term matches for prefix ${prefix}`);
 
-                // The Firestore range query already scopes results to the correct school
-                // via docIdPrefix — every doc returned here belongs to this school.
-                // Skip only if there is absolutely no period data on the document.
-                if (!academicYear && !academicTerm) return;
+                snapshot.forEach(doc => {
+                    if (processedIds.has(doc.id)) return;
+                    processedIds.add(doc.id);
 
-                if (docSchoolName && docSchoolName !== schoolName) {
-                    // Warn but still include — a name mismatch in settings shouldn't hide a valid period
-                    console.warn(`[Auth] Period doc "${doc.id}" has schoolName "${docSchoolName}" but expected "${schoolName}". Including anyway.`);
-                }
+                    const data = normalizeSchoolData(doc.data());
+                    let academicYear = data.settings?.academicYear;
+                    let academicTerm = data.settings?.academicTerm;
 
-                periods.push({
-                    year: academicYear || 'Unknown Year',
-                    term: academicTerm || 'Unknown Term',
-                    docId: doc.id
+                    // Fallback: Parse from docId if settings are missing (handles partially created or legacy docs)
+                    if (!academicYear || !academicTerm) {
+                        const parts = doc.id.split('_');
+                        if (parts.length >= 3) {
+                            // Extract year (e.g. 2025-2026)
+                            if (!academicYear) academicYear = parts[1];
+                            // Extract term (e.g. Third-Term -> Third Term)
+                            if (!academicTerm) academicTerm = parts[2].replace(/-/g, ' ');
+                        }
+                    }
+
+                    if (!academicYear && !academicTerm) return;
+
+                    periods.push({
+                        year: academicYear || 'Unknown Year',
+                        term: academicTerm || 'Unknown Term',
+                        docId: doc.id
+                    });
                 });
-            });
+            }
 
             // Clean up temp app if used
             if (tempApp) {
@@ -1890,7 +1987,8 @@ export const saveDataTransaction = async (
             };
             console.log(`[Firebase] 📤 Saving Multi-Update to schools/${docId}:`, finalPayload);
 
-            operations.push((batch) => batch.update(docRef, finalPayload));
+            // Use set with merge: true to support upsert (creating new terms)
+            operations.push((batch) => batch.set(docRef, finalPayload, { merge: true }));
         } else if (Object.keys(updates).length > 0) {
             const docRef = doc(db, "schools", docId);
             const metadata: Record<string, any> = {};
@@ -1898,7 +1996,8 @@ export const saveDataTransaction = async (
                 metadata[`metadata.lastUpdated.${key}`] = serverTimestamp();
             });
             console.log(`[Firebase] 📤 Saving Metadata-Only Update to schools/${docId}:`, metadata);
-            operations.push((batch) => batch.update(docRef, metadata));
+            // Use set with merge: true to support upsert
+            operations.push((batch) => batch.set(docRef, metadata, { merge: true }));
         }
 
         if (operations.length > 0) {
@@ -1957,7 +2056,7 @@ export const logUserActivity = debounce(async (docId: string, log: UserLog) => {
         const docRef = doc(db, "schools", docId);
         const docSnap = await loggedGetDoc(docRef, `logUserActivity/${docId}`);
         if (docSnap.exists()) {
-            const data = docSnap.data() as any;
+            const data = normalizeSchoolData(docSnap.data());
             const logs = data.userLogs || [];
             logs.push(log);
             if (logs.length > 20) logs.splice(0, logs.length - 20); // Strict Prune
@@ -2028,13 +2127,15 @@ export const initializeNewTermDatabase = async (docId: string, data: AppDataType
     // subcollection structure (Fan-Out) immediately.
     await saveDataTransaction(docId, data);
 
-    // OPTIMIZATION: Also create the student bucket if students are provided
     if (data.students && data.students.length > 0) {
         0 && console.log(`[Firebase] Creating student bucket during term initialization...`);
         await updateStudentBucket(docId, data.students).catch(e => {
             console.error('[Firebase] Warning: Failed to create student bucket during init (non-critical)', e);
         });
     }
+
+    // Invalidate auth caches so the new term is immediately visible in login flows
+    clearAuthCaches();
 };
 
 export const loginOrRegisterSchool = async (docId: string, password: string, initialData: AppDataType, createIfMissing: boolean = false, targetDatabaseIndex?: number): Promise<{ status: string; data?: AppDataType; message?: string; docId?: string; subscription?: any }> => {
@@ -2102,7 +2203,7 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
                     const docSnap = await loggedGetDoc(docRef, `loginOrRegisterSchool_tempDb/${targetDatabaseIndex}/${docId}`);
 
                     if (docSnap.exists()) {
-                        const data = docSnap.data() as AppDataType;
+                        const data = normalizeSchoolData(docSnap.data());
                         if (data.password !== password) return { status: 'wrong_password' };
                         // Fetch subscription for existing school in other DB
                         const subRef = doc(tempDb, 'subscriptions', docId.split('_')[0].toLowerCase());
@@ -2167,7 +2268,7 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
 
             if (docSnap.exists()) {
                 0 && console.log(`[FIREBASE_DEBUG] Processing existing document...`);
-                const data = docSnap.data() as AppDataType;
+                const data = normalizeSchoolData(docSnap.data());
 
                 // Debug logs for password comparison (be careful with real passwords in logs, but for debug it's ok)
                 // console.log(`[FIREBASE_DEBUG] Stored password: ${data.password}, Provided: ${password}`);
@@ -2278,7 +2379,7 @@ export const getUserById = async (docId: string, userId: number): Promise<User |
     const docRef = doc(db, "schools", docId);
     const docSnap = await loggedGetDoc(docRef, `getUserById/${docId}`);
     if (docSnap.exists()) {
-        const data = docSnap.data() as AppDataType;
+        const data = normalizeSchoolData(docSnap.data());
         return data.users?.find(u => u.id === userId) || null;
     }
     return null;
@@ -2345,7 +2446,7 @@ export const getSchoolTermData = async (docId: string): Promise<AppDataType | nu
 
         if (!docSnap.exists()) return null;
 
-        const mainData = docSnap.data() as AppDataType;
+        const mainData = normalizeSchoolData(docSnap.data());
         0 && console.log(`[getSchoolTermData] Processing term: ${docId}`);
 
         // Parallelize subcollection fetches for this specific term
