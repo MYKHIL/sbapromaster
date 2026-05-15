@@ -168,7 +168,7 @@ const AppContent: React.FC = () => {
         <GreetingWrapper currentPage={currentPage} />
         <TeacherPageRedirect currentPage={currentPage} setCurrentPage={handleNavigate} />
         <div className="fixed top-2 lg:top-4 right-2 lg:right-4 z-[60] flex flex-col items-end gap-1.5 pointer-events-none transition-all duration-300">
-          <div className="pointer-events-auto"><UserBadge onOpenTutorial={() => setIsTutorialOpen(true)} /></div>
+          <div className="pointer-events-auto">{!isTutorialOpen && <UserBadge onOpenTutorial={() => setIsTutorialOpen(true)} />}</div>
           <div className="pointer-events-auto"><GlobalActionBar currentPage={currentPage} onNavigate={handleNavigate} /></div>
         </div>
 
@@ -185,8 +185,8 @@ const AppContent: React.FC = () => {
         </div>
       </AuthOverlay>
 
-      {/* Floating Help Button - Visible on Welcome/Login, Hidden when Logged In */}
-      {!isAuthenticated && (
+      {/* Floating Help Button - Visible on Welcome/Login, Hidden when Logged In or during tutorial */}
+      {!isAuthenticated && !isTutorialOpen && (
         <button
           onClick={() => {
             setIsTutorialOpen(true);
