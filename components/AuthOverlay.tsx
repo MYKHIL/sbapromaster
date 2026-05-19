@@ -28,7 +28,7 @@ interface AuthOverlayProps {
 
 const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
     const { loadImportedData, setSchoolId, pauseSync, resumeSync, isFetching } = useData();
-    const { setUsers, users, login, setPassword: setUserPassword, checkAutoLogin, isAuthenticated } = useUser();
+    const { setUsers, users, login, setPassword: setUserPassword, checkAutoLogin, isAuthenticated, switchAccount } = useUser();
 
     // Navigation state
     const [currentStep, setCurrentStep] = useState<AuthStep>('welcome');
@@ -116,6 +116,8 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                         localStorage.removeItem('pending_school_selection'); // Clear bad data
                     }
                 }
+                console.log("[AuthOverlay] 🔍 restoreSession triggered!");
+                console.log("[AuthOverlay] localStorage keys - sba_school_id:", localStorage.getItem('sba_school_id'), "sba_force_term_select:", localStorage.getItem('sba_force_term_select'));
                 const savedSchoolId = localStorage.getItem('sba_school_id');
                 const savedSchoolPassword = localStorage.getItem('sba_school_password');
                 const savedUserId = localStorage.getItem('sba_user_id');
@@ -165,6 +167,27 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 setSchoolId(result.docId || savedSchoolId);
                 setUsers(result.data.users || []);
 
+                console.log("[AuthOverlay] Checking for sba_force_term_select in localStorage...");
+                const forceTermSelect = localStorage.getItem('sba_force_term_select') === 'true';
+                console.log("[AuthOverlay] sba_force_term_select value is:", forceTermSelect);
+                if (forceTermSelect) {
+                    console.log("[AuthOverlay] sba_force_term_select is true. Clearing flag from localStorage...");
+                    localStorage.removeItem('sba_force_term_select');
+                    const schoolItem: SchoolListItem = {
+                        docId: result.docId || savedSchoolId,
+                        displayName: result.data.settings?.schoolName || savedSchoolId.split('_')[0],
+                        settings: result.data.settings,
+                        _databaseIndex: requiredIndex,
+                        access: result.data.Access
+                    };
+                    console.log("[AuthOverlay] Prepared schoolItem:", schoolItem);
+                    setSelectedSchool(schoolItem);
+                    setVerifiedPassword(savedSchoolPassword);
+                    console.log("[AuthOverlay] Redirecting directly to currentStep 'year-term'");
+                    setCurrentStep('year-term');
+                    return;
+                }
+
                 // CASE A: User session also exists -> Show Restore Dialog
                 if (savedUserId && savedUserPassword) {
                     const user = result.data.users?.find(u => u.id === parseInt(savedUserId));
@@ -193,6 +216,45 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
 
         restoreSession();
     }, []);
+
+    // Switch Term Direct Navigation Event (No Reload)
+    useEffect(() => {
+        const handleSwitchTermEvent = async () => {
+            console.log('[AuthOverlay] 🔄 Received sba-switch-term event');
+            
+            // 1. Partial logout of active user session (preserves school context)
+            switchAccount();
+
+            // 2. Load school info from local storage
+            const savedSchoolId = localStorage.getItem('sba_school_id');
+            const savedSchoolPassword = localStorage.getItem('sba_school_password');
+
+            if (savedSchoolId && savedSchoolPassword) {
+                const { SCHOOL_DATABASE_MAPPING } = await import('../constants');
+                const schoolPrefix = savedSchoolId.split('_')[0].toLowerCase();
+                const requiredIndex = SCHOOL_DATABASE_MAPPING[schoolPrefix];
+
+                const schoolItem: SchoolListItem = {
+                    docId: savedSchoolId,
+                    displayName: schoolData?.settings?.schoolName || savedSchoolId.split('_')[0],
+                    settings: schoolData?.settings,
+                    _databaseIndex: requiredIndex,
+                    access: schoolData?.Access
+                };
+
+                setSelectedSchool(schoolItem);
+                setVerifiedPassword(savedSchoolPassword);
+                setCurrentStep('year-term');
+            } else {
+                setCurrentStep('school-list');
+            }
+        };
+
+        window.addEventListener('sba-switch-term', handleSwitchTermEvent);
+        return () => {
+            window.removeEventListener('sba-switch-term', handleSwitchTermEvent);
+        };
+    }, [schoolData, switchAccount]);
 
     // Handle session restore - continue
     const handleContinueSession = async () => {

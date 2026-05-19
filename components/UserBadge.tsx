@@ -19,7 +19,7 @@ const UserBadge: React.FC<{ onOpenTutorial?: () => void }> = ({ onOpenTutorial }
     const [showTermInfo, setShowTermInfo] = useState(false);
     const [showUserInfo, setShowUserInfo] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
-    
+
     // Term Switching State
     const [showTermSelect, setShowTermSelect] = useState(false);
     const [availableTerms, setAvailableTerms] = useState<string[]>([]);
@@ -32,11 +32,16 @@ const UserBadge: React.FC<{ onOpenTutorial?: () => void }> = ({ onOpenTutorial }
     // Close on click outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (showTermInfo && termInfoRef.current && !termInfoRef.current.contains(event.target as Node)) {
-                setShowTermInfo(false);
+            const target = event.target as HTMLElement;
+            if (showTermInfo && termInfoRef.current && !termInfoRef.current.contains(target)) {
+                if (!target.closest('[title="View Term Information"]')) {
+                    setShowTermInfo(false);
+                }
             }
-            if (showUserInfo && userInfoRef.current && !userInfoRef.current.contains(event.target as Node)) {
-                setShowUserInfo(false);
+            if (showUserInfo && userInfoRef.current && !userInfoRef.current.contains(target)) {
+                if (!target.closest('[title="View My Information"]')) {
+                    setShowUserInfo(false);
+                }
             }
         };
 
@@ -63,7 +68,7 @@ const UserBadge: React.FC<{ onOpenTutorial?: () => void }> = ({ onOpenTutorial }
             const prefix = schoolId.split('_')[0];
             const ids = await getSchoolTermIds(prefix);
             // Sort terms chronologically (approx by ID)
-            setAvailableTerms(ids.sort((a,b) => b.localeCompare(a)));
+            setAvailableTerms(ids.sort((a, b) => b.localeCompare(a)));
         } catch (e) {
             console.error("Failed to fetch terms:", e);
         } finally {
@@ -73,7 +78,7 @@ const UserBadge: React.FC<{ onOpenTutorial?: () => void }> = ({ onOpenTutorial }
 
     const handleTermSelect = (targetTermId: string) => {
         if (targetTermId === schoolId) return;
-        
+
         // We set the target school ID. 
         // Authentication uses the existing sba_school_password and sba_user_password in localStorage.
         // If they differ, AuthOverlay will fail its auto-restore and prompt for the password.
@@ -186,7 +191,7 @@ const UserBadge: React.FC<{ onOpenTutorial?: () => void }> = ({ onOpenTutorial }
                                 </div>
                             </>
                         ) : (
-                            <div className="relative" ref={userInfoRef}>
+                            <div className="relative">
                                 {/* Initials Display - Clickable */}
                                 <button
                                     onClick={(e) => {
@@ -248,7 +253,7 @@ const UserBadge: React.FC<{ onOpenTutorial?: () => void }> = ({ onOpenTutorial }
                         )}
 
                         {/* Term Info Indicator - Replaces Network Indicator */}
-                        <div className="relative" ref={termInfoRef}>
+                        <div className="relative">
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
@@ -377,8 +382,8 @@ const UserBadge: React.FC<{ onOpenTutorial?: () => void }> = ({ onOpenTutorial }
 
             {/* Mobile Backdrop for Popups */}
             {(showUserInfo || showTermInfo) && (
-                <div 
-                    className="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-[65] md:hidden"
+                <div
+                    className="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-[65] md:hidden pointer-events-auto"
                     onClick={() => {
                         setShowUserInfo(false);
                         setShowTermInfo(false);
@@ -389,7 +394,8 @@ const UserBadge: React.FC<{ onOpenTutorial?: () => void }> = ({ onOpenTutorial }
             {/* User Info Popup - Centered on Mobile */}
             {showUserInfo && (
                 <div
-                    className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-[320px] bg-white rounded-xl shadow-2xl border border-gray-100 p-5 z-[70] animate-in fade-in zoom-in-95 duration-200 md:absolute md:top-full md:right-0 md:mt-2 md:translate-x-0 md:translate-y-0 md:left-auto md:w-72"
+                    ref={userInfoRef}
+                    className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-[320px] bg-white rounded-xl shadow-2xl border border-gray-100 p-5 z-[70] animate-in fade-in zoom-in-95 duration-200 md:absolute md:top-full md:right-0 md:mt-2 md:translate-x-0 md:translate-y-0 md:left-auto md:w-72 pointer-events-auto"
                     onClick={(e) => e.stopPropagation()}
                 >
                     <div className="flex flex-col items-center mb-4 pb-4 border-b border-gray-50">
@@ -454,7 +460,8 @@ const UserBadge: React.FC<{ onOpenTutorial?: () => void }> = ({ onOpenTutorial }
             {/* Term Info Popup - Centered on Mobile */}
             {showTermInfo && (
                 <div
-                    className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-[320px] bg-white rounded-2xl shadow-2xl border border-blue-100 p-4 z-[70] animate-in fade-in zoom-in-95 duration-200 overflow-hidden md:absolute md:top-full md:right-0 md:mt-2 md:translate-x-0 md:translate-y-0 md:left-auto md:w-72"
+                    ref={termInfoRef}
+                    className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-[320px] bg-white rounded-2xl shadow-2xl border border-blue-100 p-4 z-[70] animate-in fade-in zoom-in-95 duration-200 overflow-hidden md:absolute md:top-full md:right-0 md:mt-2 md:translate-x-0 md:translate-y-0 md:left-auto md:w-72 pointer-events-auto"
                     onClick={(e) => e.stopPropagation()}
                 >
                     {showTermSelect ? (
@@ -543,8 +550,16 @@ const UserBadge: React.FC<{ onOpenTutorial?: () => void }> = ({ onOpenTutorial }
                                         <span className="font-semibold text-gray-900">{settings?.reopeningDate ? new Date(settings.reopeningDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not Set'}</span>
                                     </div>
                                 </div>
-                                <div className="pt-3 flex flex-col gap-2">
-                                    <button onClick={(e) => { e.stopPropagation(); handleFetchTerms(); }} className="w-full py-2.5 px-4 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-lg shadow-blue-200">
+                                <div className="pt-3 flex flex-col gap-2 pointer-events-auto">
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setShowTermInfo(false);
+                                            window.dispatchEvent(new CustomEvent('sba-switch-term'));
+                                        }}
+                                        className="w-full py-2.5 px-4 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-200 pointer-events-auto cursor-pointer"
+                                    >
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                                         </svg>
