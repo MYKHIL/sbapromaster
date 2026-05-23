@@ -203,13 +203,13 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ isOpen, onClose }) =>
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center animate-in fade-in duration-300">
-      <div className="absolute inset-0 bg-indigo-950 md:bg-indigo-950/90 md:backdrop-blur-xl" onClick={onClose} />
+      <div className="absolute inset-0 bg-indigo-950 md:bg-indigo-950/90 md:backdrop-blur-xl pointer-events-none" onClick={onClose} />
 
       <div className="relative w-full h-full md:w-[95%] md:h-[90%] max-w-7xl md:max-h-[900px] bg-white md:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col border-none md:border md:border-white/20">
         
         {/* Header */}
-        <div className="absolute top-0 left-0 right-0 z-[60] flex items-center justify-between p-4 md:p-6 bg-gradient-to-b from-white/95 to-white/50 backdrop-blur-sm md:bg-transparent md:backdrop-blur-none">
-            <div className="flex items-center gap-2 md:gap-4">
+        <div className="absolute top-0 left-0 right-0 z-[60] flex items-center justify-between p-4 md:p-6 bg-gradient-to-b from-white/95 to-white/50 backdrop-blur-sm md:bg-transparent md:backdrop-blur-none pointer-events-none">
+            <div className="flex items-center gap-2 md:gap-4 pointer-events-auto">
                 <div className="w-8 h-8 md:w-10 md:h-10 bg-indigo-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200">
                     <Info className="text-white" size={16} md:size={20} strokeWidth={3} />
                 </div>
@@ -219,7 +219,7 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ isOpen, onClose }) =>
                 </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 pointer-events-auto">
                 {/* Mobile Menu Toggle */}
                 <button 
                   onClick={() => setShowSectionList(!showSectionList)}
@@ -234,7 +234,7 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ isOpen, onClose }) =>
         </div>
 
         {/* Floating Settings - Visible on Desktop */}
-        <div className="hidden md:flex absolute top-6 right-20 z-30 items-center gap-3">
+        <div className="hidden md:flex absolute top-6 right-20 z-[70] items-center gap-3">
             <div className="flex items-center gap-3 bg-white/90 backdrop-blur-md p-1.5 px-3 rounded-2xl border border-gray-100 shadow-sm">
                 <label className="flex items-center gap-2 cursor-pointer group">
                     <div className="relative">

@@ -4,11 +4,38 @@ import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
 
-// Load environment variables from .env if it exists (for local testing)
-dotenv.config();
+// Load environment variables from .env relative to script location
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const ENV_PATH = path.join(__dirname, '..', '.env');
 
-const PROJECT_ROOT = process.cwd();
+// Read the .env file directly to make sure we parse all variables independently of working directory
+const envVars = {};
+if (fs.existsSync(ENV_PATH)) {
+    try {
+        const content = fs.readFileSync(ENV_PATH, 'utf8');
+        const lines = content.split(/\r?\n/);
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed && !trimmed.startsWith('#') && trimmed.includes('=')) {
+                const parts = trimmed.split('=');
+                const key = parts[0].trim();
+                const value = parts.slice(1).join('=').trim();
+                envVars[key] = value;
+            }
+        }
+    } catch (err) {
+        console.warn('⚠️ Could not read or parse .env file directly:', err.message);
+    }
+}
+
+// Merge with process.env and call dotenv config as fallback
+dotenv.config({ path: ENV_PATH });
+const mergedEnv = { ...envVars, ...process.env };
+
+const PROJECT_ROOT = path.join(__dirname, '..');
 const DATA_CONTEXT_PATH = path.join(PROJECT_ROOT, 'context', 'DataContext.tsx');
 
 async function updateVersion() {
@@ -39,8 +66,7 @@ async function updateVersion() {
     }
 
     // 3. Dynamic Firebase Discovery
-    const firebaseConfigs = [];
-    const envKeys = Object.keys(process.env);
+    const envKeys = Object.keys(mergedEnv);
     
     // Find all indices X where FIREBASE_X_API_KEY exists
     const indices = new Set();
@@ -49,17 +75,20 @@ async function updateVersion() {
         if (match) indices.add(match[1]);
     });
 
-    console.log(`🔍 Found ${indices.size} Firebase configurations to update.`);
+    // Sort indices numerically so they broadcast in order
+    const sortedIndices = Array.from(indices).map(Number).sort((a, b) => a - b);
 
-    for (const index of indices) {
+    console.log(`🔍 Found ${sortedIndices.length} Firebase configurations to update: ${sortedIndices.join(', ')}`);
+
+    for (const index of sortedIndices) {
         const config = {
-            apiKey: process.env[`FIREBASE_${index}_API_KEY`],
-            authDomain: process.env[`FIREBASE_${index}_AUTH_DOMAIN`],
-            projectId: process.env[`FIREBASE_${index}_PROJECT_ID`],
-            storageBucket: process.env[`FIREBASE_${index}_STORAGE_BUCKET`],
-            messagingSenderId: process.env[`FIREBASE_${index}_MESSAGING_SENDER_ID`],
-            appId: process.env[`FIREBASE_${index}_APP_ID`],
-            measurementId: process.env[`FIREBASE_${index}_MEASUREMENT_ID`],
+            apiKey: mergedEnv[`FIREBASE_${index}_API_KEY`],
+            authDomain: mergedEnv[`FIREBASE_${index}_AUTH_DOMAIN`],
+            projectId: mergedEnv[`FIREBASE_${index}_PROJECT_ID`],
+            storageBucket: mergedEnv[`FIREBASE_${index}_STORAGE_BUCKET`],
+            messagingSenderId: mergedEnv[`FIREBASE_${index}_MESSAGING_SENDER_ID`],
+            appId: mergedEnv[`FIREBASE_${index}_APP_ID`],
+            measurementId: mergedEnv[`FIREBASE_${index}_MEASUREMENT_ID`],
         };
 
         if (!config.apiKey || !config.projectId) {
@@ -78,7 +107,7 @@ async function updateVersion() {
                 version: newVersion,
                 updatedAt: serverTimestamp(),
                 deployedBy: 'Vercel Build Script',
-                deploymentSecret: process.env.PASSWORD_HASH || ''
+                deploymentSecret: mergedEnv.PASSWORD_HASH || ''
             }, { merge: true });
 
             console.log(`✅ Broadcasted to database ${index} (${config.projectId})`);

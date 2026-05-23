@@ -85,10 +85,12 @@ export const setSchoolDatabaseMapping = (mapping: { [key: string]: number }) => 
   SCHOOL_DATABASE_MAPPING = mapping;
 };
 
-export let ACTIVATION_HASH = '';
+export let ACTIVATION_HASH = 'c93a215026f36ac783bcac8ba5e4bbea1c3cdb6c79d3824f9712143c44dbb0f3';
 
 export const setActivationHash = (hash: string) => {
-  ACTIVATION_HASH = hash;
+  if (hash) {
+    ACTIVATION_HASH = hash;
+  }
 };
 export let PAYSTACK_PUBLIC_KEY = '';
 

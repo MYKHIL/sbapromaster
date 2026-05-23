@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SUBSCRIPTION_TIERS, ADMIN_EMAIL, PAYSTACK_PUBLIC_KEY } from '../constants';
 import { AppDataType, getSchoolList, SchoolListItem } from '../services/firebaseService';
-import { initializePayment, loadPaystackScript, activateSubscription } from '../services/paystackService';
+import { initializePayment, loadPaystackScript, activateSubscription, verifyPayment } from '../services/paystackService';
 import MessageBox from './MessageBox';
 
 interface SubscriptionRequestModalProps {
@@ -219,15 +219,39 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
 
         setIsProcessingPayment(true);
 
+        // Define checkPaymentAndDbStatus helper to poll verification endpoint
+        const checkPaymentAndDbStatus = async (ref: string) => {
+            const maxAttempts = 40; // up to 40 seconds
+            for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                try {
+                    const verifyRes = await verifyPayment(ref);
+                    if (verifyRes.status === 'success' && verifyRes.dbActivated) {
+                        return true;
+                    }
+                } catch (pollErr) {
+                    console.warn('[Polling] Verification check failed:', pollErr);
+                }
+                await new Promise(r => setTimeout(r, 1000));
+            }
+            throw new Error('Payment was received, but database activation is taking longer than expected. Please check your dashboard in a moment.');
+        };
+
         try {
-            // 1. Initialize Transaction with calculated amount
-            0 && console.log('[Paystack] Initializing with:', { email: paymentEmail, amount: calculatedAmount });
-            const initResponse = await initializePayment(paymentEmail, calculatedAmount, {
-                schoolId: selectedSchool.docId,
-                schoolName: selectedSchool.displayName,
-                tierName: currentTier.name,
-                duration: customDurationStr
-            });
+            // 1. Initialize Transaction with raw parameters
+            0 && console.log('[Paystack] Initializing with raw configurations:', { email: paymentEmail, tierName: currentTier.name });
+            const initResponse = await initializePayment(
+                paymentEmail,
+                currentTier.name,
+                durationValue,
+                durationUnit,
+                selectedSchool.docId,
+                selectedSchool.displayName,
+                selectedSchool._databaseIndex || 1,
+                pendingRegistration ? {
+                    password: pendingRegistration.password,
+                    registrationData: pendingRegistration.registrationData
+                } : undefined
+            );
 
             // Use the key from the environment (Vite prefetched) or the one loaded dynamically from API
             const publicKey = (import.meta as any).env?.VITE_PAYSTACK_PUBLIC_KEY || PAYSTACK_PUBLIC_KEY;
@@ -267,31 +291,8 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                 callback: (response: any) => {
                     const handleSuccess = async () => {
                         try {
-                            // Activation is always cumulative by default:
-                            // - If school has an unexpired period, the new duration is ADDED to it.
-                            // - If expired (or no subscription), a new session starts from today.
-                            const addTime = true;
-
-                            // Activate with the user-selected custom duration
-                            const tierWithCustomDuration = {
-                                ...currentTier,
-                                duration: customDurationStr
-                            };
-
-                            const subResult = await activateSubscription(
-                                response.reference,
-                                {
-                                    id: selectedSchool.docId,
-                                    name: selectedSchool.displayName,
-                                    dbIndex: selectedSchool._databaseIndex || 1
-                                },
-                                tierWithCustomDuration,
-                                addTime,
-                                pendingRegistration ? {
-                                    password: pendingRegistration.password,
-                                    initialData: pendingRegistration.registrationData
-                                } : undefined
-                            );
+                            // Poll verifyPayment until the backend webhook activates the database
+                            await checkPaymentAndDbStatus(response.reference);
 
                             await showMsg({
                                 title: "Activation Successful",
@@ -311,23 +312,26 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                                 return;
                             }
 
-                            if (pendingRegistration && onSuccess) {
-                                onSuccess(pendingRegistration.registrationData, pendingRegistration.docId, pendingRegistration.password, subResult);
+                            if (onSuccess) {
+                                onSuccess(
+                                    pendingRegistration ? pendingRegistration.registrationData : (null as any),
+                                    selectedSchool.docId,
+                                    pendingRegistration ? pendingRegistration.password : '',
+                                    { success: true }
+                                );
                             } else {
                                 onClose();
                             }
                         } catch (err: any) {
                             console.error(err);
-                            const userFriendlyMsg = err.message?.includes('permission') || err.message?.includes('auth')
-                                ? "Activation failed due to a connection or authorization issue. Please try again or contact support."
-                                : (err.message || "Payment successful but activation failed. Please contact support.");
+                            const userFriendlyMsg = err.message || "Payment successful but activation timed out. Please contact support.";
 
                             await showMsg({
-                                title: "Activation Failed",
+                                title: "Activation Pending",
                                 message: userFriendlyMsg,
                                 confirmText: "Understood",
                                 hideCancel: true,
-                                variant: "danger"
+                                variant: "warning"
                             });
                             setPaymentError(userFriendlyMsg);
                         }
@@ -411,8 +415,13 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                 return;
             }
 
-            if (pendingRegistration && onSuccess) {
-                onSuccess(pendingRegistration.registrationData, pendingRegistration.docId, pendingRegistration.password, null); // For trial, subscription will be fetched on login
+            if (onSuccess) {
+                onSuccess(
+                    pendingRegistration ? pendingRegistration.registrationData : (null as any),
+                    selectedSchool.docId,
+                    pendingRegistration ? pendingRegistration.password : '',
+                    null
+                );
             } else {
                 onClose();
             }

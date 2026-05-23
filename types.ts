@@ -40,6 +40,8 @@ export interface SchoolSettings {
   indexNumberCounterDigits?: number;
   showAggregateScore?: boolean;
   aggregateScoreClasses?: number[];
+  autoAssignIndexNumbers?: boolean;
+  indexNumberAutoSort?: boolean;
 }
 
 export interface Subject {
@@ -117,7 +119,7 @@ export interface Assessment {
   id: number;
   name: string;
   weight: number;
-  type: 'Class' | 'Exam';
+  type?: 'Class' | 'Exam';
   _isLocallyCreated?: boolean;
   deleted?: boolean;
   deletedAt?: string;

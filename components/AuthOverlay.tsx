@@ -960,7 +960,6 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                             } else {
                                 // Just a renewal
                                 setIsSubscriptionModalOpen(false);
-                                alert('Subscription activated successfully! Please login again.');
                                 window.location.reload();
                             }
                         }}

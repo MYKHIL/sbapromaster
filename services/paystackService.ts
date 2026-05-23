@@ -16,28 +16,32 @@ interface VerifyPaymentResponse {
     customer: {
         email: string;
     };
-}
-
-interface MetaData {
-    [key: string]: any;
+    dbActivated?: boolean; // Indicates if the backend webhook has completed the database updates
 }
 
 /**
- * Initializes a Paystack transaction
- * @param email User's email address
- * @param amount Amount in GHS
- * @param metadata Additional data to store with transaction
+ * Initializes a Paystack transaction securely by passing raw configurations to the server
  */
 export const initializePayment = async (
     email: string,
-    amount: number,
-    metadata: MetaData = {}
+    tierName: string,
+    durationValue: number,
+    durationUnit: string,
+    schoolId: string,
+    schoolName: string,
+    dbIndex: number,
+    pendingRegistration?: any
 ): Promise<InitializePaymentResponse> => {
     try {
         const response = await axios.post(`${API_BASE_URL}/initialize-payment`, {
             email,
-            amount,
-            metadata
+            tierName,
+            durationValue,
+            durationUnit,
+            schoolId,
+            schoolName,
+            dbIndex,
+            pendingRegistration
         });
 
         return response.data;
@@ -61,13 +65,8 @@ export const verifyPayment = async (reference: string): Promise<VerifyPaymentRes
     }
 };
 
-import { activateSchoolSubscriptionLocally } from './firebaseService';
-
 /**
- * Activates subscription after successful payment
- * @param reference Payment reference
- * @param schoolDetails School information
- * @param tier Subscription tier details
+ * Activates a subscription (Trial only on the client-side, delegates to backend)
  */
 export const activateSubscription = async (
     reference: string,
@@ -77,7 +76,17 @@ export const activateSubscription = async (
     registrationData?: { password: string; initialData: any }
 ): Promise<any> => {
     try {
-        return await activateSchoolSubscriptionLocally(reference, schoolDetails, tier, addRemainingTime, registrationData);
+        const response = await axios.post(`${API_BASE_URL}/activate-trial`, {
+            schoolId: schoolDetails.id,
+            schoolName: schoolDetails.name,
+            dbIndex: schoolDetails.dbIndex,
+            email: 'trial-activation@sbapromaster.com',
+            pendingRegistration: registrationData ? {
+                password: registrationData.password,
+                registrationData: registrationData.initialData
+            } : undefined
+        });
+        return response.data;
     } catch (error) {
         console.error('Subscription activation failed:', error);
         throw error;

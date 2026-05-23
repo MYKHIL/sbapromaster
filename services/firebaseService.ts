@@ -905,24 +905,18 @@ export const activateSchoolSubscriptionLocally = async (
     try {
         const { ACTIVE_DATABASE_INDEX, ACTIVATION_HASH } = await import('../constants');
 
-        // Determine target DB
-        let targetDb = db;
-        let targetProjectId = (db as any).app?.options?.projectId || 'primary';
+        // ALWAYS initialize a temporary Firestore instance without cache for activation writes
+        // to bypass local cache and force synchronous server-side verification.
+        const config = FIREBASE_CONFIGS[dbIndex];
+        if (!config) throw new Error(`Invalid database index: ${dbIndex}`);
 
-        if (dbIndex !== ACTIVE_DATABASE_INDEX) {
-            const config = FIREBASE_CONFIGS[dbIndex];
-            if (!config) throw new Error(`Invalid database index: ${dbIndex}`);
-
-            const appName = `temp_activate_${dbIndex}_${Date.now()}`;
-            tempApp = initializeApp(config, appName);
-            targetDb = initializeFirestore(tempApp, {
-                experimentalForceLongPolling: true
-            });
-            targetProjectId = config.projectId;
-            console.log(`[Activation] 🎯 Targeting Database Index: ${dbIndex} (Project: ${targetProjectId})`);
-        } else {
-            console.log(`[Activation] 🎯 Targeting ACTIVE Database Index: ${dbIndex} (Project: ${targetProjectId})`);
-        }
+        const appName = `temp_activate_${dbIndex}_${Date.now()}`;
+        tempApp = initializeApp(config, appName);
+        const targetDb = initializeFirestore(tempApp, {
+            experimentalForceLongPolling: true
+        });
+        const targetProjectId = config.projectId;
+        console.log(`[Activation] 🎯 Targeting Database Index: ${dbIndex} (Project: ${targetProjectId}) - Bypassing local cache`);
 
         // 1. Subscription Calculations
         const isTrial = reference.startsWith('FREE_');
@@ -961,16 +955,24 @@ export const activateSchoolSubscriptionLocally = async (
             maxClass: parseInt(tier.maxClass),
             expiryDate: Timestamp.fromDate(expiryDate),
             lastActivated: Timestamp.now(),
-            activationHash: ACTIVATION_HASH || (isTrial ? 'TRIAL_ACTIVATION' : 'ONLINE_PAYMENT'),
+            activationHash: ACTIVATION_HASH || 'c93a215026f36ac783bcac8ba5e4bbea1c3cdb6c79d3824f9712143c44dbb0f3',
             planName: tier.name,
             paymentReference: reference
         };
 
-        // 2. Step 1: Create Root School and Subscription (Must exist for subcollection writes)
+        // 2. Step 1: Write Subscription Record first (Crucial for B-G rules)
+        // We write the subscription record first and await its server confirmation.
+        // This ensures the subscription is active before we attempt to update any school documents,
+        // which requires the subscription to be active under Firestore security rules.
+        console.log(`[Activation] ✍️ Writing subscription record for ${baseName}...`);
+        await setDoc(subDocRef, subscriptionData, { merge: true });
+        console.log(`[Activation] ✅ Subscription record written successfully.`);
+
+        // 3. Step 1.5: Create/Update School and Variants
         const batch1 = writeBatch(targetDb);
 
         if (registrationData) {
-            0 && console.log(`[Activation] ✍️ Step 1: Queueing root school creation for ${schoolId}...`);
+            console.log(`[Activation] ✍️ Queueing root school creation for ${schoolId}...`);
             const { initialData, password } = registrationData;
             const mainDocRef = doc(targetDb, 'schools', schoolId);
 
@@ -982,7 +984,7 @@ export const activateSchoolSubscriptionLocally = async (
                 ...mainData,
                 password,
                 Access: true,
-                activationHash: ACTIVATION_HASH
+                activationHash: ACTIVATION_HASH || 'c93a215026f36ac783bcac8ba5e4bbea1c3cdb6c79d3824f9712143c44dbb0f3'
             }, { merge: true });
         }
 
@@ -995,7 +997,7 @@ export const activateSchoolSubscriptionLocally = async (
             const variantSnapshot = await getDocs(qVariants);
             variantSnapshot.forEach(d => {
                 if (d.id === baseName || d.id.startsWith(baseName + '_')) {
-                    batch1.set(d.ref, { Access: true, activationHash: ACTIVATION_HASH }, { merge: true });
+                    batch1.set(d.ref, { Access: true, activationHash: ACTIVATION_HASH || 'c93a215026f36ac783bcac8ba5e4bbea1c3cdb6c79d3824f9712143c44dbb0f3' }, { merge: true });
                     variantsCount++;
                 }
             });
@@ -1004,17 +1006,13 @@ export const activateSchoolSubscriptionLocally = async (
         }
 
         if (variantsCount === 0) {
-            batch1.set(doc(targetDb, 'schools', schoolId), { Access: true, activationHash: ACTIVATION_HASH }, { merge: true });
+            batch1.set(doc(targetDb, 'schools', schoolId), { Access: true, activationHash: ACTIVATION_HASH || 'c93a215026f36ac783bcac8ba5e4bbea1c3cdb6c79d3824f9712143c44dbb0f3' }, { merge: true });
             variantsCount = 1;
         }
 
-        // C. WRITE SUBSCRIPTION RECORD (Crucial for B-G rules)
-        0 && console.log(`[Activation] ✍️ Step 1: Queueing subscription record...`);
-        batch1.set(subDocRef, subscriptionData, { merge: true });
-
-        // COMMIT STEP 1: Foundational documents
+        // COMMIT STEP 1.5: School and variant updates
         await batch1.commit();
-        0 && console.log(`[Activation] ✅ Step 1 complete. Foundation created.`);
+        console.log(`[Activation] ✅ Step 1.5 complete. School and variants updated.`);
 
         // 3. Step 2: Initialize Buckets (Crucially AFTER subscription exists in DB)
         if (registrationData) {

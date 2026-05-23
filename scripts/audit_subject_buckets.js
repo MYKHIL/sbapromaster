@@ -63,7 +63,7 @@ async function auditBuckets() {
 
         if (mismatches.length > 0) {
             console.log(`❌ Bucket [${bucketId}] has ${mismatches.length} MISPLACED scores!`);
-            mismatches.forEach(m =\u003e {
+            mismatches.forEach(m => {
                 console.log(`   - Score ${m.scoreId} belongs to Subject ${m.actualSubjectId} but is in Subject ${m.expectedSubjectId} bucket.`);
             });
             totalMismatches += mismatches.length;
@@ -73,7 +73,7 @@ async function auditBuckets() {
     }
 
     console.log(`\n-----------------------------------------`);
-    if (totalMismatches \u003e 0) {
+    if (totalMismatches > 0) {
         console.log(`🔴 TOTAL MISPLACED SCORES FOUND: ${totalMismatches}`);
         console.log(`\nRECOMMENDATION: Run the cleanup script (coming soon) to move these scores to their correct buckets.`);
     } else {
