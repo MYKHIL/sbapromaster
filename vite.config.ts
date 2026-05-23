@@ -92,6 +92,33 @@ export default defineConfig(({ mode }) => {
             console.log('[Mock API] Initializing payment request...');
             res.setHeader('Content-Type', 'application/json');
 
+            if (env.VITE_USE_EMULATOR !== 'true') {
+              try {
+                console.log('[Mock API] Forwarding initialize-payment to Vercel...');
+                const chunks: any[] = [];
+                for await (const chunk of req) {
+                  chunks.push(chunk);
+                }
+                const body = Buffer.concat(chunks).toString();
+
+                const vercelRes = await fetch('https://sbapromaster.vercel.app/api/initialize-payment', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body
+                });
+
+                const vercelData = await vercelRes.json();
+                res.statusCode = vercelRes.status;
+                return res.end(JSON.stringify(vercelData));
+              } catch (err: any) {
+                console.error('[Mock API] Failed to forward initialize-payment to Vercel:', err);
+                res.statusCode = 500;
+                return res.end(JSON.stringify({ success: false, error: err.message }));
+              }
+            }
+
             const secretKey = (env.PAYSTACK_SECRET_KEY || '').trim();
             // If we have a secret key locally, try to get a real reference
             if (secretKey) {
@@ -136,33 +163,112 @@ export default defineConfig(({ mode }) => {
               }
             }
 
-            // Fallback to mock reference (will 400 in real SDK, but survives the API call)
+            // Fallback to mock reference
             console.warn('[Mock API] Falling back to MOCK reference (PAYSTACK_SECRET_KEY missing or failed)');
             res.end(JSON.stringify({
               success: true,
-              authorization_url: 'https://checkout.paystack.com/mock',
-              access_code: 'mock_code',
+              authorizationUrl: 'https://checkout.paystack.com/mock',
+              accessCode: 'mock_code',
               reference: 'MOCK_' + Date.now()
             }));
           });
 
           // Mock Payment Verification
-          server.middlewares.use('/api/verify-payment', (req, res) => {
-            0 && console.log('[Mock API] Verifying payment...');
+          server.middlewares.use('/api/verify-payment', async (req, res) => {
             res.setHeader('Content-Type', 'application/json');
+
+            if (env.VITE_USE_EMULATOR !== 'true') {
+              try {
+                const url = new URL(req.url || '', `http://${req.headers.host}`);
+                const reference = url.searchParams.get('reference') || '';
+                console.log(`[Mock API] Forwarding verify-payment to Vercel for reference: ${reference}...`);
+
+                const vercelRes = await fetch(`https://sbapromaster.vercel.app/api/verify-payment?reference=${reference}`);
+                const vercelData = await vercelRes.json();
+                res.statusCode = vercelRes.status;
+                return res.end(JSON.stringify(vercelData));
+              } catch (err: any) {
+                console.error('[Mock API] Failed to forward verify-payment to Vercel:', err);
+                res.statusCode = 500;
+                return res.end(JSON.stringify({ success: false, error: err.message }));
+              }
+            }
+
             res.end(JSON.stringify({
               success: true,
               status: 'success',
               message: 'Verification successful',
+              dbActivated: true,
               data: { status: 'success' }
             }));
           });
 
           // Mock Subscription Activation
-          server.middlewares.use('/api/activate-subscription', (req, res) => {
-            0 && console.log('[Mock API] Activating subscription...');
+          server.middlewares.use('/api/activate-subscription', async (req, res) => {
             res.setHeader('Content-Type', 'application/json');
+
+            if (env.VITE_USE_EMULATOR !== 'true') {
+              try {
+                console.log('[Mock API] Forwarding activate-subscription to Vercel...');
+                const chunks: any[] = [];
+                for await (const chunk of req) {
+                  chunks.push(chunk);
+                }
+                const body = Buffer.concat(chunks).toString();
+
+                const vercelRes = await fetch('https://sbapromaster.vercel.app/api/activate-subscription', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body
+                });
+
+                const vercelData = await vercelRes.json();
+                res.statusCode = vercelRes.status;
+                return res.end(JSON.stringify(vercelData));
+              } catch (err: any) {
+                console.error('[Mock API] Failed to forward activate-subscription to Vercel:', err);
+                res.statusCode = 500;
+                return res.end(JSON.stringify({ success: false, error: err.message }));
+              }
+            }
+
             res.end(JSON.stringify({ success: true, message: 'Mock activation successful' }));
+          });
+
+          // Mock Trial Activation
+          server.middlewares.use('/api/activate-trial', async (req, res) => {
+            res.setHeader('Content-Type', 'application/json');
+
+            if (env.VITE_USE_EMULATOR !== 'true') {
+              try {
+                console.log('[Mock API] Forwarding activate-trial to Vercel...');
+                const chunks: any[] = [];
+                for await (const chunk of req) {
+                  chunks.push(chunk);
+                }
+                const body = Buffer.concat(chunks).toString();
+
+                const vercelRes = await fetch('https://sbapromaster.vercel.app/api/activate-trial', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body
+                });
+
+                const vercelData = await vercelRes.json();
+                res.statusCode = vercelRes.status;
+                return res.end(JSON.stringify(vercelData));
+              } catch (err: any) {
+                console.error('[Mock API] Failed to forward activate-trial to Vercel:', err);
+                res.statusCode = 500;
+                return res.end(JSON.stringify({ success: false, error: err.message }));
+              }
+            }
+
+            res.end(JSON.stringify({ success: true, message: 'Mock trial activation successful' }));
           });
         }
       }

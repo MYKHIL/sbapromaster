@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SUBSCRIPTION_TIERS, ADMIN_EMAIL, PAYSTACK_PUBLIC_KEY } from '../constants';
-import { AppDataType, getSchoolList, SchoolListItem } from '../services/firebaseService';
+import { AppDataType, getSchoolList, SchoolListItem, activateSchoolSubscriptionLocally } from '../services/firebaseService';
 import { initializePayment, loadPaystackScript, activateSubscription, verifyPayment } from '../services/paystackService';
 import MessageBox from './MessageBox';
 
@@ -259,6 +259,77 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
             const isLocalHost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
             if (isLocalHost) {
                 console.log(`[Paystack DEBUG] Initialization success: { reference: ${initResponse.reference}, Full Public Key: "${publicKey}" }`);
+                
+                const simulateSuccess = await showMsg({
+                    title: "Local Development Mode",
+                    message: "Would you like to simulate a successful payment and activate the subscription locally?",
+                    confirmText: "Simulate Success",
+                    cancelText: "Use Real Paystack",
+                    variant: "info"
+                });
+
+                if (simulateSuccess) {
+                    try {
+                        const mockRef = initResponse.reference || 'MOCK_' + Date.now();
+                        await activateSchoolSubscriptionLocally(
+                            mockRef,
+                            {
+                                id: selectedSchool.docId,
+                                name: selectedSchool.displayName,
+                                dbIndex: selectedSchool._databaseIndex || 1
+                            },
+                            {
+                                name: currentTier.name,
+                                maxStudents: currentTier.maxStudents,
+                                maxClass: currentTier.maxClass,
+                                duration: customDurationStr
+                            },
+                            true, // addRemainingTime
+                            pendingRegistration ? {
+                                password: pendingRegistration.password,
+                                initialData: pendingRegistration.registrationData
+                            } : undefined
+                        );
+
+                        await showMsg({
+                            title: "Mock Activation Successful",
+                            message: `Success! [Mock] ${currentTier.name} activated for ${selectedSchool.displayName} for ${customDurationStr}.`,
+                            confirmText: "Excellent",
+                            hideCancel: true,
+                            variant: "success"
+                        });
+
+                        // Re-fetch schools
+                        await loadSchools();
+
+                        // If we registered a new school, we might need a reload for DB switch
+                        const { ACTIVE_DATABASE_INDEX } = await import('../constants');
+                        if (pendingRegistration && pendingRegistration.targetIndex !== ACTIVE_DATABASE_INDEX) {
+                            localStorage.setItem('active_database_index', pendingRegistration.targetIndex.toString());
+                            localStorage.setItem('sba_school_id', pendingRegistration.docId);
+                            localStorage.setItem('sba_school_password', pendingRegistration.password);
+                            window.location.reload();
+                            return;
+                        }
+
+                        if (onSuccess) {
+                            onSuccess(
+                                pendingRegistration ? pendingRegistration.registrationData : (null as any),
+                                selectedSchool.docId,
+                                pendingRegistration ? pendingRegistration.password : '',
+                                { success: true }
+                            );
+                        } else {
+                            onClose();
+                        }
+                    } catch (err: any) {
+                        console.error("Local mock activation failed:", err);
+                        setPaymentError(err.message || "Local mock activation failed.");
+                    } finally {
+                        setIsProcessingPayment(false);
+                    }
+                    return;
+                }
             }
 
             // 2. Open Paystack Popup
@@ -294,8 +365,36 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                 callback: (response: any) => {
                     const handleSuccess = async () => {
                         try {
-                            // Poll verifyPayment until the backend webhook activates the database
-                            await checkPaymentAndDbStatus(response.reference);
+                            console.log('[Paystack] Activating school subscription in database...');
+                            await activateSchoolSubscriptionLocally(
+                                response.reference,
+                                {
+                                    id: selectedSchool.docId,
+                                    name: selectedSchool.displayName,
+                                    dbIndex: selectedSchool._databaseIndex || 1
+                                },
+                                {
+                                    name: currentTier.name,
+                                    maxStudents: currentTier.maxStudents,
+                                    maxClass: currentTier.maxClass,
+                                    duration: customDurationStr
+                                },
+                                true, // addRemainingTime
+                                pendingRegistration ? {
+                                    password: pendingRegistration.password,
+                                    initialData: pendingRegistration.registrationData
+                                } : undefined
+                            );
+                            console.log('[Paystack] Database activation completed successfully.');
+
+                            // For production, also verify via the backend (will return instantly because we just activated it)
+                            if (!isLocalHost) {
+                                try {
+                                    await checkPaymentAndDbStatus(response.reference);
+                                } catch (pollErr) {
+                                    console.warn('[Paystack Callback] Webhook verification timed out, but database was successfully activated client-side:', pollErr);
+                                }
+                            }
 
                             await showMsg({
                                 title: "Activation Successful",

@@ -94,20 +94,43 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         const transaction = data.data;
         const metadata = transaction.metadata;
 
-        // Check if database activation has been completed by webhook
+        // Check if database activation has been completed
         let dbActivated = false;
         if (transaction.status === 'success' && metadata && metadata.schoolId && metadata.dbIndex) {
+            const dbIndex = Number(metadata.dbIndex);
+            const schoolId = metadata.schoolId;
+            const baseName = schoolId.split('_')[0].toLowerCase();
+            
+            // 1. First try checking using the Firestore REST API (no credentials required, fast)
             try {
-                const dbIndex = Number(metadata.dbIndex);
-                const schoolId = metadata.schoolId;
-                const baseName = schoolId.split('_')[0].toLowerCase();
-                const db = getAdminFirestore(dbIndex);
-                const subDoc = await db.collection('subscriptions').doc(baseName).get();
-                if (subDoc.exists && subDoc.data()?.paymentReference === reference) {
-                    dbActivated = true;
+                const projectId = process.env[`FIREBASE_${dbIndex}_PROJECT_ID`] || '';
+                if (projectId) {
+                    const restUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/subscriptions/${baseName}`;
+                    const docRes = await fetch(restUrl);
+                    if (docRes.ok) {
+                        const docData = await docRes.json();
+                        const payRef = docData.fields?.paymentReference?.stringValue;
+                        if (payRef === reference) {
+                            dbActivated = true;
+                            console.log(`[Verify Payment] Activation verified successfully via Firestore REST API for ${baseName}`);
+                        }
+                    }
                 }
-            } catch (err) {
-                console.warn('[Verify Payment] Database activation check failed:', err);
+            } catch (restErr) {
+                console.warn('[Verify Payment] Firestore REST API check failed:', restErr);
+            }
+
+            // 2. Fallback to Admin SDK if REST check didn't succeed
+            if (!dbActivated) {
+                try {
+                    const db = getAdminFirestore(dbIndex);
+                    const subDoc = await db.collection('subscriptions').doc(baseName).get();
+                    if (subDoc.exists && subDoc.data()?.paymentReference === reference) {
+                        dbActivated = true;
+                    }
+                } catch (err) {
+                    console.warn('[Verify Payment] Admin SDK database activation check failed:', err);
+                }
             }
         }
 
