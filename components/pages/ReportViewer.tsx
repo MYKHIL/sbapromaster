@@ -141,9 +141,36 @@ const ReportViewer: React.FC = () => {
     setIsLocalLoading(true);
     setGeneratedReports([]);
 
+    let active = true;
+
     const timer = setTimeout(() => {
+        if (!active) return;
         if (selectedStudentId === 'all') {
-            setGeneratedReports(studentsInClass);
+            // Progressively render reports in small batches to yield execution to the browser
+            const batchSize = 3;
+            let currentIdx = 0;
+
+            const renderBatch = () => {
+                if (!active) return;
+                if (currentIdx >= studentsInClass.length) {
+                    setIsLocalLoading(false);
+                    return;
+                }
+
+                setGeneratedReports(prev => {
+                    const nextBatch = studentsInClass.slice(0, currentIdx + batchSize);
+                    return nextBatch;
+                });
+
+                currentIdx += batchSize;
+                if (currentIdx < studentsInClass.length) {
+                    setTimeout(renderBatch, 0);
+                } else {
+                    setIsLocalLoading(false);
+                }
+            };
+
+            renderBatch();
             setShowPanel(false);
         } else {
             const student = students.find(s => s.id === selectedStudentId);
@@ -154,11 +181,14 @@ const ReportViewer: React.FC = () => {
                 setGeneratedReports([]);
                 setShowPanel(false);
             }
+            setIsLocalLoading(false);
         }
-        setIsLocalLoading(false);
     }, 400); // Artificial delay for visual feedback
 
-    return () => clearTimeout(timer);
+    return () => {
+        active = false;
+        clearTimeout(timer);
+    };
   }, [selectedStudentId, selectedClassId, studentsInClass, students, isComparisonMode]);
 
   // Lazy Load Students

@@ -63,7 +63,7 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
 
             setPassword('');
             setMaintainPassword(true);
-            setLockCurrentUsers(false);
+            setLockCurrentUsers(true);
             setShowPassword(false);
             setCreatedTermId(null);
             setVacationDate('');
@@ -116,7 +116,7 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
                 ...settings,
                 academicYear: newYear,
                 academicTerm: newTerm,
-                isPromotionTerm: false, // Reset promotion settings for the new term
+                isPromotionTerm: newTerm === 'Third Term', // Promotion Mode is automatically set to true for Third Term, otherwise false
                 vacationDate: vacationDate || settings.vacationDate,
                 reopeningDate: reopeningDate || settings.reopeningDate
             };

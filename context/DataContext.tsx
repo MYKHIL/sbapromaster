@@ -160,6 +160,167 @@ export const getItemId = (item: any): string | undefined => {
     return id !== undefined ? String(id) : undefined;
 };
 
+// Deep comparison helper to check if two values are equal
+export const deepEqual = (a: any, b: any): boolean => {
+    if (a === b) return true;
+    if (a == null || b == null) return false;
+    if (typeof a !== typeof b) return false;
+
+    // For arrays
+    if (Array.isArray(a) && Array.isArray(b)) {
+        if (a.length !== b.length) return false;
+        for (let i = 0; i < a.length; i++) {
+            if (!deepEqual(a[i], b[i])) return false;
+        }
+        return true;
+    }
+
+    // For objects
+    if (typeof a === 'object' && typeof b === 'object') {
+        const keysA = Object.keys(a).sort();
+        const keysB = Object.keys(b).sort();
+
+        if (keysA.length !== keysB.length) return false;
+
+        for (let i = 0; i < keysA.length; i++) {
+            if (keysA[i] !== keysB[i]) return false;
+            if (!deepEqual(a[keysA[i]], b[keysA[i]])) return false;
+        }
+        return true;
+    }
+
+    return false;
+};
+
+const IGNORED_KEYS = new Set(['_seconds', '_nanoseconds', 'createdAt', 'updatedAt', '__v', '_firestore', '_isLocallyCreated']);
+
+export const deepEqualOptimized = (a: any, b: any): boolean => {
+    if (a === b) return true;
+
+    const isEmptyValue = (v: any) => 
+        v === null || 
+        v === undefined || 
+        v === '' || 
+        (Array.isArray(v) && v.length === 0) ||
+        (v === false); // deleted: false vs missing is equivalent
+
+    if (isEmptyValue(a) && isEmptyValue(b)) return true;
+    if (a == null || b == null) return false;
+    if (typeof a !== typeof b) return false;
+
+    if (typeof a === 'string') {
+        return a.trim() === b.trim();
+    }
+
+    if (Array.isArray(a) && Array.isArray(b)) {
+        const filteredA = a.filter(v => !isEmptyValue(v));
+        const filteredB = b.filter(v => !isEmptyValue(v));
+        if (filteredA.length !== filteredB.length) return false;
+        
+        // Order-independent check for objects with IDs
+        if (filteredA.length > 0 && typeof filteredA[0] === 'object') {
+            const mapB = new Map<string, any>();
+            for (const item of filteredB) {
+                const id = getItemId(item);
+                if (id !== undefined) mapB.set(id, item);
+            }
+            
+            for (const item of filteredA) {
+                const id = getItemId(item);
+                if (id === undefined) return false;
+                const itemB = mapB.get(id);
+                if (!itemB || !deepEqualOptimized(item, itemB)) return false;
+            }
+            return true;
+        }
+
+        // Normal array index-by-index comparison
+        for (let i = 0; i < filteredA.length; i++) {
+            if (!deepEqualOptimized(filteredA[i], filteredB[i])) return false;
+        }
+        return true;
+    }
+
+    if (typeof a === 'object') {
+        // Special handling for assessmentScores inside Scores
+        const hasAssessmentScoresA = 'assessmentScores' in a;
+        const hasAssessmentScoresB = 'assessmentScores' in b;
+        
+        const keysA = Object.keys(a).filter(k => !IGNORED_KEYS.has(k) && k !== 'assessmentScores');
+        const keysB = Object.keys(b).filter(k => !IGNORED_KEYS.has(k) && k !== 'assessmentScores');
+
+        // Build list of active keys
+        const activeKeysA = keysA.filter(k => !isEmptyValue(a[k]));
+        const activeKeysB = keysB.filter(k => !isEmptyValue(b[k]));
+
+        if (activeKeysA.length !== activeKeysB.length) return false;
+
+        for (const key of activeKeysA) {
+            if (!Object.prototype.hasOwnProperty.call(b, key)) return false;
+            
+            let valA = a[key];
+            let valB = b[key];
+
+            const lowerKey = key.toLowerCase();
+            if (lowerKey === 'id' || lowerKey.endsWith('id') || lowerKey === 'studentid' || lowerKey === 'classid' || lowerKey === 'age') {
+                if (valA !== null && valA !== undefined) valA = String(valA);
+                if (valB !== null && valB !== undefined) valB = String(valB);
+            }
+
+            if (!deepEqualOptimized(valA, valB)) return false;
+        }
+
+        // Compare assessmentScores
+        if (hasAssessmentScoresA || hasAssessmentScoresB) {
+            const scoresA = hasAssessmentScoresA ? a.assessmentScores : null;
+            const scoresB = hasAssessmentScoresB ? b.assessmentScores : null;
+
+            const isEmptyScores = (s: any) => {
+                if (!s || typeof s !== 'object') return true;
+                return Object.keys(s).every(k => !Array.isArray(s[k]) || s[k].every((v: any) => v === ''));
+            };
+
+            const emptyA = isEmptyScores(scoresA);
+            const emptyB = isEmptyScores(scoresB);
+
+            if (emptyA && emptyB) return true;
+            if (emptyA || emptyB) return false;
+
+            const keysSA = Object.keys(scoresA).filter(k => Array.isArray(scoresA[k]) && scoresA[k].some((v: any) => v !== ''));
+            const keysSB = Object.keys(scoresB).filter(k => Array.isArray(scoresB[k]) && scoresB[k].some((v: any) => v !== ''));
+
+            if (keysSA.length !== keysSB.length) return false;
+
+            for (const k of keysSA) {
+                if (!Object.prototype.hasOwnProperty.call(scoresB, k)) return false;
+                const arrA = scoresA[k].filter((v: any) => v !== '');
+                const arrB = scoresB[k].filter((v: any) => v !== '');
+                if (!deepEqualOptimized(arrA, arrB)) return false;
+            }
+        }
+
+        return true;
+    }
+
+    return false;
+};
+
+export const isDataEqual = (a: any, b: any, field?: string): boolean => {
+    const result = deepEqualOptimized(a, b);
+    if (!result && field) {
+        console.log(`[DataContext] 🔍 isDataEqual(${String(field)}): MISMATCH`, {
+            a,
+            b
+        });
+    }
+    return result;
+};
+
+export const normalizeData = (data: any): any => {
+    // Kept for backward compatibility but unused internally
+    return data;
+};
+
 
 export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     // Database error handler
@@ -275,7 +436,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.271"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.272"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -664,155 +825,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // write sizes and potential conflicts.
     const dirtyFields = React.useRef<Set<keyof AppDataType>>(new Set());
 
-    // Deep comparison helper to check if two values are equal
-    const deepEqual = (a: any, b: any): boolean => {
-        if (a === b) return true;
-        if (a == null || b == null) return false;
-        if (typeof a !== typeof b) return false;
-
-        // For arrays
-        if (Array.isArray(a) && Array.isArray(b)) {
-            if (a.length !== b.length) return false;
-            for (let i = 0; i < a.length; i++) {
-                if (!deepEqual(a[i], b[i])) return false;
-            }
-            return true;
-        }
-
-        // For objects
-        if (typeof a === 'object' && typeof b === 'object') {
-            const keysA = Object.keys(a).sort();
-            const keysB = Object.keys(b).sort();
-
-            if (keysA.length !== keysB.length) return false;
-
-            for (let i = 0; i < keysA.length; i++) {
-                if (keysA[i] !== keysB[i]) return false;
-                if (!deepEqual(a[keysA[i]], b[keysA[i]])) return false;
-            }
-            return true;
-        }
-
-        return false;
-    };
-
-    /**
-     * Normalizes data for semantic comparison.
-     * Trims strings, removes undefined/null keys, sorts arrays by ID,
-     * and ensures consistent key types in assessment objects.
-     */
-    const normalizeData = (data: any): any => {
-        if (data === null || data === undefined) return null;
-
-        // 1. Strings: Trim
-        if (typeof data === 'string') return data.trim();
-
-        // 2. Arrays: Normalize elements and sort
-        if (Array.isArray(data)) {
-            const normalized = data.map(normalizeData).filter(item => item !== null);
-            // Sort by ID using getItemId to ensure order-independence across all collection types
-            if (normalized.length > 0 && normalized[0] && typeof normalized[0] === 'object') {
-                return normalized.sort((a, b) => {
-                    const idA = String(getItemId(a) || '');
-                    const idB = String(getItemId(b) || '');
-                    return idA.localeCompare(idB);
-                });
-            }
-            return normalized;
-        }
-
-        // 3. Objects
-        if (typeof data === 'object') {
-            const normalized: any = {};
-                // Filter out system-generated keys that shouldn't trigger "unsaved changes"
-                const keys = Object.keys(data)
-                    .filter(k => !['_seconds', '_nanoseconds', 'createdAt', 'updatedAt', '__v', '_firestore', '_isLocallyCreated'].includes(k))
-                    .sort();
-
-                for (const key of keys) {
-                    // EXCEPTION: Convert 'id', 'studentId', 'classId', and 'age' to string to ensure consistent comparison
-                    const lowerKey = key.toLowerCase();
-                    if (lowerKey === 'id' || lowerKey.endsWith('id') || lowerKey === 'studentid' || lowerKey === 'classid' || lowerKey === 'age') {
-                        normalized[key] = data[key] !== null && data[key] !== undefined ? String(data[key]) : data[key];
-                        continue;
-                    }
-
-                    const value = normalizeData(data[key]);
-                    // Only include meaningful values (not null, undefined, or empty string)
-                    // Filter out empty arrays and objects as well to ensure semantic equality
-                    const isMeaningfulValue = (v: any, k: string) => {
-                        if (v === null || v === undefined || v === '') return false;
-                        
-                        // Semantic comparison for booleans: 'false' is equivalent to 'undefined/missing' for soft-delete flags in the baseline
-                        // This prevents cloud (missing field) vs local (deleted: false) from triggering dirty status
-                        if (k === 'deleted' && v === false) return false;
-
-                        if (Array.isArray(v) && v.length === 0) return false;
-                        if (typeof v === 'object' && Object.keys(v).length === 0) return false;
-                        return true;
-                    };
-
-                    if (isMeaningfulValue(value, key)) {
-                        normalized[key] = value;
-                    }
-                }
-
-            // Special handling for Scores to normalize assessmentScores keys
-            if ('assessmentScores' in data && typeof data.assessmentScores === 'object') {
-                const normScores: any = {};
-                const sKeys = Object.keys(data.assessmentScores).sort();
-                for (const skey of sKeys) {
-                    const sVal = normalizeData(data.assessmentScores[skey]);
-                    // Only include non-empty arrays of scores
-                    if (sVal && Array.isArray(sVal) && sVal.some(v => v !== '')) {
-                        normScores[String(skey)] = sVal.filter(v => v !== '');
-                    }
-                }
-
-                if (Object.keys(normScores).length > 0) {
-                    normalized.assessmentScores = normScores;
-                }
-            }
-
-            // Pruning: If object is empty after cleanup, treat as null for comparison
-            // However, don't prune if the original object was already empty (base case)
-            if (Object.keys(normalized).length === 0 && Object.keys(data).length > 0) {
-                // Special case: don't prune if 'id' was the only property
-                if (Object.keys(data).length === 1 && 'id' in data) {
-                    return normalized;
-                }
-                return null;
-            }
-            return normalized;
-        }
-
-        return data;
-    };
-
-    /**
-     * Checks if two data sets are semantically equal by normalizing them first.
-     */
-    const isDataEqual = (a: any, b: any, field?: keyof AppDataType): boolean => {
-        if (a === b) return true;
-
-        // 1. Treat null, undefined, and empty arrays as equivalent for collection fields
-        const isEmpty = (v: any) => v === null || v === undefined || (Array.isArray(v) && v.length === 0);
-        if (isEmpty(a) && isEmpty(b)) return true;
-
-        const normA = normalizeData(a);
-        const normB = normalizeData(b);
-        const result = deepEqual(normA, normB);
-
-        if (!result && field) {
-            console.log(`[DataContext] 🔍 isDataEqual(${String(field)}): MISMATCH after normalization`, {
-                normA,
-                normB
-            });
-        }
-
-        return result;
-    };
-
     /**
      * Determines if a discrepancy between local and cloud data is "meaningful".
      * A discrepancy is NOT meaningful if the local data is just the default initial state.
@@ -965,16 +977,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, [markDirty]);
 
     const rebuildItemDirtyMap = React.useCallback((dataOverride?: Partial<AppDataType>) => {
-        // console.log('[DataContext] ⚒️ Rebuilding item-level dirty map...');
-        const collections: (keyof AppDataType)[] = [
-            'students', 'subjects', 'classes', 'grades', 'assessments', 'reportData', 'classData'
-        ];
+        // If dataOverride is passed, only check the keys present in dataOverride.
+        // Otherwise, check all collections.
+        const collectionsToCheck = dataOverride 
+            ? (Object.keys(dataOverride) as (keyof AppDataType)[]).filter(k => 
+                ['students', 'subjects', 'classes', 'grades', 'assessments', 'reportData', 'classData'].includes(k)
+              )
+            : ['students', 'subjects', 'classes', 'grades', 'assessments', 'reportData', 'classData'] as (keyof AppDataType)[];
 
         let anyMapChanged = false;
         const newMapState = { ...persistedPendingMap };
 
-        collections.forEach(field => {
-            const current = dataOverride?.[field] || stateRef.current[field];
+        collectionsToCheck.forEach(field => {
+            const current = dataOverride?.[field] !== undefined ? dataOverride[field] : stateRef.current[field];
             const original = originalData.current[field];
 
             if (!Array.isArray(current) || !Array.isArray(original)) return;
@@ -1006,22 +1021,25 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
 
         // 2. Settings (Non-array granular tracking)
-        const currentSettings = dataOverride?.settings || stateRef.current.settings;
-        const originalSettings = originalData.current.settings;
-        if (currentSettings && originalSettings) {
-             const currentDirtyKeys: string[] = [];
-             Object.keys(currentSettings).forEach(key => {
-                 const k = key as keyof SchoolSettings;
-                 if (!deepEqual(currentSettings[k], originalSettings[k])) {
-                     currentDirtyKeys.push(key);
-                 }
-             });
+        const checkSettings = !dataOverride || ('settings' in dataOverride);
+        if (checkSettings) {
+            const currentSettings = dataOverride?.settings !== undefined ? dataOverride.settings : stateRef.current.settings;
+            const originalSettings = originalData.current.settings;
+            if (currentSettings && originalSettings) {
+                 const currentDirtyKeys: string[] = [];
+                 Object.keys(currentSettings).forEach(key => {
+                     const k = key as keyof SchoolSettings;
+                     if (!deepEqual(currentSettings[k], originalSettings[k])) {
+                         currentDirtyKeys.push(key);
+                     }
+                 });
 
-             const prevDirtyKeys = persistedPendingMap.settings || [];
-             if (!isDataEqual(currentDirtyKeys.sort(), [...prevDirtyKeys].sort())) {
-                 newMapState.settings = currentDirtyKeys;
-                 anyMapChanged = true;
-             }
+                 const prevDirtyKeys = persistedPendingMap.settings || [];
+                 if (!isDataEqual(currentDirtyKeys.sort(), [...prevDirtyKeys].sort())) {
+                     newMapState.settings = currentDirtyKeys;
+                     anyMapChanged = true;
+                 }
+            }
         }
 
         if (anyMapChanged) {
@@ -1058,16 +1076,60 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
 // loadImportedData relocated below
 
-    // Reactive effect to auto-recheck dirty status when data changes
+    // Split monolithic useEffect into fine-grained reactive effects for each collection
     React.useEffect(() => {
-        // Skip if we don't have original data loaded yet
-        if (Object.keys(originalData.current).length === 0) return;
+        if (!originalData.current.settings) return;
+        recheckDirtyStatus('settings', settings);
+        rebuildItemDirtyMap({ settings });
+    }, [settings, recheckDirtyStatus, rebuildItemDirtyMap]);
 
-        // Perform full dirty recheck using LATEST state to avoid race conditions with stateRef
-        recheckAllDirtyStatus({
-            settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions
-        });
-    }, [settings, students, subjects, classes, grades, assessments, scores, reportData, classData, users, userLogs, activeSessions]);
+    React.useEffect(() => {
+        if (originalData.current.students === undefined) return;
+        recheckDirtyStatus('students', students);
+        rebuildItemDirtyMap({ students });
+    }, [students, recheckDirtyStatus, rebuildItemDirtyMap]);
+
+    React.useEffect(() => {
+        if (originalData.current.subjects === undefined) return;
+        recheckDirtyStatus('subjects', subjects);
+        rebuildItemDirtyMap({ subjects });
+    }, [subjects, recheckDirtyStatus, rebuildItemDirtyMap]);
+
+    React.useEffect(() => {
+        if (originalData.current.classes === undefined) return;
+        recheckDirtyStatus('classes', classes);
+        rebuildItemDirtyMap({ classes });
+    }, [classes, recheckDirtyStatus, rebuildItemDirtyMap]);
+
+    React.useEffect(() => {
+        if (originalData.current.grades === undefined) return;
+        recheckDirtyStatus('grades', grades);
+        rebuildItemDirtyMap({ grades });
+    }, [grades, recheckDirtyStatus, rebuildItemDirtyMap]);
+
+    React.useEffect(() => {
+        if (originalData.current.assessments === undefined) return;
+        recheckDirtyStatus('assessments', assessments);
+        rebuildItemDirtyMap({ assessments });
+    }, [assessments, recheckDirtyStatus, rebuildItemDirtyMap]);
+
+    React.useEffect(() => {
+        if (originalData.current.scores === undefined) return;
+        recheckDirtyStatus('scores', scores);
+        rebuildItemDirtyMap({ scores });
+    }, [scores, recheckDirtyStatus, rebuildItemDirtyMap]);
+
+    React.useEffect(() => {
+        if (originalData.current.reportData === undefined) return;
+        recheckDirtyStatus('reportData', reportData);
+        rebuildItemDirtyMap({ reportData });
+    }, [reportData, recheckDirtyStatus, rebuildItemDirtyMap]);
+
+    React.useEffect(() => {
+        if (originalData.current.classData === undefined) return;
+        recheckDirtyStatus('classData', classData);
+        rebuildItemDirtyMap({ classData });
+    }, [classData, recheckDirtyStatus, rebuildItemDirtyMap]);
 
     // AUTO-SYNC REMOVED: All saves are now manual and page-specific
 

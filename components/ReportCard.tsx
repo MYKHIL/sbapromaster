@@ -19,32 +19,42 @@ const FitText: React.FC<{
         if (!container) return;
 
         const adjustFontSize = () => {
-            // Set initial font size to the max allowed to start the calculation.
-            container.style.fontSize = `${maxFontSize}px`;
-
             const isOverflowing = () => {
-                // A small buffer helps prevent floating point inaccuracies and ensures a fit.
                 const buffer = 1;
                 if (mode === 'single') {
-                    // For single line, check if the content's width exceeds the container's width.
                     return container.scrollWidth > container.clientWidth + buffer;
                 }
-                // For multi-line, check if the content's height exceeds the container's height.
                 return container.scrollHeight > container.clientHeight + buffer;
             };
 
-            let currentFontSize = maxFontSize;
-            // Loop downwards from max size until the content fits or min size is reached.
-            while (isOverflowing() && currentFontSize > minFontSize) {
-                currentFontSize -= 0.5;
-                container.style.fontSize = `${currentFontSize}px`;
+            let low = minFontSize;
+            let high = maxFontSize;
+            let bestSize = maxFontSize;
+
+            // Step 1: Set to maximum font size initially. If it doesn't overflow, we are done (1 write, 1 read).
+            container.style.fontSize = `${maxFontSize}px`;
+            if (!isOverflowing()) {
+                return;
             }
+
+            // Step 2: Binary search with 0.5px precision to find the perfect fit.
+            while (low <= high) {
+                const mid = Math.round((low + high) * 2) / 2; // keep 0.5px granularity
+                container.style.fontSize = `${mid}px`;
+                
+                if (isOverflowing()) {
+                    high = mid - 0.5;
+                } else {
+                    bestSize = mid;
+                    low = mid + 0.5;
+                }
+            }
+
+            // Apply the best fitting font size.
+            container.style.fontSize = `${bestSize}px`;
         };
 
-        // Run the adjustment logic once after render.
         adjustFontSize();
-
-        // The effect re-runs if the content or size constraints change.
     }, [children, maxFontSize, minFontSize, mode]);
 
     const styles: React.CSSProperties = {
