@@ -160,7 +160,10 @@ async function handler(req: VercelRequest, res: VercelResponse) {
 
         // If there's a pending registration for a new school, store it securely on the server
         if (pendingRegistration) {
-            console.log(`[Paystack API] Saving pending registration for reference: ${reference}`);
+            const isLocal = process.env.NODE_ENV === 'development';
+            if (isLocal) {
+                console.log(`[Paystack API] Saving pending registration for reference: ${reference}`);
+            }
             try {
                 const db = getAdminFirestore(Number(dbIndex));
                 await db.collection('pending_registrations').doc(reference).set({
@@ -171,7 +174,9 @@ async function handler(req: VercelRequest, res: VercelResponse) {
                     registrationData: pendingRegistration.registrationData,
                     createdAt: new Date().toISOString()
                 });
-                console.log(`[Paystack API] Pending registration saved successfully.`);
+                if (isLocal) {
+                    console.log(`[Paystack API] Pending registration saved successfully.`);
+                }
             } catch (firestoreError: any) {
                 console.error('[Paystack API] Failed to save pending registration:', firestoreError);
                 return res.status(500).json({

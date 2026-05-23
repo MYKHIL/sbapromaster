@@ -256,7 +256,10 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
             // Use the key from the environment (Vite prefetched) or the one loaded dynamically from API
             const publicKey = (import.meta as any).env?.VITE_PAYSTACK_PUBLIC_KEY || PAYSTACK_PUBLIC_KEY;
 
-            console.log(`[Paystack DEBUG] Initialization success: { reference: ${initResponse.reference}, Full Public Key: "${publicKey}" }`);
+            const isLocalHost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+            if (isLocalHost) {
+                console.log(`[Paystack DEBUG] Initialization success: { reference: ${initResponse.reference}, Full Public Key: "${publicKey}" }`);
+            }
 
             // 2. Open Paystack Popup
             const PaystackPop = (window as any).PaystackPop;

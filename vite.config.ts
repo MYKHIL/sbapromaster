@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => {
       {
         name: 'api-mock',
         configureServer(server) {
-          server.middlewares.use('/api/firebase-config', (req, res) => {
+          server.middlewares.use('/api/firebase-config', async (req, res) => {
             const pk = (env.PAYSTACK_PUBLIC_KEY || '').trim();
             console.log(`[Mock API DEBUG] Serving firebase-config. Full Public Key: "${pk}"`);
             // Dynamically detect all Firebase configurations from loadEnv 'env'
@@ -46,11 +46,42 @@ export default defineConfig(({ mode }) => {
             } catch (e) {
               console.warn('[Mock API] Failed to parse SCHOOL_DATABASE_MAPPING:', e);
             }
+            // Expose subscription prices dynamically from loadEnv 'env' at runtime
+            let subscriptionPrices = {
+              TRIAL: env.VITE_TIER_PRICE_TRIAL || 'Free',
+              BASIC: env.VITE_TIER_PRICE_BASIC || 'GHS 105',
+              STANDARD: env.VITE_TIER_PRICE_STANDARD || 'GHS 207',
+              PREMIUM: env.VITE_TIER_PRICE_PREMIUM || 'GHS 360',
+              PROFESSIONAL: env.VITE_TIER_PRICE_PROFESSIONAL || 'GHS 620',
+              ENTERPRISE: env.VITE_TIER_PRICE_ENTERPRISE || 'GHS 920',
+              CUSTOM: env.VITE_TIER_PRICE_CUSTOM || 'Quote'
+            };
+
+            // Attempt to fetch live subscription prices directly from Vercel
+            try {
+              console.log('[Mock API] Fetching live config/prices from Vercel...');
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 4000);
+              const vercelRes = await fetch('https://sbapromaster.vercel.app/api/firebase-config', { signal: controller.signal });
+              clearTimeout(timeoutId);
+              
+              if (vercelRes.ok) {
+                const vercelData = await vercelRes.json();
+                if (vercelData.subscriptionPrices) {
+                  subscriptionPrices = vercelData.subscriptionPrices;
+                  console.log('[Mock API] Successfully fetched live subscription prices from Vercel.');
+                }
+              }
+            } catch (fetchErr) {
+              console.warn('[Mock API] Failed to fetch live prices from Vercel. Falling back to local env:', fetchErr);
+            }
+
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({ 
               success: true, 
               configs, 
               schoolDatabaseMapping,
+              subscriptionPrices,
               paystackPublicKey: env.PAYSTACK_PUBLIC_KEY,
               activationHash: env.PASSWORD_HASH
             }));

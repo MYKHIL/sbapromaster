@@ -57,10 +57,22 @@ async function handler(req: VercelRequest, res: VercelResponse) {
             console.warn('Failed to parse SCHOOL_DATABASE_MAPPING, using empty mapping:', error);
         }
 
+        // Expose subscription prices dynamically from process.env at runtime
+        const subscriptionPrices = {
+            TRIAL: process.env.VITE_TIER_PRICE_TRIAL || 'Free',
+            BASIC: process.env.VITE_TIER_PRICE_BASIC || 'GHS 105',
+            STANDARD: process.env.VITE_TIER_PRICE_STANDARD || 'GHS 207',
+            PREMIUM: process.env.VITE_TIER_PRICE_PREMIUM || 'GHS 360',
+            PROFESSIONAL: process.env.VITE_TIER_PRICE_PROFESSIONAL || 'GHS 620',
+            ENTERPRISE: process.env.VITE_TIER_PRICE_ENTERPRISE || 'GHS 920',
+            CUSTOM: process.env.VITE_TIER_PRICE_CUSTOM || 'Quote'
+        };
+
         return res.status(200).json({
             success: true,
             configs, 
             schoolDatabaseMapping,
+            subscriptionPrices,
             paystackPublicKey: process.env.PAYSTACK_PUBLIC_KEY,
             activationHash: process.env.PASSWORD_HASH // Required for client-side activation security rules
         });

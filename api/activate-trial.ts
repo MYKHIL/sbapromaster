@@ -1,6 +1,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import admin from 'firebase-admin';
 
+const isLocal = process.env.NODE_ENV === 'development';
+const safeLog = (...args: any[]) => {
+    if (isLocal) {
+        console.log(...args);
+    }
+};
+
 /**
  * Free Trial Activation Endpoint
  * 
@@ -147,7 +154,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
 
         // 3. Process setup
         if (pendingRegistration) {
-            console.log(`[Trial] Manifesting new trial school: ${schoolId}`);
+            safeLog(`[Trial] Manifesting new trial school: ${schoolId}`);
             const registrationData = pendingRegistration.registrationData;
 
             // Step 1: Write Subscription Record
@@ -214,11 +221,11 @@ async function handler(req: VercelRequest, res: VercelResponse) {
                 await updateStudentBucketAdmin(db, schoolId, registrationData.students);
             }
 
-            console.log(`[Trial] Manifestation complete for school: ${schoolId}`);
+            safeLog(`[Trial] Manifestation complete for school: ${schoolId}`);
 
         } else {
             // Existing school trial (unlikely to have trial option if registered already, but handled for completeness)
-            console.log(`[Trial] Activating trial for existing school: ${schoolId}`);
+            safeLog(`[Trial] Activating trial for existing school: ${schoolId}`);
             const batch = db.batch();
             batch.set(subDocRef, subscriptionData, { merge: true });
 

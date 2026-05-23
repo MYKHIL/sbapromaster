@@ -2,6 +2,13 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import admin from 'firebase-admin';
 import crypto from 'crypto';
 
+const isLocal = process.env.NODE_ENV === 'development';
+const safeLog = (...args: any[]) => {
+    if (isLocal) {
+        console.log(...args);
+    }
+};
+
 /**
  * Paystack Webhook Handler
  * 
@@ -188,7 +195,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         // Force secondary verification by fetching directly from Paystack API to ensure absolute safety
-        console.log(`[Webhook] Fetching verification for reference: ${reference}`);
+        safeLog(`[Webhook] Fetching verification for reference: ${reference}`);
         const verifyResponse = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
             method: 'GET',
             headers: {
@@ -204,7 +211,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(400).json({ error: 'Payment verification failed' });
         }
 
-        console.log(`[Webhook] Payment verified successfully via Paystack API.`);
+        safeLog(`[Webhook] Payment verified successfully via Paystack API.`);
 
         const transaction = verifyData.data;
         const metadata = transaction.metadata;
@@ -260,7 +267,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         const pendingRegDoc = await pendingRegRef.get();
 
         if (pendingRegDoc.exists) {
-            console.log(`[Webhook] Found pending registration for school: ${schoolId}. Processing full manifestation...`);
+            safeLog(`[Webhook] Found pending registration for school: ${schoolId}. Processing full manifestation...`);
             const pendingData = pendingRegDoc.data()!;
             const registrationData = pendingData.registrationData;
 
@@ -330,11 +337,11 @@ async function handler(req: VercelRequest, res: VercelResponse) {
 
             // Cleanup pending registration
             await pendingRegRef.delete();
-            console.log(`[Webhook] Manifestation complete for school: ${schoolId}. Cleaned pending_registrations.`);
+            safeLog(`[Webhook] Manifestation complete for school: ${schoolId}. Cleaned pending_registrations.`);
 
         } else {
             // Existing school renewal or upgrade
-            console.log(`[Webhook] No pending registration found. Performing standard renewal/upgrade for school: ${schoolId}`);
+            safeLog(`[Webhook] No pending registration found. Performing standard renewal/upgrade for school: ${schoolId}`);
             
             const batch = db.batch();
             batch.set(subDocRef, subscriptionData, { merge: true });
@@ -364,7 +371,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
             }
 
             await batch.commit();
-            console.log(`[Webhook] Subscription successfully activated/renewed for ${schoolId}.`);
+            safeLog(`[Webhook] Subscription successfully activated/renewed for ${schoolId}.`);
         }
 
         return res.status(200).json({ success: true, message: 'Webhook processed successfully' });

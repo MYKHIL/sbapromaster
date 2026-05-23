@@ -20,7 +20,10 @@ export const SHOW_USER_EXPORT_BUTTON = false;
 export const WHATSAPP_DEVELOPER_NUMBER = '233542410613';
 export const AUTO_SANITIZE_TEACHERS = true;
 
-// GLOBAL STYLING: Dirty Indicators
+export const isLocal = process.env.NODE_ENV !== 'production';
+export const debugLog = (...args: any[]) => {
+  if (isLocal) console.log(...args);
+};
 // Brick Red Pattern: bg-red-900 / text-white
 // Navy Blue Pattern: bg-blue-900 / text-white
 // Amber Pattern: bg-amber-50 / text-amber-900
@@ -49,7 +52,6 @@ export const ACTIVE_DATABASE_INDEX = storedIndex ? parseInt(storedIndex, 10) : 1
 
 // API CONFIGURATION
 // Determine API Base URL based on environment
-const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 const isGitHubPages = typeof window !== 'undefined' && window.location.hostname.includes('github.io');
 
 export const API_BASE_URL = isGitHubPages
@@ -167,55 +169,66 @@ export const INITIAL_REPORT_DATA: ReportSpecificData[] = [];
 export const INITIAL_CLASS_DATA: ClassSpecificData[] = [];
 
 export const ADMIN_EMAIL = 'darkmic50@gmail.com';
-
-export const SUBSCRIPTION_TIERS = [
+export let SUBSCRIPTION_TIERS = [
   {
     name: import.meta.env.VITE_TIER_NAME_TRIAL as string,
     maxStudents: Number(import.meta.env.VITE_TIER_STUDENTS_TRIAL),
     maxClass: Number(import.meta.env.VITE_TIER_CLASSES_TRIAL),
     duration: import.meta.env.VITE_TIER_DURATION_TRIAL as string,
-    price: import.meta.env.VITE_TIER_PRICE_TRIAL as string
+    price: (import.meta.env.VITE_TIER_PRICE_TRIAL || '') as string
   },
   {
     name: import.meta.env.VITE_TIER_NAME_BASIC as string,
     maxStudents: Number(import.meta.env.VITE_TIER_STUDENTS_BASIC),
     maxClass: Number(import.meta.env.VITE_TIER_CLASSES_BASIC),
     duration: import.meta.env.VITE_TIER_DURATION_BASIC as string,
-    price: import.meta.env.VITE_TIER_PRICE_BASIC as string
+    price: (import.meta.env.VITE_TIER_PRICE_BASIC || '') as string
   },
   {
     name: import.meta.env.VITE_TIER_NAME_STANDARD as string,
     maxStudents: Number(import.meta.env.VITE_TIER_STUDENTS_STANDARD),
     maxClass: Number(import.meta.env.VITE_TIER_CLASSES_STANDARD),
     duration: import.meta.env.VITE_TIER_DURATION_STANDARD as string,
-    price: import.meta.env.VITE_TIER_PRICE_STANDARD as string
+    price: (import.meta.env.VITE_TIER_PRICE_STANDARD || '') as string
   },
   {
     name: import.meta.env.VITE_TIER_NAME_PREMIUM as string,
     maxStudents: Number(import.meta.env.VITE_TIER_STUDENTS_PREMIUM),
     maxClass: Number(import.meta.env.VITE_TIER_CLASSES_PREMIUM),
     duration: import.meta.env.VITE_TIER_DURATION_PREMIUM as string,
-    price: import.meta.env.VITE_TIER_PRICE_PREMIUM as string
+    price: (import.meta.env.VITE_TIER_PRICE_PREMIUM || '') as string
   },
   {
     name: import.meta.env.VITE_TIER_NAME_PROFESSIONAL as string,
     maxStudents: Number(import.meta.env.VITE_TIER_STUDENTS_PROFESSIONAL),
     maxClass: Number(import.meta.env.VITE_TIER_CLASSES_PROFESSIONAL),
     duration: import.meta.env.VITE_TIER_DURATION_PROFESSIONAL as string,
-    price: import.meta.env.VITE_TIER_PRICE_PROFESSIONAL as string
+    price: (import.meta.env.VITE_TIER_PRICE_PROFESSIONAL || '') as string
   },
   {
     name: import.meta.env.VITE_TIER_NAME_ENTERPRISE as string,
     maxStudents: Number(import.meta.env.VITE_TIER_STUDENTS_ENTERPRISE),
     maxClass: Number(import.meta.env.VITE_TIER_CLASSES_ENTERPRISE),
     duration: import.meta.env.VITE_TIER_DURATION_ENTERPRISE as string,
-    price: import.meta.env.VITE_TIER_PRICE_ENTERPRISE as string
+    price: (import.meta.env.VITE_TIER_PRICE_ENTERPRISE || '') as string
   },
   {
     name: import.meta.env.VITE_TIER_NAME_CUSTOM as string,
     maxStudents: Number(import.meta.env.VITE_TIER_STUDENTS_CUSTOM),
     maxClass: Number(import.meta.env.VITE_TIER_CLASSES_CUSTOM),
     duration: import.meta.env.VITE_TIER_DURATION_CUSTOM as string,
-    price: import.meta.env.VITE_TIER_PRICE_CUSTOM as string
+    price: (import.meta.env.VITE_TIER_PRICE_CUSTOM || '') as string
   },
 ];
+
+
+
+export const setSubscriptionTiersPrices = (prices: { [key: string]: string }) => {
+  SUBSCRIPTION_TIERS = SUBSCRIPTION_TIERS.map(tier => {
+    const key = tier.name === 'Full / Custom' ? 'CUSTOM' : tier.name.toUpperCase();
+    if (prices[key]) {
+      return { ...tier, price: prices[key] };
+    }
+    return tier;
+  });
+};

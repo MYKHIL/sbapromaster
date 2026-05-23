@@ -64,7 +64,7 @@ if (!rootElement) {
   throw new Error("Could not find root element to mount to");
 }
 
-import { setFirebaseConfigs, setSchoolDatabaseMapping, setActivationHash, setPaystackPublicKey, API_BASE_URL, FIREBASE_CONFIGS, ENABLE_ERUDA_CONSOLE } from './constants';
+import { setFirebaseConfigs, setSchoolDatabaseMapping, setActivationHash, setPaystackPublicKey, setSubscriptionTiersPrices, API_BASE_URL, FIREBASE_CONFIGS, ENABLE_ERUDA_CONSOLE } from './constants';
 
 const loadFirebaseConfig = async () => {
   try {
@@ -94,6 +94,7 @@ const loadFirebaseConfig = async () => {
     }
 
     0 && console.log('[App] Firebase configuration loaded from API');
+    return data;
   } catch (error) {
     console.error('[App] Failed to load Firebase config:', error);
     // Fallback: If fetch fails (e.g. offline/error), try local storage or default?
@@ -132,12 +133,19 @@ const bootstrap = async () => {
     // Fallback? If fetch fails (dev mode without API), we might break.
     // For now, assuming Vercel environment or correctly proxied dev.
 
-    // In local dev without `vercel dev`, this will 404. 
-    // We should handle that gracefully if possible, but the user asked for this architecture.
-    // We will attempt fetch.
-
-    await loadFirebaseConfig();
-    0 && console.log('[Bootstrap] Configuration loaded.');
+    try {
+      const data = await loadFirebaseConfig();
+      if (data && data.subscriptionPrices) {
+        setSubscriptionTiersPrices(data.subscriptionPrices);
+        console.log('[Bootstrap] Subscription prices set dynamically');
+      } else {
+        console.warn('[Bootstrap] Subscription prices not available, using defaults');
+      }
+    } catch (err) {
+      console.error('[Bootstrap] Failed to load Firebase config:', err);
+      // Continue with default tier prices defined in constants.ts
+    }
+    console.log('[Bootstrap] Configuration loaded.');
 
     // 2. Dynamic Import App
     // This ensures imports within App (like firebaseService) run AFTER config is set.
