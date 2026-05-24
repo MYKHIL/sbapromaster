@@ -624,49 +624,32 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                         </div>
 
                                         {/* Status Descriptors */}
-                                        <div className="rounded-3xl border border-slate-200 bg-blue p-4 shadow-sm">
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                {/* <span className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-[11px] font-semibold tracking-wide uppercase ${
-                                                    user.role === 'Admin' ? 'bg-purple-50 text-purple-700 border border-purple-200' : 
-                                                    user.role === 'Teacher' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 
-                                                    'bg-slate-50 text-slate-600 border border-slate-200'
-                                                }`}>
-                                                    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-                                                        {user.role === 'Admin' ? (
-                                                            <path d="M12 2l3 3h4a1 1 0 011 1v4l3 3v6a1 1 0 01-1 1h-4a1 1 0 01-1-1v-3H9v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-6l3-3V6a1 1 0 011-1h4l3-3z" />
-                                                        ) : user.role === 'Teacher' ? (
-                                                            <path d="M4 5a2 2 0 012-2h12a2 2 0 012 2v14a1 1 0 01-1.447.894L12 16.618l-7.553 3.276A1 1 0 013 19V5zm2 1v12.382l6.553-2.846a1 1 0 01.894 0L18 18.382V6H6z" />
-                                                        ) : (
-                                                            <path d="M12 12a4 4 0 100-8 4 4 0 000 8zm-6 9a6 6 0 0112 0H6z" />
-                                                        )}
-                                                    </svg>
-                                                    {user.role}
-                                                </span> */}
-                                                <span className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-[11px] font-semibold tracking-wide ${
-                                                    user.isReadOnly ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                                }`}>
-                                                    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                                                        {user.isReadOnly ? (
-                                                            <path fillRule="evenodd" d="M6 8V7a4 4 0 118 0v1h1a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1V9a1 1 0 011-1h1zm2-1a2 2 0 114 0v1H8V7z" clipRule="evenodd" />
-                                                        ) : (
-                                                            <path fillRule="evenodd" d="M5 11V9a5 5 0 1110 0v2h1a1 1 0 011 1v5a1 1 0 01-1 1H4a1 1 0 01-1-1v-5a1 1 0 011-1h1zm2-2a3 3 0 116 0v2H7V9z" clipRule="evenodd" />
-                                                        )}
-                                                    </svg>
-                                                    {user.isReadOnly ? 'Restricted' : 'Unlocked'}
-                                                </span>
-                                                <span className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-[11px] font-semibold tracking-wide ${
-                                                    user.passwordHash && user.passwordHash.trim() !== '' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
-                                                }`}>
-                                                    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                                                        {user.passwordHash && user.passwordHash.trim() !== '' ? (
-                                                            <path d="M10 2a4 4 0 00-4 4v2h8V6a4 4 0 00-4-4zm-1 7a1 1 0 100 2 1 1 0 000-2zm4 5H7a1 1 0 01-1-1v-3a1 1 0 011-1h6a1 1 0 011 1v3a1 1 0 01-1 1z" />
-                                                        ) : (
-                                                            <path fillRule="evenodd" d="M5 8a5 5 0 1110 0v2h1a1 1 0 011 1v5a1 1 0 01-1 1H4a1 1 0 01-1-1v-5a1 1 0 011-1h1V8zm2 0V6a3 3 0 116 0v2H7z" clipRule="evenodd" />
-                                                        )}
-                                                    </svg>
-                                                    {user.passwordHash && user.passwordHash.trim() !== '' ? 'Password Set' : 'No Password'}
-                                                </span>
-                                            </div>
+                                        <div className="flex flex-wrap items-center gap-2">                                             
+                                            <div className="w-full border-t border-gray-200 my-3"></div>                                        
+                                            <span className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-[11px] font-semibold tracking-wide ${
+                                                user.isReadOnly ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-700'
+                                            }`}>
+                                                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                                                    {user.isReadOnly ? (
+                                                        <path fillRule="evenodd" d="M6 8V7a4 4 0 118 0v1h1a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1V9a1 1 0 011-1h1zm2-1a2 2 0 114 0v1H8V7z" clipRule="evenodd" />
+                                                    ) : (
+                                                        <path fillRule="evenodd" d="M5 11V9a5 5 0 1110 0v2h1a1 1 0 011 1v5a1 1 0 01-1 1H4a1 1 0 01-1-1v-5a1 1 0 011-1h1zm2-2a3 3 0 116 0v2H7V9z" clipRule="evenodd" />
+                                                    )}
+                                                </svg>
+                                                {user.isReadOnly ? 'Restricted' : 'Unlocked'}
+                                            </span>
+                                            <span className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-[11px] font-semibold tracking-wide ${
+                                                user.passwordHash && user.passwordHash.trim() !== '' ? 'bg-emerald-50 text-emerald-700' : 'bg-yellow-50 text-yellow-700'
+                                            }`}>
+                                                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                                                    {user.passwordHash && user.passwordHash.trim() !== '' ? (
+                                                        <path d="M10 2a4 4 0 00-4 4v2h8V6a4 4 0 00-4-4zm-1 7a1 1 0 100 2 1 1 0 000-2zm4 5H7a1 1 0 01-1-1v-3a1 1 0 011-1h6a1 1 0 011 1v3a1 1 0 01-1 1z" />
+                                                    ) : (
+                                                        <path fillRule="evenodd" d="M5 8a5 5 0 1110 0v2h1a1 1 0 011 1v5a1 1 0 01-1 1H4a1 1 0 01-1-1v-5a1 1 0 011-1h1V8zm2 0V6a3 3 0 116 0v2H7z" clipRule="evenodd" />
+                                                    )}
+                                                </svg>
+                                                {user.passwordHash && user.passwordHash.trim() !== '' ? 'Password Set' : 'No Password'}
+                                            </span>
                                         </div>
                                     </div>
                                 ))}
