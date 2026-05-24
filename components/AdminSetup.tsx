@@ -605,6 +605,13 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                     <div className="flex flex-wrap items-center gap-1.5 w-full">
                         <button
                             type="button"
+                            onClick={() => handleEditUser(selectedMobileUserData)}
+                            className="px-2.5 py-1 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 text-[10px] font-semibold transition shadow-sm"
+                        >
+                            Edit
+                        </button>
+                        <button
+                            type="button"
                             onClick={() => toggleExistingUserReadOnly(selectedMobileUserData.id)}
                             className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition shadow-sm ${selectedMobileUserData.isReadOnly ? 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100' : 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200'}`}
                         >
@@ -615,14 +622,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                             onClick={() => setResetConfirmUserId(selectedMobileUserData.id)}
                             className="px-2.5 py-1 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 text-[10px] font-semibold transition shadow-sm"
                         >
-                            Clear Pass
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => handleEditUser(selectedMobileUserData)}
-                            className="px-2.5 py-1 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 text-[10px] font-semibold transition shadow-sm"
-                        >
-                            Edit
+                            Clear Password
                         </button>
                         <button
                             type="button"
@@ -705,6 +705,14 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
             {/* BOTTOM ROW: Action Buttons aligned horizontally */}
             <div className="flex flex-wrap items-center gap-2 w-full">
                 <button
+                    onClick={() => handleEditUser(user)}
+                    className="px-3 py-1.5 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 text-[11px] font-semibold transition shadow-sm"
+                    title="Edit Settings"
+                >
+                    Edit User
+                </button>
+
+                <button
                     onClick={() => toggleExistingUserReadOnly(user.id)}
                     className={`px-3 py-1.5 rounded-xl text-[11px] font-semibold transition shadow-sm ${
                         user.isReadOnly
@@ -722,14 +730,6 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                     title="Reset Password"
                 >
                     Clear Password
-                </button>
-
-                <button
-                    onClick={() => handleEditUser(user)}
-                    className="px-3 py-1.5 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 text-[11px] font-semibold transition shadow-sm"
-                    title="Edit Settings"
-                >
-                    Edit User
                 </button>
 
                 <button
