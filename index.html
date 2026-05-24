@@ -50,6 +50,63 @@
       -ms-overflow-style: none;
       scrollbar-width: none;
     }
+
+    /* Loading screen styles */
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      gap: 12px;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      color: #1f2937;
+      text-align: center;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .loading-container .logo {
+      width: 96px;
+      height: auto;
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(31,41,55,0.12);
+      background: white;
+    }
+
+    .app-title {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.5px;
+    }
+
+    .loading-subtitle {
+      margin: 0;
+      color: #475569;
+      font-size: 14px;
+    }
+
+    .loading-visual { margin: 8px 0 4px; }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 4px solid rgba(0,0,0,0.08);
+      border-top-color: #3b82f6;
+      animation: spin 1s linear infinite;
+      box-shadow: 0 6px 18px rgba(59,130,246,0.12);
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .creator { margin: 6px 0 0; color: #374151; font-size: 13px; }
+    .creator a { color: #2563eb; text-decoration: none; }
+    .creator a:hover { text-decoration: underline; }
+
+    .connection-note { margin: 4px 0 0; color: #6b7280; font-size: 12px; }
   </style>
 
 
@@ -88,9 +145,17 @@
 
 <body class="bg-gray-100">
   <div id="root">
-    <div
-      style="display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif; color: #666;">
-      Loading Application... (If this persists, JavaScript failed to load)
+    <div class="loading-container" role="status" aria-live="polite">
+      <img src="images/logo1.png" alt="SBA Pro Master logo" class="logo" />
+      <h1 class="app-title">SBA Pro Master</h1>
+      <p class="loading-subtitle">Initializing system — please wait</p>
+
+      <div class="loading-visual">
+        <div class="spinner" aria-hidden="true"></div>
+      </div>
+
+      <p class="creator">Created by <strong>Mr. Michael Darko</strong> (<a href="tel:0542410613">0542410613</a>)</p>
+      <p class="connection-note">If loading takes longer than 30 seconds, check your internet connection or contact the creator.</p>
     </div>
   </div>
   <script type="module" src="./index.tsx"></script>
