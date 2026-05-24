@@ -564,30 +564,21 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         </select>
 
         {selectedMobileUserData ? (
-            <div className="mt-4 bg-white border border-slate-200 rounded-[1.5rem] p-5 shadow-sm">
-                <div className="flex flex-col gap-5">
+            <div className="mt-3 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+                <div className="flex flex-col gap-3.5">
                     
                     {/* TOP AREA: Name & Descriptors aligned horizontally */}
-                    <div className="flex flex-wrap items-center gap-3 w-full">
-                        <div className="text-lg font-bold text-slate-900">{selectedMobileUserData.name || 'Unnamed User'}</div>
+                    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 w-full">
+                        <div className="text-base font-bold text-slate-900">{selectedMobileUserData.name || 'Unnamed User'}</div>
                         
-                        {/* Role Badge */}
-                        <div className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-700 bg-slate-100">
-                            <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
-                                {selectedMobileUserData.role === 'Admin' ? (
-                                    <path d="M12 2l3 3h4a1 1 0 011 1v4l3 3v6a1 1 0 01-1 1h-4a1 1 0 01-1-1v-3H9v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-6l3-3V6a1 1 0 011-1h4l3-3z" />
-                                ) : selectedMobileUserData.role === 'Teacher' ? (
-                                        <path d="M4 5a2 2 0 012-2h12a2 2 0 012 2v14a1 1 0 01-1.447.894L12 16.618l-7.553 3.276A1 1 0 013 19V5zm2 1v12.382l6.553-2.846a1 1 0 01.894 0L18 18.382V6H6z" />
-                                ) : (
-                                    <path d="M12 12a4 4 0 100-8 4 4 0 000 8zm-6 9a6 6 0 0112 0H6z" />
-                                )}
-                            </svg>
+                        {/* Role Badge (Main anchor) */}
+                        <div className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-700 bg-slate-100">
                             {selectedMobileUserData.role}
                         </div>
                         
-                        {/* Access Status Badge */}
-                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide ${selectedMobileUserData.isReadOnly ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-700'}`}>
-                            <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
+                        {/* Access Status Minimal Indicator */}
+                        <span className={`inline-flex items-center gap-0.5 text-[9px] font-medium ${selectedMobileUserData.isReadOnly ? 'text-rose-600' : 'text-emerald-600'}`}>
+                            <svg className="h-2.5 w-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                 {selectedMobileUserData.isReadOnly ? (
                                     <path fillRule="evenodd" d="M6 8V7a4 4 0 118 0v1h1a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1V9a1 1 0 011-1h1zm2-1a2 2 0 114 0v1H8V7z" clipRule="evenodd" />
                                 ) : (
@@ -597,46 +588,46 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                             {selectedMobileUserData.isReadOnly ? 'Restricted' : 'Unlocked'}
                         </span>
                         
-                        {/* Password Status Badge */}
-                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide ${selectedMobileUserData.passwordHash && selectedMobileUserData.passwordHash.trim() !== '' ? 'bg-emerald-50 text-emerald-700' : 'bg-yellow-50 text-yellow-700'}`}>
-                            <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
+                        {/* Password Status Minimal Indicator */}
+                        <span className={`inline-flex items-center gap-0.5 text-[9px] font-medium ${selectedMobileUserData.passwordHash && selectedMobileUserData.passwordHash.trim() !== '' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                            <svg className="h-2.5 w-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                 {selectedMobileUserData.passwordHash && selectedMobileUserData.passwordHash.trim() !== '' ? (
                                     <path d="M10 2a4 4 0 00-4 4v2h8V6a4 4 0 00-4-4zm-1 7a1 1 0 100 2 1 1 0 000-2zm4 5H7a1 1 0 01-1-1v-3a1 1 0 011-1h6a1 1 0 011 1v3a1 1 0 01-1 1z" />
                                 ) : (
                                     <path fillRule="evenodd" d="M5 8a5 5 0 1110 0v2h1a1 1 0 011 1v5a1 1 0 01-1 1H4a1 1 0 01-1-1v-5a1 1 0 011-1h1V8zm2 0V6a3 3 0 116 0v2H7z" clipRule="evenodd" />
                                 )}
                             </svg>
-                            {selectedMobileUserData.passwordHash && selectedMobileUserData.passwordHash.trim() !== '' ? 'Password Set' : 'No Password'}
+                            {selectedMobileUserData.passwordHash && selectedMobileUserData.passwordHash.trim() !== '' ? 'Secure' : 'No Pass'}
                         </span>
                     </div>
 
                     {/* BOTTOM AREA: Action Buttons aligned horizontally */}
-                    <div className="flex flex-wrap items-center gap-2 w-full">
+                    <div className="flex flex-wrap items-center gap-1.5 w-full">
                         <button
                             type="button"
                             onClick={() => toggleExistingUserReadOnly(selectedMobileUserData.id)}
-                            className={`px-3 py-1.5 rounded-xl text-[11px] font-semibold transition shadow-sm ${selectedMobileUserData.isReadOnly ? 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100' : 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200'}`}
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition shadow-sm ${selectedMobileUserData.isReadOnly ? 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100' : 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200'}`}
                         >
-                            {selectedMobileUserData.isReadOnly ? 'Grant Access' : 'Restrict Access'}
+                            {selectedMobileUserData.isReadOnly ? 'Unlock' : 'Restrict'}
                         </button>
                         <button
                             type="button"
                             onClick={() => setResetConfirmUserId(selectedMobileUserData.id)}
-                            className="px-3 py-1.5 rounded-xl border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 text-[11px] font-semibold transition shadow-sm"
+                            className="px-2.5 py-1 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 text-[10px] font-semibold transition shadow-sm"
                         >
-                            Clear Password
+                            Clear Pass
                         </button>
                         <button
                             type="button"
                             onClick={() => handleEditUser(selectedMobileUserData)}
-                            className="px-3 py-1.5 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 text-[11px] font-semibold transition shadow-sm"
+                            className="px-2.5 py-1 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 text-[10px] font-semibold transition shadow-sm"
                         >
-                            Edit User
+                            Edit
                         </button>
                         <button
                             type="button"
                             onClick={() => setDeleteConfirmUserId(selectedMobileUserData.id)}
-                            className="px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 text-[11px] font-semibold transition shadow-sm"
+                            className="px-2.5 py-1 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 text-[10px] font-semibold transition shadow-sm"
                         >
                             Delete
                         </button>
