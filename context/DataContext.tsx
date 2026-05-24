@@ -117,7 +117,7 @@ export interface DataContextType {
 
     // Lazy Loading
     loadStudents: (limit?: number, force?: boolean) => Promise<void>;
-    loadScores: (classId: number, subjectId: number) => Promise<void>;
+    loadScores: (classId: number | undefined, subjectId: number) => Promise<void>;
 
     // UI Feedback
     hasLocalChanges: boolean;
@@ -436,7 +436,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.278"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.279"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -3307,15 +3307,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Sync users if present
         if (importedUsers) {
             SyncLogger.log(`loadImportedData: Loading users from document. Count: ${importedUsers.length}`);
-            if (isInitialLaunch && !isDataEqual(importedUsers, users)) {
-                console.log(`[DataContext] 🛡️ Preservation: Discrepancy in users. Keeping local.`);
-                // markDirty('users', true);
-                // nextState.users remains current
+            const shouldPreserveUsers = isInitialLaunch
+                && pendingChangesMap.current.users.size > 0
+                && users.length > 0
+                && !isDataEqual(importedUsers, users);
+
+            if (shouldPreserveUsers) {
+                console.log(`[DataContext] 🛡️ Preservation: Local user changes exist; keeping local users during initial sync. dirtyUserCount=${pendingChangesMap.current.users.size}`);
             } else if (!isDataEqual(importedUsers, users)) {
                 console.log('[DataContext] ✅ Updating users:', importedUsers.length);
                 setUsers(importedUsers);
                 nextState.users = importedUsers; // Track next state
-                // if (!isRemote) markDirty('users');
             }
         }
 

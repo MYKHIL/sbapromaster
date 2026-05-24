@@ -13,9 +13,10 @@ import { useUser } from '../../context/UserContext';
 import { processAndUploadImage, validateImageSize, triggerDownload } from '../../utils/imageUtils';
 import { exportToExcel, exportToPDF } from '../../utils/exportUtils';
 import { useUserAction } from '../../context/UserActionContext';
-import type { NavigationMeta } from '../../types';
+import type { Page, NavigationMeta } from '../../types';
 
 interface TeachersProps {
+    onNavigate?: (page: Page, meta?: NavigationMeta) => void;
     navigationMeta?: NavigationMeta | null;
 }
 
@@ -27,7 +28,7 @@ const EMPTY_TEACHER_FORM: Omit<Class, 'id'> = {
 
 const SIGNATURE_PLACEHOLDER = 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTUwIDUwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0yIDI1LjVDMiAyNS41IDE1LjUgMTUuNSAyOS41IDI4QzQzLjUgNDAuNSA1MyAyNS41IDY2LjUgMjAuNUM4MCAxNS41IDg4LjUgMjkgMTAwIDI5QzExMS41IDI5IDEyMyAxNS41IDEzNyAyOS41IiBzdHJva2U9IiM5Y2EzYWYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+';
 
-const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
+const Teachers: React.FC<TeachersProps> = ({ navigationMeta, onNavigate }) => {
     const { recordAction } = useUserAction();
     const { classes, deletedClasses, restoreItem, permanentlyDeleteItem, addClass, updateClass, deleteClass, saveClasses, isDirty, isItemDirty, isSyncing, isOnline, subscription, loadMetadata } = useData();
     const { currentUser } = useUser();
@@ -409,6 +410,19 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta }) => {
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                                     </svg>
                                     <span>Add New Teacher/Class</span>
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        if (onNavigate) onNavigate('Settings', { openUserManagement: true, returnTo: 'Classes & Teachers' });
+                                        else window.dispatchEvent(new CustomEvent('app-navigate', { detail: { page: 'Settings', meta: { openUserManagement: true, returnTo: 'Classes & Teachers' } } }));
+                                    }}
+                                    className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition shadow-sm border border-gray-200"
+                                    title="Manage Users & Permissions"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11c1.657 0 3-1.343 3-3S17.657 5 16 5s-3 1.343-3 3 1.343 3 3 3zM6 11c1.657 0 3-1.343 3-3S7.657 5 6 5 3 6.343 3 8s1.343 3 3 3zM6 13c-2.33 0-7 1.17-7 3.5V20h14v-3.5C13 14.17 8.33 13 6 13zm10 0c-.29 0-.57.02-.85.05C17.54 13.83 19 15.28 19 17v3h5v-3.5c0-2.33-4.67-3.5-7-3.5z" />
+                                    </svg>
+                                    <span>Manage Users</span>
                                 </button>
                                 {visibleDeletedClasses.length > 0 && (
                                     <button

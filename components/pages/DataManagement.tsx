@@ -7,7 +7,7 @@ import { generateWpfProject } from '../../services/wpfProjectGenerator';
 import ConfirmationModal from '../ConfirmationModal';
 import AdminSetup from '../AdminSetup';
 import { DEV_TOOLS_ENABLED, WHATSAPP_DEVELOPER_NUMBER, SHOW_USER_EXPORT_BUTTON, ACTIVATION_HASH } from '../../constants';
-import type { User, SchoolPeriod } from '../../types';
+import type { User, SchoolPeriod, NavigationMeta } from '../../types';
 import { generateIndexNumber, validateIndexNumberPattern } from '../../utils/indexNumberGenerator';
 import IndexNumberConfig from '../IndexNumberConfig';
 
@@ -129,7 +129,8 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
             // 1.5. Lock Current Users (Optional)
             if (lockCurrentUsers && schoolId) {
                 // Create a list of users with isReadOnly=true
-                const lockedUsers = dataContext.users.map(u => ({ ...u, isReadOnly: true }));
+                const usersList = dataContext.users ?? [];
+                const lockedUsers = usersList.map(u => ({ ...u, isReadOnly: true }));
                 // Update CURRENT db locally and cloud
                 // We should probably await this to ensure it's saved before we move on,
                 // BUT if we fail to create the new term, we might have locked users prematurely?
@@ -139,7 +140,8 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
             }
 
             // 1.6 Ensure New Term Users are Unlocked
-            const unlockedUsers = dataContext.users.map(u => {
+            const usersList2 = dataContext.users ?? [];
+            const unlockedUsers = usersList2.map(u => {
                 // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 const { isReadOnly, ...rest } = u; // Remove isReadOnly property
                 return { ...rest, isReadOnly: false }; // Explicitly set to false to be safe
@@ -730,7 +732,11 @@ const PasswordScopeModal: React.FC<{
     );
 };
 
-const DataManagement: React.FC = () => {
+interface DataManagementProps {
+    navigationMeta?: NavigationMeta | null;
+}
+
+const DataManagement: React.FC<DataManagementProps> = ({ navigationMeta = null }) => {
     const dataContext = useData();
     const { settings, loadImportedData, saveToCloud, schoolId, updateSettings, isFetching } = dataContext;
     const { currentUser, users, setUsers } = useUser();
@@ -796,6 +802,24 @@ const DataManagement: React.FC = () => {
     const handleImportClick = () => {
         setFeedback(null);
         fileInputRef.current?.click();
+    };
+
+    // Open user management from navigation meta (e.g. shortcut from other pages)
+    useEffect(() => {
+        if (navigationMeta?.openUserManagement && currentUser?.role === 'Admin') {
+            setIsUserManagementOpen(true);
+        }
+    }, [navigationMeta, currentUser?.role]);
+
+    const navigateBackIfPresent = () => {
+        try {
+            const returnTo = (navigationMeta as any)?.returnTo as string | undefined;
+            if (returnTo) {
+                window.dispatchEvent(new CustomEvent('app-navigate', { detail: { page: returnTo } }));
+            }
+        } catch (e) {
+            // ignore
+        }
     };
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -928,7 +952,7 @@ const DataManagement: React.FC = () => {
             // PASS TRUE to skip the auto-refresh.
             // When importing a full DB, we trust the import data we just loaded into memory.
             // Fetching it back from the cloud immediately is a waste of Quota (Reads).
-            await saveToCloud(true, true);
+            await saveToCloud(true);
             setFeedback({ message: 'Data saved to cloud successfully!', type: 'success' });
         } catch (error) {
             console.error("Cloud save failed:", error);
@@ -1053,6 +1077,7 @@ const DataManagement: React.FC = () => {
 
             if (shouldClose) {
                 setIsUserManagementOpen(false);
+                navigateBackIfPresent();
             }
             // Clear feedback after 4 seconds
             setTimeout(() => setFeedback(null), 4000);
@@ -1521,6 +1546,7 @@ const DataManagement: React.FC = () => {
                                             )}
                                         </div>
                                     </div>
+
                                 )}
 
                                 {currentUser?.role === 'Admin' && (
@@ -1783,7 +1809,7 @@ const DataManagement: React.FC = () => {
                         currentUser={currentUser}
                         onComplete={(users) => handleUserManagementSave(users, true)} // Complete/Close
                         onUpdate={(users) => handleUserManagementSave(users, false)} // Update/Keep Open
-                        onCancel={() => setIsUserManagementOpen(false)}
+                        onCancel={() => { setIsUserManagementOpen(false); navigateBackIfPresent(); }}
                         isFetching={isFetching}
                     />
                 )

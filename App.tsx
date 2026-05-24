@@ -52,12 +52,12 @@ const ActivePage: React.FC<{
   switch (page) {
     case 'Dashboard': return <Dashboard onNavigate={onNavigate} />;
     case 'School Setup': return <Settings />;
-    case 'Classes & Teachers': return <Teachers navigationMeta={navigationMeta} />;
+    case 'Classes & Teachers': return <Teachers onNavigate={onNavigate} navigationMeta={navigationMeta} />;
     case 'Subjects': return <Subjects />;
     case 'Students': return <Students onNavigate={onNavigate} />;
     case 'Grading System': return <GradingSystem />;
     case 'Assessment Types': return <AssessmentTypes />;
-    case 'Score Entry': return <ScoreEntry />;
+    case 'Score Entry': return <ScoreEntry onNavigate={onNavigate} />;
     case 'Score Summary': return <ScoreSummary />;
     case 'Student Progress': return <StudentProgress />;
     case 'Subject Analysis': return <SubjectAnalysis />;
@@ -131,6 +131,16 @@ const AppContent: React.FC = () => {
     recordAction(`Navigated to ${page}${meta ? ` (${JSON.stringify(meta)})` : ''}`);
   }, [currentPage, recordAction]);
 
+  // Listen for global navigation events from components that don't receive onNavigate
+  React.useEffect(() => {
+    const handler = (e: any) => {
+      const detail = e.detail as { page: Page; meta?: NavigationMeta };
+      if (detail?.page) handleNavigate(detail.page, detail.meta);
+    };
+    window.addEventListener('app-navigate' as any, handler as any);
+    return () => window.removeEventListener('app-navigate' as any, handler as any);
+  }, [handleNavigate]);
+
   React.useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasLocalChanges) {
@@ -178,7 +188,7 @@ const AppContent: React.FC = () => {
           <Sidebar currentPage={currentPage} setCurrentPage={handleNavigate} />
           <main className="flex-1 p-4 pt-20 pb-36 md:p-6 md:pt-20 md:pb-32 lg:p-10 overflow-auto">
             <PageWrapper name="Settings" currentPage={currentPage}>
-              <DataManagement />
+              <DataManagement navigationMeta={navigationMeta} />
             </PageWrapper>
             {currentPage !== 'Settings' && <ActivePage page={currentPage} onNavigate={handleNavigate} navigationMeta={navigationMeta} />}
           </main>

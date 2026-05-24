@@ -7,14 +7,14 @@ import InlineScoreInput from '../InlineScoreInput';
 import ScoreManagementModal from '../ScoreManagementModal';
 import PreviewDataModal from '../PreviewDataModal';
 import { NetworkIndicator } from '../NetworkIndicator';
-import type { Student, Assessment } from '../../types';
+import type { Student, Assessment, Page, NavigationMeta } from '../../types';
 
 import { getAvailableClasses, getSubjectsForUserAndClass } from '../../utils/permissions';
 import { sortClassesByName } from '../../utils/classSort';
 
-const ScoreEntry: React.FC = () => {
+const ScoreEntry: React.FC<{ onNavigate?: (page: Page, meta?: NavigationMeta) => void }> = ({ onNavigate }) => {
     // Destructure with default empty arrays to prevent undefined errors
-    const { students = [], subjects: allSubjects = [], assessments = [], classes: allClasses = [], getStudentScores, updateStudentScores, isOnline, isSyncing, isFetching, queuedCount, hasLocalChanges, setHasLocalChanges, isDirty, updateDraftScore, removeDraftScore, getComputedScore, draftVersion, scores, saveToCloud, refreshFromCloud, pendingCount, getPendingUploadData, loadScores, isDraftScore, isScoreDirty, refreshVersion } = useData();
+    const { students = [], subjects: allSubjects = [], assessments = [], classes: allClasses = [], users: allUsers = [], getStudentScores, updateStudentScores, isOnline, isSyncing, isFetching, queuedCount, hasLocalChanges, setHasLocalChanges, isDirty, updateDraftScore, removeDraftScore, getComputedScore, draftVersion, scores, saveToCloud, refreshFromCloud, pendingCount, getPendingUploadData, loadScores, isDraftScore, isScoreDirty, refreshVersion } = useData();
     const { currentUser } = useUser();
     const isReadOnly = currentUser?.role === 'Guest';
 
@@ -143,8 +143,134 @@ const ScoreEntry: React.FC = () => {
     // Filter subjects based on selected class (per-class mapping)
     const subjects = useMemo(() => {
         if (!selectedClass) return allSubjects; // Show all when "All Classes" selected
+
+        const normalizeClassKey = (value: string | number | undefined | null) => {
+            if (value === undefined || value === null) return '';
+            return value.toString().trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+        };
+
+        const selectedClassKey = normalizeClassKey(selectedClass);
+
+        // For Admins: only include subjects that are assigned to any teacher for the selected class
+        if ((currentUser?.role || '').toLowerCase() === 'admin') {
+            const assignedIds = new Set<number>();
+            const debugInfo: any = {
+                selectedClass,
+                selectedClassKey,
+                allUsersCount: (allUsers || []).length,
+                allUsers: (allUsers || []).map(u => ({
+                    id: u.id,
+                    name: u.name,
+                    role: u.role,
+                    hasClassSubjects: !!u.classSubjects,
+                    classSubjectsKeys: u.classSubjects ? Object.keys(u.classSubjects) : [],
+                    classSubjectsData: u.classSubjects
+                })),
+                teachers: [] as any[]
+            };
+
+            (allUsers || []).forEach(u => {
+                const role = (u.role || '').toString().toLowerCase();
+                const hasExplicitClassSubjects = u.classSubjects && Object.keys(u.classSubjects).length > 0;
+                const isAssignmentSource = role === 'teacher' || (role === 'admin' && hasExplicitClassSubjects);
+                if (isAssignmentSource) {
+                    const mapping = u.classSubjects || {};
+                    const mappingKeys = Object.keys(mapping);
+
+                    // Find a matching class key in the teacher's mapping (trim + case-insensitive)
+                    const clsKey = mappingKeys.find(k => {
+                        const normalized = normalizeClassKey(k);
+                        if (normalized && normalized === selectedClassKey) return true;
+                        return (k || '').toString().trim().toLowerCase() === (selectedClass || '').toString().trim().toLowerCase();
+                    });
+
+                    const altMatchKey = !clsKey
+                        ? mappingKeys.find(k => {
+                            const normalized = normalizeClassKey(k);
+                            return normalized && (normalized.includes(selectedClassKey) || selectedClassKey.includes(normalized));
+                        })
+                        : undefined;
+
+                    const effectiveKey = clsKey || altMatchKey;
+                    let clsSubjects: any[] = effectiveKey ? (mapping[effectiveKey] || []) : [];
+                    let usedAllowedSubjectsFallback = false;
+
+                    // If the teacher has no explicit classSubjects mapping for this class,
+                    // but they are assigned to the class via allowedClasses, use allowedSubjects.
+                    if (!effectiveKey && role === 'teacher') {
+                        const normalizedAllowedClasses = (u.allowedClasses || []).map(normalizeClassKey);
+                        const hasClassAssignment = normalizedAllowedClasses.some(cls => cls === selectedClassKey || cls.includes(selectedClassKey) || selectedClassKey.includes(cls));
+                        if (hasClassAssignment) {
+                            clsSubjects = u.allowedSubjects || [];
+                            usedAllowedSubjectsFallback = true;
+                        }
+                    }
+
+                    if (!clsKey && altMatchKey) {
+                        debugInfo.altMatch = altMatchKey;
+                    }
+
+                    debugInfo.teachers.push({
+                        name: u.name,
+                        mappingKeys,
+                        matchedKey: clsKey,
+                        altMatchKey,
+                        selectedClassKey,
+                        subjectsForClass: clsSubjects,
+                        allowedSubjects: u.allowedSubjects || [],
+                        allowedClasses: u.allowedClasses || [],
+                        usedAllowedSubjectsFallback
+                    });
+
+                    (clsSubjects || []).forEach(entry => {
+                        if (typeof entry === 'number') {
+                            assignedIds.add(entry);
+                            return;
+                        }
+
+                        if (typeof entry === 'string') {
+                            // Numeric string? cast to number
+                            const asNum = Number(entry);
+                            if (!isNaN(asNum)) {
+                                assignedIds.add(asNum);
+                                return;
+                            }
+
+                            // Otherwise try to match by subject name (case-insensitive)
+                            const match = allSubjects.find(s => (s.subject || '').toString().trim().toLowerCase() === entry.trim().toLowerCase());
+                            if (match) assignedIds.add(match.id);
+                        }
+
+                        if (typeof entry === 'object' && entry !== null) {
+                            // Legacy or malformed entry: try to extract an ID or name
+                            const entryId = Number((entry as any).id ?? (entry as any).subjectId);
+                            if (!isNaN(entryId)) {
+                                assignedIds.add(entryId);
+                                return;
+                            }
+                            const entryName = (entry as any).subject || (entry as any).name;
+                            if (typeof entryName === 'string') {
+                                const match = allSubjects.find(s => (s.subject || '').toString().trim().toLowerCase() === entryName.trim().toLowerCase());
+                                if (match) assignedIds.add(match.id);
+                            }
+                        }
+                    });
+                }
+            });
+
+            debugInfo.foundAssignedIds = Array.from(assignedIds);
+            debugInfo.allSubjectIds = allSubjects.map(s => ({ id: s.id, name: s.subject }));
+            console.log('[ScoreEntry] Admin Subject Filtering Debug:', debugInfo);
+
+            // Map IDs back to subject objects, keeping original ordering in allSubjects
+            return allSubjects.filter(s => assignedIds.has(s.id));
+        }
+
         return getSubjectsForUserAndClass(currentUser, selectedClass, allSubjects);
-    }, [currentUser, selectedClass, allSubjects]);
+    }, [currentUser, selectedClass, allSubjects, allUsers]);
+
+    const missingSubjects = selectedClass ? allSubjects.filter(subject => !subjects.some(s => s.id === subject.id)) : [];
+    const showAdminAssignPrompt = currentUser?.role === 'Admin' && selectedClass && missingSubjects.length > 0;
 
     // Safe initialization for selectedSubjectId
     const [selectedSubjectId, setSelectedSubjectId] = useState<number>(() => {
@@ -321,6 +447,65 @@ const ScoreEntry: React.FC = () => {
 
 
     // Reset student selection if filtering changes and causes out of bounds (handled by useMemo, but we can clean up any errors here if needed)
+
+    const [isMissingDataModalOpen, setIsMissingDataModalOpen] = useState(false);
+
+    const missingDataList = useMemo(() => {
+        if (!filteredStudents.length || !subjects.length || !assessments.length) return [];
+        
+        const missing: { studentIndex: number; studentId: number; studentName: string; subjectId: number; subjectName: string; missingAssessments: Assessment[] }[] = [];
+        
+        filteredStudents.forEach((student, index) => {
+            subjects.forEach(subject => {
+                const missingAssessmentsForStudent = assessments.filter(assessment => {
+                    const scores = getStudentScores(student.id, subject.id, assessment.id);
+                    return !scores || scores.length === 0 || scores[0] === '';
+                });
+                
+                if (missingAssessmentsForStudent.length > 0) {
+                    missing.push({
+                        studentIndex: index,
+                        studentId: student.id,
+                        studentName: student.name,
+                        subjectId: subject.id,
+                        subjectName: subject.subject,
+                        missingAssessments: missingAssessmentsForStudent
+                    });
+                }
+            });
+        });
+        return missing;
+    }, [filteredStudents, subjects, assessments, getStudentScores, refreshVersion]);
+
+    const jumpToNextMissing = () => {
+        if (missingDataList.length === 0) return;
+        
+        // Find current position in list (match by student + subject)
+        let currentIdx = missingDataList.findIndex(
+            m => m.studentIndex === selectedStudentIndex && m.subjectId === selectedSubjectId
+        );
+        
+        // Cycle to next
+        const nextIdx = (currentIdx + 1) % missingDataList.length;
+        const nextMissing = missingDataList[nextIdx];
+        
+        if (scoreModified) commitScore();
+        handleStudentIndexChange(nextMissing.studentIndex);
+        setSelectedSubjectId(nextMissing.subjectId);
+        localStorage.setItem('scoreEntry_selectedSubjectId', String(nextMissing.subjectId));
+        setSelectedAssessmentId(nextMissing.missingAssessments[0].id);
+        setMobileScoreError('');
+    };
+
+    const jumpToMissingStudentAndAssessment = (studentIndex: number, subjectId: number, assessmentId: number) => {
+        setIsMissingDataModalOpen(false);
+        if (scoreModified) commitScore();
+        handleStudentIndexChange(studentIndex);
+        setSelectedSubjectId(subjectId);
+        localStorage.setItem('scoreEntry_selectedSubjectId', String(subjectId));
+        setSelectedAssessmentId(assessmentId);
+        setMobileScoreError('');
+    };
 
     const unfilledCount = useMemo(() => {
         if (!filteredStudents || !selectedSubjectId || !selectedAssessmentId) return 0;
@@ -675,10 +860,33 @@ const ScoreEntry: React.FC = () => {
                                     </svg>
                                 </div>
                             </div>
-                            {subjects.length === 0 && (
-                                <p className="mt-1 text-[9px] text-red-500 font-medium italic">
-                                    Please contact Admin to assign subjects to you for this class.
+                            {showAdminAssignPrompt && (
+                                <p className="mt-1 text-[9px] text-amber-700 font-medium italic">
+                                    {missingSubjects.length === 1 ? 'One subject' : `${missingSubjects.length} subjects`} are not currently assigned to a teacher or admin for this class. <button
+                                        onClick={() => {
+                                            if (onNavigate) onNavigate('Settings', { openUserManagement: true, returnTo: 'Score Entry' });
+                                            else window.dispatchEvent(new CustomEvent('app-navigate', { detail: { page: 'Settings', meta: { openUserManagement: true, returnTo: 'Score Entry' } } }));
+                                        }}
+                                        className="underline text-blue-600 hover:text-blue-800 ml-1"
+                                    >Assign missing subjects</button>.
                                 </p>
+                            )}
+                            {subjects.length === 0 && (
+                                currentUser?.role === 'Admin' && selectedClass ? (
+                                    <p className="mt-1 text-[9px] text-red-500 font-medium italic">
+                                        No subjects are linked to teachers for this class. <button
+                                            onClick={() => {
+                                                if (onNavigate) onNavigate('Settings', { openUserManagement: true, returnTo: 'Score Entry' });
+                                                else window.dispatchEvent(new CustomEvent('app-navigate', { detail: { page: 'Settings', meta: { openUserManagement: true, returnTo: 'Score Entry' } } }));
+                                            }}
+                                            className="underline text-blue-600 hover:text-blue-800 ml-1"
+                                        >Open User Management</button>
+                                    </p>
+                                ) : (
+                                    <p className="mt-1 text-[9px] text-red-500 font-medium italic">
+                                        Please contact Admin to assign subjects to you for this class.
+                                    </p>
+                                )
                             )}
                         </div>
                     </div>
@@ -690,7 +898,28 @@ const ScoreEntry: React.FC = () => {
                                 <>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Student</label>
+                                            <div className="flex justify-between items-center mb-1">
+                                                <label className="block text-sm font-medium text-gray-700">Student</label>
+                                                {missingDataList.length > 0 && (
+                                                    <div className="flex items-center gap-1">
+                                                        <button
+                                                            onClick={jumpToNextMissing}
+                                                            title="Next Incomplete Student"
+                                                            className="text-[10px] p-1 rounded-full bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+                                                        >
+                                                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                                                            </svg>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setIsMissingDataModalOpen(true)}
+                                                            className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700 hover:bg-red-200 hover:text-red-800 transition-colors"
+                                                        >
+                                                            {missingDataList.length} incomplete
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
                                             <select
                                                 value={selectedStudentIndex}
                                                 onChange={(e) => {
@@ -971,10 +1200,50 @@ const ScoreEntry: React.FC = () => {
                 />
             )}
 
+            {isMissingDataModalOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 animate-in fade-in">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[80vh] flex flex-col">
+                        <div className="flex justify-between items-center p-4 border-b border-gray-100">
+                            <h3 className="font-bold text-gray-800">Incomplete Scores</h3>
+                            <button onClick={() => setIsMissingDataModalOpen(false)} className="text-gray-500 hover:text-gray-700">
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div className="p-4 overflow-y-auto custom-scrollbar flex-1 space-y-3">
+                            <p className="text-sm text-gray-600 mb-2">The following students have missing scores across all subjects:</p>
+                            {missingDataList.map((entry, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={() => jumpToMissingStudentAndAssessment(entry.studentIndex, entry.subjectId, entry.missingAssessments[0].id)}
+                                    className="w-full text-left text-sm text-red-800 flex flex-col bg-red-50 p-2.5 rounded border border-red-100 hover:bg-red-100 transition-colors focus:outline-none focus:ring-2 focus:ring-red-400"
+                                >
+                                    <div className="flex justify-between items-start">
+                                        <span className="font-semibold">{entry.studentName}</span>
+                                        <span className="text-[10px] px-1.5 py-0.5 bg-red-200 text-red-800 rounded font-medium ml-2 flex-shrink-0">{entry.subjectName}</span>
+                                    </div>
+                                    <span className="text-red-500 mt-1 text-[11px] uppercase tracking-wide">
+                                        Missing: {entry.missingAssessments.map(a => a.name).join(', ')}
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+                        <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-xl flex justify-end">
+                            <button
+                                onClick={() => setIsMissingDataModalOpen(false)}
+                                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors text-sm font-medium"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <PreviewDataModal
                 isOpen={isDebugModalOpen}
                 onClose={handleCloseDebugModal}
-                debugData={debugData}
                 pendingCount={pendingCount}
                 onSave={() => saveToCloud(true)}
                 isSyncing={isSyncing}

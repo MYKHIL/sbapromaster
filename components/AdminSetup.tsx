@@ -24,6 +24,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
     const [users, setUsers] = useState<Partial<User>[]>(mode === 'setup' ? [{ role: 'Admin' as UserRole, allowedClasses: [], allowedSubjects: [] }] : []);
     const [existingUsers, setExistingUsers] = useState<User[]>(initialUsers);
     const [adminPassword, setAdminPassword] = useState('');
+    const [isApplyingChanges, setIsApplyingChanges] = useState(false);
 
     // Update local state when prop changes (e.g. after data load)
     useEffect(() => {
@@ -55,7 +56,14 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         }));
     }, [subjects]);
 
-    const classNames = React.useMemo(() => classes.map(c => c.name), [classes]);
+    const classNames = React.useMemo(() => {
+        return classes.map(c => c.name).sort((a, b) => {
+            return a.localeCompare(b, undefined, {
+                numeric: true,
+                sensitivity: 'base'
+            });
+        });
+    }, [classes]);
 
     // Ref for auto-scrolling to bottom of user list
     const userListRef = React.useRef<HTMLDivElement>(null);
@@ -98,6 +106,29 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         }
     };
 
+    const handleApplyChanges = async () => {
+        if (isFetching && existingUsers.length === 0) {
+            setError('⏳ Still fetching users from cloud. Please wait...');
+            return;
+        }
+        if (existingUsers.length === 0) {
+            setError('Cannot save: no users to apply. Please add at least the admin user.');
+            return;
+        }
+
+        setError(null);
+        setIsApplyingChanges(true);
+        try {
+            await onComplete(existingUsers);
+            setError('✅ User changes saved to cloud. You may now close this window.');
+        } catch (err) {
+            console.error('Failed to apply user changes:', err);
+            setError('Failed to apply user changes. Please try again.');
+        } finally {
+            setIsApplyingChanges(false);
+        }
+    };
+
     const addNewUser = () => {
         // Save current scroll position before opening add form
         if (existingUsersListRef.current) {
@@ -122,6 +153,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         const newClasses = currentClasses.includes(className)
             ? currentClasses.filter(c => c !== className)
             : [...currentClasses, className];
+        newClasses.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
         updateUser(index, 'allowedClasses', newClasses);
     };
 
@@ -235,7 +267,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                 role: u.role || 'Teacher',  // Ensure role is defined
                 allowedClasses: u.role === 'Admin' ? classNames : (u.allowedClasses || []),
                 allowedSubjects: u.role === 'Admin' ? subjectList.map(s => s.id) : (u.allowedSubjects || []),
-                classSubjects: u.role === 'Admin' ? {} : (u.classSubjects || {}),  // Include classSubjects mapping
+                classSubjects: u.classSubjects || {},  // Include classSubjects mapping for all roles
                 passwordHash: mode === 'setup' && index === 0
                     ? await hashPassword(adminPassword)
                     : (u.passwordHash || ''),  // Empty string instead of undefined
@@ -280,7 +312,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         const hasGlobalSubjects = editingUser.allowedSubjects && editingUser.allowedSubjects.length > 0;
         const hasClassMappings = editingUser.classSubjects && Object.keys(editingUser.classSubjects).length > 0;
 
-        if (hasGlobalSubjects && !hasClassMappings && editingUser.allowedClasses) {
+        if (hasGlobalSubjects && !hasClassMappings && editingUser.allowedClasses && editingUser.role !== 'Admin') {
             // Auto-populate: Assign all allowedSubjects to all allowedClasses
             editingUser.allowedClasses.forEach(className => {
                 editingUser.classSubjects![className] = [...editingUser.allowedSubjects!];
@@ -308,7 +340,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                     role: updatedUser.role!,
                     allowedClasses: updatedUser.role === 'Admin' ? classNames : (updatedUser.allowedClasses || []),
                     allowedSubjects: updatedUser.role === 'Admin' ? subjectList.map(s => s.id) : (updatedUser.allowedSubjects || []),
-                    classSubjects: updatedUser.role === 'Admin' ? {} : (updatedUser.classSubjects || {}),  // Include classSubjects mapping
+                    classSubjects: updatedUser.classSubjects || {},  // Preserve admin classSubjects mapping
                 }
                 : u
         );
@@ -403,7 +435,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                 role: newUser.role!,
                 allowedClasses: newUser.role === 'Admin' ? classNames : (newUser.allowedClasses || []),
                 allowedSubjects: newUser.role === 'Admin' ? subjectList.map(s => s.id) : (newUser.allowedSubjects || []),
-                classSubjects: newUser.role === 'Admin' ? {} : (newUser.classSubjects || {}),
+                classSubjects: newUser.classSubjects || {},
                 passwordHash: '',
             };
             const updatedUsers = [...existingUsers, newUserObj];
@@ -428,6 +460,11 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                 existingUsersListRef.current.scrollTop = savedScrollPosition;
             }
         }, 0);
+    };
+
+    const getAssignmentClassNames = (user: Partial<User>) => {
+        const list = user.role === 'Admin' ? classNames : (user.allowedClasses || []);
+        return [...list].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
     };
 
     return (
@@ -624,70 +661,72 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                     </div>
                                 </div>
 
-                                {user.role !== 'Admin' && (
+                                {user.role !== 'Guest' && (
                                     <>
-                                        <div className="mb-4">
-                                            <div className="flex justify-between items-center mb-2">
-                                                <label className="block text-sm font-medium text-gray-700">Allowed Classes</label>
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        type="button"
-                                                        onClick={handleRefreshData}
-                                                        disabled={isRefreshing}
-                                                        className="flex items-center px-2 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 transition disabled:opacity-50"
-                                                        title="Refresh classes and subjects from database"
-                                                    >
-                                                        {isRefreshing ? (
-                                                            <>
-                                                                <svg className="animate-spin h-3 w-3 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                                </svg>
-                                                                Refreshing...
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                                                </svg>
-                                                                Refresh Data
-                                                            </>
-                                                        )}
-                                                    </button>
-                                                    <button
-                                                        onClick={() => toggleAllClasses(index)}
-                                                        className="text-xs text-blue-600 hover:text-blue-800"
-                                                    >
-                                                        {(user.allowedClasses || []).length === classNames.length ? 'Deselect All' : 'Select All'}
-                                                    </button>
+                                        {user.role !== 'Admin' && (
+                                            <div className="mb-4">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <label className="block text-sm font-medium text-gray-700">Allowed Classes</label>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleRefreshData}
+                                                            disabled={isRefreshing}
+                                                            className="flex items-center px-2 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 transition disabled:opacity-50"
+                                                            title="Refresh classes and subjects from database"
+                                                        >
+                                                            {isRefreshing ? (
+                                                                <>
+                                                                    <svg className="animate-spin h-3 w-3 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                                    </svg>
+                                                                    Refreshing...
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                                    </svg>
+                                                                    Refresh Data
+                                                                </>
+                                                            )}
+                                                        </button>
+                                                        <button
+                                                            onClick={() => toggleAllClasses(index)}
+                                                            className="text-xs text-blue-600 hover:text-blue-800"
+                                                        >
+                                                            {(user.allowedClasses || []).length === classNames.length ? 'Deselect All' : 'Select All'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {classNames.map(className => (
+                                                        <button
+                                                            key={className}
+                                                            onClick={() => toggleClass(index, className)}
+                                                            className={`px-3 py-1 text-sm rounded-full transition ${(user.allowedClasses || []).includes(className)
+                                                                ? 'bg-blue-600 text-white'
+                                                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                                                }`}
+                                                        >
+                                                            {className}
+                                                        </button>
+                                                    ))}
                                                 </div>
                                             </div>
-                                            <div className="flex flex-wrap gap-2">
-                                                {classNames.map(className => (
-                                                    <button
-                                                        key={className}
-                                                        onClick={() => toggleClass(index, className)}
-                                                        className={`px-3 py-1 text-sm rounded-full transition ${(user.allowedClasses || []).includes(className)
-                                                            ? 'bg-blue-600 text-white'
-                                                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                                            }`}
-                                                    >
-                                                        {className}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
+                                        )}
 
                                         <div className="mb-4">
                                             <label className="block text-sm font-medium text-gray-700 mb-3">
                                                 Classes & Subjects Assignment
                                             </label>
 
-                                            {(user.allowedClasses || []).length === 0 ? (
+                                            {getAssignmentClassNames(user).length === 0 ? (
                                                 <p className="text-sm text-gray-500 italic">Select classes above to assign subjects</p>
                                             ) : (
                                                 <div className="space-y-3 max-h-80 overflow-y-auto">
-                                                    {(user.allowedClasses || []).map(className => (
+                                                    {getAssignmentClassNames(user).map(className => (
                                                         <div key={className} className="border border-gray-200 rounded-lg p-3 bg-white">
                                                             <div className="flex justify-between items-center mb-2">
                                                                 <h5 className="font-medium text-gray-800 text-sm">{className}</h5>
@@ -709,7 +748,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                                                     const classSubjects = user.classSubjects || {};
                                                                     const assignedSubjects = classSubjects[className] || [];
                                                                     // Highlight if ID matches OR Name matches (for legacy data)
-                                                                    const isSelected = assignedSubjects.some(s => s === subject.id || s === subject.name);
+                                                                    const isSelected = assignedSubjects.some((s: any) => s === subject.id || s === subject.name);
 
                                                                     return (
                                                                         <button
@@ -777,22 +816,16 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                 <div className="mt-6 flex gap-3">
                     {onCancel && mode === 'management' && users.length === 0 && (
                         <button
-                            onClick={async () => {
-                                if (isFetching && existingUsers.length === 0) {
-                                    setError('⏳ Still fetching users from cloud. Please wait...');
-                                    return;
-                                }
-                                if (existingUsers.length === 0) {
-                                    setError('Cannot save: no users to apply. Please add at least the admin user.');
-                                    return;
-                                }
-                                await onComplete(existingUsers);
-                                setError('✅ User changes saved to cloud. You may now close this window.');
-                            }}
-                            disabled={isFetching && existingUsers.length === 0}
-                            className={`flex-1 py-3 px-4 text-white rounded-md transition ${isFetching && existingUsers.length === 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-gray-600 hover:bg-gray-700'}`}
+                            onClick={handleApplyChanges}
+                            disabled={isFetching && existingUsers.length === 0 || isApplyingChanges}
+                            className={`flex-1 py-3 px-4 text-white rounded-md transition ${isFetching && existingUsers.length === 0 ? 'bg-gray-400 cursor-not-allowed' : isApplyingChanges ? 'bg-blue-600 cursor-wait opacity-90 animate-pulse' : 'bg-gray-600 hover:bg-gray-700'}`}
                         >
-                            {isFetching && existingUsers.length === 0 ? 'Loading Users...' : 'Apply Changes'}
+                            {isApplyingChanges ? (
+                                <span className="inline-flex items-center justify-center gap-2">
+                                    <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                                    Applying Changes...
+                                </span>
+                            ) : isFetching && existingUsers.length === 0 ? 'Loading Users...' : 'Apply Changes'}
                         </button>
                     )}
                     {mode === 'management' && users.length > 0 && (

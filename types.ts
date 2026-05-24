@@ -16,6 +16,8 @@ export type Page =
 
 export interface NavigationMeta {
   openAddModal?: boolean;
+  openUserManagement?: boolean;
+  returnTo?: Page | string;
 }
 
 export interface SchoolSettings {

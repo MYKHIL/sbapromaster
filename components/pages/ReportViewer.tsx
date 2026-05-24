@@ -27,7 +27,7 @@ const PerformanceSummaryFetcher: React.FC<{ student: Student, children: (summary
 
 const ReportViewer: React.FC = () => {
   const data = useData();
-  const { students, classes, subjects, loadScores, loadStudents, isFetching } = data;
+  const { students, classes, subjects, loadScores, loadStudents, isFetching, getReportData, reportData } = data;
   const { currentUser } = useUser();
 
   // State
@@ -70,7 +70,7 @@ const ReportViewer: React.FC = () => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [pendingNav, setPendingNav] = useState<{
     type: 'student' | 'class' | 'navigate';
-    value?: number | 'all';
+    value?: number | 'all' | '';
     direction?: 'prev' | 'next';
   } | null>(null);
 
@@ -128,6 +128,79 @@ const ReportViewer: React.FC = () => {
     );
     return sortClassesByName(unique);
   }, [classes, currentUser]);
+
+  const [isMissingDataModalOpen, setIsMissingDataModalOpen] = useState(false);
+
+  const missingDataList = useMemo(() => {
+    if (!studentsInClass || studentsInClass.length === 0) return [];
+    
+    const missing: { studentId: number; studentName: string, missingRemarks: string[] }[] = [];
+    const requiredFields = ['attendance', 'conduct', 'interest', 'attitude', 'teacherRemark'];
+    const fieldLabels: Record<string, string> = {
+        attendance: 'Attendance',
+        conduct: 'Conduct',
+        interest: 'Interest',
+        attitude: 'Attitude',
+        teacherRemark: 'Teacher Remark'
+    };
+
+    studentsInClass.forEach(student => {
+        const rData = getReportData(student.id);
+        const missingFields: string[] = [];
+
+        if (rData) {
+            requiredFields.forEach(field => {
+                const val = rData[field as keyof typeof rData];
+                if (!val || (typeof val === 'string' && val.trim() === '')) {
+                    missingFields.push(fieldLabels[field]);
+                }
+            });
+        } else {
+            requiredFields.forEach(field => missingFields.push(fieldLabels[field]));
+        }
+
+        if (missingFields.length > 0) {
+            missing.push({
+                studentId: student.id,
+                studentName: student.name,
+                missingRemarks: missingFields
+            });
+        }
+    });
+
+    return missing;
+  }, [studentsInClass, getReportData, reportData]);
+
+  const jumpToMissingStudent = (studentId: number) => {
+    setIsMissingDataModalOpen(false);
+    if (customizationPanelRef.current?.hasUnsavedChanges) {
+      setPendingNav({ type: 'student', value: studentId });
+      setShowConfirmModal(true);
+      return;
+    }
+    setSelectedStudentId(studentId);
+    localStorage.setItem('reportViewer_selectedStudentId', String(studentId));
+    if (isComparisonMode) {
+      setIsComparisonMode(false);
+    }
+    setShowPanel(true);
+    setManualExpandTrigger(0);
+  };
+
+  const jumpToNextMissing = () => {
+    if (missingDataList.length === 0) return;
+    
+    let currentIdx = -1;
+    if (selectedStudentId !== 'all') {
+      currentIdx = missingDataList.findIndex(m => m.studentId === selectedStudentId);
+    }
+    
+    // Cycle to next
+    const nextIdx = (currentIdx + 1) % missingDataList.length;
+    const nextMissingStudentId = missingDataList[nextIdx].studentId;
+    
+    jumpToMissingStudent(nextMissingStudentId);
+  };
 
   // Auto-select Class
   useEffect(() => {
@@ -508,9 +581,30 @@ const ReportViewer: React.FC = () => {
             </div>
 
             <div className="w-full md:w-64">
-              <label htmlFor="student-select" className="block text-sm font-medium text-gray-700 mb-1">
-                {isComparisonMode ? "Add Student to View" : "Select Student"}
-              </label>
+              <div className="flex justify-between items-center mb-1">
+                <label htmlFor="student-select" className="block text-sm font-medium text-gray-700">
+                  {isComparisonMode ? "Add Student to View" : "Select Student"}
+                </label>
+                {missingDataList.length > 0 && selectedClassId && !isComparisonMode && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={jumpToNextMissing}
+                      title="Next Incomplete Student"
+                      className="text-[10px] p-1 rounded-full bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+                    >
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => setIsMissingDataModalOpen(true)}
+                      className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700 hover:bg-red-200 hover:text-red-800 transition-colors"
+                    >
+                      {missingDataList.length} incomplete
+                    </button>
+                  </div>
+                )}
+              </div>
               <select
                 id="student-select"
                 value={selectedStudentId}
@@ -759,6 +853,45 @@ const ReportViewer: React.FC = () => {
                 />
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Missing Data Modal */}
+      {isMissingDataModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 animate-in fade-in">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[80vh] flex flex-col">
+            <div className="flex justify-between items-center p-4 border-b border-gray-100">
+              <h3 className="font-bold text-gray-800">Incomplete Report Data</h3>
+              <button onClick={() => setIsMissingDataModalOpen(false)} className="text-gray-500 hover:text-gray-700">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto custom-scrollbar flex-1 space-y-3">
+              <p className="text-sm text-gray-600 mb-2">The following students have missing remarks or attendance data for their report cards:</p>
+              {missingDataList.map((entry, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => jumpToMissingStudent(entry.studentId)}
+                  className="w-full text-left text-sm text-red-800 flex flex-col bg-red-50 p-2.5 rounded border border-red-100 hover:bg-red-100 transition-colors focus:outline-none focus:ring-2 focus:ring-red-400"
+                >
+                  <span className="font-semibold">{entry.studentName}</span>
+                  <span className="text-red-500 mt-1 text-[11px] uppercase tracking-wide">
+                    Missing: {entry.missingRemarks.join(', ')}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-xl flex justify-end">
+              <button
+                onClick={() => setIsMissingDataModalOpen(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors text-sm font-medium"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
