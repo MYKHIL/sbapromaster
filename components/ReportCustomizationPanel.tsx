@@ -493,7 +493,7 @@ const InputWithOptions: React.FC<{
 };
 
 const ReportCustomizationPanel = React.forwardRef<ReportCustomizationPanelHandle, ReportCustomizationPanelProps>(({ student, performanceSummary, onCollapseChange, classId, shouldAutoExpand = true, manualExpandTrigger = 0, onNavigate }, ref) => {
-    const { getReportData, updateReportData, getClassData, updateClassData, settings } = useData();
+    const { students, getReportData, updateReportData, getClassData, updateClassData, settings } = useData();
     const [data, setData] = useState<Partial<Omit<ReportSpecificData, 'totalSchoolDays'>>>({ attendance: '', conduct: '', interest: '', attitude: '', teacherRemark: '' });
     const [originalData, setOriginalData] = useState<Partial<Omit<ReportSpecificData, 'totalSchoolDays'>>>({});
     const [totalDays, setTotalDays] = useState('');
@@ -522,7 +522,7 @@ const ReportCustomizationPanel = React.forwardRef<ReportCustomizationPanelHandle
         const percentage = (totalScore / maxScore) * 100;
         
         // Get total students for position context
-        const allStudentsInClass = (data.students || []).filter(s => s.class === student.class);
+        const allStudentsInClass = students.filter(s => s.class === student.class);
         const totalStudents = allStudentsInClass.length || 1;
         const positionPercentile = (overallPosition / totalStudents) * 100;
 
@@ -560,7 +560,7 @@ const ReportCustomizationPanel = React.forwardRef<ReportCustomizationPanelHandle
             cat = percentage >= 80 ? 'Outstanding' : 'Excellent';
         }
         return cat;
-    }, [totalScore, subjectResults, totalClassWeight, examWeight, overallPosition, student.class, data.students]);
+    }, [totalScore, subjectResults, totalClassWeight, examWeight, overallPosition, student.class, students]);
 
     // Only load data when the student ID changes to prevent resetting while typing
     useEffect(() => {

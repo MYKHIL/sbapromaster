@@ -208,7 +208,7 @@ const ReportViewer: React.FC = () => {
   // Zoom Logic
   useEffect(() => {
     let resizeTimer: ReturnType<typeof setTimeout>;
-    const lastDimensions = { width: window.innerWidth, height: window.innerHeight };
+    const lastDimensions = { width: 0, height: 0 };
 
     const calculateOptimalZoom = () => {
       const currentWidth = window.innerWidth;

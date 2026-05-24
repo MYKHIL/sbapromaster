@@ -39,7 +39,7 @@ const FitText: React.FC<{
 
             // Step 2: Binary search with 0.5px precision to find the perfect fit.
             while (low <= high) {
-                const mid = Math.round((low + high) * 2) / 2; // keep 0.5px granularity
+                const mid = Math.round(low + high) / 2; // keep 0.5px granularity
                 container.style.fontSize = `${mid}px`;
                 
                 if (isOverflowing()) {
