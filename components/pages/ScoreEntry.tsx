@@ -122,9 +122,6 @@ const ScoreEntry: React.FC<{ onNavigate?: (page: Page, meta?: NavigationMeta) =>
     useEffect(() => {
         // Prevent aggressive overwrite during initial hydration when allClasses hasn't loaded
         if (allClasses.length === 0) return;
-
-        // Allow empty string for Admins ("All Classes" mode) - it is a valid selection
-        if (selectedClass === '' && currentUser?.role === 'Admin') return;
         
         const availableNames = getAvailableClasses(currentUser, allClasses).map(c => c.name);
         
@@ -133,7 +130,7 @@ const ScoreEntry: React.FC<{ onNavigate?: (page: Page, meta?: NavigationMeta) =>
             setSelectedClass(fallback);
             if (fallback) localStorage.setItem('scoreEntry_selectedClass', fallback);
             else localStorage.removeItem('scoreEntry_selectedClass');
-        } else if (!selectedClass && availableNames.length > 0 && currentUser?.role !== 'Admin') {
+        } else if (!selectedClass && availableNames.length > 0) {
             const fallback = availableNames[0];
             setSelectedClass(fallback);
             localStorage.setItem('scoreEntry_selectedClass', fallback);
@@ -270,7 +267,10 @@ const ScoreEntry: React.FC<{ onNavigate?: (page: Page, meta?: NavigationMeta) =>
     }, [currentUser, selectedClass, allSubjects, allUsers]);
 
     const missingSubjects = selectedClass ? allSubjects.filter(subject => !subjects.some(s => s.id === subject.id)) : [];
-    const showAdminAssignPrompt = currentUser?.role === 'Admin' && selectedClass && missingSubjects.length > 0;
+    // Only show the admin assign prompt when there are subjects defined for the class
+    // This prevents both the "no subjects linked" and "missing subjects" messages
+    // from appearing at the same time (when subjects.length === 0).
+    const showAdminAssignPrompt = currentUser?.role === 'Admin' && selectedClass && subjects.length > 0 && missingSubjects.length > 0;
 
     // Safe initialization for selectedSubjectId
     const [selectedSubjectId, setSelectedSubjectId] = useState<number>(() => {
@@ -347,6 +347,9 @@ const ScoreEntry: React.FC<{ onNavigate?: (page: Page, meta?: NavigationMeta) =>
 
         return results.filter(student => student.class === selectedClass);
     }, [students, selectedClass, currentUser, selectedSubjectId, subjects]);
+
+    // Only allow the score entry area when all required controls have data
+    const canEnterScores = Boolean(selectedClass && subjects.length > 0 && assessments.length > 0 && filteredStudents.length > 0);
 
     // PERSISTENCE: Initialize from localStorage via Student ID
     const [persistedStudentId, setPersistedStudentId] = useState<number | null>(() => {
@@ -827,11 +830,9 @@ const ScoreEntry: React.FC<{ onNavigate?: (page: Page, meta?: NavigationMeta) =>
                                 }}
                                 className={getSelectStyles(useMobileView)}
                             >
-                                {currentUser?.role === 'Admin' || (classes.length === 0) ? (
-                                    <option value="">
-                                        {currentUser?.role === 'Admin' ? '-- All Classes --' : '-- Select Class --'}
-                                    </option>
-                                ) : null}
+                                {classes.length === 0 && (
+                                    <option value="">No Registered Class</option>
+                                )}
                                 {classes.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                             </select>
                         </div>
@@ -862,13 +863,13 @@ const ScoreEntry: React.FC<{ onNavigate?: (page: Page, meta?: NavigationMeta) =>
                             </div>
                             {showAdminAssignPrompt && (
                                 <p className="mt-1 text-[9px] text-amber-700 font-medium italic">
-                                    {missingSubjects.length === 1 ? 'One subject' : `${missingSubjects.length} subjects`} are not currently assigned to a teacher or admin for this class. <button
-                                        onClick={() => {
-                                            if (onNavigate) onNavigate('Settings', { openUserManagement: true, returnTo: 'Score Entry' });
-                                            else window.dispatchEvent(new CustomEvent('app-navigate', { detail: { page: 'Settings', meta: { openUserManagement: true, returnTo: 'Score Entry' } } }));
-                                        }}
-                                        className="underline text-blue-600 hover:text-blue-800 ml-1"
-                                    >Assign missing subjects</button>.
+                                    {missingSubjects.length === 1 ? 'One subject is not currently assigned to a teacher or admin for this class.' : `${missingSubjects.length} subjects are not currently assigned to a teacher or admin for this class.`} <button
+                                                onClick={() => {
+                                                    if (onNavigate) onNavigate('Settings', { openUserManagement: true, returnTo: 'Score Entry' });
+                                                    else window.dispatchEvent(new CustomEvent('app-navigate', { detail: { page: 'Settings', meta: { openUserManagement: true, returnTo: 'Score Entry' } } }));
+                                                }}
+                                                className="underline text-blue-600 hover:text-blue-800 ml-1"
+                                            >{missingSubjects.length === 1 ? 'Assign missing subject' : 'Assign missing subjects'}</button>
                                 </p>
                             )}
                             {subjects.length === 0 && (
@@ -892,7 +893,7 @@ const ScoreEntry: React.FC<{ onNavigate?: (page: Page, meta?: NavigationMeta) =>
                     </div>
 
                     {/* Mobile Compact View Controls */}
-                    {useMobileView && (
+                    {useMobileView && canEnterScores && (
                         <div className="lg:hidden space-y-4 border-t border-gray-100 pt-4 mt-2">
                             {filteredStudents.length > 0 ? (
                                 <>
@@ -1143,47 +1144,126 @@ const ScoreEntry: React.FC<{ onNavigate?: (page: Page, meta?: NavigationMeta) =>
 
             {/* Desktop View: Grid Table & Mobile Card View */}
             <ReadOnlyWrapper allowedRoles={['Admin', 'Teacher']}>
-                <div className={`lg:bg-white lg:rounded-xl lg:shadow-md lg:border lg:border-gray-200 ${useMobileView ? 'hidden lg:block' : 'block'}`}>
-                    <div className="overflow-x-visible lg:overflow-x-auto pb-4 lg:pb-0">
-                        <table className="min-w-full text-left block lg:table">
-                            <thead className="bg-gray-50 hidden lg:table-header-group">
-                                <tr className="border-b">
-                                    <th className="p-4 font-semibold text-gray-600 w-12 text-center">#</th>
-                                    <th className="p-4 font-semibold text-gray-600 w-1/4">Student Name</th>
-                                    {sortedAssessments.map(assessment => (
-                                        <th key={assessment.id} className="p-4 font-semibold text-gray-600 text-center">
-                                            {assessment.name} <br /> <span className="font-normal text-sm">({assessment.name.toLowerCase().includes('exam') ? 100 : assessment.weight}%)</span>
-                                        </th>
-                                    ))}
-                                    <th className="p-4 font-semibold text-gray-600 text-center">Total (100%)</th>
-                                </tr>
-                            </thead>
-                            <tbody className="block lg:table-row-group space-y-4 lg:space-y-0">
-                                {filteredStudents.length > 0 ? (
-                                    filteredStudents.map((student, index) => (
-                                        <InlineScoreInput
-                                            key={`${student.id}-${selectedSubjectId}`}
-                                            index={index + 1}
-                                            student={student}
-                                            subjectId={selectedSubjectId}
-                                            assessments={sortedAssessments}
-                                            onOpenModal={handleOpenModal}
-                                            readOnly={isReadOnly}
-                                            studentTotal={allStudentsRankings[student.id]?.total}
-                                            studentRank={allStudentsRankings[student.id]?.rank}
-                                        />
-                                    ))
-                                ) : (
-                                    <tr className="block lg:table-row bg-white rounded-xl shadow-sm border border-gray-200 lg:border-none lg:shadow-none lg:bg-transparent">
-                                        <td colSpan={sortedAssessments.length + 3} className="block lg:table-cell text-center p-8 text-gray-500">
-                                            No students in the selected class.
-                                        </td>
+                {!canEnterScores ? (
+                    // Show prioritized helpful panels when any required control is missing
+                    classes.length === 0 ? (
+                        <div className="p-6 bg-red-50 border border-red-200 rounded-xl text-center max-w-2xl mx-auto my-8 shadow-sm">
+                            <div className="flex flex-col items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-red-500 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                <h3 className="text-lg font-bold text-red-800">No Registered Classes Found</h3>
+                                <p className="text-sm text-red-700">You must register classes and assign teachers before entering academic scores.</p>
+                                <button
+                                    onClick={() => {
+                                        if (onNavigate) onNavigate('Classes & Teachers');
+                                        else window.dispatchEvent(new CustomEvent('app-navigate', { detail: { page: 'Classes & Teachers' } }));
+                                    }}
+                                    className="mt-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow transition duration-200 transform hover:scale-105 active:scale-95"
+                                >
+                                    Click here to add teachers and classes
+                                </button>
+                            </div>
+                        </div>
+                    ) : !selectedClass ? (
+                        <div className="p-6 bg-gray-50 border border-gray-100 rounded-xl text-center max-w-2xl mx-auto my-8 shadow-sm">
+                            <p className="text-sm text-gray-600">Please select a class to begin entering scores.</p>
+                        </div>
+                    ) : subjects.length === 0 ? (
+                        currentUser?.role === 'Admin' ? (
+                            <div className="p-6 bg-red-50 border border-red-200 rounded-xl text-center max-w-2xl mx-auto my-8 shadow-sm">
+                                <div className="flex flex-col items-center gap-2">
+                                    <h3 className="text-lg font-bold text-red-800">No Subjects Assigned</h3>
+                                    <p className="text-sm text-red-700">No subjects are linked to teachers for this class.</p>
+                                    <button
+                                        onClick={() => {
+                                            if (onNavigate) onNavigate('Settings', { openUserManagement: true, returnTo: 'Score Entry' });
+                                            else window.dispatchEvent(new CustomEvent('app-navigate', { detail: { page: 'Settings', meta: { openUserManagement: true, returnTo: 'Score Entry' } } }));
+                                        }}
+                                        className="mt-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow transition duration-200"
+                                    >Open User Management</button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="p-6 bg-red-50 border border-red-200 rounded-xl text-center max-w-2xl mx-auto my-8 shadow-sm">
+                                <p className="text-sm text-red-700">Please contact Admin to assign subjects to you for this class.</p>
+                            </div>
+                        )
+                    ) : assessments.length === 0 ? (
+                        <div className="p-6 bg-yellow-50 border border-yellow-200 rounded-xl text-center max-w-2xl mx-auto my-8 shadow-sm">
+                            <div className="flex flex-col items-center gap-2">
+                                <h3 className="text-lg font-bold text-yellow-800">No Assessments Found</h3>
+                                <p className="text-sm text-yellow-700">There are no assessments defined. Please add assessments before entering scores.</p>
+                            </div>
+                        </div>
+                    ) : filteredStudents.length === 0 ? (
+                        <div className="p-6 bg-amber-50 border border-amber-200 rounded-xl text-center max-w-2xl mx-auto my-8 shadow-sm">
+                            <div className="flex flex-col items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-amber-500 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                <h3 className="text-lg font-bold text-amber-800">No Registered Students Found</h3>
+                                <p className="text-sm text-amber-700">You must add students before entering academic scores.</p>
+                                <button
+                                    onClick={() => {
+                                        if (onNavigate) onNavigate('Students');
+                                        else window.dispatchEvent(new CustomEvent('app-navigate', { detail: { page: 'Students' } }));
+                                    }}
+                                    className="mt-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg shadow transition duration-200 transform hover:scale-105 active:scale-95"
+                                >
+                                    Click here to add students
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        // Fallback: if we somehow land here, hide entry area
+                        <div className="p-6 bg-gray-50 border border-gray-100 rounded-xl text-center max-w-2xl mx-auto my-8 shadow-sm">
+                            <p className="text-sm text-gray-600">Please ensure class, subject, assessment and students are selected.</p>
+                        </div>
+                    )
+                ) : (
+                    <div className={`lg:bg-white lg:rounded-xl lg:shadow-md lg:border lg:border-gray-200 ${useMobileView ? 'hidden lg:block' : 'block'}`}>
+                        <div className="overflow-x-visible lg:overflow-x-auto pb-4 lg:pb-0">
+                            <table className="min-w-full text-left block lg:table">
+                                <thead className="bg-gray-50 hidden lg:table-header-group">
+                                    <tr className="border-b">
+                                        <th className="p-4 font-semibold text-gray-600 w-12 text-center">#</th>
+                                        <th className="p-4 font-semibold text-gray-600 w-1/4">Student Name</th>
+                                        {sortedAssessments.map(assessment => (
+                                            <th key={assessment.id} className="p-4 font-semibold text-gray-600 text-center">
+                                                {assessment.name} <br /> <span className="font-normal text-sm">({assessment.name.toLowerCase().includes('exam') ? 100 : assessment.weight}%)</span>
+                                            </th>
+                                        ))}
+                                        <th className="p-4 font-semibold text-gray-600 text-center">Total (100%)</th>
                                     </tr>
-                                )}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="block lg:table-row-group space-y-4 lg:space-y-0">
+                                    {filteredStudents.length > 0 ? (
+                                        filteredStudents.map((student, index) => (
+                                            <InlineScoreInput
+                                                key={`${student.id}-${selectedSubjectId}`}
+                                                index={index + 1}
+                                                student={student}
+                                                subjectId={selectedSubjectId}
+                                                assessments={sortedAssessments}
+                                                onOpenModal={handleOpenModal}
+                                                readOnly={isReadOnly}
+                                                studentTotal={allStudentsRankings[student.id]?.total}
+                                                studentRank={allStudentsRankings[student.id]?.rank}
+                                            />
+                                        ))
+                                    ) : (
+                                        <tr className="block lg:table-row bg-white rounded-xl shadow-sm border border-gray-200 lg:border-none lg:shadow-none lg:bg-transparent">
+                                            <td colSpan={sortedAssessments.length + 3} className="block lg:table-cell text-center p-8 text-gray-500">
+                                                No students in the selected class.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
+                )}
             </ReadOnlyWrapper>
 
             {isModalOpen && modalData && (
