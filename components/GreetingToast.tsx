@@ -77,6 +77,10 @@ const GreetingToast: React.FC<GreetingToastProps> = ({ currentUser, currentPage 
 
     // Handle Login Greeting & Term Announcement
     useEffect(() => {
+        if (currentPage === 'Report Viewer') {
+            setIsVisible(false);
+            return;
+        }
         // Trigger only when user is logged in, settings are available, and we haven't shown the session announcement yet
         if (currentUser && settings?.academicYear && !hasShownAnnouncement) {
             const hour = new Date().getHours();
@@ -98,10 +102,16 @@ const GreetingToast: React.FC<GreetingToastProps> = ({ currentUser, currentPage 
             setHasShownAnnouncement(true);
             showToast();
         }
-    }, [currentUser, settings, hasShownAnnouncement]);
+    }, [currentUser, settings, hasShownAnnouncement, currentPage]);
 
     // Handle Page Navigation Greeting
     useEffect(() => {
+        if (currentPage === 'Report Viewer') {
+            setIsVisible(false);
+            setLastPage(currentPage);
+            return;
+        }
+
         // Reset manual dismissal flag when page changes to allow toast on new pages
         if (currentPage !== lastPage) {
             isManuallyDismissedRef.current = false;

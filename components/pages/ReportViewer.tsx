@@ -78,6 +78,12 @@ const ReportViewer: React.FC = () => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [contentSize, setContentSize] = useState({ width: 0, height: 0 });
 
+  // Double-load Prevention Refs
+  const lastGeneratedStudentIdsRef = useRef<number[]>([]);
+  const lastGeneratedClassIdRef = useRef<number | ''>('');
+  const lastGeneratedStudentIdRef = useRef<number | 'all'>('all');
+  const lastComparisonModeRef = useRef<boolean>(false);
+
   useEffect(() => {
     if (reportContainerRef.current) {
       setContentSize({
@@ -106,6 +112,13 @@ const ReportViewer: React.FC = () => {
 
     return results;
   }, [students, classes, selectedClassId]);
+
+  // Compute a content-based unique string for students. 
+  // It only changes when student IDs, names, or genders physically change, 
+  // preventing redundant hook triggers on simple context reference swaps.
+  const studentsInClassKey = useMemo(() => {
+    return studentsInClass.map(s => `${s.id}-${s.name}-${s.gender}`).join('|');
+  }, [studentsInClass]);
 
   const accessibleClasses = useMemo(() => {
     const available = getAvailableClasses(currentUser, classes);
@@ -175,7 +188,7 @@ const ReportViewer: React.FC = () => {
             renderBatch();
             setShowPanel(false);
         } else {
-            const student = students.find(s => s.id === selectedStudentId);
+            const student = studentsInClass.find(s => s.id === selectedStudentId);
             if (student) {
                 setGeneratedReports([student]);
                 setShowPanel(true);
@@ -191,7 +204,7 @@ const ReportViewer: React.FC = () => {
         active = false;
         clearTimeout(timer);
     };
-  }, [selectedStudentId, selectedClassId, studentsInClass, students, isComparisonMode]);
+  }, [selectedStudentId, selectedClassId, studentsInClassKey, isComparisonMode]);
 
   // Lazy Load Students
   useEffect(() => { loadStudents(); }, [loadStudents]);
@@ -627,32 +640,27 @@ const ReportViewer: React.FC = () => {
             className="flex flex-row gap-12 w-max transition-transform duration-200 ease-in-out origin-top-left"
             style={{ transform: `scale(${zoomLevel})` }}
           >
-            {isFetching || (isLocalLoading && generatedReports.length === 0) ? (
-              <div className="flex flex-col items-center justify-center min-w-[800px] min-h-[600px] bg-white rounded-lg shadow-sm border border-gray-100">
-                <svg className="animate-spin h-16 w-16 text-blue-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <h3 className="text-xl font-semibold text-gray-800">Generating Reports...</h3>
-                <p className="text-gray-500 mt-2">Fetching specialized data records</p>
-              </div>
-            ) : generatedReports.length > 0 ? (
-              generatedReports.map(student => (
-                <div key={student.id} className="report-container relative group">
-                  <ReportCard student={student} />
-                  {isComparisonMode && (
-                    <button
-                      onClick={() => removeReport(student.id)}
-                      className="absolute -top-4 -right-4 bg-red-500 text-white rounded-full p-2 shadow-lg hover:bg-red-600 transition-colors z-50 opacity-0 group-hover:opacity-100"
-                      title="Remove from comparison"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-              ))
+            {generatedReports.length > 0 ? (
+              generatedReports.map(generatedStudent => {
+                // Map to the freshest student context object to support instant updates
+                const student = students.find(s => s.id === generatedStudent.id) || generatedStudent;
+                return (
+                  <div key={student.id} className="report-container relative group">
+                    <ReportCard student={student} />
+                    {isComparisonMode && (
+                      <button
+                        onClick={() => removeReport(student.id)}
+                        className="absolute -top-4 -right-4 bg-red-500 text-white rounded-full p-2 shadow-lg hover:bg-red-600 transition-colors z-50 opacity-0 group-hover:opacity-100"
+                        title="Remove from comparison"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                );
+              })
             ) : (
               <div className="text-center py-20 bg-white rounded-lg shadow-md border min-w-[800px]">
                 <h2 className="text-xl text-gray-500">
@@ -722,6 +730,52 @@ const ReportViewer: React.FC = () => {
         onDiscard={handleModalDiscard}
         onQueueAndMove={handleModalQueueAndMove}
       />
+      {/* Beautiful Centered Glassmorphism Loading Overlay */}
+      {(isFetching || isLocalLoading) && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white/90 border border-gray-100/50 rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center space-y-6 animate-in fade-in zoom-in-95 duration-200">
+            <div className="relative flex justify-center items-center">
+              {/* Spinning Loader Ring */}
+              <svg className="animate-spin h-20 w-20 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3.5"></circle>
+                <path className="opacity-80" fill="currentColor" strokeLinecap="round" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              {/* Progress Count / Percentage Center Label */}
+              {studentsInClass.length > 0 && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center mt-1">
+                  <span className="text-lg font-black text-blue-700 leading-none">
+                    {Math.round((generatedReports.length / studentsInClass.length) * 100)}%
+                  </span>
+                  <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mt-0.5">loaded</span>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold text-gray-800">Generating Reports</h3>
+              <p className="text-sm font-medium text-gray-500">
+                {generatedReports.length > 0 
+                  ? `Loading ${generatedReports.length} of ${studentsInClass.length} cards...`
+                  : 'Preparing student records...'}
+              </p>
+            </div>
+
+            {/* Custom Premium Progress Bar */}
+            {studentsInClass.length > 0 && (
+              <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden border border-gray-200/40">
+                <div 
+                  className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 h-full transition-all duration-300 rounded-full"
+                  style={{ width: `${(generatedReports.length / studentsInClass.length) * 100}%` }}
+                />
+              </div>
+            )}
+            
+            <div className="text-[11px] font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-full inline-block">
+              Please wait while we render cards safely
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
