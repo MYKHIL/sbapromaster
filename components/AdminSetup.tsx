@@ -544,7 +544,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                     className="h-4.5 w-4.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
                                 />
                                 <label htmlFor="global-readonly" className="text-sm font-medium text-gray-700 cursor-pointer">
-                                    Set All Users to Read-Only Mode (Disable Editing)
+                                    Block Editing for All Users
                                 </label>
                             </div>
 
