@@ -97,15 +97,21 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ isOpen, onClose }) =>
 
   // Voice Narration and Step Synchronization
   useEffect(() => {
+    const hasSpeech = typeof window !== 'undefined' && window.speechSynthesis !== undefined;
+
     if (!isOpen || !activeStep || showSectionList) {
-        window.speechSynthesis.cancel();
+        if (hasSpeech) {
+            window.speechSynthesis.cancel();
+        }
         return;
     }
 
     try {
-        window.speechSynthesis.cancel();
+        if (hasSpeech) {
+            window.speechSynthesis.cancel();
+        }
         
-        if (!isVoiceEnabled) {
+        if (!isVoiceEnabled || !hasSpeech) {
           if (isAutoPlaying) {
             const timer = setTimeout(handleNext, 6000);
             return () => clearTimeout(timer);
@@ -140,8 +146,10 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ isOpen, onClose }) =>
 
         if (window.speechSynthesis.getVoices().length === 0) {
           window.speechSynthesis.onvoiceschanged = () => {
-            utterance.voice = getVoice() || null;
-            window.speechSynthesis.speak(utterance);
+            if (speechRef.current === utterance) {
+              utterance.voice = getVoice() || null;
+              window.speechSynthesis.speak(utterance);
+            }
           };
         } else {
           window.speechSynthesis.speak(utterance);
@@ -151,8 +159,10 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ isOpen, onClose }) =>
     }
 
     return () => {
-      window.speechSynthesis.cancel();
-      if (window.speechSynthesis.onvoiceschanged) window.speechSynthesis.onvoiceschanged = null;
+      if (hasSpeech) {
+        window.speechSynthesis.cancel();
+        if (window.speechSynthesis.onvoiceschanged) window.speechSynthesis.onvoiceschanged = null;
+      }
     };
   }, [isOpen, position.section, position.step, isAutoPlaying, isVoiceEnabled, showSectionList]);
 

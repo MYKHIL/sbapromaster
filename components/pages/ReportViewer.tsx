@@ -146,8 +146,10 @@ const ReportViewer: React.FC = () => {
     const timer = setTimeout(() => {
         if (!active) return;
         if (selectedStudentId === 'all') {
-            // Progressively render reports in small batches to yield execution to the browser
-            const batchSize = 3;
+            // Progressively render reports in small batches to yield execution to the browser.
+            // On mobile, rendering large batches synchronously freezes the browser due to FitText layout reflows.
+            // Using a batch size of 2 and a timeout of 60ms allows the browser to paint and keep the UI responsive.
+            const batchSize = 2;
             let currentIdx = 0;
 
             const renderBatch = () => {
@@ -164,7 +166,7 @@ const ReportViewer: React.FC = () => {
 
                 currentIdx += batchSize;
                 if (currentIdx < studentsInClass.length) {
-                    setTimeout(renderBatch, 0);
+                    setTimeout(renderBatch, 60);
                 } else {
                     setIsLocalLoading(false);
                 }
@@ -472,7 +474,15 @@ const ReportViewer: React.FC = () => {
       <div className="flex flex-col gap-6">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold text-gray-800">Report Cards</h1>
-
+          {isLocalLoading && generatedReports.length > 0 && (
+            <div className="flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-full text-sm font-semibold border border-blue-100 shadow-sm animate-pulse">
+              <svg className="animate-spin h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span>Loading reports: {generatedReports.length} of {studentsInClass.length}</span>
+            </div>
+          )}
         </div>
 
         <div className="bg-white p-4 rounded-xl shadow-md border border-gray-200 flex flex-col gap-4">
@@ -617,7 +627,7 @@ const ReportViewer: React.FC = () => {
             className="flex flex-row gap-12 w-max transition-transform duration-200 ease-in-out origin-top-left"
             style={{ transform: `scale(${zoomLevel})` }}
           >
-            {isFetching || isLocalLoading ? (
+            {isFetching || (isLocalLoading && generatedReports.length === 0) ? (
               <div className="flex flex-col items-center justify-center min-w-[800px] min-h-[600px] bg-white rounded-lg shadow-sm border border-gray-100">
                 <svg className="animate-spin h-16 w-16 text-blue-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>

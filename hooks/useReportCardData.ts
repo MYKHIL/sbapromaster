@@ -58,6 +58,19 @@ export const calculateReportData = (student: Student, data: DataContextType) => 
     const classmates = students.filter(s => s.class === className);
     const classmateIds = new Set(classmates.map(c => c.id));
 
+    // Pre-build score lookup Map for O(1) retrieval instead of O(S) find array search
+    const scoreLookupMap = new Map<string, any>();
+    scores.forEach(s => {
+        if (s && s.id) {
+            scoreLookupMap.set(s.id, s.assessmentScores || {});
+        }
+    });
+
+    const getScoresFromMap = (studentId: number, subjectId: number, assessmentId: number): string[] => {
+        const key = `${studentId}-${subjectId}`;
+        return scoreLookupMap.get(key)?.[assessmentId] || [];
+    };
+
     const relevantSubjectIds = new Set<number>();
     scores.forEach(score => {
         if (classmateIds.has(score.studentId)) {
@@ -80,7 +93,7 @@ export const calculateReportData = (student: Student, data: DataContextType) => 
 
     const calculateAssessmentTypeScore = (studentId: number, subjectId: number, specificAssessments: Assessment[]) => {
         return specificAssessments.reduce((total, assessment) => {
-            const scores = getStudentScores(studentId, subjectId, assessment.id);
+            const scores = getScoresFromMap(studentId, subjectId, assessment.id);
             if (!scores || scores.length === 0) return total;
 
             const isExam = assessment.name.toLowerCase().includes('exam');
@@ -144,6 +157,20 @@ export const calculateReportData = (student: Student, data: DataContextType) => 
         }).sort((a, b) => b.totalScore - a.totalScore);
     });
 
+    // Pre-calculate subject ranks for each student to avoid inner loops
+    const subjectRanks: Record<number, Record<number, number>> = {};
+    relevantSubjects.forEach(subject => {
+        subjectRanks[subject.id] = {};
+        const sortedScores = allStudentSubjectScores[subject.id] || [];
+        let rank = 1;
+        for (let i = 0; i < sortedScores.length; i++) {
+            if (i > 0 && sortedScores[i].totalScore < sortedScores[i - 1].totalScore) {
+                rank = i + 1;
+            }
+            subjectRanks[subject.id][sortedScores[i].studentId] = rank;
+        }
+    });
+
     // Calculate overall class positions based on total marks across all subjects
     const overallClassScores = classmates.map(classmate => {
         const overallTotalScore = relevantSubjects.reduce((total, subject) => {
@@ -186,19 +213,7 @@ export const calculateReportData = (student: Student, data: DataContextType) => 
             }
 
             const { grade, remark } = getGradeAndRemark(totalScore, grades);
-
-            const sortedScores = allStudentSubjectScores[subject.id] || [];
-            let position = 0;
-            let rank = 1;
-            for (let i = 0; i < sortedScores.length; i++) {
-                if (i > 0 && sortedScores[i].totalScore < sortedScores[i - 1].totalScore) {
-                    rank = i + 1;
-                }
-                if (sortedScores[i].studentId === classmate.id) {
-                    position = rank;
-                    break;
-                }
-            }
+            const position = subjectRanks[subject.id]?.[classmate.id] || 0;
 
             return { subject: subject.subject, classScore, examScore, totalScore, grade, remark, position };
         });
