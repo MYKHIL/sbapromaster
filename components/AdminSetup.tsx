@@ -44,7 +44,6 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
     const [editingUserId, setEditingUserId] = useState<number | null>(null);
     const [deleteConfirmUserId, setDeleteConfirmUserId] = useState<number | null>(null);
     const [resetConfirmUserId, setResetConfirmUserId] = useState<number | null>(null);
-    const [selectedUserForActions, setSelectedUserForActions] = useState<number | null>(null);
     const [showLogs, setShowLogs] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const { userLogs } = useData();
@@ -66,9 +65,9 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         });
     }, [classes]);
 
-    // Ref for auto-scrolling to bottom of user list
+    // Ref for auto-scrolling to the add-user form
     const userListRef = React.useRef<HTMLDivElement>(null);
-    // Ref for main modal to ensure new forms are visible
+    // Ref for main modal wrapper
     const modalRef = React.useRef<HTMLDivElement>(null);
     // Ref for the scrollable existing users list container
     const existingUsersListRef = React.useRef<HTMLDivElement>(null);
@@ -77,9 +76,8 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
 
     // Auto-scroll to bottom when users are added
     useEffect(() => {
-        // Scroll main modal to ensure the new section is visible
-        if (modalRef.current) {
-            modalRef.current.scrollTo({ top: modalRef.current.scrollHeight, behavior: 'smooth' });
+        if (users.length > 0 && userListRef.current) {
+            userListRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
         }
     }, [users.length]);
 
@@ -470,7 +468,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
 
     return (
         <div ref={modalRef} className="fixed inset-0 bg-gray-900 bg-opacity-95 z-50 flex items-center justify-center p-3 sm:p-4 overflow-hidden">
-            <div className="bg-white w-full max-w-4xl max-h-[70vh] rounded-xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+            <div className="bg-white w-full max-w-4xl max-h-[75vh] rounded-xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
                 {/* Fixed Header */}
                 <div className="p-4 sm:p-5 border-b border-gray-100 flex-shrink-0 bg-white text-center">
                     <h2 className="text-xl sm:text-2xl font-bold text-gray-800">
@@ -548,62 +546,118 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                 </label>
                             </div>
 
-                            {selectedUserForActions !== null && (
-                                <div 
-                                    className="fixed inset-0 z-10" 
-                                    onClick={() => setSelectedUserForActions(null)} 
-                                />
-                            )}
-                            <div ref={existingUsersListRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-1 max-h-[40vh] overflow-y-auto z-20 relative">
+                            <div ref={existingUsersListRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-1 max-h-[40vh] overflow-y-auto z-20 relative">
                                 {existingUsers.map((user, index) => (
-                                    <div key={user.id} className="relative">
-                                        <button
-                                            onClick={() => setSelectedUserForActions(selectedUserForActions === user.id ? null : user.id)}
-                                            className={`w-full text-left flex flex-col gap-3 px-4 py-4 rounded-2xl border transition-all shadow-sm ${
-                                                selectedUserForActions === user.id
-                                                    ? 'bg-blue-600 border-blue-600 text-white'
-                                                    : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
-                                            }`} 
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <span className={`w-2.5 h-2.5 rounded-full ${
-                                                    user.role === 'Admin' 
-                                                        ? (selectedUserForActions === user.id ? 'bg-purple-200' : 'bg-purple-500') 
-                                                        : user.role === 'Teacher' 
-                                                        ? (selectedUserForActions === user.id ? 'bg-blue-200' : 'bg-blue-500') 
-                                                        : (selectedUserForActions === user.id ? 'bg-gray-200' : 'bg-gray-400')
-                                                }`} />
+                                    <div key={user.id} className="bg-white border border-slate-200 rounded-[1.5rem] p-5 flex flex-col gap-4 shadow-sm hover:border-slate-300 hover:shadow-md transition-all">
+                                        {/* Header */}
+                                        <div className="flex flex-col gap-2">
+                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                                                 <div className="min-w-0">
-                                                    <div className="truncate text-sm font-semibold">
+                                                    <div className="text-base font-semibold text-slate-900 truncate">
                                                         {user.name || 'Unnamed User'}
                                                     </div>
+                                                    {/* <div className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                                                        User profile details
+                                                    </div> */}
                                                 </div>
-                                            </div>
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold ${selectedUserForActions === user.id ? 'bg-white/15 text-white' : 'bg-slate-100 text-slate-700'}`}>
-                                                    <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 24 24">
+                                                <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-semibold tracking-wide uppercase ${
+                                                    user.role === 'Admin' ? 'bg-purple-50 text-purple-700 border border-purple-200' : 
+                                                    user.role === 'Teacher' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 
+                                                    'bg-slate-50 text-slate-600 border border-slate-200'
+                                                }`}>
+                                                    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
                                                         {user.role === 'Admin' ? (
                                                             <path d="M12 2l3 3h4a1 1 0 011 1v4l3 3v6a1 1 0 01-1 1h-4a1 1 0 01-1-1v-3H9v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-6l3-3V6a1 1 0 011-1h4l3-3z" />
                                                         ) : user.role === 'Teacher' ? (
-                                                            <path d="M5 4a1 1 0 011-1h12a1 1 0 011 1v16a1 1 0 01-1 1H6a1 1 0 01-1-1V4zm2 2v12h10V6H7zm2 2h6v2H9V8zm0 4h4v2H9v-2z" />
+                                                            <path d="M4 5a2 2 0 012-2h12a2 2 0 012 2v14a1 1 0 01-1.447.894L12 16.618l-7.553 3.276A1 1 0 013 19V5zm2 1v12.382l6.553-2.846a1 1 0 01.894 0L18 18.382V6H6z" />
                                                         ) : (
-                                                            <path d="M12 2a5 5 0 00-5 5c0 3.333 2.667 6 5 6s5-2.667 5-6a5 5 0 00-5-5zm0 12c-4 0-7 2-7 4v2h14v-2c0-2-3-4-7-4z" />
+                                                            <path d="M12 12a4 4 0 100-8 4 4 0 000 8zm-6 9a6 6 0 0112 0H6z" />
                                                         )}
                                                     </svg>
                                                     {user.role}
                                                 </span>
-                                                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold ${selectedUserForActions === user.id ? 'bg-white/15 text-white' : user.isReadOnly ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
-                                                    <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                                            </div>
+                                        </div>
+
+                                        {/* Actions */}
+                                        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-3 shadow-sm">
+                                            <div className="text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500 mb-3">
+                                                Actions
+                                            </div>
+                                            <div className="grid gap-2 grid-cols-2 lg:grid-cols-4">
+                                                <button
+                                                    onClick={() => toggleExistingUserReadOnly(user.id)}
+                                                    className={`flex items-center justify-center gap-2 px-3 py-2 rounded-2xl text-[11px] font-semibold transition shadow-sm ${
+                                                        user.isReadOnly
+                                                            ? 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100'
+                                                            : 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200'
+                                                    }`}
+                                                    title={user.isReadOnly ? 'Unlock Editing' : 'Lock Editing (Read-Only)'}
+                                                >
+                                                    {user.isReadOnly ? 'Grant Access' : 'Restrict Access'}
+                                                </button>
+
+                                                <button
+                                                    onClick={() => setResetConfirmUserId(user.id)}
+                                                    className="flex items-center justify-center gap-2 px-3 py-2 rounded-2xl border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 text-[11px] font-semibold transition shadow-sm"
+                                                    title="Reset Password"
+                                                >
+                                                    Clear Password
+                                                </button>
+
+                                                <button
+                                                    onClick={() => handleEditUser(user)}
+                                                    className="flex items-center justify-center gap-2 px-3 py-2 rounded-2xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 text-[11px] font-semibold transition shadow-sm"
+                                                    title="Edit Settings"
+                                                >
+                                                    Edit User
+                                                </button>
+
+                                                <button
+                                                    onClick={() => setDeleteConfirmUserId(user.id)}
+                                                    className="flex items-center justify-center gap-2 px-3 py-2 rounded-2xl border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 text-[11px] font-semibold transition shadow-sm"
+                                                    title="Delete User"
+                                                >
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Status Descriptors */}
+                                        <div className="rounded-3xl border border-slate-200 bg-blue p-4 shadow-sm">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                {/* <span className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-[11px] font-semibold tracking-wide uppercase ${
+                                                    user.role === 'Admin' ? 'bg-purple-50 text-purple-700 border border-purple-200' : 
+                                                    user.role === 'Teacher' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 
+                                                    'bg-slate-50 text-slate-600 border border-slate-200'
+                                                }`}>
+                                                    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                                                        {user.role === 'Admin' ? (
+                                                            <path d="M12 2l3 3h4a1 1 0 011 1v4l3 3v6a1 1 0 01-1 1h-4a1 1 0 01-1-1v-3H9v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-6l3-3V6a1 1 0 011-1h4l3-3z" />
+                                                        ) : user.role === 'Teacher' ? (
+                                                            <path d="M4 5a2 2 0 012-2h12a2 2 0 012 2v14a1 1 0 01-1.447.894L12 16.618l-7.553 3.276A1 1 0 013 19V5zm2 1v12.382l6.553-2.846a1 1 0 01.894 0L18 18.382V6H6z" />
+                                                        ) : (
+                                                            <path d="M12 12a4 4 0 100-8 4 4 0 000 8zm-6 9a6 6 0 0112 0H6z" />
+                                                        )}
+                                                    </svg>
+                                                    {user.role}
+                                                </span> */}
+                                                <span className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-[11px] font-semibold tracking-wide ${
+                                                    user.isReadOnly ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                                }`}>
+                                                    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                                                         {user.isReadOnly ? (
                                                             <path fillRule="evenodd" d="M6 8V7a4 4 0 118 0v1h1a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1V9a1 1 0 011-1h1zm2-1a2 2 0 114 0v1H8V7z" clipRule="evenodd" />
                                                         ) : (
                                                             <path fillRule="evenodd" d="M5 11V9a5 5 0 1110 0v2h1a1 1 0 011 1v5a1 1 0 01-1 1H4a1 1 0 01-1-1v-5a1 1 0 011-1h1zm2-2a3 3 0 116 0v2H7V9z" clipRule="evenodd" />
                                                         )}
                                                     </svg>
-                                                    {user.isReadOnly ? 'Locked' : 'Unlocked'}
+                                                    {user.isReadOnly ? 'Restricted' : 'Unlocked'}
                                                 </span>
-                                                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold ${selectedUserForActions === user.id ? 'bg-white/15 text-white' : user.passwordHash && user.passwordHash.trim() !== '' ? 'bg-emerald-50 text-emerald-700' : 'bg-yellow-50 text-yellow-700'}`}>
-                                                    <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                                                <span className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-[11px] font-semibold tracking-wide ${
+                                                    user.passwordHash && user.passwordHash.trim() !== '' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+                                                }`}>
+                                                    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                                                         {user.passwordHash && user.passwordHash.trim() !== '' ? (
                                                             <path d="M10 2a4 4 0 00-4 4v2h8V6a4 4 0 00-4-4zm-1 7a1 1 0 100 2 1 1 0 000-2zm4 5H7a1 1 0 01-1-1v-3a1 1 0 011-1h6a1 1 0 011 1v3a1 1 0 01-1 1z" />
                                                         ) : (
@@ -613,75 +667,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                                     {user.passwordHash && user.passwordHash.trim() !== '' ? 'Password Set' : 'No Password'}
                                                 </span>
                                             </div>
-                                        </button>
-
-                                        {selectedUserForActions === user.id && (
-                                            <div className="absolute left-0 mt-1.5 z-30 w-48 bg-white border border-gray-200 rounded-xl shadow-lg p-1.5 flex flex-col gap-0.5">
-                                                <div className="px-2.5 py-1.5 text-xs font-semibold text-gray-500 border-b border-gray-100 flex justify-between items-center mb-1">
-                                                    <span className="truncate">Actions: {user.name}</span>
-                                                </div>
-                                                <button
-                                                    onClick={() => {
-                                                        toggleExistingUserReadOnly(user.id);
-                                                        setSelectedUserForActions(null);
-                                                    }}
-                                                    className="w-full text-left px-2.5 py-1.5 text-xs font-semibold rounded-lg hover:bg-gray-100 transition text-gray-700 flex items-center gap-2"
-                                                >
-                                                    {user.isReadOnly ? (
-                                                        <>
-                                                            <svg className="h-3.5 w-3.5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                                                                <path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2H9V7a1 1 0 012 0v2h2V7a5 5 0 00-5-5z" />
-                                                            </svg>
-                                                            Unlock Editing
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <svg className="h-3.5 w-3.5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                                                                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                                                            </svg>
-                                                            Lock (Read-Only)
-                                                        </>
-                                                    )}
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setResetConfirmUserId(user.id);
-                                                        setSelectedUserForActions(null);
-                                                    }}
-                                                    className="w-full text-left px-2.5 py-1.5 text-xs font-semibold rounded-lg hover:bg-yellow-50 text-yellow-700 transition flex items-center gap-2"
-                                                >
-                                                    <svg className="h-3.5 w-3.5 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m-5-4a3.333 3.333 0 00-8 0V7a3.333 3.333 0 008 0V5z" />
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                                                    </svg>
-                                                    Reset Password
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        handleEditUser(user);
-                                                        setSelectedUserForActions(null);
-                                                    }}
-                                                    className="w-full text-left px-2.5 py-1.5 text-xs font-semibold rounded-lg hover:bg-blue-50 text-blue-700 transition flex items-center gap-2"
-                                                >
-                                                    <svg className="h-3.5 w-3.5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                    </svg>
-                                                    Edit Settings
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setDeleteConfirmUserId(user.id);
-                                                        setSelectedUserForActions(null);
-                                                    }}
-                                                    className="w-full text-left px-2.5 py-1.5 text-xs font-semibold rounded-lg hover:bg-red-50 text-red-700 transition flex items-center gap-2"
-                                                >
-                                                    <svg className="h-3.5 w-3.5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                    </svg>
-                                                    Delete User
-                                                </button>
-                                            </div>
-                                        )}
+                                        </div>
                                     </div>
                                 ))}
                             </div>
