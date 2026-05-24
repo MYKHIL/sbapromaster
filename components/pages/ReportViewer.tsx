@@ -159,10 +159,10 @@ const ReportViewer: React.FC = () => {
     const timer = setTimeout(() => {
         if (!active) return;
         if (selectedStudentId === 'all') {
-            // Progressively render reports in small batches to yield execution to the browser.
-            // On mobile, rendering large batches synchronously freezes the browser due to FitText layout reflows.
-            // Using a batch size of 2 and a timeout of 60ms allows the browser to paint and keep the UI responsive.
-            const batchSize = 2;
+            // Progressively render reports in batches to yield execution to the browser.
+            // Each batch is followed by a 60ms pause so the browser can paint between cycles.
+            // A batch size of 10 provides fast throughput while keeping the UI responsive.
+            const batchSize = 10;
             let currentIdx = 0;
 
             const renderBatch = () => {
@@ -487,15 +487,6 @@ const ReportViewer: React.FC = () => {
       <div className="flex flex-col gap-6">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold text-gray-800">Report Cards</h1>
-          {isLocalLoading && generatedReports.length > 0 && (
-            <div className="flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-full text-sm font-semibold border border-blue-100 shadow-sm animate-pulse">
-              <svg className="animate-spin h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              <span>Loading reports: {generatedReports.length} of {studentsInClass.length}</span>
-            </div>
-          )}
         </div>
 
         <div className="bg-white p-4 rounded-xl shadow-md border border-gray-200 flex flex-col gap-4">
@@ -610,12 +601,12 @@ const ReportViewer: React.FC = () => {
         </PerformanceSummaryFetcher>
       )}
 
-      {/* Zoom Controls (Unchanged) */}
+      {/* Zoom Controls (Shifted up on mobile to avoid bottom nav interference) */}
       <div className={`fixed left-6 z-30 items-center bg-white p-2 rounded-full shadow-lg border border-gray-200 space-x-2 opacity-50 hover:opacity-100 transition-opacity duration-300 ${selectedStudentForPanel
         ? isPanelCollapsed
-          ? 'flex bottom-24 lg:bottom-6'
+          ? 'flex bottom-36 lg:bottom-6'
           : 'hidden lg:flex lg:bottom-6'
-        : 'flex bottom-6'
+        : 'flex bottom-28 lg:bottom-6'
         }`}>
         <button onClick={() => setZoomLevel(prev => Math.max(0.25, prev - 0.1))} className="p-2 hover:bg-gray-100 rounded-full text-gray-600 focus:outline-none" title="Zoom Out">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -677,7 +668,7 @@ const ReportViewer: React.FC = () => {
         <div className={`fixed bottom-24 lg:bottom-6 z-20 flex-col items-center gap-4 transition-all duration-300 ${(selectedStudentForPanel && !isPanelCollapsed) ? 'hidden lg:flex' : 'flex'} ${selectedStudentForPanel ? 'lg:right-[31.5rem] right-6' : 'right-6'}`}>
           <button
             onClick={handleDownloadPdf}
-            disabled={isGeneratingPdf}
+            disabled={isGeneratingPdf || isFetching || isLocalLoading}
             className="flex items-center bg-green-600 text-white px-5 py-3 rounded-full shadow-lg hover:bg-green-700 transition-all duration-300 transform hover:scale-110 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:scale-100"
           >
             {isGeneratingPdf ? (
@@ -696,7 +687,7 @@ const ReportViewer: React.FC = () => {
           {accessibleClasses.length > 1 && (
             <button
               onClick={handleDownloadAllPdf}
-              disabled={isGeneratingAllPdf || isGeneratingPdf}
+              disabled={isGeneratingAllPdf || isGeneratingPdf || isFetching || isLocalLoading}
               className="flex items-center bg-blue-600 text-white px-5 py-3 rounded-full shadow-lg hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:scale-100"
               title="Download reports for all your available classes"
             >
@@ -730,49 +721,44 @@ const ReportViewer: React.FC = () => {
         onDiscard={handleModalDiscard}
         onQueueAndMove={handleModalQueueAndMove}
       />
-      {/* Beautiful Centered Glassmorphism Loading Overlay */}
-      {(isFetching || isLocalLoading) && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-white/90 border border-gray-100/50 rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center space-y-6 animate-in fade-in zoom-in-95 duration-200">
-            <div className="relative flex justify-center items-center">
+      {/* Beautiful Centered Glassmorphism Loading Widget (Ultra-sleek & Minimal) */}
+      {(isFetching || isLocalLoading) && !(studentsInClass.length > 0 && generatedReports.length >= studentsInClass.length) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none animate-in fade-in duration-200">
+          <div className="bg-white/95 backdrop-blur-md border border-gray-200/80 rounded-2xl shadow-2xl p-3 w-64 flex items-center space-x-3 relative overflow-hidden transition-all duration-300 pointer-events-auto animate-in fade-in zoom-in-95 duration-200">
+            <div className="relative flex-shrink-0 flex items-center justify-center">
               {/* Spinning Loader Ring */}
-              <svg className="animate-spin h-20 w-20 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <svg className="animate-spin h-9 w-9 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3.5"></circle>
                 <path className="opacity-80" fill="currentColor" strokeLinecap="round" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
               {/* Progress Count / Percentage Center Label */}
               {studentsInClass.length > 0 && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center mt-1">
-                  <span className="text-lg font-black text-blue-700 leading-none">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-[9px] font-black text-blue-700">
                     {Math.round((generatedReports.length / studentsInClass.length) * 100)}%
                   </span>
-                  <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mt-0.5">loaded</span>
                 </div>
               )}
             </div>
 
-            <div className="space-y-2">
-              <h3 className="text-xl font-bold text-gray-800">Generating Reports</h3>
-              <p className="text-sm font-medium text-gray-500">
+            <div className="flex-1 min-w-0 text-left">
+              <h4 className="text-xs font-bold text-gray-800 truncate">Generating Reports</h4>
+              <p className="text-[10px] font-semibold text-gray-500 truncate">
                 {generatedReports.length > 0 
-                  ? `Loading ${generatedReports.length} of ${studentsInClass.length} cards...`
-                  : 'Preparing student records...'}
+                  ? `${generatedReports.length} of ${studentsInClass.length} cards`
+                  : 'Preparing records...'}
               </p>
             </div>
 
-            {/* Custom Premium Progress Bar */}
+            {/* Premium Bottom-Edge Integrated Progress Bar */}
             {studentsInClass.length > 0 && (
-              <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden border border-gray-200/40">
+              <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-gray-100/50 overflow-hidden">
                 <div 
-                  className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 h-full transition-all duration-300 rounded-full"
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 h-full transition-all duration-300"
                   style={{ width: `${(generatedReports.length / studentsInClass.length) * 100}%` }}
                 />
               </div>
             )}
-            
-            <div className="text-[11px] font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-full inline-block">
-              Please wait while we render cards safely
-            </div>
           </div>
         </div>
       )}
