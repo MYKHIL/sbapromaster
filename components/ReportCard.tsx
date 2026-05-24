@@ -120,23 +120,35 @@ const ReportCard: React.FC<{ student: Student }> = ({ student }) => {
         sortedGrades.slice(i * colSize, (i + 1) * colSize)
     ).filter(col => col.length > 0);
 
-    const InfoItem: React.FC<{ label: string; value?: React.ReactNode; className?: string }> = ({ label, value, className = '' }) => (
+    const InfoItem: React.FC<{ label: string; value?: React.ReactNode; className?: string; fitText?: boolean }> = ({ label, value, className = '', fitText = false }) => (
         <div className={`flex items-baseline py-0.5 ${className}`}>
             <span className="font-bold whitespace-nowrap pr-2 text-black">{label}:</span>
             <div className="relative w-full h-5 border-b border-dotted border-black text-black overflow-hidden">
                 <div className="absolute bottom-0 left-0 right-0">
-                    {value ? <FitText maxFontSize={14} minFontSize={10} mode="single">{value}</FitText> : <span className="invisible">.</span>}
+                    {value ? (
+                        fitText ? (
+                            <FitText maxFontSize={14} minFontSize={10} mode="single">{value}</FitText>
+                        ) : (
+                            <span className="text-[14px] leading-none whitespace-nowrap">{value}</span>
+                        )
+                    ) : <span className="invisible">.</span>}
                 </div>
             </div>
         </div>
     );
 
-    const DataItem: React.FC<{ label: string; value?: React.ReactNode }> = ({ label, value }) => (
+    const DataItem: React.FC<{ label: string; value?: React.ReactNode; fitText?: boolean }> = ({ label, value, fitText = false }) => (
         <div className="flex items-baseline py-0.5">
             <span className="font-bold whitespace-nowrap pr-2 text-black">{label}:</span>
             <div className="relative w-full h-5 border-b border-dotted border-black text-black overflow-hidden">
                 <div className="absolute bottom-0 left-0 right-0">
-                    {value ? <FitText maxFontSize={14} minFontSize={10} mode="single">{value}</FitText> : <span className="invisible">.</span>}
+                    {value ? (
+                        fitText ? (
+                            <FitText maxFontSize={14} minFontSize={10} mode="single">{value}</FitText>
+                        ) : (
+                            <span className="text-[14px] leading-none whitespace-nowrap">{value}</span>
+                        )
+                    ) : <span className="invisible">.</span>}
                 </div>
             </div>
         </div>
@@ -281,20 +293,20 @@ const ReportCard: React.FC<{ student: Student }> = ({ student }) => {
                     <span className="font-bold whitespace-nowrap pr-2 text-black">Attendance:</span>
                     <div className="relative w-20 h-5 border-b border-dotted border-black">
                         <div className="absolute bottom-0 left-0 right-0">
-                            <FitText className="text-center" maxFontSize={14} minFontSize={10} mode="single">{reportData?.attendance}</FitText>
+                            <span className="text-[14px] leading-none text-center block">{reportData?.attendance}</span>
                         </div>
                     </div>
                     <span className="px-2">out of</span>
                     <div className="relative w-20 h-5 border-b border-dotted border-black">
                         <div className="absolute bottom-0 left-0 right-0">
-                            <FitText className="text-center" maxFontSize={14} minFontSize={10} mode="single">{totalSchoolDays}</FitText>
+                            <span className="text-[14px] leading-none text-center block">{totalSchoolDays}</span>
                         </div>
                     </div>
                 </div>
                 <DataItem label="Conduct" value={reportData?.conduct} />
                 <DataItem label="Interest" value={reportData?.interest} />
                 <DataItem label="Attitude" value={reportData?.attitude} />
-                <DataItem label="Class Teacher's Remarks" value={reportData?.teacherRemark} />
+                <DataItem label="Class Teacher's Remarks" value={reportData?.teacherRemark} fitText={true} />
             </section>
 
             <section className="mt-auto pt-4 border-t-2 border-black flex justify-between items-end text-sm text-center flex-shrink-0">

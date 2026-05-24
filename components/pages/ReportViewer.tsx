@@ -207,21 +207,47 @@ const ReportViewer: React.FC = () => {
 
   // Zoom Logic
   useEffect(() => {
+    let resizeTimer: ReturnType<typeof setTimeout>;
+    const lastDimensions = { width: window.innerWidth, height: window.innerHeight };
+
     const calculateOptimalZoom = () => {
+      const currentWidth = window.innerWidth;
+      const currentHeight = window.innerHeight;
+
+      // On mobile, height changes due to the URL bar collapsing/expanding on scroll.
+      // We ignore minor height changes to prevent infinite resize loops.
+      const widthChanged = currentWidth !== lastDimensions.width;
+      const heightChanged = Math.abs(currentHeight - lastDimensions.height) > 100;
+
+      if (!widthChanged && !heightChanged) {
+        return;
+      }
+
+      lastDimensions.width = currentWidth;
+      lastDimensions.height = currentHeight;
+
       const reportCardWidth = 800;
       const reportCardHeight = 1130;
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-      const availableWidth = viewportWidth - 100;
-      const availableHeight = viewportHeight - 250;
+      const availableWidth = currentWidth - 100;
+      const availableHeight = currentHeight - 250;
       const zoomByWidth = availableWidth / reportCardWidth;
       const zoomByHeight = availableHeight / reportCardHeight;
       const finalZoom = Math.max(0.25, Math.min(1, zoomByWidth, zoomByHeight));
       setZoomLevel(finalZoom);
     };
-    window.addEventListener('resize', calculateOptimalZoom);
+
+    const handleResize = () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(calculateOptimalZoom, 150);
+    };
+
+    window.addEventListener('resize', handleResize);
     calculateOptimalZoom();
-    return () => window.removeEventListener('resize', calculateOptimalZoom);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      clearTimeout(resizeTimer);
+    };
   }, []);
 
   const toggleComparisonMode = () => {
