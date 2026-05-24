@@ -26,12 +26,36 @@ export const getOrdinal = (n: number) => {
     return n + (s[(v - 20) % 10] || s[v] || s[0]);
 };
 
+interface ClassReportCacheEntry {
+    studentsRef: any[];
+    scoresRef: any[];
+    subjectsRef: any[];
+    assessmentsRef: any[];
+    gradesRef: any[];
+    reportCards: Record<number, any>;
+}
+
+const classReportCache: Record<string, ClassReportCacheEntry> = {};
+
 export const calculateReportData = (student: Student, data: DataContextType) => {
     const { students, subjects, assessments, grades, getStudentScores, scores } = data;
+    const className = student.class;
 
-    const numericGradeMap = getNumericGradeMap(grades);
+    // Check cache to reuse precomputed class reports
+    const cached = classReportCache[className];
+    if (
+        cached &&
+        cached.studentsRef === students &&
+        cached.scoresRef === scores &&
+        cached.subjectsRef === subjects &&
+        cached.assessmentsRef === assessments &&
+        cached.gradesRef === grades &&
+        cached.reportCards[student.id]
+    ) {
+        return cached.reportCards[student.id];
+    }
 
-    const classmates = students.filter(s => s.class === student.class);
+    const classmates = students.filter(s => s.class === className);
     const classmateIds = new Set(classmates.map(c => c.id));
 
     const relevantSubjectIds = new Set<number>();
@@ -94,109 +118,134 @@ export const calculateReportData = (student: Student, data: DataContextType) => 
         }, 0);
     };
 
+    // Calculate student subject scores once for all classmates in this class
+    const studentSubjectScores: Record<number, Record<number, { classScore: number; examScore: number; totalScore: number }>> = {};
+    classmates.forEach(classmate => {
+        studentSubjectScores[classmate.id] = {};
+        relevantSubjects.forEach(subject => {
+            const classScore = calculateAssessmentTypeScore(classmate.id, subject.id, classAssessments);
+            const examScore = calculateAssessmentTypeScore(classmate.id, subject.id, examAssessments);
+            studentSubjectScores[classmate.id][subject.id] = {
+                classScore,
+                examScore,
+                totalScore: classScore + examScore
+            };
+        });
+    });
+
     const allStudentSubjectScores: { [subjectId: number]: { studentId: number; totalScore: number }[] } = {};
 
     relevantSubjects.forEach(subject => {
         allStudentSubjectScores[subject.id] = classmates.map(classmate => {
-            const classScore = calculateAssessmentTypeScore(classmate.id, subject.id, classAssessments);
-            const examScore = calculateAssessmentTypeScore(classmate.id, subject.id, examAssessments);
-            return { studentId: classmate.id, totalScore: classScore + examScore };
+            return {
+                studentId: classmate.id,
+                totalScore: studentSubjectScores[classmate.id][subject.id]?.totalScore || 0
+            };
         }).sort((a, b) => b.totalScore - a.totalScore);
     });
 
-    // Calculate overall class position based on total marks across all subjects
+    // Calculate overall class positions based on total marks across all subjects
     const overallClassScores = classmates.map(classmate => {
         const overallTotalScore = relevantSubjects.reduce((total, subject) => {
-            const studentScoreInfo = allStudentSubjectScores[subject.id]?.find(s => s.studentId === classmate.id);
-            return total + (studentScoreInfo?.totalScore || 0);
+            return total + (studentSubjectScores[classmate.id][subject.id]?.totalScore || 0);
         }, 0);
         return { studentId: classmate.id, overallTotalScore };
     }).sort((a, b) => b.overallTotalScore - a.overallTotalScore);
 
-    const studentTotalScore = overallClassScores.find(s => s.studentId === student.id)?.overallTotalScore || 0;
-
-    let studentOverallPosition = 0;
+    const overallPositions: Record<number, number> = {};
     if (overallClassScores.length > 0) {
         let rank = 1;
         for (let i = 0; i < overallClassScores.length; i++) {
             if (i > 0 && overallClassScores[i].overallTotalScore < overallClassScores[i - 1].overallTotalScore) {
                 rank = i + 1;
             }
-            if (overallClassScores[i].studentId === student.id) {
-                studentOverallPosition = rank;
-                break;
-            }
+            overallPositions[overallClassScores[i].studentId] = rank;
         }
     }
 
-    const results = relevantSubjects.map(subject => {
-        const classScore = calculateAssessmentTypeScore(student.id, subject.id, classAssessments);
-        const examScore = calculateAssessmentTypeScore(student.id, subject.id, examAssessments);
-        const totalScore = classScore + examScore;
+    const numericGradeMap = getNumericGradeMap(grades);
+    const leastGradeValue = numericGradeMap.size > 0 ? Math.max(...numericGradeMap.values()) : 9;
 
-        if (totalScore === 0) {
-            return {
-                subject: subject.subject,
-                classScore: 0,
-                examScore: 0,
-                totalScore: 0,
-                grade: '-',
-                remark: '-',
-                position: 0,
-            };
-        }
+    const computedReportCards: Record<number, any> = {};
 
-        const { grade, remark } = getGradeAndRemark(totalScore, grades);
+    classmates.forEach(classmate => {
+        const results = relevantSubjects.map(subject => {
+            const scores = studentSubjectScores[classmate.id][subject.id] || { classScore: 0, examScore: 0, totalScore: 0 };
+            const { classScore, examScore, totalScore } = scores;
 
-        const sortedScores = allStudentSubjectScores[subject.id];
-        let position = 0;
-        let rank = 1;
-        for (let i = 0; i < sortedScores.length; i++) {
-            if (i > 0 && sortedScores[i].totalScore < sortedScores[i - 1].totalScore) {
-                rank = i + 1;
+            if (totalScore === 0) {
+                return {
+                    subject: subject.subject,
+                    classScore: 0,
+                    examScore: 0,
+                    totalScore: 0,
+                    grade: '-',
+                    remark: '-',
+                    position: 0,
+                };
             }
-            if (sortedScores[i].studentId === student.id) {
-                position = rank;
-                break;
-            }
-        }
 
-        return { subject: subject.subject, classScore, examScore, totalScore, grade, remark, position };
+            const { grade, remark } = getGradeAndRemark(totalScore, grades);
+
+            const sortedScores = allStudentSubjectScores[subject.id] || [];
+            let position = 0;
+            let rank = 1;
+            for (let i = 0; i < sortedScores.length; i++) {
+                if (i > 0 && sortedScores[i].totalScore < sortedScores[i - 1].totalScore) {
+                    rank = i + 1;
+                }
+                if (sortedScores[i].studentId === classmate.id) {
+                    position = rank;
+                    break;
+                }
+            }
+
+            return { subject: subject.subject, classScore, examScore, totalScore, grade, remark, position };
+        });
+
+        const studentGradesMap = new Map<string, string>();
+        results.forEach(r => {
+            if (r.grade !== '-' && r.grade !== 'N/A') {
+                studentGradesMap.set(r.subject, r.grade);
+            }
+        });
+
+        const finalAggregateScore = calculateAggregateScore(
+            studentGradesMap,
+            relevantSubjects,
+            numericGradeMap,
+            leastGradeValue
+        );
+
+        const summary = results
+            .map(r => `${r.subject}: ${r.grade} (${r.remark}, ${getOrdinal(r.position)} in class)`)
+            .join(', ');
+
+        const studentTotalScore = overallClassScores.find(s => s.studentId === classmate.id)?.overallTotalScore || 0;
+        const studentOverallPosition = overallPositions[classmate.id] || 0;
+
+        computedReportCards[classmate.id] = {
+            subjectResults: results,
+            totalClassWeight,
+            examWeight: examWeightValue,
+            performanceSummary: summary,
+            aggregateScore: finalAggregateScore,
+            overallPosition: studentOverallPosition,
+            totalScore: studentTotalScore,
+        };
     });
 
-    // 3. Calculate Aggregate Score using centralized utility
-    const leastGradeValue = numericGradeMap.size > 0
-        ? Math.max(...numericGradeMap.values())
-        : 9;
-
-    const studentGradesMap = new Map<string, string>();
-    results.forEach(r => {
-        if (r.grade !== '-' && r.grade !== 'N/A') {
-            studentGradesMap.set(r.subject, r.grade);
-        }
-    });
-
-    const finalAggregateScore = calculateAggregateScore(
-        studentGradesMap,
-        relevantSubjects, // Only count subjects active in this class
-        numericGradeMap,
-        leastGradeValue
-    );
-
-
-    const summary = results
-        .map(r => `${r.subject}: ${r.grade} (${r.remark}, ${getOrdinal(r.position)} in class)`)
-        .join(', ');
-
-    return {
-        subjectResults: results,
-        totalClassWeight,
-        examWeight: examWeightValue,
-        performanceSummary: summary,
-        aggregateScore: finalAggregateScore,
-        overallPosition: studentOverallPosition,
-        totalScore: studentTotalScore,
+    // Cache the class report cards
+    classReportCache[className] = {
+        studentsRef: students,
+        scoresRef: scores,
+        subjectsRef: subjects,
+        assessmentsRef: assessments,
+        gradesRef: grades,
+        reportCards: computedReportCards
     };
+
+    return computedReportCards[student.id];
 };
 
 export const useReportCardData = (student: Student) => {
