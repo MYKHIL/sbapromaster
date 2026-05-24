@@ -44,6 +44,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
     const [editingUserId, setEditingUserId] = useState<number | null>(null);
     const [deleteConfirmUserId, setDeleteConfirmUserId] = useState<number | null>(null);
     const [resetConfirmUserId, setResetConfirmUserId] = useState<number | null>(null);
+    const [selectedUserForActions, setSelectedUserForActions] = useState<number | null>(null);
     const [showLogs, setShowLogs] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const { userLogs } = useData();
@@ -468,385 +469,417 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
     };
 
     return (
-        <div ref={modalRef} className="fixed inset-0 bg-gray-900 bg-opacity-95 z-50 flex items-center justify-center p-4 overflow-y-auto">
-            <div className="bg-white rounded-lg shadow-2xl p-6 md:p-8 max-w-4xl w-full my-8">
-                <div className="text-center mb-6">
-                    <h2 className="text-3xl font-bold text-gray-800">
+        <div ref={modalRef} className="fixed inset-0 bg-gray-900 bg-opacity-95 z-50 flex items-center justify-center p-3 sm:p-4 overflow-hidden">
+            <div className="bg-white w-full max-w-4xl max-h-[70vh] rounded-xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+                {/* Fixed Header */}
+                <div className="p-4 sm:p-5 border-b border-gray-100 flex-shrink-0 bg-white text-center">
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-800">
                         {mode === 'setup' ? 'Admin Setup - Register Users' : 'User Management'}
                     </h2>
                     {mode === 'setup' && (
-                        <p className="text-gray-600 mt-2">
+                        <p className="text-gray-600 mt-1 text-xs sm:text-sm">
                             Welcome! Please register users for your school. The first user will be the administrator.
                         </p>
                     )}
                 </div>
 
-                {(error || externalError) && (
-                    <div className={`border-l-4 p-4 mb-4 text-sm ${(error || externalError)?.startsWith('⏳')
-                        ? 'bg-blue-50 border-blue-500 text-blue-700'
-                        : 'bg-red-50 border-red-500 text-red-700'
-                        }`}>
-                        {externalError || error}
-                    </div>
-                )}
+                {/* Main Scrollable Content */}
+                <div className="flex-grow overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
+                    {(error || externalError) && (
+                        <div className={`border-l-4 p-4 text-sm rounded-r-lg ${(error || externalError)?.startsWith('⏳')
+                            ? 'bg-blue-50 border-blue-500 text-blue-700'
+                            : 'bg-red-50 border-red-500 text-red-700'
+                            }`}>
+                            {externalError || error}
+                        </div>
+                    )}
 
-                {(error || externalError) && (
-                    <div className={`border-l-4 p-4 mb-4 text-sm ${(error || externalError)?.startsWith('⏳')
-                        ? 'bg-blue-50 border-blue-500 text-blue-700'
-                        : 'bg-red-50 border-red-500 text-red-700'
-                        }`}>
-                        {externalError || error}
-                    </div>
-                )}
+                    {/* Users Tab Content */}
+                    {mode === 'management' && !showLogs && editingUserId === null && (
+                        <div>
+                            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-4">
+                                <h3 className="text-xl font-semibold text-gray-700">
+                                    Existing Users ({existingUsers.length})
+                                </h3>
+                                <div className="flex flex-wrap gap-2">
+                                    <button
+                                        onClick={handleRefreshData}
+                                        disabled={isRefreshing}
+                                        className="flex items-center px-3.5 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition disabled:opacity-50 text-sm font-semibold shadow-sm"
+                                        title="Refresh all data from database"
+                                    >
+                                        {isRefreshing ? (
+                                            <>
+                                                <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                Refreshing...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                </svg>
+                                                Refresh Data
+                                            </>
+                                        )}
+                                    </button>
+                                    <button
+                                        onClick={addNewUser}
+                                        className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition text-sm font-semibold shadow-sm"
+                                    >
+                                        + Add New User
+                                    </button>
+                                </div>
+                            </div>
 
-                {/* Tabs for Management Mode */}
+                            {/* Global Read-Only Toggle */}
+                            <div className="flex items-center space-x-2.5 mb-4 px-1">
+                                <input
+                                    type="checkbox"
+                                    id="global-readonly"
+                                    checked={allReadOnly}
+                                    onChange={(e) => toggleAllReadOnly(e.target.checked)}
+                                    className="h-4.5 w-4.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
+                                />
+                                <label htmlFor="global-readonly" className="text-sm font-medium text-gray-700 cursor-pointer">
+                                    Set All Users to Read-Only Mode (Disable Editing)
+                                </label>
+                            </div>
 
-                {/* Users Tab Content */}
-                {mode === 'management' && !showLogs && editingUserId === null && (
-                    <div className="mb-6">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-semibold text-gray-700">
-                                Existing Users ({existingUsers.length})
-                            </h3>
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={handleRefreshData}
-                                    disabled={isRefreshing}
-                                    className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition disabled:opacity-50"
-                                    title="Refresh all data from database"
-                                >
-                                    {isRefreshing ? (
-                                        <>
-                                            <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                            </svg>
-                                            Refreshing...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                            </svg>
-                                            Refresh Data
-                                        </>
-                                    )}
-                                </button>
-                                <button
-                                    onClick={addNewUser}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-                                >
-                                    + Add New User
-                                </button>
+                            {selectedUserForActions !== null && (
+                                <div 
+                                    className="fixed inset-0 z-10" 
+                                    onClick={() => setSelectedUserForActions(null)} 
+                                />
+                            )}
+                            <div ref={existingUsersListRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-1 max-h-[40vh] overflow-y-auto z-20 relative">
+                                {existingUsers.map((user, index) => (
+                                    <div key={user.id} className="relative">
+                                        <button
+                                            onClick={() => setSelectedUserForActions(selectedUserForActions === user.id ? null : user.id)}
+                                            className={`w-full text-left flex flex-col gap-3 px-4 py-4 rounded-2xl border transition-all shadow-sm ${
+                                                selectedUserForActions === user.id
+                                                    ? 'bg-blue-600 border-blue-600 text-white'
+                                                    : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                                            }`} 
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <span className={`w-2.5 h-2.5 rounded-full ${
+                                                    user.role === 'Admin' 
+                                                        ? (selectedUserForActions === user.id ? 'bg-purple-200' : 'bg-purple-500') 
+                                                        : user.role === 'Teacher' 
+                                                        ? (selectedUserForActions === user.id ? 'bg-blue-200' : 'bg-blue-500') 
+                                                        : (selectedUserForActions === user.id ? 'bg-gray-200' : 'bg-gray-400')
+                                                }`} />
+                                                <div className="min-w-0">
+                                                    <div className="truncate text-sm font-semibold">
+                                                        {user.name || 'Unnamed User'}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold ${selectedUserForActions === user.id ? 'bg-white/15 text-white' : 'bg-slate-100 text-slate-700'}`}>
+                                                    <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 24 24">
+                                                        {user.role === 'Admin' ? (
+                                                            <path d="M12 2l3 3h4a1 1 0 011 1v4l3 3v6a1 1 0 01-1 1h-4a1 1 0 01-1-1v-3H9v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-6l3-3V6a1 1 0 011-1h4l3-3z" />
+                                                        ) : user.role === 'Teacher' ? (
+                                                            <path d="M5 4a1 1 0 011-1h12a1 1 0 011 1v16a1 1 0 01-1 1H6a1 1 0 01-1-1V4zm2 2v12h10V6H7zm2 2h6v2H9V8zm0 4h4v2H9v-2z" />
+                                                        ) : (
+                                                            <path d="M12 2a5 5 0 00-5 5c0 3.333 2.667 6 5 6s5-2.667 5-6a5 5 0 00-5-5zm0 12c-4 0-7 2-7 4v2h14v-2c0-2-3-4-7-4z" />
+                                                        )}
+                                                    </svg>
+                                                    {user.role}
+                                                </span>
+                                                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold ${selectedUserForActions === user.id ? 'bg-white/15 text-white' : user.isReadOnly ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                                                    <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                                                        {user.isReadOnly ? (
+                                                            <path fillRule="evenodd" d="M6 8V7a4 4 0 118 0v1h1a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1V9a1 1 0 011-1h1zm2-1a2 2 0 114 0v1H8V7z" clipRule="evenodd" />
+                                                        ) : (
+                                                            <path fillRule="evenodd" d="M5 11V9a5 5 0 1110 0v2h1a1 1 0 011 1v5a1 1 0 01-1 1H4a1 1 0 01-1-1v-5a1 1 0 011-1h1zm2-2a3 3 0 116 0v2H7V9z" clipRule="evenodd" />
+                                                        )}
+                                                    </svg>
+                                                    {user.isReadOnly ? 'Locked' : 'Unlocked'}
+                                                </span>
+                                                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold ${selectedUserForActions === user.id ? 'bg-white/15 text-white' : user.passwordHash && user.passwordHash.trim() !== '' ? 'bg-emerald-50 text-emerald-700' : 'bg-yellow-50 text-yellow-700'}`}>
+                                                    <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                                                        {user.passwordHash && user.passwordHash.trim() !== '' ? (
+                                                            <path d="M10 2a4 4 0 00-4 4v2h8V6a4 4 0 00-4-4zm-1 7a1 1 0 100 2 1 1 0 000-2zm4 5H7a1 1 0 01-1-1v-3a1 1 0 011-1h6a1 1 0 011 1v3a1 1 0 01-1 1z" />
+                                                        ) : (
+                                                            <path fillRule="evenodd" d="M5 8a5 5 0 1110 0v2h1a1 1 0 011 1v5a1 1 0 01-1 1H4a1 1 0 01-1-1v-5a1 1 0 011-1h1V8zm2 0V6a3 3 0 116 0v2H7z" clipRule="evenodd" />
+                                                        )}
+                                                    </svg>
+                                                    {user.passwordHash && user.passwordHash.trim() !== '' ? 'Password Set' : 'No Password'}
+                                                </span>
+                                            </div>
+                                        </button>
+
+                                        {selectedUserForActions === user.id && (
+                                            <div className="absolute left-0 mt-1.5 z-30 w-48 bg-white border border-gray-200 rounded-xl shadow-lg p-1.5 flex flex-col gap-0.5">
+                                                <div className="px-2.5 py-1.5 text-xs font-semibold text-gray-500 border-b border-gray-100 flex justify-between items-center mb-1">
+                                                    <span className="truncate">Actions: {user.name}</span>
+                                                </div>
+                                                <button
+                                                    onClick={() => {
+                                                        toggleExistingUserReadOnly(user.id);
+                                                        setSelectedUserForActions(null);
+                                                    }}
+                                                    className="w-full text-left px-2.5 py-1.5 text-xs font-semibold rounded-lg hover:bg-gray-100 transition text-gray-700 flex items-center gap-2"
+                                                >
+                                                    {user.isReadOnly ? (
+                                                        <>
+                                                            <svg className="h-3.5 w-3.5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2H9V7a1 1 0 012 0v2h2V7a5 5 0 00-5-5z" />
+                                                            </svg>
+                                                            Unlock Editing
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <svg className="h-3.5 w-3.5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                                                            </svg>
+                                                            Lock (Read-Only)
+                                                        </>
+                                                    )}
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setResetConfirmUserId(user.id);
+                                                        setSelectedUserForActions(null);
+                                                    }}
+                                                    className="w-full text-left px-2.5 py-1.5 text-xs font-semibold rounded-lg hover:bg-yellow-50 text-yellow-700 transition flex items-center gap-2"
+                                                >
+                                                    <svg className="h-3.5 w-3.5 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m-5-4a3.333 3.333 0 00-8 0V7a3.333 3.333 0 008 0V5z" />
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                                                    </svg>
+                                                    Reset Password
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        handleEditUser(user);
+                                                        setSelectedUserForActions(null);
+                                                    }}
+                                                    className="w-full text-left px-2.5 py-1.5 text-xs font-semibold rounded-lg hover:bg-blue-50 text-blue-700 transition flex items-center gap-2"
+                                                >
+                                                    <svg className="h-3.5 w-3.5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                    </svg>
+                                                    Edit Settings
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setDeleteConfirmUserId(user.id);
+                                                        setSelectedUserForActions(null);
+                                                    }}
+                                                    className="w-full text-left px-2.5 py-1.5 text-xs font-semibold rounded-lg hover:bg-red-50 text-red-700 transition flex items-center gap-2"
+                                                >
+                                                    <svg className="h-3.5 w-3.5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                    Delete User
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
                             </div>
                         </div>
+                    )}
 
-                        {/* Global Read-Only Toggle */}
-                        <div className="flex items-center space-x-2 mb-4 px-1">
-                            <input
-                                type="checkbox"
-                                id="global-readonly"
-                                checked={allReadOnly}
-                                onChange={(e) => toggleAllReadOnly(e.target.checked)}
-                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                            />
-                            <label htmlFor="global-readonly" className="text-sm font-medium text-gray-700">
-                                Set All Users to Read-Only Mode (Disable Editing)
-                            </label>
-                        </div>
+                    {(mode === 'setup' || users.length > 0) && (
+                        <div ref={userListRef} className="space-y-6">
+                            {users.map((user, index) => (
+                                <div key={index} className="border border-gray-200 rounded-xl p-5 bg-gray-50/50 shadow-sm">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h4 className="text-lg font-bold text-gray-800">
+                                            {mode === 'setup' && index === 0 ? 'Admin User' : `User ${index + 1}`}
+                                        </h4>
+                                        {mode === 'setup' && index > 0 && (
+                                            <button
+                                                onClick={() => removeUser(index)}
+                                                className="text-red-600 hover:text-red-800 text-sm font-semibold flex items-center gap-1"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                                Remove
+                                            </button>
+                                        )}
+                                    </div>
 
-                        <div ref={existingUsersListRef} className="space-y-2 max-h-80 overflow-y-auto pr-2">
-                            {existingUsers.map((user, index) => (
-                                <div key={user.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                    <div className="flex items-center gap-3">
-                                        <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
-                                            {index + 1}
-                                        </span>
-                                        <div className="flex flex-col">
-                                            <div className="flex items-center flex-wrap gap-2">
-                                                <span className="font-medium">{user.name}</span>
-                                                <span className="text-sm text-gray-600">({user.role})</span>
-                                                {user.passwordHash && user.passwordHash.trim() !== '' ? (
-                                                    <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full font-medium">
-                                                        Password Set
-                                                    </span>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-1">Name</label>
+                                            <input
+                                                type="text"
+                                                value={user.name || ''}
+                                                onChange={(e) => updateUser(index, 'name', e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                                                placeholder="Enter user name"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-1">Role</label>
+                                            <select
+                                                value={user.role || 'Teacher'}
+                                                onChange={(e) => updateUser(index, 'role', e.target.value as UserRole)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                                                disabled={mode === 'setup' && index === 0}
+                                            >
+                                                <option value="Admin">Admin</option>
+                                                <option value="Teacher">Teacher</option>
+                                                <option value="Guest">Guest</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    {user.role !== 'Guest' && (
+                                        <>
+                                            {user.role !== 'Admin' && (
+                                                <div className="mb-5">
+                                                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-3">
+                                                        <label className="block text-sm font-semibold text-gray-700">Allowed Classes</label>
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={handleRefreshData}
+                                                                disabled={isRefreshing}
+                                                                className="flex items-center px-2 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 transition disabled:opacity-50 font-medium"
+                                                                title="Refresh classes and subjects from database"
+                                                            >
+                                                                {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => toggleAllClasses(index)}
+                                                                className="text-xs text-blue-600 hover:text-blue-800 font-semibold"
+                                                            >
+                                                                {(user.allowedClasses || []).length === classNames.length ? 'Deselect All' : 'Select All'}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex flex-wrap gap-2 bg-white p-3 rounded-lg border border-gray-200">
+                                                        {classNames.map(className => (
+                                                            <button
+                                                                key={className}
+                                                                type="button"
+                                                                onClick={() => toggleClass(index, className)}
+                                                                className={`px-3.5 py-1.5 text-sm rounded-full transition font-medium cursor-pointer shadow-sm ${
+                                                                    (user.allowedClasses || []).includes(className)
+                                                                        ? 'bg-blue-600 text-white'
+                                                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200/50'
+                                                                }`}
+                                                            >
+                                                                {className}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            <div className="mb-2">
+                                                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                                                    Classes & Subjects Assignment
+                                                </label>
+
+                                                {getAssignmentClassNames(user).length === 0 ? (
+                                                    <p className="text-sm text-gray-500 italic p-3 bg-white border border-gray-200 rounded-lg text-center">
+                                                        Select classes above to assign subjects
+                                                    </p>
                                                 ) : (
-                                                    <span className="px-2 py-0.5 text-xs bg-yellow-100 text-yellow-700 rounded-full font-medium">
-                                                        No Password
-                                                    </span>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                        {getAssignmentClassNames(user).map(className => (
+                                                            <div key={className} className="border border-gray-200 rounded-xl p-4 bg-white shadow-sm flex flex-col justify-between">
+                                                                <div className="flex justify-between items-center mb-3">
+                                                                    <h5 className="font-bold text-gray-800 text-sm">{className}</h5>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => copySubjectsToAllClasses(index, className)}
+                                                                        className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 font-semibold"
+                                                                        title="Copy this class's subjects to all classes"
+                                                                    >
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                                        </svg>
+                                                                        Copy to All
+                                                                    </button>
+                                                                </div>
+
+                                                                <div className="flex flex-wrap gap-1.5">
+                                                                    {subjectList.map(subject => {
+                                                                        const classSubjects = user.classSubjects || {};
+                                                                        const assignedSubjects = classSubjects[className] || [];
+                                                                        const isSelected = assignedSubjects.some((s: any) => s === subject.id || s === subject.name);
+
+                                                                        return (
+                                                                            <button
+                                                                                key={subject.id}
+                                                                                type="button"
+                                                                                onClick={() => toggleClassSubject(index, className, subject.id)}
+                                                                                className={`px-2.5 py-1.5 text-xs rounded-lg transition font-medium cursor-pointer border shadow-sm ${
+                                                                                    isSelected
+                                                                                        ? 'bg-green-600 text-white border-green-700'
+                                                                                        : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border-gray-200'
+                                                                                }`}
+                                                                            >
+                                                                                {subject.displayName}
+                                                                            </button>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 )}
                                             </div>
-                                            {user.isReadOnly && (
-                                                <span className="text-xs text-red-600 font-semibold mt-0.5">Read-Only</span>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex items-center mr-2" title="Toggle Read-Only Mode">
-                                            <input
-                                                type="checkbox"
-                                                checked={!!user.isReadOnly}
-                                                onChange={() => toggleExistingUserReadOnly(user.id)}
-                                                className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded cursor-pointer"
-                                            />
-                                            <span className="ml-1 text-xs text-gray-500">Lock</span>
-                                        </div>
-                                        <button
-                                            onClick={() => setResetConfirmUserId(user.id)}
-                                            className="px-3 py-1 text-sm bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200 transition"
-                                            title="Reset Password"
-                                        >
-                                            Reset PWM
-                                        </button>
-                                        <button
-                                            onClick={() => handleEditUser(user)}
-                                            className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition"
-                                        >
-                                            Edit
-                                        </button>
-                                        <button
-                                            onClick={() => setDeleteConfirmUserId(user.id)}
-                                            className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 transition"
-                                        >
-                                            Delete
-                                        </button>
-                                    </div>
+                                        </>
+                                    )}
                                 </div>
                             ))}
                         </div>
-                    </div>
-                )}
+                    )}
 
-                {(mode === 'setup' || users.length > 0) && (
-                    <div ref={userListRef} className="space-y-6">
-                        {users.map((user, index) => (
-                            <div key={index} className="border-2 border-gray-200 rounded-lg p-4 bg-gray-50">
-                                <div className="flex justify-between items-center mb-3">
-                                    <h4 className="text-lg font-semibold text-gray-700">
-                                        {mode === 'setup' && index === 0 ? 'Admin User' : `User ${index + 1}`}
-                                    </h4>
-                                    {mode === 'setup' && index > 0 && (
-                                        <button
-                                            onClick={() => removeUser(index)}
-                                            className="text-red-600 hover:text-red-800 text-sm"
-                                        >
-                                            Remove
-                                        </button>
-                                    )}
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                                        <input
-                                            type="text"
-                                            value={user.name || ''}
-                                            onChange={(e) => updateUser(index, 'name', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                            placeholder="Enter user name"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                                        <select
-                                            value={user.role || 'Teacher'}
-                                            onChange={(e) => updateUser(index, 'role', e.target.value as UserRole)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                                            disabled={mode === 'setup' && index === 0}
-                                        >
-                                            <option value="Admin">Admin</option>
-                                            <option value="Teacher">Teacher</option>
-                                            <option value="Guest">Guest</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                {user.role !== 'Guest' && (
-                                    <>
-                                        {user.role !== 'Admin' && (
-                                            <div className="mb-4">
-                                                <div className="flex justify-between items-center mb-2">
-                                                    <label className="block text-sm font-medium text-gray-700">Allowed Classes</label>
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            type="button"
-                                                            onClick={handleRefreshData}
-                                                            disabled={isRefreshing}
-                                                            className="flex items-center px-2 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 transition disabled:opacity-50"
-                                                            title="Refresh classes and subjects from database"
-                                                        >
-                                                            {isRefreshing ? (
-                                                                <>
-                                                                    <svg className="animate-spin h-3 w-3 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                                    </svg>
-                                                                    Refreshing...
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                                                    </svg>
-                                                                    Refresh Data
-                                                                </>
-                                                            )}
-                                                        </button>
-                                                        <button
-                                                            onClick={() => toggleAllClasses(index)}
-                                                            className="text-xs text-blue-600 hover:text-blue-800"
-                                                        >
-                                                            {(user.allowedClasses || []).length === classNames.length ? 'Deselect All' : 'Select All'}
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {classNames.map(className => (
-                                                        <button
-                                                            key={className}
-                                                            onClick={() => toggleClass(index, className)}
-                                                            className={`px-3 py-1 text-sm rounded-full transition ${(user.allowedClasses || []).includes(className)
-                                                                ? 'bg-blue-600 text-white'
-                                                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                                                }`}
-                                                        >
-                                                            {className}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        <div className="mb-4">
-                                            <label className="block text-sm font-medium text-gray-700 mb-3">
-                                                Classes & Subjects Assignment
-                                            </label>
-
-                                            {getAssignmentClassNames(user).length === 0 ? (
-                                                <p className="text-sm text-gray-500 italic">Select classes above to assign subjects</p>
-                                            ) : (
-                                                <div className="space-y-3 max-h-80 overflow-y-auto">
-                                                    {getAssignmentClassNames(user).map(className => (
-                                                        <div key={className} className="border border-gray-200 rounded-lg p-3 bg-white">
-                                                            <div className="flex justify-between items-center mb-2">
-                                                                <h5 className="font-medium text-gray-800 text-sm">{className}</h5>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => copySubjectsToAllClasses(index, className)}
-                                                                    className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                                                                    title="Copy this class's subjects to all classes"
-                                                                >
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                                                    </svg>
-                                                                    Copy to All
-                                                                </button>
-                                                            </div>
-
-                                                            <div className="flex flex-wrap gap-2">
-                                                                {subjectList.map(subject => {
-                                                                    const classSubjects = user.classSubjects || {};
-                                                                    const assignedSubjects = classSubjects[className] || [];
-                                                                    // Highlight if ID matches OR Name matches (for legacy data)
-                                                                    const isSelected = assignedSubjects.some((s: any) => s === subject.id || s === subject.name);
-
-                                                                    return (
-                                                                        <button
-                                                                            key={subject.id}
-                                                                            type="button"
-                                                                            onClick={() => toggleClassSubject(index, className, subject.id)}
-                                                                            className={`px-2 py-1 text-xs rounded transition ${isSelected
-                                                                                ? 'bg-green-600 text-white'
-                                                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                                                                }`}
-                                                                        >
-                                                                            {subject.displayName}
-                                                                        </button>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                )}
-
-                {mode === 'setup' && (
-                    <>
-                        <div className="mt-6">
+                    {mode === 'setup' && (
+                        <div className="pt-2">
                             <button
                                 onClick={addNewUser}
-                                className="w-full flex justify-center items-center py-2 px-4 border-2 border-dashed border-gray-300 rounded-md text-gray-600 hover:border-blue-500 hover:text-blue-600 transition"
+                                className="w-full flex justify-center items-center py-3 px-4 border-2 border-dashed border-gray-300 hover:border-blue-500 rounded-xl text-gray-600 hover:text-blue-600 transition font-semibold"
                             >
                                 + Add Another User
                             </button>
                         </div>
+                    )}
 
-                        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {mode === 'setup' && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-gray-100">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Admin Password</label>
+                                <label className="block text-sm font-semibold text-gray-700 mb-1">Admin Password</label>
                                 <input
                                     type="password"
                                     value={adminPassword}
                                     onChange={(e) => setAdminPassword(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
                                     placeholder="Set admin password"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+                                <label className="block text-sm font-semibold text-gray-700 mb-1">Confirm Password</label>
                                 <input
                                     type="password"
                                     value={confirmPassword}
                                     onChange={(e) => setConfirmPassword(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
                                     placeholder="Confirm password"
                                 />
                             </div>
                         </div>
-                    </>
-                )}
+                    )}
+                </div>
 
-                <div className="mt-6 flex gap-3">
-                    {onCancel && mode === 'management' && users.length === 0 && (
-                        <button
-                            onClick={handleApplyChanges}
-                            disabled={isFetching && existingUsers.length === 0 || isApplyingChanges}
-                            className={`flex-1 py-3 px-4 text-white rounded-md transition ${isFetching && existingUsers.length === 0 ? 'bg-gray-400 cursor-not-allowed' : isApplyingChanges ? 'bg-blue-600 cursor-wait opacity-90 animate-pulse' : 'bg-gray-600 hover:bg-gray-700'}`}
-                        >
-                            {isApplyingChanges ? (
-                                <span className="inline-flex items-center justify-center gap-2">
-                                    <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                                    Applying Changes...
-                                </span>
-                            ) : isFetching && existingUsers.length === 0 ? 'Loading Users...' : 'Apply Changes'}
-                        </button>
-                    )}
-                    {mode === 'management' && users.length > 0 && (
-                        <button
-                            onClick={handleCancelNewUser}
-                            className="flex-1 py-3 px-4 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition"
-                        >
-                            Cancel
-                        </button>
-                    )}
-                    {(mode === 'setup' || users.length > 0) && (
-                        <button
-                            onClick={mode === 'management' && editingUserId !== null ? handleUpdateExistingUser :
-                                mode === 'management' ? handleSaveManagement : handleSubmit}
-                            className="flex-1 py-3 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-                        >
-                            {mode === 'setup' ? 'Complete Setup' :
-                                editingUserId !== null ? 'Update User' :
-                                    users.length > 0 ? 'Add User' : 'Save Changes'}
-                        </button>
-                    )}
+                {/* Fixed Footer */}
+                <div className="p-3 sm:p-4 border-t border-gray-100 bg-gray-50 flex-shrink-0 flex flex-col-reverse sm:flex-row gap-2">
                     {/* Close button always visible */}
                     <button
                         onClick={() => {
@@ -856,25 +889,80 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                 onCancel();
                             }
                         }}
-                        className="flex-1 py-3 px-4 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition"
+                        className="flex-1 py-2 px-4 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition font-bold shadow-sm text-sm"
                     >
                         Close
                     </button>
+
+                    {onCancel && mode === 'management' && users.length === 0 && (
+                        <button
+                            onClick={handleApplyChanges}
+                            disabled={isFetching && existingUsers.length === 0 || isApplyingChanges}
+                            className={`flex-1 py-2 px-4 text-white rounded-lg transition font-bold shadow-sm text-sm ${
+                                isFetching && existingUsers.length === 0
+                                    ? 'bg-gray-400 cursor-not-allowed'
+                                    : isApplyingChanges
+                                    ? 'bg-blue-600 cursor-wait opacity-90 animate-pulse'
+                                    : 'bg-gray-600 hover:bg-gray-700'
+                            }`}
+                        >
+                            {isApplyingChanges ? (
+                                <span className="inline-flex items-center justify-center gap-2">
+                                    <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                                    Applying Changes...
+                                </span>
+                            ) : isFetching && existingUsers.length === 0 ? (
+                                'Loading Users...'
+                            ) : (
+                                'Apply Changes'
+                            )}
+                        </button>
+                    )}
+
+                    {mode === 'management' && users.length > 0 && (
+                        <button
+                            onClick={handleCancelNewUser}
+                            className="flex-1 py-2 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-bold shadow-sm text-sm"
+                        >
+                            Cancel
+                        </button>
+                    )}
+
+                    {(mode === 'setup' || users.length > 0) && (
+                        <button
+                            onClick={
+                                mode === 'management' && editingUserId !== null
+                                    ? handleUpdateExistingUser
+                                    : mode === 'management'
+                                    ? handleSaveManagement
+                                    : handleSubmit
+                            }
+                            className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-bold shadow-sm text-sm"
+                        >
+                            {mode === 'setup'
+                                ? 'Complete Setup'
+                                : editingUserId !== null
+                                ? 'Update User'
+                                : users.length > 0
+                                ? 'Add User'
+                                : 'Save Changes'}
+                        </button>
+                    )}
                 </div>
-                {/* Unsaved changes warning modal */}
-                <ConfirmationModal
-                    isOpen={showCloseWarning}
-                    onClose={() => setShowCloseWarning(false)}
-                    onConfirm={() => {
-                        setShowCloseWarning(false);
-                        if (onCancel) onCancel();
-                    }}
-                    title="Unsaved Changes"
-                    message="You have unsaved changes. Are you sure you want to close without saving?"
-                    variant="warning"
-                    confirmText="Close Without Saving"
-                />
             </div>
+            {/* Unsaved changes warning modal */}
+            <ConfirmationModal
+                isOpen={showCloseWarning}
+                onClose={() => setShowCloseWarning(false)}
+                onConfirm={() => {
+                    setShowCloseWarning(false);
+                    if (onCancel) onCancel();
+                }}
+                title="Unsaved Changes"
+                message="You have unsaved changes. Are you sure you want to close without saving?"
+                variant="warning"
+                confirmText="Close Without Saving"
+            />
 
             {/* Reset Password Confirmation Modal */}
             <ConfirmationModal
