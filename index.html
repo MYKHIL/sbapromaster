@@ -138,6 +138,13 @@
         errorDiv.style.whiteSpace = 'pre-wrap';
         document.body.appendChild(errorDiv);
       }
+      // Fast-fix: suppress generic cross-origin script errors in production
+      var isDebug = (window.location.hostname === 'localhost') || (window.location.search || '').indexOf('showErrors=true') !== -1;
+      if (!isDebug && (message === 'Script error.' || (source === 'Unknown source' && lineno === 0))) {
+        // Ignore to avoid alarming users on browsers that hide cross-origin details
+        return;
+      }
+
       // Append browser and page info to help debug cross-browser differences
       var userAgent = navigator.userAgent || 'Unknown UA';
       var pageUrl = window.location.href || 'Unknown URL';
