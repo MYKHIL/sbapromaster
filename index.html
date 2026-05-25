@@ -161,7 +161,13 @@
       <p class="connection-note">If loading takes longer than 30 seconds, check your internet connection or contact the creator.</p>
     </div>
   </div>
-  <script type="module" src="./index.tsx"></script>
+  <!--
+    Note: `crossorigin="anonymous"` enables browsers to surface real stack traces
+    for errors originating from this module when the resource and its source map
+    are served with proper CORS headers (Access-Control-Allow-Origin).
+    See CORS_AND_SOURCE_MAPS.md for server/CDN configuration instructions.
+  -->
+  <script type="module" src="./index.tsx" crossorigin="anonymous"></script>
 </body>
 
 </html>
