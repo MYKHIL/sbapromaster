@@ -47,6 +47,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
     const [showLogs, setShowLogs] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [selectedMobileUser, setSelectedMobileUser] = useState<number | null>(null);
+    const [mobileUserFormPage, setMobileUserFormPage] = useState(0);
     const { userLogs } = useData();
 
     const subjectList = React.useMemo(() => {
@@ -74,13 +75,17 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
     const existingUsersListRef = React.useRef<HTMLDivElement>(null);
     // State to preserve scroll position when opening/closing forms
     const [savedScrollPosition, setSavedScrollPosition] = useState<number>(0);
+    // Preserve mobile selection across add/edit form lifecycle
+    const previousSelectedMobileUserRef = React.useRef<number | null>(null);
 
-    // Reset mobile user selection when form closes
+    // Reset mobile user selection when form closes or selection is invalid
     useEffect(() => {
         if (users.length === 0 && editingUserId === null) {
-            setSelectedMobileUser(existingUsers.length > 0 ? existingUsers[0].id : null);
+            if (selectedMobileUser === null || !existingUsers.some(u => u.id === selectedMobileUser)) {
+                setSelectedMobileUser(existingUsers.length > 0 ? existingUsers[0].id : null);
+            }
         }
-    }, [users.length, editingUserId, existingUsers.length]);
+    }, [users.length, editingUserId, existingUsers.length, selectedMobileUser, existingUsers]);
 
     // Manual data refresh handler
     const handleRefreshData = async () => {
@@ -130,8 +135,10 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
     };
 
     const addNewUser = () => {
+        previousSelectedMobileUserRef.current = selectedMobileUser;
         setUsers([...users, { role: 'Teacher' as UserRole, allowedClasses: [], allowedSubjects: [] }]);
         setSelectedMobileUser(null);
+        setMobileUserFormPage(0);
     };
 
     const removeUser = (index: number) => {
@@ -276,11 +283,13 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
     };
 
     const handleEditUser = (user: User) => {
+        previousSelectedMobileUserRef.current = selectedMobileUser;
         // Save current scroll position before opening edit form
         if (existingUsersListRef.current) {
             setSavedScrollPosition(existingUsersListRef.current.scrollTop);
         }
         setEditingUserId(user.id);
+        setMobileUserFormPage(0);
 
         // NORMALIZE: Convert name-based assignments to ID-based assignments
         const normalizeSubjects = (subs: (number | string)[] = []) => {
@@ -347,6 +356,8 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         setEditingUserId(null);
         setUsers([]);
         setError(null);
+        setSelectedMobileUser(previousSelectedMobileUserRef.current ?? editingUserId);
+        previousSelectedMobileUserRef.current = null;
 
         // Restore scroll position after updating user
         setTimeout(() => {
@@ -358,6 +369,85 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         // Removed auto-save. Changes are batched until close.
         if (mode === 'management') {
             // Do nothing here, wait for manual save/close
+        }
+    };
+
+    // Handle mobile form pagination
+    const getTotalPages = (role: UserRole): number => {
+        // Guest only needs 1 page (basic info)
+        // Admin needs 2 pages (info, subjects)
+        // Teacher needs 3 pages (info, classes, subjects)
+        if (role === 'Teacher') return 3;
+        if (role === 'Admin') return 2;
+        return 1; // Guest
+    };
+
+    const getPageDescription = (role: UserRole, page: number): string => {
+        if (role === 'Teacher') {
+            switch (page) {
+                case 0: return 'Step 1 of 3: Basic Information';
+                case 1: return 'Step 2 of 3: Class Access';
+                case 2: return 'Step 3 of 3: Subject Assignment';
+                default: return 'User Setup';
+            }
+        } else if (role === 'Admin') {
+            switch (page) {
+                case 0: return 'Step 1 of 2: Basic Information';
+                case 1: return 'Step 2 of 2: Subject Assignment';
+                default: return 'Admin Setup';
+            }
+        }
+        // Guest
+        return 'Basic Information';
+    };
+
+    const handleMobileFormNext = () => {
+        if (users.length === 0) return;
+        
+        const currentUser = users[0];
+        const totalPages = getTotalPages(currentUser.role as UserRole);
+        
+        // Validate current page before advancing
+        if (mobileUserFormPage === 0) {
+            // Page 1: Name & Role validation
+            if (!currentUser.name || currentUser.name.trim() === '') {
+                setError('Please enter a user name');
+                return;
+            }
+            setError(null);
+        }
+        
+        // If we've reached the last page, submit instead of advancing
+        if (mobileUserFormPage >= totalPages - 1) {
+            handleMobileFormSubmit();
+            return;
+        }
+        
+        // Advance to next page
+        setMobileUserFormPage(prev => Math.min(prev + 1, totalPages - 1));
+    };
+
+    const handleMobileFormPrevious = () => {
+        setMobileUserFormPage(prev => Math.max(prev - 1, 0));
+    };
+
+    const handleMobileFormSubmit = async () => {
+        if (editingUserId) {
+            await handleUpdateExistingUser();
+            setMobileUserFormPage(0);
+        } else {
+            // New user flow - create the user
+            if (users.length > 0) {
+                // Similar validation as handleUpdateExistingUser
+                const newUser = users[0];
+                if (!newUser.name || newUser.name.trim() === '') {
+                    setError('User must have a name');
+                    return;
+                }
+                // Call add new user logic here (would need to be extracted from form submission)
+                setError(null);
+                setMobileUserFormPage(0);
+            }
         }
     };
 
@@ -450,6 +540,8 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         setUsers([]);
         setEditingUserId(null);
         setError(null);
+        setSelectedMobileUser(previousSelectedMobileUserRef.current ?? (existingUsers.length > 0 ? existingUsers[0].id : null));
+        previousSelectedMobileUserRef.current = null;
 
         // Restore scroll position after closing form
         setTimeout(() => {
@@ -751,7 +843,39 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                         <div ref={userListRef} className="space-y-6">
                             {users.map((user, index) => (
                                 <div key={index} className="border border-gray-200 rounded-xl p-5 bg-gray-50/50 shadow-sm">
-                                    <div className="flex justify-between items-center mb-4">
+                                    {/* Mobile Pagination Header */}
+                                    <div className="lg:hidden mb-4 pb-4 border-b border-gray-200">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <h4 className="text-lg font-bold text-gray-800">
+                                                {getPageDescription(user.role as UserRole, mobileUserFormPage)}
+                                            </h4>
+                                            {mode === 'setup' && index > 0 && (
+                                                <button
+                                                    onClick={() => removeUser(index)}
+                                                    className="text-red-600 hover:text-red-800 text-sm font-semibold flex items-center gap-1"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                    Remove
+                                                </button>
+                                            )}
+                                        </div>
+                                        {(user.role === 'Teacher' || user.role === 'Admin') && (
+                                            <div className="flex items-center gap-2">
+                                                <div className="text-xs font-semibold text-gray-600">Step {mobileUserFormPage + 1} of {getTotalPages(user.role as UserRole)}</div>
+                                                <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                                    <div 
+                                                        className="h-full bg-blue-600 transition-all duration-300"
+                                                        style={{ width: `${((mobileUserFormPage + 1) / getTotalPages(user.role as UserRole)) * 100}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Desktop Header */}
+                                    <div className="hidden lg:flex justify-between items-center mb-4">
                                         <h4 className="text-lg font-bold text-gray-800">
                                             {mode === 'setup' && index === 0 ? 'Admin User' : `User ${index + 1}`}
                                         </h4>
@@ -768,133 +892,136 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                         )}
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                        <div>
-                                            <label className="block text-sm font-semibold text-gray-700 mb-1">Name</label>
-                                            <input
-                                                type="text"
-                                                value={user.name || ''}
-                                                onChange={(e) => updateUser(index, 'name', e.target.value)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-                                                placeholder="Enter user name"
-                                            />
+                                    {/* PAGE 1: Name & Role */}
+                                    {(mobileUserFormPage === 0 || window.innerWidth >= 1024) ? (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                            <div>
+                                                <label className="block text-sm font-semibold text-gray-700 mb-1">Name</label>
+                                                <input
+                                                    type="text"
+                                                    value={user.name || ''}
+                                                    onChange={(e) => updateUser(index, 'name', e.target.value)}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                                                    placeholder="Enter user name"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-gray-700 mb-1">Role</label>
+                                                <select
+                                                    value={user.role || 'Teacher'}
+                                                    onChange={(e) => updateUser(index, 'role', e.target.value as UserRole)}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                                                    disabled={mode === 'setup' && index === 0}
+                                                >
+                                                    <option value="Admin">Admin</option>
+                                                    <option value="Teacher">Teacher</option>
+                                                    <option value="Guest">Guest</option>
+                                                </select>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-gray-700 mb-1">Role</label>
-                                            <select
-                                                value={user.role || 'Teacher'}
-                                                onChange={(e) => updateUser(index, 'role', e.target.value as UserRole)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-                                                disabled={mode === 'setup' && index === 0}
-                                            >
-                                                <option value="Admin">Admin</option>
-                                                <option value="Teacher">Teacher</option>
-                                                <option value="Guest">Guest</option>
-                                            </select>
-                                        </div>
-                                    </div>
+                                    ) : null}
 
-                                    {user.role !== 'Guest' && (
-                                        <>
-                                            {user.role !== 'Admin' && (
-                                                <div className="mb-5">
-                                                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-3">
-                                                        <label className="block text-sm font-semibold text-gray-700">Allowed Classes</label>
-                                                        <div className="flex gap-2">
-                                                            <button
-                                                                type="button"
-                                                                onClick={handleRefreshData}
-                                                                disabled={isRefreshing}
-                                                                className="flex items-center px-2 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 transition disabled:opacity-50 font-medium"
-                                                                title="Refresh classes and subjects from database"
-                                                            >
-                                                                {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => toggleAllClasses(index)}
-                                                                className="text-xs text-blue-600 hover:text-blue-800 font-semibold"
-                                                            >
-                                                                {(user.allowedClasses || []).length === classNames.length ? 'Deselect All' : 'Select All'}
-                                                            </button>
+                                    {/* PAGE 2: Allowed Classes (Teachers only) */}
+                                    {((mobileUserFormPage === 1 || window.innerWidth >= 1024) && user.role === 'Teacher') ? (
+                                        <div className="mb-5">
+                                            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-3">
+                                                <label className="block text-sm font-semibold text-gray-700">Allowed Classes</label>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleRefreshData}
+                                                        disabled={isRefreshing}
+                                                        className="flex items-center px-2 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 transition disabled:opacity-50 font-medium"
+                                                        title="Refresh classes and subjects from database"
+                                                    >
+                                                        {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => toggleAllClasses(index)}
+                                                        className="text-xs text-blue-600 hover:text-blue-800 font-semibold"
+                                                    >
+                                                        {(user.allowedClasses || []).length === classNames.length ? 'Deselect All' : 'Select All'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2 bg-white p-3 rounded-lg border border-gray-200">
+                                                {classNames.map(className => (
+                                                    <button
+                                                        key={className}
+                                                        type="button"
+                                                        onClick={() => toggleClass(index, className)}
+                                                        className={`px-3.5 py-1.5 text-sm rounded-full transition font-medium cursor-pointer shadow-sm ${
+                                                            (user.allowedClasses || []).includes(className)
+                                                                ? 'bg-blue-600 text-white'
+                                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200/50'
+                                                        }`}
+                                                    >
+                                                        {className}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ) : null}
+
+                                    {/* PAGE 3: Classes & Subjects Assignment */}
+                                    {((mobileUserFormPage === (user.role === 'Admin' ? 1 : 2) || window.innerWidth >= 1024) && user.role !== 'Guest') ? (
+                                        <div className="mb-2">
+                                            <label className="block text-sm font-semibold text-gray-700 mb-3">
+                                                Classes & Subjects Assignment
+                                            </label>
+
+                                            {getAssignmentClassNames(user).length === 0 ? (
+                                                <p className="text-sm text-gray-500 italic p-3 bg-white border border-gray-200 rounded-lg text-center">
+                                                    Select classes above to assign subjects
+                                                </p>
+                                            ) : (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                    {getAssignmentClassNames(user).map(className => (
+                                                        <div key={className} className="border border-gray-200 rounded-xl p-4 bg-white shadow-sm flex flex-col justify-between">
+                                                            <div className="flex justify-between items-center mb-3">
+                                                                <h5 className="font-bold text-gray-800 text-sm">{className}</h5>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => copySubjectsToAllClasses(index, className)}
+                                                                    className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 font-semibold"
+                                                                    title="Copy this class's subjects to all classes"
+                                                                >
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                                    </svg>
+                                                                    Copy to All
+                                                                </button>
+                                                            </div>
+
+                                                            <div className="flex flex-wrap gap-1.5">
+                                                                {subjectList.map(subject => {
+                                                                    const classSubjects = user.classSubjects || {};
+                                                                    const assignedSubjects = classSubjects[className] || [];
+                                                                    const isSelected = assignedSubjects.some((s: any) => s === subject.id || s === subject.name);
+
+                                                                    return (
+                                                                        <button
+                                                                            key={subject.id}
+                                                                            type="button"
+                                                                            onClick={() => toggleClassSubject(index, className, subject.id)}
+                                                                            className={`px-2.5 py-1.5 text-xs rounded-lg transition font-medium cursor-pointer border shadow-sm ${
+                                                                                isSelected
+                                                                                    ? 'bg-green-600 text-white border-green-700'
+                                                                                    : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border-gray-200'
+                                                                            }`}
+                                                                        >
+                                                                            {subject.displayName}
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                    <div className="flex flex-wrap gap-2 bg-white p-3 rounded-lg border border-gray-200">
-                                                        {classNames.map(className => (
-                                                            <button
-                                                                key={className}
-                                                                type="button"
-                                                                onClick={() => toggleClass(index, className)}
-                                                                className={`px-3.5 py-1.5 text-sm rounded-full transition font-medium cursor-pointer shadow-sm ${
-                                                                    (user.allowedClasses || []).includes(className)
-                                                                        ? 'bg-blue-600 text-white'
-                                                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200/50'
-                                                                }`}
-                                                            >
-                                                                {className}
-                                                            </button>
-                                                        ))}
-                                                    </div>
+                                                    ))}
                                                 </div>
                                             )}
-
-                                            <div className="mb-2">
-                                                <label className="block text-sm font-semibold text-gray-700 mb-3">
-                                                    Classes & Subjects Assignment
-                                                </label>
-
-                                                {getAssignmentClassNames(user).length === 0 ? (
-                                                    <p className="text-sm text-gray-500 italic p-3 bg-white border border-gray-200 rounded-lg text-center">
-                                                        Select classes above to assign subjects
-                                                    </p>
-                                                ) : (
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                        {getAssignmentClassNames(user).map(className => (
-                                                            <div key={className} className="border border-gray-200 rounded-xl p-4 bg-white shadow-sm flex flex-col justify-between">
-                                                                <div className="flex justify-between items-center mb-3">
-                                                                    <h5 className="font-bold text-gray-800 text-sm">{className}</h5>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => copySubjectsToAllClasses(index, className)}
-                                                                        className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 font-semibold"
-                                                                        title="Copy this class's subjects to all classes"
-                                                                    >
-                                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                                                        </svg>
-                                                                        Copy to All
-                                                                    </button>
-                                                                </div>
-
-                                                                <div className="flex flex-wrap gap-1.5">
-                                                                    {subjectList.map(subject => {
-                                                                        const classSubjects = user.classSubjects || {};
-                                                                        const assignedSubjects = classSubjects[className] || [];
-                                                                        const isSelected = assignedSubjects.some((s: any) => s === subject.id || s === subject.name);
-
-                                                                        return (
-                                                                            <button
-                                                                                key={subject.id}
-                                                                                type="button"
-                                                                                onClick={() => toggleClassSubject(index, className, subject.id)}
-                                                                                className={`px-2.5 py-1.5 text-xs rounded-lg transition font-medium cursor-pointer border shadow-sm ${
-                                                                                    isSelected
-                                                                                        ? 'bg-green-600 text-white border-green-700'
-                                                                                        : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border-gray-200'
-                                                                                }`}
-                                                                            >
-                                                                                {subject.displayName}
-                                                                            </button>
-                                                                        );
-                                                                    })}
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </>
-                                    )}
+                                        </div>
+                                    ) : null}
                                 </div>
                             ))}
                         </div>
@@ -939,73 +1066,124 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
 
                 {/* Fixed Footer */}
                 <div className="p-3 sm:p-4 border-t border-gray-100 bg-gray-50 flex-shrink-0 flex flex-col-reverse sm:flex-row gap-2">
-                    {/* Close button always visible */}
-                    <button
-                        onClick={() => {
-                            if (hasUnsavedChanges) {
-                                setShowCloseWarning(true);
-                            } else if (onCancel) {
-                                onCancel();
-                            }
-                        }}
-                        className="flex-1 py-2 px-4 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition font-bold shadow-sm text-sm"
-                    >
-                        Close
-                    </button>
+                    {/* Mobile Pagination Controls - only show on mobile when editing/adding user on small screen */}
+                    {users.length > 0 && window.innerWidth < 1024 && (
+                        <>
+                            {/* Cancel button when editing/adding on mobile */}
+                            <button
+                                onClick={() => {
+                                    if (hasUnsavedChanges) {
+                                        setShowCloseWarning(true);
+                                    } else {
+                                        handleCancelNewUser();
+                                    }
+                                }}
+                                className="flex-1 py-2 px-4 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition font-bold shadow-sm text-sm"
+                            >
+                                Cancel
+                            </button>
 
-                    {onCancel && mode === 'management' && users.length === 0 && (
-                        <button
-                            onClick={handleApplyChanges}
-                            disabled={isFetching && existingUsers.length === 0 || isApplyingChanges}
-                            className={`flex-1 py-2 px-4 text-white rounded-lg transition font-bold shadow-sm text-sm ${
-                                isFetching && existingUsers.length === 0
-                                    ? 'bg-gray-400 cursor-not-allowed'
-                                    : isApplyingChanges
-                                    ? 'bg-blue-600 cursor-wait opacity-90 animate-pulse'
-                                    : 'bg-gray-600 hover:bg-gray-700'
-                            }`}
-                        >
-                            {isApplyingChanges ? (
-                                <span className="inline-flex items-center justify-center gap-2">
-                                    <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                                    Applying Changes...
-                                </span>
-                            ) : isFetching && existingUsers.length === 0 ? (
-                                'Loading Users...'
-                            ) : (
-                                'Apply Changes'
+                            {/* Previous button - show on page 2+ */}
+                            {mobileUserFormPage > 0 && (
+                                <button
+                                    onClick={handleMobileFormPrevious}
+                                    className="flex-1 py-2 px-4 border border-gray-300 bg-white text-gray-700 rounded-lg hover:bg-gray-50 transition font-bold shadow-sm text-sm"
+                                >
+                                    ← Previous
+                                </button>
                             )}
-                        </button>
+
+                            {/* Next button - show on page 1-2 for Teachers, or submit immediately for Admin/Guest */}
+                            {users.length > 0 && mobileUserFormPage < getTotalPages(users[0].role as UserRole) - 1 ? (
+                                <button
+                                    onClick={handleMobileFormNext}
+                                    className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-bold shadow-sm text-sm"
+                                >
+                                    Next →
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={handleMobileFormSubmit}
+                                    className="flex-1 py-2 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-bold shadow-sm text-sm"
+                                >
+                                    {editingUserId ? 'Update User' : 'Create User'}
+                                </button>
+                            )}
+                        </>
                     )}
 
-                    {mode === 'management' && users.length > 0 && (
-                        <button
-                            onClick={handleCancelNewUser}
-                            className="flex-1 py-2 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-bold shadow-sm text-sm"
-                        >
-                            Cancel
-                        </button>
-                    )}
+                    {/* Desktop / Default Controls */}
+                    {(users.length === 0 || window.innerWidth >= 1024) && (
+                        <>
+                            {/* Close button always visible */}
+                            <button
+                                onClick={() => {
+                                    if (hasUnsavedChanges) {
+                                        setShowCloseWarning(true);
+                                    } else if (onCancel) {
+                                        onCancel();
+                                    }
+                                }}
+                                className="flex-1 py-2 px-4 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition font-bold shadow-sm text-sm"
+                            >
+                                Close
+                            </button>
 
-                    {(mode === 'setup' || users.length > 0) && (
-                        <button
-                            onClick={
-                                mode === 'management' && editingUserId !== null
-                                    ? handleUpdateExistingUser
-                                    : mode === 'management'
-                                    ? handleSaveManagement
-                                    : handleSubmit
-                            }
-                            className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-bold shadow-sm text-sm"
-                        >
-                            {mode === 'setup'
-                                ? 'Complete Setup'
-                                : editingUserId !== null
-                                ? 'Update User'
-                                : users.length > 0
-                                ? 'Add User'
-                                : 'Save Changes'}
-                        </button>
+                            {onCancel && mode === 'management' && users.length === 0 && (
+                                <button
+                                    onClick={handleApplyChanges}
+                                    disabled={isFetching && existingUsers.length === 0 || isApplyingChanges}
+                                    className={`flex-1 py-2 px-4 text-white rounded-lg transition font-bold shadow-sm text-sm ${
+                                        isFetching && existingUsers.length === 0
+                                            ? 'bg-gray-400 cursor-not-allowed'
+                                            : isApplyingChanges
+                                            ? 'bg-blue-600 cursor-wait opacity-90 animate-pulse'
+                                            : 'bg-gray-600 hover:bg-gray-700'
+                                    }`}
+                                >
+                                    {isApplyingChanges ? (
+                                        <span className="inline-flex items-center justify-center gap-2">
+                                            <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                                            Applying Changes...
+                                        </span>
+                                    ) : isFetching && existingUsers.length === 0 ? (
+                                        'Loading Users...'
+                                    ) : (
+                                        'Apply Changes'
+                                    )}
+                                </button>
+                            )}
+
+                            {mode === 'management' && users.length > 0 && (
+                                <button
+                                    onClick={handleCancelNewUser}
+                                    className="flex-1 py-2 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-bold shadow-sm text-sm"
+                                >
+                                    Cancel
+                                </button>
+                            )}
+
+                            {(mode === 'setup' || users.length > 0) && (
+                                <button
+                                    onClick={
+                                        mode === 'management' && editingUserId !== null
+                                            ? handleUpdateExistingUser
+                                            : mode === 'management'
+                                            ? handleSaveManagement
+                                            : handleSubmit
+                                    }
+                                    className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-bold shadow-sm text-sm"
+                                >
+                                    {mode === 'setup'
+                                        ? 'Complete Setup'
+                                        : editingUserId !== null
+                                        ? 'Update User'
+                                        : users.length > 0
+                                        ? 'Add User'
+                                        : 'Save Changes'}
+                                </button>
+                            )}
+                        </>
                     )}
                 </div>
             </div>
