@@ -138,7 +138,10 @@
         errorDiv.style.whiteSpace = 'pre-wrap';
         document.body.appendChild(errorDiv);
       }
-      errorDiv.innerHTML += 'Error: ' + message + '\nSource: ' + source + ':' + lineno + '\n\n';
+      // Append browser and page info to help debug cross-browser differences
+      var userAgent = navigator.userAgent || 'Unknown UA';
+      var pageUrl = window.location.href || 'Unknown URL';
+      errorDiv.innerHTML += 'Error: ' + message + '\nSource: ' + source + ':' + lineno + '\nUA: ' + userAgent + '\nURL: ' + pageUrl + '\n\n';
     }, true); // Capture phase to catch resource load errors
   </script>
 </head>
