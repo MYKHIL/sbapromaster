@@ -458,6 +458,29 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                 const updatedUsers = [...existingUsers, newUserObj];
                 setExistingUsers(updatedUsers);
 
+                // Notify parent of immediate update
+                if (onUpdate) {
+                    try {
+                        onUpdate(updatedUsers);
+                    } catch (err) {
+                        0 && console.error('[AdminSetup] onUpdate callback failed', err);
+                    }
+                }
+
+                // If in management mode, persist immediately so users aren't lost on reload
+                if (mode === 'management' && onComplete) {
+                    setIsApplyingChanges(true);
+                    try {
+                        await onComplete(updatedUsers);
+                        setError('✅ User changes saved to cloud.');
+                    } catch (err) {
+                        console.error('[AdminSetup] Failed to save new user immediately:', err);
+                        setError('Failed to save new user. Please try Apply Changes.');
+                    } finally {
+                        setIsApplyingChanges(false);
+                    }
+                }
+
                 // Close form and return to selection page
                 setUsers([]);
                 setError(null);
@@ -612,7 +635,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                     )}
 
                     {/* Users Tab Content */}
-                    {mode === 'management' && !showLogs && editingUserId === null && (
+                    {mode === 'management' && !showLogs && editingUserId === null && users.length === 0 && (
                         <div>
                             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-4">
                                 <h3 className="text-xl font-semibold text-gray-700">
