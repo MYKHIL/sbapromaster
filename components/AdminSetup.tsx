@@ -433,20 +433,45 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
 
     const handleMobileFormSubmit = async () => {
         if (editingUserId) {
+            // Editing existing user - update and close form
             await handleUpdateExistingUser();
-            setMobileUserFormPage(0);
         } else {
             // New user flow - create the user
             if (users.length > 0) {
-                // Similar validation as handleUpdateExistingUser
                 const newUser = users[0];
                 if (!newUser.name || newUser.name.trim() === '') {
                     setError('User must have a name');
                     return;
                 }
-                // Call add new user logic here (would need to be extracted from form submission)
+
+                // Create new user object and add to existingUsers
+                const newUserObj: User = {
+                    id: Date.now(),
+                    name: newUser.name!,
+                    role: newUser.role!,
+                    allowedClasses: newUser.role === 'Admin' ? classNames : (newUser.allowedClasses || []),
+                    allowedSubjects: newUser.role === 'Admin' ? subjectList.map(s => s.id) : (newUser.allowedSubjects || []),
+                    classSubjects: newUser.classSubjects || {},
+                    passwordHash: '',
+                };
+
+                const updatedUsers = [...existingUsers, newUserObj];
+                setExistingUsers(updatedUsers);
+
+                // Close form and return to selection page
+                setUsers([]);
                 setError(null);
                 setMobileUserFormPage(0);
+
+                // Select newly created user and restore scroll
+                setSelectedMobileUser(newUserObj.id);
+                previousSelectedMobileUserRef.current = null;
+
+                setTimeout(() => {
+                    if (existingUsersListRef.current) {
+                        existingUsersListRef.current.scrollTop = savedScrollPosition;
+                    }
+                }, 0);
             }
         }
     };
