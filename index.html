@@ -122,6 +122,17 @@
       // Removed filter for 'Script error.' to debug loading issues
       // if (message === 'Script error.' || (message === 'Unknown error' && source.includes('Unknown source'))) return;
 
+      // Fast-fix: decide whether to suppress generic cross-origin script errors before creating UI
+      var isDebug = (window.location.hostname === 'localhost') || (window.location.search || '').indexOf('showErrors=true') !== -1;
+      if (!isDebug && (message === 'Script error.' || (source === 'Unknown source' && lineno === 0))) {
+        // If an empty banner was previously created, remove it to avoid leaving a blank bar
+        var prev = document.getElementById('global-error-display');
+        if (prev && (!prev.innerHTML || prev.innerHTML.trim() === '')) {
+          prev.remove();
+        }
+        return;
+      }
+
       var errorDiv = document.getElementById('global-error-display');
       if (!errorDiv) {
         errorDiv = document.createElement('div');
@@ -137,12 +148,6 @@
         errorDiv.style.fontFamily = 'monospace';
         errorDiv.style.whiteSpace = 'pre-wrap';
         document.body.appendChild(errorDiv);
-      }
-      // Fast-fix: suppress generic cross-origin script errors in production
-      var isDebug = (window.location.hostname === 'localhost') || (window.location.search || '').indexOf('showErrors=true') !== -1;
-      if (!isDebug && (message === 'Script error.' || (source === 'Unknown source' && lineno === 0))) {
-        // Ignore to avoid alarming users on browsers that hide cross-origin details
-        return;
       }
 
       // Append browser and page info to help debug cross-browser differences
