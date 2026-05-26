@@ -11,8 +11,7 @@ const safeLog = (...args: any[]) => {
 /**
  * Free Trial Activation Endpoint
  * 
- * Verifies that a school does not have an existing subscription, then securely
- * activates a 7-day trial and performs administrative database writes.
+ * Activates a 7-day trial for a school in a specific database.
  * 
  * POST /api/activate-trial
  * Body: { schoolId, schoolName, dbIndex, email, pendingRegistration }
@@ -29,61 +28,84 @@ const allowCors = (fn: (req: VercelRequest, res: VercelResponse) => Promise<any>
     return await fn(req, res);
 };
 
-// Dynamically initialize Firestore admin for a specific database index using process.env
-function getAdminFirestore(dbIndex: number) {
-    const appName = `db_admin_${dbIndex}`;
+// Initialize Firestore using public Firebase configuration for a specific database
+async function getFirestoreDb(dbIndex: number): Promise<admin.firestore.Firestore> {
+    const appName = `db_firestore_${dbIndex}`;
+    
+    // Check if app already initialized
     const existingApp = Array.isArray((admin as any).apps)
         ? (admin as any).apps.find((app: any) => app?.name === appName)
         : undefined;
+    
     if (existingApp) {
         return existingApp.firestore();
     }
 
-    const tokenRaw = process.env[`FIREBASE_${dbIndex}_TOKEN`] || '';
-    const projectId = process.env[`FIREBASE_${dbIndex}_PROJECT_ID`] || '';
+    // Get configuration from environment variables
+    const apiKey = process.env[`FIREBASE_${dbIndex}_API_KEY`];
+    const authDomain = process.env[`FIREBASE_${dbIndex}_AUTH_DOMAIN`];
+    const projectId = process.env[`FIREBASE_${dbIndex}_PROJECT_ID`];
+    const storageBucket = process.env[`FIREBASE_${dbIndex}_STORAGE_BUCKET`];
+    const messagingSenderId = process.env[`FIREBASE_${dbIndex}_MESSAGING_SENDER_ID`];
+    const appId = process.env[`FIREBASE_${dbIndex}_APP_ID`];
 
-    if (!projectId) {
-        throw new Error(`Project ID for database ${dbIndex} is not configured.`);
+    if (!projectId || !apiKey || !authDomain || !storageBucket || !messagingSenderId || !appId) {
+        throw new Error(`Incomplete Firebase configuration for database ${dbIndex}. Ensure all FIREBASE_${dbIndex}_* values are set.`);
     }
 
-    let app: admin.app.App;
+    // Choose credentials in order of availability.
+    // Public config is used to identify the project, but server access still requires credentials.
     let credential: admin.credential.Credential | null = null;
-    if (tokenRaw) {
-        if (admin.credential && typeof admin.credential.cert === 'function') {
+
+    try {
+        credential = admin.credential.applicationDefault();
+    } catch (error: any) {
+        // Not available in this environment.
+    }
+
+    // If ADC is unavailable, fallback to service account from env.
+    if (!credential) {
+        const serviceAccountRaw = process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT;
+        if (serviceAccountRaw) {
+            try {
+                const serviceAccount = JSON.parse(serviceAccountRaw);
+                credential = admin.credential.cert(serviceAccount);
+            } catch (parseError: any) {
+                throw new Error(`Failed to parse FIREBASE_ADMIN_SERVICE_ACCOUNT: ${parseError.message}`);
+            }
+        }
+    }
+
+    // If a database-specific token is present, use it as an additional fallback.
+    if (!credential) {
+        const tokenRaw = process.env[`FIREBASE_${dbIndex}_TOKEN`];
+        if (tokenRaw) {
             try {
                 const tokenValue = tokenRaw.trim();
-                let credentialPayload: any;
-                
-                // Try to parse as JSON (service account)
                 if (tokenValue.startsWith('{')) {
-                    credentialPayload = JSON.parse(tokenValue);
-                    credential = admin.credential.cert(credentialPayload);
+                    const tokenPayload = JSON.parse(tokenValue);
+                    credential = admin.credential.cert(tokenPayload);
                 } else if (admin.credential && typeof admin.credential.refreshToken === 'function') {
-                    // Otherwise try as refresh token string
                     credential = admin.credential.refreshToken(tokenValue);
-                } else {
-                    console.error(`[Firebase Admin] Unsupported token format for database ${dbIndex}.`);
                 }
-            } catch (error: any) {
-                console.error(`[Firebase Admin] Failed to initialize credential for database ${dbIndex}:`, error?.message || error);
-                credential = null;
+            } catch (tokenErr: any) {
+                throw new Error(`Failed to parse FIREBASE_${dbIndex}_TOKEN: ${tokenErr.message}`);
             }
-        } else {
-            console.error(`[Firebase Admin] admin.credential methods are not available for database ${dbIndex}.`);
         }
     }
 
     if (!credential) {
-        throw new Error(`Unable to initialize Firebase credentials for database ${dbIndex}. Ensure FIREBASE_${dbIndex}_TOKEN is set with a valid service account JSON or refresh token, and FIREBASE_${dbIndex}_PROJECT_ID is configured.`);
+        throw new Error(`Unable to initialize Firebase credentials for database ${dbIndex}. Ensure application default credentials are available or FIREBASE_ADMIN_SERVICE_ACCOUNT is configured.`);
     }
 
-    app = admin.initializeApp({
+    const app = admin.initializeApp({
         credential,
-        projectId: projectId
+        projectId
     }, appName);
 
     return app.firestore();
 }
+
 
 // Manifest student chunks to avoid Firestore document limits (admin-version of client method)
 async function updateStudentBucketAdmin(db: admin.firestore.Firestore, schoolId: string, students: any[], initialChunkSize: number = 10000) {
@@ -144,30 +166,31 @@ async function handler(req: VercelRequest, res: VercelResponse) {
 
         const baseName = schoolId.split('_')[0].toLowerCase();
         
+        // Get Firestore instance for this specific database
         let db: admin.firestore.Firestore;
         try {
-            db = getAdminFirestore(Number(dbIndex));
+            db = await getFirestoreDb(Number(dbIndex));
         } catch (firebaseErr: any) {
-            console.error(`[Trial] Firebase initialization failed for dbIndex ${dbIndex}:`, firebaseErr.message);
+            console.error(`[Trial] Failed to initialize database ${dbIndex}:`, firebaseErr.message);
             return res.status(500).json({
                 error: 'Database initialization failed',
                 message: firebaseErr.message,
-                details: `Failed to initialize Firestore for database ${dbIndex}`
+                details: `Failed to initialize Firestore using public configuration for database ${dbIndex}`
             });
         }
 
-        // 1. Double check existing subscriptions (trials are one-time only)
+        // Check if subscription already exists
         const subDocRef = db.collection('subscriptions').doc(baseName);
         const subDoc = await subDocRef.get();
 
         if (subDoc.exists) {
             return res.status(400).json({
-                error: 'Trial Unavailable',
+                error: 'Trial activation failed',
                 message: 'A trial or subscription has already been activated for this school.'
             });
         }
 
-        // 2. Set Expiry (7 Days)
+        // Create subscription record for trial
         const expiryDate = new Date();
         expiryDate.setUTCDate(expiryDate.getUTCDate() + 7);
 
@@ -182,61 +205,40 @@ async function handler(req: VercelRequest, res: VercelResponse) {
             paymentReference: reference
         };
 
-        // 3. Process setup
-        if (pendingRegistration) {
-            safeLog(`[Trial] Manifesting new trial school: ${schoolId}`);
+        // Write subscription (reuse subDocRef from earlier check)
+        await subDocRef.set(subscriptionData, { merge: true });
+
+        // If there's pending registration data, write school data
+        if (pendingRegistration && pendingRegistration.registrationData) {
             const registrationData = pendingRegistration.registrationData;
-
-            // Step 1: Write Subscription Record
-            await subDocRef.set(subscriptionData, { merge: true });
-
-            // Step 2: Write root school record
-            const batch1 = db.batch();
-            const mainDocRef = db.collection('schools').doc(schoolId);
             const { subjects, assessments, classes, students, scores, ...mainData } = registrationData;
 
-            batch1.set(mainDocRef, {
+            // Write main school record
+            const mainDocRef = db.collection('schools').doc(schoolId);
+            await mainDocRef.set({
                 ...mainData,
                 password: pendingRegistration.password,
                 Access: true,
                 activationHash: process.env.PASSWORD_HASH || 'c93a215026f36ac783bcac8ba5e4bbea1c3cdb6c79d3824f9712143c44dbb0f3'
             }, { merge: true });
 
-            // Update Access on all variants
-            const schoolsRefList = db.collection('schools');
-            const qVariants = schoolsRefList
-                .where(admin.firestore.FieldPath.documentId(), '>=', baseName)
-                .where(admin.firestore.FieldPath.documentId(), '<=', baseName + '\uf8ff');
-            const variantSnapshot = await qVariants.get();
-            
-            variantSnapshot.forEach(d => {
-                if (d.id === baseName || d.id.startsWith(baseName + '_')) {
-                    batch1.set(d.ref, {
-                        Access: true,
-                        activationHash: process.env.PASSWORD_HASH || 'c93a215026f36ac783bcac8ba5e4bbea1c3cdb6c79d3824f9712143c44dbb0f3'
-                    }, { merge: true });
-                }
-            });
-
-            await batch1.commit();
-
-            // Step 3: Initialize subcollections and configurations
-            const batch2 = db.batch();
+            // Write subcollections
+            const batch = db.batch();
             ['subjects', 'assessments', 'classes', 'grades'].forEach(col => {
                 const data = (registrationData as any)[col];
                 if (data && Array.isArray(data)) {
                     data.forEach((item: any) => {
                         if (item.id) {
                             const ref = db.collection('schools').doc(schoolId).collection(col).doc(String(item.id));
-                            batch2.set(ref, item, { merge: true });
+                            batch.set(ref, item, { merge: true });
                         }
                     });
                 }
             });
 
-            // Metadata bundle
+            // Write metadata bundle
             const bundleRef = db.collection('schools').doc(schoolId).collection('config').doc('metadata_bundle');
-            batch2.set(bundleRef, {
+            batch.set(bundleRef, {
                 subjects: registrationData.subjects || [],
                 assessments: registrationData.assessments || [],
                 classes: registrationData.classes || [],
@@ -244,63 +246,34 @@ async function handler(req: VercelRequest, res: VercelResponse) {
                 lastUpdated: admin.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
 
-            await batch2.commit();
-
-            // Step 4: Chunked student manifestation
-            if (registrationData.students && registrationData.students.length > 0) {
-                await updateStudentBucketAdmin(db, schoolId, registrationData.students);
-            }
-
-            safeLog(`[Trial] Manifestation complete for school: ${schoolId}`);
-
-        } else {
-            // Existing school trial (unlikely to have trial option if registered already, but handled for completeness)
-            safeLog(`[Trial] Activating trial for existing school: ${schoolId}`);
-            const batch = db.batch();
-            batch.set(subDocRef, subscriptionData, { merge: true });
-
-            const schoolsRefList = db.collection('schools');
-            const qVariants = schoolsRefList
-                .where(admin.firestore.FieldPath.documentId(), '>=', baseName)
-                .where(admin.firestore.FieldPath.documentId(), '<=', baseName + '\uf8ff');
-            const variantSnapshot = await qVariants.get();
-            let variantsCount = 0;
-
-            variantSnapshot.forEach(d => {
-                if (d.id === baseName || d.id.startsWith(baseName + '_')) {
-                    batch.set(d.ref, {
-                        Access: true,
-                        activationHash: process.env.PASSWORD_HASH || 'c93a215026f36ac783bcac8ba5e4bbea1c3cdb6c79d3824f9712143c44dbb0f3'
-                    }, { merge: true });
-                    variantsCount++;
-                }
-            });
-
-            if (variantsCount === 0) {
-                batch.set(db.collection('schools').doc(schoolId), {
-                    Access: true,
-                    activationHash: process.env.PASSWORD_HASH || 'c93a215026f36ac783bcac8ba5e4bbea1c3cdb6c79d3824f9712143c44dbb0f3'
-                }, { merge: true });
-            }
-
             await batch.commit();
+
+            // Write student data if present
+            if (registrationData.students && registrationData.students.length > 0) {
+                try {
+                    await updateStudentBucketAdmin(db, schoolId, registrationData.students);
+                } catch (studentErr: any) {
+                    console.warn('[Trial] Student manifestation warning:', studentErr.message);
+                    // Don't fail the entire trial activation for student write issues
+                }
+            }
         }
 
         return res.status(200).json({
             success: true,
             message: 'Trial activated successfully',
-            expiryDate: expiryDate.toISOString()
+            expiryDate: expiryDate.toISOString(),
+            dbIndex,
+            schoolId,
+            schoolName
         });
 
     } catch (error: any) {
-        console.error('[Trial Error] Full error:', error);
+        console.error('[Trial Error]:', error);
         console.error('[Trial Error] Stack:', error?.stack);
-        console.error('[Trial Error] Message:', error?.message);
-        console.error('[Trial Error] Code:', error?.code);
-        return res.status(500).json({ 
-            error: 'Internal server error', 
-            message: error.message,
-            details: error?.code || 'Unknown error'
+        return res.status(500).json({
+            error: 'Internal server error',
+            message: error.message
         });
     }
 }
