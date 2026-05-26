@@ -84,7 +84,7 @@ export interface DataContextType {
     getClassData: (classId: number) => ClassSpecificData | undefined;
     updateClassData: (classId: number, data: Partial<ClassSpecificData>) => void;
     // FIX: Add function to load imported data.
-    loadImportedData: (data: Partial<AppDataType>, isRemote?: boolean) => void;
+    loadImportedData: (data: Partial<AppDataType>, isRemote?: boolean, sub?: any) => void;
     saveToCloud: (isManualSave?: boolean) => Promise<void>;
 
     // Page-specific save functions
@@ -436,7 +436,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.316"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.317"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -550,7 +550,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const jsonString = JSON.stringify(nextFullMap);
             const compressed = LZ.compress(jsonString);
             localStorage.setItem(getKey('pending-changes-map'), compressed);
-        } catch (error) {
+        } catch (error: any) {
             if (isQuotaExhaustedError(error)) {
                 showDatabaseError({
                     message: "Device storage is full. Your manual edits cannot be saved locally and may be lost on refresh.",
@@ -585,7 +585,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const jsonString = JSON.stringify(nextFullMap);
             const compressed = LZ.compress(jsonString);
             localStorage.setItem(getKey('pending-changes-map'), compressed);
-        } catch (error) {
+        } catch (error: any) {
             // Failsafe
         }
 
@@ -661,12 +661,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const originalScore = originalData.current.scores?.find(s => String(s.id) === scoreId);
         if (!originalScore) {
             // If it's a completely new score item, it's dirty if it has any meaningful content
-            const val = existingScore.assessmentScores?.[assessmentId];
+            const _existingAssessmentScores: any = existingScore.assessmentScores;
+            const val = _existingAssessmentScores?.[assessmentId];
             return val && Array.isArray(val) && val.some(v => v !== null && v !== undefined && String(v).trim() !== '');
         }
 
-        const currentVal = existingScore.assessmentScores?.[assessmentId] || [];
-        const originalVal = originalScore.assessmentScores?.[assessmentId] || [];
+        const _currentAssessmentScores: any = existingScore.assessmentScores;
+        const _originalAssessmentScores: any = originalScore.assessmentScores;
+        const currentVal = _currentAssessmentScores?.[assessmentId] || [];
+        const originalVal = _originalAssessmentScores?.[assessmentId] || [];
 
         return !deepEqual(currentVal, originalVal);
     }, [scores]);
@@ -1149,11 +1152,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const setupListener = (key: string, collectionRef: any, stateSetter: (data: any) => void) => {
             if (activeListeners.current[key]) return;
 
-            activeListeners.current[key] = onSnapshot(collectionRef, (snapshot) => {
+            activeListeners.current[key] = onSnapshot(collectionRef, (snapshot: any) => {
                 // Ignore local optimistic updates to prevent jitter/loops
                 if (snapshot.metadata.hasPendingWrites) return;
 
-                const data = snapshot.docs ? snapshot.docs.map(doc => doc.data()) : snapshot.data();
+                const data = snapshot.docs ? snapshot.docs.map((doc: any) => doc.data()) : snapshot.data();
                 if (!data) return;
 
                 console.log(`[DataContext] 📥 Real-time update for ${key}`);
@@ -1179,14 +1182,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 unmarkDirty(key as keyof AppDataType);
                 
                 setTimeout(() => { isRemoteUpdate.current = false; }, 1000);
-            }, (error) => {
+            }, (error: any) => {
                 console.error(`[DataContext] ❌ Listener error for ${key}:`, error);
             });
         };
 
         // 1. School Main Doc (Settings, Access, etc.)
         const schoolRef = doc(db, "schools", schoolId);
-        activeListeners.current['main'] = onSnapshot(schoolRef, (snapshot) => {
+        activeListeners.current['main'] = onSnapshot(schoolRef, (snapshot: any) => {
             if (snapshot.metadata.hasPendingWrites) return;
             const data = snapshot.data();
             if (data) {
@@ -1342,7 +1345,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 SyncLogger.log(`Universal Transactional Save started for ${schoolId}`);
                 
                 // Uses the new generalized transaction helper
-                await saveDataTransaction(schoolId, transactionPayload, transactionDeletions, stateRef.current.students);
+                await saveDataTransaction(schoolId!, transactionPayload, transactionDeletions, stateRef.current.students);
                 console.log('[DataContext] ✅ Data saved to cloud successfully!');
             } else {
                 console.log('[DataContext] ℹ️ No actionable updates or deletions found for transaction.');
@@ -1415,7 +1418,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             setIsSyncing(false);
             isSyncingRef.current = false;
-        } catch (error) {
+        } catch (error: any) {
             console.error('[DataContext] ❌ Failed to save data to cloud:', error);
 
             // Show database error modal for critical errors
@@ -1660,7 +1663,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         // FIX: Check if scores actually changed to prevent false dirty flags
         const existingScore = scores.find(s => s.id === scoreId);
-        const currentScores = existingScore?.assessmentScores?.[assessmentId] || [];
+        const currentScores = (existingScore?.assessmentScores as any)?.[assessmentId] || [];
 
         if (deepEqual(currentScores, newScores)) {
             return;
@@ -1668,7 +1671,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         // SMART DIRTY CHECK
         const originalScore = originalData.current.scores?.find(s => String(s.id) === scoreId);
-        const originalAssessmentScores = originalScore?.assessmentScores?.[assessmentId] || [];
+        const originalAssessmentScores = (originalScore?.assessmentScores as any)?.[assessmentId] || [];
         const isActuallyChanged = !deepEqual(newScores, originalAssessmentScores);
 
         if (isActuallyChanged) {
@@ -1680,7 +1683,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // This is more thorough than just deleting from a set
             const hasOtherDirtyAssessments = Object.entries(existingScore?.assessmentScores || {}).some(([id, val]) => {
                 if (Number(id) === assessmentId) return false;
-                const origVal = originalScore?.assessmentScores?.[id] || [];
+                const origVal = (originalScore?.assessmentScores as any)?.[id] || [];
                 return !deepEqual(val, origVal);
             });
 
@@ -1728,7 +1731,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const getStudentScores = (studentId: number, subjectId: number, assessmentId: number): string[] => {
         const scoreId = `${studentId}-${subjectId}`;
         const score = scores.find(s => s.id === scoreId);
-        return score?.assessmentScores?.[assessmentId] || [];
+        return (score?.assessmentScores as any)?.[assessmentId] || [];
     };
 
     const getReportData = (studentId: number): ReportSpecificData | undefined => {
@@ -1845,7 +1848,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             // Use transaction for all saves to ensure consistency
 
-            await saveDataTransaction(schoolId, updates, _deletions, stateRef.current.students);
+            await saveDataTransaction(schoolId!, updates, _deletions, stateRef.current.students);
 
             // COMPOSITE STORAGE: If we just saved metadata, trigger a bundle rebuild
             // This ensures the optimized 'fetchMetadataBundle' has the latest data.
@@ -1889,7 +1892,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             console.log(`[savePageData] ✅ ${String(field)} saved successfully!`);
             setIsSyncing(false);
             isSyncingRef.current = false;
-        } catch (error) {
+        } catch (error: any) {
             console.error(`[savePageData] ❌ Failed to save ${String(field)}:`, error);
             showDatabaseError(error, 'write');
             setIsSyncing(false);
@@ -1988,7 +1991,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // Use the transactional save to perform a SMART MERGE of the offline state
             // This prevents overwriting server data (like the "Data Wipe" bug caused by setDoc/merge:true on arrays)
 
-            saveDataTransaction(schoolId, currentData, deletions, stateRef.current.students)
+            saveDataTransaction(schoolId!, currentData, deletions, stateRef.current.students)
                 .then(() => {
                     // Success - clear the entire queue since we just synced current state
                     offlineQueue.clearQueue();
@@ -2401,7 +2404,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         deletedIds = deletedIds.filter(id => {
                             const item = originalVal.find((o: any) => getItemId(o) === id);
                             // Only allow deletion if item class is in allowedClasses
-                            const itemClass = item?.class || item?.name || item?.className;
+                            const itemClass = (item as any)?.class || (item as any)?.name || (item as any)?.className;
                             return itemClass && allowedClasses.includes(itemClass);
                         });
 
@@ -2522,7 +2525,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     setDraftVersion(v => v + 1);
                 }
             }
-        } catch (error) {
+        } catch (error: any) {
             console.warn("[DataContext] Failed to restore draft scores:", error);
         }
     }, [schoolId]);
@@ -2535,7 +2538,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // @ts-ignore - LZ is available globally or imported
             const compressed = LZ.compress(jsonString);
             localStorage.setItem(getKey('draft-scores-map'), compressed);
-        } catch (error) {
+        } catch (error: any) {
             // Memory constrained, silent fail
         }
     }, [schoolId]);
@@ -3220,7 +3223,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             
             // ATOMIC BASELINE SYNC: Update originalData first so following checks detect correct delta
             if (isRemote) {
-                originalData.current[field] = [...imported];
+                // @ts-ignore - intentional dynamic assignment to partial baseline
+                originalData.current[field as keyof AppDataType] = [...imported] as any;
             }
 
             const reconciled = (isRemote && !isContextShift)
@@ -3294,7 +3298,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     markDirty('scores', true);
                 }
             }
-        } else if (isRemote && importedScores && importedScores.length === 0) {
+        } else if (isRemote && Array.isArray(importedScores) && importedScores.length === 0) {
             // Explicit empty array update from cloud
             if (scores.length > 0) {
                 setScores([]);

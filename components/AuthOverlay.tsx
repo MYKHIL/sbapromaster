@@ -19,6 +19,7 @@ import SubscriptionExpiredDialog from './auth/SubscriptionExpiredDialog';
 import AdminSetup from './AdminSetup';
 import UserSelection from './UserSelection';
 import SubscriptionRequestModal from './SubscriptionRequestModal';
+import MessageBox from './MessageBox';
 
 type AuthStep = 'welcome' | 'school-list' | 'password' | 'year-term' | 'register' | 'admin-setup' | 'user-selection' | 'authenticated';
 
@@ -45,6 +46,40 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
     const [pendingSchoolName, setPendingSchoolName] = useState<string>('');
     const [pendingRegistration, setPendingRegistration] = useState<{ docId: string; password: string; registrationData: AppDataType; targetIndex: number } | null>(null);
     const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
+
+    const [messageBox, setMessageBox] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string | React.ReactNode;
+        confirmText?: string;
+        cancelText?: string;
+        onConfirm: () => void;
+        onCancel?: () => void;
+        variant?: 'info' | 'success' | 'warning' | 'danger';
+        hideCancel?: boolean;
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => { }
+    });
+
+    const showMsg = (config: Omit<typeof messageBox, 'isOpen' | 'onConfirm' | 'onCancel'>) => {
+        return new Promise<boolean>((resolve) => {
+            setMessageBox({
+                ...config,
+                isOpen: true,
+                onConfirm: () => {
+                    setMessageBox(prev => ({ ...prev, isOpen: false }));
+                    resolve(true);
+                },
+                onCancel: () => {
+                    setMessageBox(prev => ({ ...prev, isOpen: false }));
+                    resolve(false);
+                }
+            });
+        });
+    };
 
     // Loading state
     const [restoringSession, setRestoringSession] = useState(true);
@@ -426,8 +461,22 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
 
                 if (duplicate) {
                     console.warn(`[AuthOverlay] School "${schoolName}" already exists as ${duplicate.docId}`);
-                    alert(`This school is already registered as "${duplicate.displayName}".\n\nPlease select it from the School List instead of registering again.`);
-                    return;
+                    const shouldLogin = await showMsg({
+                        title: 'School Already Registered',
+                        message: `This school is already registered as "${duplicate.displayName}".\nIf this is your school, please log in instead. If not, change the school name to continue registration.\n\nWhat would you like to do?`,
+                        confirmText: 'Login Instead',
+                        cancelText: 'Change School Name',
+                        variant: 'warning'
+                    });
+
+                    if (shouldLogin) {
+                        setSelectedSchool(null);
+                        setSelectedPeriod(null);
+                        setCurrentStep('school-list');
+                    }
+
+                    // Inform caller (RegistrationForm) that registration was cancelled so it can re-enable controls
+                    return false;
                 }
             } catch (error) {
                 console.error('[AuthOverlay] Failed to check for duplicates:', error);
@@ -550,13 +599,13 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 // DEBUG AUTOMATION: Auto-login for Dummy School
                 // -------------------------------------------------------------
                 // @ts-ignore - DEV and VITE_USE_EMULATOR exist in Vite env
-                if (((import.meta as any).env.DEV || (import.meta as any).env.VITE_USE_EMULATOR === 'true') && schoolName === 'Dummy School') {
+                        if (((import.meta as any).env.DEV || (import.meta as any).env.VITE_USE_EMULATOR === 'true') && schoolName === 'Dummy School') {
                     try {
                         0 && console.log('[AuthOverlay] 🤖 Debug Mode: Auto-logging in as admin...');
                         setUsers(usersArray);
                         const loginSuccess = await login(1, 'password', usersArray[0]);
                         if (!loginSuccess) throw new Error('Login returned false');
-                        setUserPassword('password');
+                        await setUserPassword(1, 'password');
                         localStorage.setItem('sba_user_id', '1');
                         localStorage.setItem('sba_user_password', 'password');
                         setCurrentStep('authenticated');
@@ -585,7 +634,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
         }
     };
 
-    const handleRegistrationComplete = (data: AppDataType, docId: string, _password: string, _subscription: any) => {
+    const handleRegistrationComplete = async (data: AppDataType, docId: string, _password: string, _subscription: any) => {
         0 && console.log('[AuthOverlay] ✅ Deferred registration successful:', docId);
 
         // 1. Clear modal and registration states
@@ -605,7 +654,15 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
         // 3. Purge auth cache to ensure the new school shows up in search/listing
         clearAuthCaches();
 
-        // 4. Return to school selection (Login) instead of auto-logging in
+        // 4. Notify the user with a single custom MessageBox then return to the school selection page
+        await showMsg({
+            title: 'Registration Successful',
+            message: `Registration and payment were successful. ${data.settings?.schoolName || ''} is now registered.\n\nPlease continue by selecting it from the school list and logging in.`,
+            confirmText: 'Continue',
+            hideCancel: true,
+            variant: 'success'
+        });
+
         setSelectedSchool(null);
         setSelectedPeriod(null);
         setCurrentStep('school-list');
@@ -712,7 +769,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
 
             // Auto-login as admin - call UserContext.login with (userId, password, userOverride)
             await login(adminUser.id, adminPassword, adminUser);
-            setUserPassword(adminPassword);
+            await setUserPassword(adminUser.id, adminPassword);
 
             // Save user credentials
             localStorage.setItem('sba_user_id', adminUser.id.toString());
@@ -756,7 +813,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
 
             // Login successful - call UserContext.login with (userId, password)
             await login(user.id, password);
-            setUserPassword(password);
+            await setUserPassword(user.id, password);
 
             // Save user credentials
             localStorage.setItem('sba_user_id', user.id.toString());
@@ -800,7 +857,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
 
             // Auto-login after setting password - call UserContext.login with (userId, password, userOverride)
             await login(user.id, password, updatedUser);
-            setUserPassword(password);
+            await setUserPassword(user.id, password);
 
             // Save user credentials
             localStorage.setItem('sba_user_id', user.id.toString());
@@ -818,22 +875,6 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
     };
 
     // ========== RENDER ==========
-
-    if (currentStep === 'authenticated') {
-        return (
-            <>
-                {children}
-                {!isAuthenticated && users.length > 0 && (
-                    <UserSelection
-                        users={sortedUsers}
-                        onLogin={handleUserLogin}
-                        onSetPassword={handleSetPassword}
-                        onBack={handleLogoutSession}
-                    />
-                )}
-            </>
-        );
-    }
 
     const renderAuthContent = () => {
         // Show loading state while restoring session or checking license
@@ -981,13 +1022,25 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                         }}
                     />
                 )}
+                <MessageBox {...messageBox} />
             </div>
             
-            {/* Main Application Content (Heated during authenticated state) */}
-            {currentStep === 'authenticated' && isAuthenticated && (
-                <div className="min-h-screen bg-slate-50">
-                    {children}
-                </div>
+            {/* Main Application Content (Authenticated state handling) */}
+            {currentStep === 'authenticated' && (
+                isAuthenticated ? (
+                    <div className="min-h-screen bg-slate-50">
+                        {children}
+                    </div>
+                ) : (
+                    users.length > 0 && (
+                        <UserSelection
+                            users={sortedUsers}
+                            onLogin={handleUserLogin}
+                            onSetPassword={handleSetPassword}
+                            onBack={handleLogoutSession}
+                        />
+                    )
+                )
             )}
         </>
     );

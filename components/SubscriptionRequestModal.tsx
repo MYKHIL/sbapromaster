@@ -26,6 +26,32 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
     const [isProcessingPayment, setIsProcessingPayment] = useState(false);
     const [paymentEmail, setPaymentEmail] = useState('');
 
+    const isLocalServer = import.meta.env.DEV || (import.meta.env.VITE_USE_EMULATOR === 'true') || (import.meta.env.VITE_LOCAL_SERVER === 'true');
+
+    const getDatabaseEmail = (dbIndex?: number) => {
+        if (!dbIndex) return '';
+        const env = import.meta.env as Record<string, string | boolean | undefined>;
+        const candidates = [
+            `VITE_FIREBASE_${dbIndex}_EMAIL`,
+            `VITE_FIREBASE_${dbIndex}_DB_EMAIL`,
+            `VITE_FIREBASE_${dbIndex}_ADMIN_EMAIL`,
+            `VITE_FIREBASE_${dbIndex}_CONTACT_EMAIL`,
+            `VITE_FIREBASE_EMAIL_${dbIndex}`,
+            `VITE_FIREBASE_CONTACT_EMAIL_${dbIndex}`,
+            `VITE_FIREBASE_${dbIndex}_SUPPORT_EMAIL`,
+            `VITE_FIREBASE_EMAIL_ADDRESS_${dbIndex}`
+        ];
+
+        for (const key of candidates) {
+            const value = env[key];
+            if (typeof value === 'string' && value.trim()) {
+                return value.trim();
+            }
+        }
+
+        return '';
+    };
+
     // Duration State
     const [durationValue, setDurationValue] = useState(1);
     const [durationUnit, setDurationUnit] = useState<'Term' | 'Year'>('Year');
@@ -309,13 +335,15 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                             } : undefined
                         );
 
-                        await showMsg({
-                            title: "Mock Activation Successful",
-                            message: `Success! [Mock] ${currentTier.name} activated for ${selectedSchool.displayName} for ${customDurationStr}.`,
-                            confirmText: "Excellent",
-                            hideCancel: true,
-                            variant: "success"
-                        });
+                        if (!pendingRegistration) {
+                            await showMsg({
+                                title: "Mock Activation Successful",
+                                message: `Success! [Mock] ${currentTier.name} activated for ${selectedSchool.displayName} for ${customDurationStr}.`,
+                                confirmText: "Excellent",
+                                hideCancel: true,
+                                variant: "success"
+                            });
+                        }
 
                         // Re-fetch schools
                         await loadSchools();
@@ -426,13 +454,15 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                                 }
                             }
 
-                            await showMsg({
-                                title: "Activation Successful",
-                                message: `Success! ${currentTier.name} activated for ${selectedSchool.displayName} for ${customDurationStr}.`,
-                                confirmText: "Excellent",
-                                hideCancel: true,
-                                variant: "success"
-                            });
+                            if (!pendingRegistration) {
+                                await showMsg({
+                                    title: "Activation Successful",
+                                    message: `Success! ${currentTier.name} activated for ${selectedSchool.displayName} for ${customDurationStr}.`,
+                                    confirmText: "Excellent",
+                                    hideCancel: true,
+                                    variant: "success"
+                                });
+                            }
 
                             // If we registered a new school, we might need a reload for DB switch
                             const { ACTIVE_DATABASE_INDEX } = await import('../constants');
@@ -576,9 +606,25 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
             }
         } catch (error: any) {
             console.error("Trial activation failed:", error);
-            const userFriendlyMsg = error.message?.includes('permission') || error.message?.includes('auth')
+
+            // Prefer server-provided message when available
+            const serverMsg = error?.response?.data?.message || error?.response?.data?.error || null;
+
+            // Special-case: trial already used -> show friendly exhausted message
+            if (error?.response?.status === 400 && serverMsg && /trial|already|activated|subscription/i.test(serverMsg)) {
+                await showMsg({
+                    title: "Trial Unavailable",
+                    message: `A trial or subscription has already been activated for this school. You have likely already used your free trial.`,
+                    confirmText: "Understood",
+                    hideCancel: true,
+                    variant: "warning"
+                });
+                return;
+            }
+
+            const userFriendlyMsg = (error.message && (error.message.includes('permission') || error.message.includes('auth')))
                 ? "Trial activation failed due to a connection issue. Please try again later."
-                : (error.message || "Failed to activate trial. Please contact support.");
+                : (serverMsg || error.message || "Failed to activate trial. Please contact support.");
 
             await showMsg({
                 title: "Activation Failed",
@@ -657,7 +703,16 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                                                 className="w-full text-left px-4 py-3 hover:bg-indigo-50 border-b border-gray-100 last:border-0 transition-colors"
                                             >
                                                 <p className="font-medium text-gray-800">{school.displayName}</p>
-                                                <p className="text-xs text-gray-500">{school.docId}</p>
+                                                <p className="text-xs text-gray-500">
+                                                    {school.docId}
+                                                    {isLocalServer && school._databaseIndex != null && (
+                                                        <>
+                                                            <br />
+                                                            <span>DB #{school._databaseIndex}</span>
+                                                            {getDatabaseEmail(school._databaseIndex) ? ` • ${getDatabaseEmail(school._databaseIndex)}` : ''}
+                                                        </>
+                                                    )}
+                                                </p>
                                             </button>
                                         ))
                                     ) : (
@@ -669,11 +724,19 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                             )}
                         </div>
                         {selectedSchool && (
-                            <div className="flex items-center gap-2 text-green-600 text-sm mt-1 animate-fadeIn">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm3.707-9.293a1 1 0 0 0-1.414-1.414L9 10.586 7.707 9.293a1 1 0 0 0-1.414 1.414l2 2a1 1 0 0 0 1.414 0l4-4z" clipRule="evenodd" />
-                                </svg>
-                                <span>Ready for activation</span>
+                            <div className="flex flex-col gap-1 mt-1 animate-fadeIn">
+                                <div className="flex items-center gap-2 text-green-600 text-sm">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm3.707-9.293a1 1 0 0 0-1.414-1.414L9 10.586 7.707 9.293a1 1 0 0 0-1.414 1.414l2 2a1 1 0 0 0 1.414 0l4-4z" clipRule="evenodd" />
+                                    </svg>
+                                    <span>Ready for activation</span>
+                                </div>
+                                {isLocalServer && selectedSchool._databaseIndex != null && (
+                                    <p className="text-[11px] text-gray-500">
+                                        DB #{selectedSchool._databaseIndex}
+                                        {getDatabaseEmail(selectedSchool._databaseIndex) ? ` • ${getDatabaseEmail(selectedSchool._databaseIndex)}` : ''}
+                                    </p>
+                                )}
                             </div>
                         )}
                     </div>

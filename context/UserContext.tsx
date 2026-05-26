@@ -32,7 +32,9 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
     // Access schoolId and actions from DataContext
-    const { schoolId, sendHeartbeat, logUserAction, users, setUsers } = useData();
+    const data = useData();
+    const { schoolId, sendHeartbeat, logUserAction, setUsers } = data;
+    const users = data.users || [];
 
     // Heartbeat Effect
     useEffect(() => {
@@ -107,7 +109,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 0 && console.log('Logging user login activity for:', user.name);
                 await logUserAction(user.id, user.name, user.role, 'Login');
                 0 && console.log('Login activity logged successfully');
-            } catch (error) {
+            } catch (error: any) {
                 console.error('Failed to log login activity:', error);
             }
 
@@ -162,7 +164,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
      */
     const switchAccount = () => {
         if (currentUser) {
-            logUserAction(currentUser.id, currentUser.name, currentUser.role, 'Switch User');
+            logUserAction(currentUser.id, currentUser.name, currentUser.role, 'Switch User' as any);
         }
 
         // Clear only user persistence

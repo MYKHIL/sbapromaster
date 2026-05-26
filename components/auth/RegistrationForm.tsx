@@ -3,7 +3,8 @@ import { createDocumentId, clearAuthCaches } from '../../services/firebaseServic
 import { INITIAL_SETTINGS } from '../../constants';
 
 interface RegistrationFormProps {
-    onRegister: (schoolName: string, year: string, term: string, password: string, docId: string) => void;
+    // onRegister may return false to indicate registration was cancelled (e.g., duplicate name -> change name)
+    onRegister: (schoolName: string, year: string, term: string, password: string, docId: string) => Promise<boolean | void> | boolean | void;
     onBack: () => void;
 }
 
@@ -52,8 +53,13 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister, onBack 
             // Clear auth caches since we're adding a new school
             clearAuthCaches();
 
-            // Call parent handler
-            onRegister(schoolName, academicYear, academicTerm, password, docId);
+            // Call parent handler and await result in case parent needs to cancel
+            const result = await Promise.resolve(onRegister(schoolName, academicYear, academicTerm, password, docId));
+
+            // If parent explicitly returned false, cancel loading so user can edit
+            if (result === false) {
+                setLoading(false);
+            }
         } catch (err) {
             console.error('Registration error:', err);
             setError('Failed to register school. Please try again.');

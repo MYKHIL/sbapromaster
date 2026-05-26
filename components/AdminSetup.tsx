@@ -1838,7 +1838,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                         </span>
                                     </label>
                                     <p className="text-xs text-gray-600 mt-2 ml-6">
-                                        When checked, this user will be automatically assigned as the teacher for this class and will have access to it in their class list.
+                                        When checked, this user will be assigned as the class teacher and will have access to this class in their class list.
                                     </p>
                                 </div>
                             )}

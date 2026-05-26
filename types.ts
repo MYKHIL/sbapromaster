@@ -115,7 +115,7 @@ export interface Score {
   id: string; // Composite ID: `${studentId}-${subjectId}`
   studentId: number;
   subjectId: number;
-  assessmentScores: { [assessmentId: number]: string[] };
+  assessmentScores: { [assessmentId: string]: string[] };
   _isLocallyCreated?: boolean;
 }
 
