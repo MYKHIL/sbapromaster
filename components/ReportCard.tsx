@@ -90,6 +90,24 @@ const ReportCard: React.FC<{ student: Student }> = ({ student }) => {
     const totalSchoolDays = classData?.totalSchoolDays || '-';
     const numOnRoll = students.filter(s => s.class === student.class).length;
 
+    const getReportTeacherNames = () => {
+        if (!classInfo) return [];
+        if (classInfo.reportTeachers && classInfo.reportTeachers.length) {
+            return classInfo.reportTeachers.map(name => name.trim()).filter(Boolean);
+        }
+        if (classInfo.teacherNames && classInfo.teacherNames.length) {
+            return classInfo.teacherNames.map(name => name.trim()).filter(Boolean);
+        }
+        if (classInfo.teacherName) {
+            return [classInfo.teacherName.trim()];
+        }
+        return [];
+    };
+
+    const reportTeacherNames = getReportTeacherNames();
+    const teacherSignatureLabel = reportTeacherNames.length > 1 ? "Class Teachers' Signature" : "Class Teacher's Signature";
+    const reportTeacherLine = reportTeacherNames.length > 0 ? reportTeacherNames.join(', ') : classInfo?.teacherName || '';
+
     const formatDate = (dateString: string): string => {
         if (!dateString || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return dateString;
         try {
@@ -315,8 +333,8 @@ const ReportCard: React.FC<{ student: Student }> = ({ student }) => {
                         {classInfo?.teacherSignature && <img src={classInfo.teacherSignature} alt="Teacher's Signature" className="h-full object-contain" />}
                     </div>
                     <div className="border-t border-dotted border-black mt-1 pt-1 font-semibold">
-                        <div>Class Teacher's Signature</div>
-                        {classInfo?.teacherName && <div className="font-normal">({classInfo.teacherName})</div>}
+                        <div>{teacherSignatureLabel}</div>
+                        {reportTeacherLine && <div className="font-normal">({reportTeacherLine})</div>}
                     </div>
                 </div>
                 <div className="w-48">

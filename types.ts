@@ -62,6 +62,8 @@ export interface Class {
   id: number;
   name: string;
   teacherName?: string;
+  teacherNames?: string[]; // Support multiple class teachers (names)
+  reportTeachers?: string[]; // Which teachers appear on report cards
   teacherSignature?: string;
   indexNumberPrefix?: string;
   indexNumberSuffix?: string;

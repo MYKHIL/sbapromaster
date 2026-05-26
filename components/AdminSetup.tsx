@@ -19,12 +19,32 @@ interface AdminSetupProps {
 const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, currentUser, onComplete, onUpdate, onCancel, externalError, isFetching }) => {
     const [showCloseWarning, setShowCloseWarning] = useState(false);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-    const { classes, subjects } = useData();
+    const { classes, subjects, addClass, updateClass, saveClasses, subscription } = useData();
     const { logout } = useUser();
     const [users, setUsers] = useState<Partial<User>[]>(mode === 'setup' ? [{ role: 'Admin' as UserRole, allowedClasses: [], allowedSubjects: [] }] : []);
     const [existingUsers, setExistingUsers] = useState<User[]>(initialUsers);
     const [adminPassword, setAdminPassword] = useState('');
     const [isApplyingChanges, setIsApplyingChanges] = useState(false);
+    
+    // State for class creation
+    const [showAddClassModal, setShowAddClassModal] = useState(false);
+    const [newClassName, setNewClassName] = useState('');
+    const [newTeacherName, setNewTeacherName] = useState('');
+    const [addClassError, setAddClassError] = useState<string | null>(null);
+    const [isCreatingClass, setIsCreatingClass] = useState(false);
+    const [localNewClasses, setLocalNewClasses] = useState<string[]>([]);
+    const [pendingClassTeacherChanges, setPendingClassTeacherChanges] = useState<Record<string, string[]>>({});
+    const [pendingReportTeacherChanges, setPendingReportTeacherChanges] = useState<Record<string, string[]>>({});
+    const [pendingNewClasses, setPendingNewClasses] = useState<Array<{ name: string; teacherNames?: string[] }>>([]);
+    const [teacherChoiceModal, setTeacherChoiceModal] = useState<{
+        isOpen: boolean;
+        className?: string;
+        existing?: string[];
+        userIndex?: number | null;
+        userName?: string;
+    }>({ isOpen: false });
+    const [assignAsTeacher, setAssignAsTeacher] = useState(false);
+    const [currentUserIndexForClass, setCurrentUserIndexForClass] = useState<number | null>(null);
 
     // Update local state when prop changes (e.g. after data load)
     useEffect(() => {
@@ -59,13 +79,18 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
     }, [subjects]);
 
     const classNames = React.useMemo(() => {
-        return classes.map(c => c.name).sort((a, b) => {
+        const allClasses = [
+            ...classes.map(c => c.name),
+            ...localNewClasses
+        ];
+        const uniqueClasses = Array.from(new Set(allClasses));
+        return uniqueClasses.sort((a, b) => {
             return a.localeCompare(b, undefined, {
                 numeric: true,
                 sensitivity: 'base'
             });
         });
-    }, [classes]);
+    }, [classes, localNewClasses]);
 
     // Ref for auto-scrolling to the add-user form
     const userListRef = React.useRef<HTMLDivElement>(null);
@@ -124,14 +149,84 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         setError(null);
         setIsApplyingChanges(true);
         try {
+            // First persist pending new classes (if any)
+            if (pendingNewClasses.length > 0) {
+                for (const pc of pendingNewClasses) {
+                    try {
+                        // addClass might be sync or async; handle both
+                        await Promise.resolve(addClass({ name: pc.name, teacherNames: pc.teacherNames || [], teacherName: pc.teacherNames && pc.teacherNames.length ? pc.teacherNames[0] : '' }));
+                    } catch (err) {
+                        console.error('Failed to add pending class', pc.name, err);
+                    }
+                }
+            }
+
+            // Then persist pending teacher assignments
+            const entries = Object.entries(pendingClassTeacherChanges);
+            if (entries.length > 0) {
+                for (const [className, teacherNames] of entries) {
+                    const cls = classes.find(c => (c.name || '').trim().toLowerCase() === className.trim().toLowerCase());
+                    if (cls && updateClass) {
+                        const updated = { ...cls, teacherNames: teacherNames, teacherName: teacherNames && teacherNames.length ? teacherNames[0] : '' };
+                        try {
+                            await Promise.resolve(updateClass(updated));
+                        } catch (err) {
+                            console.error('Failed to update class teachers for', className, err);
+                        }
+                    } else {
+                        // Class may have been newly created in this batch; try to add then update
+                        try {
+                            await Promise.resolve(addClass({ name: className, teacherNames: teacherNames, teacherName: teacherNames && teacherNames.length ? teacherNames[0] : '' }));
+                        } catch (err) {
+                            console.error('Failed to add/update class during apply for', className, err);
+                        }
+                    }
+                }
+            }
+
+            const reportEntries = Object.entries(pendingReportTeacherChanges);
+            if (reportEntries.length > 0) {
+                for (const [className, reportTeachers] of reportEntries) {
+                    const cls = classes.find(c => (c.name || '').trim().toLowerCase() === className.trim().toLowerCase());
+                    if (cls && updateClass) {
+                        const updated = { ...cls, reportTeachers };
+                        try {
+                            await Promise.resolve(updateClass(updated));
+                        } catch (err) {
+                            console.error('Failed to update report teachers for', className, err);
+                        }
+                    } else {
+                        try {
+                            await Promise.resolve(addClass({ name: className, reportTeachers, teacherName: reportTeachers && reportTeachers.length ? reportTeachers[0] : '' }));
+                        } catch (err) {
+                            console.error('Failed to add/update report teachers during apply for', className, err);
+                        }
+                    }
+                }
+            }
+
+            const classesChanged = pendingNewClasses.length > 0 || entries.length > 0 || reportEntries.length > 0;
+            if (classesChanged && saveClasses) {
+                // Let React flush any pending class state updates before persisting.
+                await new Promise(resolve => setTimeout(resolve, 0));
+                await saveClasses();
+            }
+
+            // Finally persist users
             await onComplete(existingUsers);
             setError('✅ User changes saved to cloud. You may now close this window.');
         } catch (err) {
             console.error('Failed to apply user changes:', err);
             setError('Failed to apply user changes. Please try again.');
-        } finally {
             setIsApplyingChanges(false);
+            return;
         }
+
+        // Clear pending buffers on success
+        setPendingNewClasses([]);
+        setPendingClassTeacherChanges({});
+        setPendingReportTeacherChanges({});
+        setIsApplyingChanges(false);
     };
 
     const addNewUser = () => {
@@ -212,6 +307,201 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         });
 
         updateUser(userIndex, 'classSubjects', classSubjects);
+    };
+
+    // Toggle assignment of a user as class teacher for a specific class
+    const toggleAssignClassTeacher = (userIndex: number, className: string) => {
+        const user = users[userIndex];
+        if (!user) return;
+        const userName = (user.name || '').trim();
+        if (!userName) {
+            setError('User must have a name to be assigned as class teacher');
+            return;
+        }
+
+        // Determine current teachers (merge live + pending)
+        const cls = classes.find(c => (c.name || '').trim().toLowerCase() === className.trim().toLowerCase());
+        const liveTeachers = cls ? (cls.teacherNames && cls.teacherNames.length ? cls.teacherNames : (cls.teacherName ? [cls.teacherName] : [])) : [];
+        const pending = pendingClassTeacherChanges[className] || liveTeachers;
+
+        // If user is already a teacher in pending mapping, then unassign locally
+        if (pending.map(t => t.trim().toLowerCase()).includes(userName.toLowerCase())) {
+            const newTeachers = pending.filter(t => t.trim().toLowerCase() !== userName.toLowerCase());
+            setPendingClassTeacherChanges(prev => ({ ...prev, [className]: newTeachers }));
+
+            // Remove class from user's allowedClasses and classSubjects locally
+            const currentClasses = user.allowedClasses || [];
+            if (currentClasses.includes(className)) {
+                updateUser(userIndex, 'allowedClasses', currentClasses.filter(c => c !== className));
+            }
+            const classSubjects = user.classSubjects || {};
+            if (classSubjects[className]) {
+                const newClassSubjects = { ...classSubjects };
+                delete newClassSubjects[className];
+                updateUser(userIndex, 'classSubjects', newClassSubjects);
+            }
+            return;
+        }
+
+        // If there are existing teachers (live) and user isn't present, ask whether to replace or add
+        if (liveTeachers.length > 0 && !liveTeachers.map(t => t.trim().toLowerCase()).includes(userName.toLowerCase())) {
+            setTeacherChoiceModal({ isOpen: true, className, existing: liveTeachers, userIndex, userName });
+            return;
+        }
+
+        // Otherwise simply add to pending mapping
+        const newList = Array.from(new Set([...(pending || []), userName]));
+        setPendingClassTeacherChanges(prev => ({ ...prev, [className]: newList }));
+
+        // Ensure user has access to the class locally
+        const currentClasses = user.allowedClasses || [];
+        if (!currentClasses.includes(className)) {
+            const updatedClasses = [...currentClasses, className].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+            updateUser(userIndex, 'allowedClasses', updatedClasses);
+        }
+        const classSubjects = user.classSubjects || {};
+        if (!classSubjects[className]) {
+            classSubjects[className] = [];
+            updateUser(userIndex, 'classSubjects', classSubjects);
+        }
+    };
+
+    // Class creation handlers
+    const maxClasses = subscription?.maxClass || Infinity;
+    const isClassLimitReached = classes.length >= maxClasses;
+
+    const handleOpenAddClassModal = (userIndex?: number) => {
+        setAddClassError(null);
+        setNewClassName('');
+        setAssignAsTeacher(false);
+        setCurrentUserIndexForClass(userIndex ?? null);
+        
+        // Auto-populate teacher name with current user if index provided
+        if (userIndex !== undefined && users[userIndex]?.name) {
+            setNewTeacherName((users[userIndex].name as string).trim());
+        } else {
+            setNewTeacherName('');
+        }
+        
+        setShowAddClassModal(true);
+    };
+
+    const handleCreateClass = async () => {
+        setAddClassError(null);
+
+        // Validation
+        if (!newClassName.trim()) {
+            setAddClassError('Class name is required');
+            return;
+        }
+        if (!newTeacherName.trim()) {
+            setAddClassError('Teacher name is required');
+            return;
+        }
+
+        // Check maxClass limit
+        if (classes.length >= maxClasses) {
+            setAddClassError(`Cannot create class: License limit reached (${maxClasses} classes maximum)`);
+            return;
+        }
+
+        // Check for duplicates (including locally created ones)
+        const isDuplicate = classNames.some(cn =>
+            (cn || '').trim().toLowerCase() === (newClassName || '').trim().toLowerCase()
+        );
+        if (isDuplicate) {
+            setAddClassError('A class with this name already exists');
+            return;
+        }
+
+        // Check for duplicate class + teacher combination
+        const isDuplicateCombination = classes.some(cls =>
+            (cls.name || '').trim().toLowerCase() === (newClassName || '').trim().toLowerCase() &&
+            (cls.teacherName || '').trim().toLowerCase() === (newTeacherName || '').trim().toLowerCase()
+        );
+        if (isDuplicateCombination) {
+            setAddClassError('This Class + Teacher combination already exists');
+            return;
+        }
+
+        // Defer creation when in management mode; otherwise create immediately
+        setIsCreatingClass(true);
+        try {
+            const className = newClassName.trim();
+            const teacher = newTeacherName.trim();
+
+            if (mode === 'management') {
+                // Add to pending new classes
+                setPendingNewClasses(prev => [...prev, { name: className, teacherNames: assignAsTeacher ? [teacher] : (teacher ? [teacher] : []) }]);
+                setLocalNewClasses(prev => [...new Set([...prev, className])]);
+
+                // If assign as teacher, update local pending mapping and user
+                if (assignAsTeacher && currentUserIndexForClass !== null) {
+                    const userIndex = currentUserIndexForClass;
+                    const current = pendingClassTeacherChanges[className] || [];
+                    setPendingClassTeacherChanges(prev => ({ ...prev, [className]: Array.from(new Set([...current, teacher])) }));
+
+                    const user = users[userIndex];
+                    const currentClasses = user.allowedClasses || [];
+                    if (!currentClasses.includes(className)) {
+                        const updatedClasses = [...currentClasses, className].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+                        updateUser(userIndex, 'allowedClasses', updatedClasses);
+                    }
+                    const classSubjects = user.classSubjects || {};
+                    if (!classSubjects[className]) {
+                        classSubjects[className] = [];
+                        updateUser(userIndex, 'classSubjects', classSubjects);
+                    }
+                }
+
+                setNewClassName('');
+                setNewTeacherName('');
+                setAssignAsTeacher(false);
+                setCurrentUserIndexForClass(null);
+                setShowAddClassModal(false);
+                setAddClassError(null);
+            } else {
+                // Immediate creation (setup mode)
+                const newId = addClass({
+                    name: className,
+                    teacherName: teacher,
+                    teacherNames: teacher ? [teacher] : [],
+                    teacherSignature: ''
+                });
+
+                if (newId) {
+                    setLocalNewClasses(prev => [...new Set([...prev, className])]);
+                    if (assignAsTeacher && currentUserIndexForClass !== null) {
+                        const userIndex = currentUserIndexForClass;
+                        const user = users[userIndex];
+                        const currentClasses = user.allowedClasses || [];
+                        if (!currentClasses.includes(className)) {
+                            const updatedClasses = [...currentClasses, className].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+                            updateUser(userIndex, 'allowedClasses', updatedClasses);
+                        }
+                        const classSubjects = user.classSubjects || {};
+                        if (!classSubjects[className]) {
+                            classSubjects[className] = [];
+                            updateUser(userIndex, 'classSubjects', classSubjects);
+                        }
+                    }
+
+                    setNewClassName('');
+                    setNewTeacherName('');
+                    setAssignAsTeacher(false);
+                    setCurrentUserIndexForClass(null);
+                    setShowAddClassModal(false);
+                    setAddClassError(null);
+                } else {
+                    setAddClassError('Failed to create class. Please try again.');
+                }
+            }
+        } catch (err) {
+            console.error('Error creating class:', err);
+            setAddClassError('Failed to create class. Please try again.');
+        } finally {
+            setIsCreatingClass(false);
+        }
     };
 
     // For existing users (Management Mode)
@@ -604,12 +894,84 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         return [...list].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
     };
 
+    const getEffectiveClassTeachers = (className: string) => {
+        const liveClass = classes.find(c => (c.name || '').trim().toLowerCase() === className.trim().toLowerCase());
+        const liveTeachers = liveClass ? (liveClass.teacherNames && liveClass.teacherNames.length ? liveClass.teacherNames : (liveClass.teacherName ? [liveClass.teacherName] : [])) : [];
+        const pendingTeachers = pendingClassTeacherChanges[className];
+        return pendingTeachers || liveTeachers;
+    };
+
     const selectedMobileUserData = selectedMobileUser !== null
         ? existingUsers.find(u => u.id === selectedMobileUser)
         : undefined;
 
     return (
         <div ref={modalRef} className="fixed inset-0 bg-gray-900 bg-opacity-95 z-50 flex items-center justify-center p-3 sm:p-4 overflow-hidden">
+            <ConfirmationModal
+                isOpen={teacherChoiceModal.isOpen}
+                onClose={() => setTeacherChoiceModal({ isOpen: false })}
+                onConfirm={() => {
+                    // Replace existing teachers with this user
+                    const className = teacherChoiceModal.className!;
+                    const userName = teacherChoiceModal.userName!;
+                    setPendingClassTeacherChanges(prev => ({ ...prev, [className]: [userName] }));
+                    // Ensure user's class access
+                    if (teacherChoiceModal.userIndex !== null && teacherChoiceModal.userIndex !== undefined) {
+                        const idx = teacherChoiceModal.userIndex;
+                        const usr = users[idx];
+                        if (usr) {
+                            const currentClasses = usr.allowedClasses || [];
+                            if (!currentClasses.includes(className)) {
+                                updateUser(idx, 'allowedClasses', [...currentClasses, className].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })));
+                            }
+                            const classSubjects = usr.classSubjects || {};
+                            if (!classSubjects[className]) {
+                                classSubjects[className] = [];
+                                updateUser(idx, 'classSubjects', classSubjects);
+                            }
+                        }
+                    }
+                    setTeacherChoiceModal({ isOpen: false });
+                }}
+                title="Existing class teachers"
+                message={teacherChoiceModal.existing ? (
+                    <div>
+                        <div className="text-sm text-gray-700">This class already has teacher(s):</div>
+                        <ul className="mt-2 text-sm text-gray-600 list-disc list-inside">
+                            {teacherChoiceModal.existing?.map((t, i) => <li key={i}>{t}</li>)}
+                        </ul>
+                        <div className="mt-2 text-sm text-gray-700">Would you like to replace them with this user or add this user to the existing teachers?</div>
+                    </div>
+                ) : null}
+                variant="info"
+                confirmText="Replace"
+                cancelText="Cancel"
+                additionalAction={() => {
+                    // Add to existing teachers
+                    const className = teacherChoiceModal.className!;
+                    const userName = teacherChoiceModal.userName!;
+                    const existing = teacherChoiceModal.existing || [];
+                    const newList = Array.from(new Set([...existing, userName]));
+                    setPendingClassTeacherChanges(prev => ({ ...prev, [className]: newList }));
+                    if (teacherChoiceModal.userIndex !== null && teacherChoiceModal.userIndex !== undefined) {
+                        const idx = teacherChoiceModal.userIndex;
+                        const usr = users[idx];
+                        if (usr) {
+                            const currentClasses = usr.allowedClasses || [];
+                            if (!currentClasses.includes(className)) {
+                                updateUser(idx, 'allowedClasses', [...currentClasses, className].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })));
+                            }
+                            const classSubjects = usr.classSubjects || {};
+                            if (!classSubjects[className]) {
+                                classSubjects[className] = [];
+                                updateUser(idx, 'classSubjects', classSubjects);
+                            }
+                        }
+                    }
+                    setTeacherChoiceModal({ isOpen: false });
+                }}
+                additionalActionText="Add"
+            />
             <div className="bg-white w-full max-w-4xl max-h-[75vh] rounded-xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
                 {/* Fixed Header */}
                 <div className="p-4 sm:p-5 border-b border-gray-100 flex-shrink-0 bg-white text-center">
@@ -974,7 +1336,10 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                         <div className="mb-5">
                                             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-3">
                                                 <label className="block text-sm font-semibold text-gray-700">Allowed Classes</label>
-                                                <div className="flex gap-2">
+                                                <div className="flex gap-2 flex-wrap">
+                                                    {isClassLimitReached && (
+                                                        <span className="text-xs text-amber-600 font-semibold">License limit reached</span>
+                                                    )}
                                                     <button
                                                         type="button"
                                                         onClick={handleRefreshData}
@@ -983,6 +1348,22 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                                         title="Refresh classes and subjects from database"
                                                     >
                                                         {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleOpenAddClassModal(index)}
+                                                        disabled={isClassLimitReached}
+                                                        className={`flex items-center px-2 py-1 text-xs rounded font-semibold transition ${
+                                                            isClassLimitReached
+                                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                                : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                                                        }`}
+                                                        title="Create a new class"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                                        </svg>
+                                                        Add Class
                                                     </button>
                                                     <button
                                                         type="button"
@@ -1015,9 +1396,34 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                     {/* PAGE 3: Classes & Subjects Assignment */}
                                     {((mobileUserFormPage === (user.role === 'Admin' ? 1 : 2) || window.innerWidth >= 1024) && user.role !== 'Guest') ? (
                                         <div className="mb-2">
-                                            <label className="block text-sm font-semibold text-gray-700 mb-3">
-                                                Classes & Subjects Assignment
-                                            </label>
+                                            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-3">
+                                                <label className="block text-sm font-semibold text-gray-700">
+                                                    Classes & Subjects Assignment
+                                                </label>
+                                                {user.role === 'Admin' && (
+                                                    <div className="flex gap-2">
+                                                        {isClassLimitReached && (
+                                                            <span className="text-xs text-amber-600 font-semibold">License limit reached</span>
+                                                        )}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleOpenAddClassModal(index)}
+                                                            disabled={isClassLimitReached}
+                                                            className={`flex items-center px-2 py-1 text-xs rounded font-semibold transition ${
+                                                                isClassLimitReached
+                                                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                                    : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                                                            }`}
+                                                            title="Create a new class"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                                            </svg>
+                                                            Add Class
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
 
                                             {getAssignmentClassNames(user).length === 0 ? (
                                                 <p className="text-sm text-gray-500 italic p-3 bg-white border border-gray-200 rounded-lg text-center">
@@ -1028,18 +1434,40 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                                     {getAssignmentClassNames(user).map(className => (
                                                         <div key={className} className="border border-gray-200 rounded-xl p-4 bg-white shadow-sm flex flex-col justify-between">
                                                             <div className="flex justify-between items-center mb-3">
-                                                                <h5 className="font-bold text-gray-800 text-sm">{className}</h5>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => copySubjectsToAllClasses(index, className)}
-                                                                    className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 font-semibold"
-                                                                    title="Copy this class's subjects to all classes"
-                                                                >
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                                                    </svg>
-                                                                    Copy to All
-                                                                </button>
+                                                                <div className="flex items-center gap-3">
+                                                                    <h5 className="font-bold text-gray-800 text-sm">{className}</h5>
+                                                                </div>
+                                                                <div className="flex items-center gap-3">
+                                                                    {/* Assign as class teacher checkbox */}
+                                                                    <label className="flex items-center gap-2 text-sm">
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            checked={(() => {
+                                                                                const userName = (user.name || '').trim().toLowerCase();
+                                                                                const cls = classes.find(c => (c.name || '').trim().toLowerCase() === className.trim().toLowerCase());
+                                                                                const liveTeachers = cls ? (cls.teacherNames && cls.teacherNames.length ? cls.teacherNames : (cls.teacherName ? [cls.teacherName] : [])) : [];
+                                                                                const pending = pendingClassTeacherChanges[className];
+                                                                                const effective = pending || liveTeachers || [];
+                                                                                return effective.map(t => t.trim().toLowerCase()).includes(userName);
+                                                                            })()}
+                                                                            onChange={() => toggleAssignClassTeacher(index, className)}
+                                                                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                                                                        />
+                                                                        <span className="text-xs text-gray-700 font-medium">Set as class teacher</span>
+                                                                    </label>
+
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => copySubjectsToAllClasses(index, className)}
+                                                                        className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 font-semibold"
+                                                                        title="Copy this class's subjects to all classes"
+                                                                    >
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                                        </svg>
+                                                                        Copy to All
+                                                                    </button>
+                                                                </div>
                                                             </div>
 
                                                             <div className="flex flex-wrap gap-1.5">
@@ -1280,6 +1708,110 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                 }
                 variant={currentUser && currentUser.id === deleteConfirmUserId ? "warning" : undefined}
             />
+
+            {/* Add New Class Modal */}
+            {showAddClassModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-2 sm:p-4">
+                    <div className="bg-white p-4 sm:p-6 rounded-xl shadow-2xl w-full max-w-md animate-fade-in-scale">
+                        <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-4">Create New Class</h2>
+
+                        {isClassLimitReached && (
+                            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                <p className="text-sm text-amber-700 font-semibold">
+                                    License Limit Reached: You have reached the maximum of {maxClasses} classes.
+                                </p>
+                            </div>
+                        )}
+
+                        <form onSubmit={(e) => { e.preventDefault(); handleCreateClass(); }} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-tight mb-1">Class Name</label>
+                                <input
+                                    type="text"
+                                    value={newClassName}
+                                    onChange={(e) => {
+                                        setNewClassName(e.target.value);
+                                        if (addClassError) setAddClassError(null);
+                                    }}
+                                    placeholder="e.g. Class 1"
+                                    disabled={isCreatingClass || isClassLimitReached}
+                                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
+                                    autoFocus
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-tight mb-1">Teacher Name</label>
+                                <input
+                                    type="text"
+                                    value={newTeacherName}
+                                    onChange={(e) => {
+                                        setNewTeacherName(e.target.value);
+                                        if (addClassError) setAddClassError(null);
+                                    }}
+                                    placeholder="e.g. John Doe"
+                                    disabled={isCreatingClass || isClassLimitReached}
+                                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
+                                />
+                                {currentUserIndexForClass !== null && users[currentUserIndexForClass]?.name && (
+                                    <p className="text-xs text-gray-500 mt-1">Auto-filled with user: <strong>{(users[currentUserIndexForClass].name as string).trim()}</strong></p>
+                                )}
+                            </div>
+
+                            {currentUserIndexForClass !== null && (
+                                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={assignAsTeacher}
+                                            onChange={(e) => setAssignAsTeacher(e.target.checked)}
+                                            disabled={isCreatingClass}
+                                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                                        />
+                                        <span className="text-sm font-semibold text-gray-700">
+                                            Assign me as class teacher
+                                        </span>
+                                    </label>
+                                    <p className="text-xs text-gray-600 mt-2 ml-6">
+                                        When checked, this user will be automatically assigned as the teacher for this class and will have access to it in their class list.
+                                    </p>
+                                </div>
+                            )}
+
+                            {addClassError && (
+                                <p className="text-red-600 text-sm font-semibold p-2 bg-red-50 rounded-lg border border-red-200">
+                                    {addClassError}
+                                </p>
+                            )}
+
+                            <div className="flex justify-end gap-3 pt-4 border-t">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowAddClassModal(false);
+                                        setAddClassError(null);
+                                        setNewClassName('');
+                                        setNewTeacherName('');
+                                        setAssignAsTeacher(false);
+                                        setCurrentUserIndexForClass(null);
+                                    }}
+                                    disabled={isCreatingClass}
+                                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition disabled:opacity-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isCreatingClass || isClassLimitReached}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 shadow-sm active:scale-95"
+                                >
+                                    {isCreatingClass ? 'Creating...' : 'Create Class'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

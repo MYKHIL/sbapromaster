@@ -23,6 +23,8 @@ interface TeachersProps {
 const EMPTY_TEACHER_FORM: Omit<Class, 'id'> = {
     name: '',
     teacherName: '',
+    teacherNames: [],
+    reportTeachers: [],
     teacherSignature: '',
 };
 
@@ -142,10 +144,10 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta, onNavigate }) => {
 
         // Filter by search query
         if (query) {
-            result = result.filter(cls =>
-                (cls.name || '').toLowerCase().includes(query) ||
-                (cls.teacherName || '').toLowerCase().includes(query)
-            );
+            result = result.filter(cls => {
+                const teacherMatches = (cls.teacherNames && cls.teacherNames.join(' ').toLowerCase()) || (cls.teacherName || '').toLowerCase();
+                return (cls.name || '').toLowerCase().includes(query) || teacherMatches.includes(query);
+            });
         }
 
         return result;
@@ -165,7 +167,8 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta, onNavigate }) => {
         const duplicates: number[] = [];
 
         classes.forEach(cls => {
-            const key = `${(cls.name || '').trim().toLowerCase()}_${(cls.teacherName || '').trim().toLowerCase()}`;
+            const teacherKey = cls.teacherNames && cls.teacherNames.length ? cls.teacherNames.map(t => t.trim().toLowerCase()).sort().join('|') : (cls.teacherName || '').trim().toLowerCase();
+            const key = `${(cls.name || '').trim().toLowerCase()}_${teacherKey}`;
             if (seen.has(key)) {
                 duplicates.push(cls.id);
             } else {
@@ -236,23 +239,71 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta, onNavigate }) => {
         setModalError(null);
     };
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
+    const normalizeTeacherName = (value: string) => value.trim();
+
+    const buildReportTeachers = (names: string[], existingReportTeachers: string[] = []) => {
+        const normalizedNames = names.map(normalizeTeacherName).filter(Boolean);
+        const existingSelected = existingReportTeachers
+            .map(normalizeTeacherName)
+            .filter(name => normalizedNames.some(n => n.toLowerCase() === name.toLowerCase()));
+        if (existingSelected.length > 0) return existingSelected;
+        return normalizedNames.length > 0 ? [normalizedNames[0]] : [];
+    };
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement> | React.ChangeEvent<HTMLTextAreaElement>) => {
+        const { name, value } = e.target as any;
         if (modalError) setModalError(null);
+
+        if (name === 'teacherNamesCSV') {
+            const valueString: string = String(value || '');
+            const arr = (valueString.split(/[\n,;]+/) as string[])
+                .map((s: string) => s.trim())
+                .filter((s: string): s is string => s.length > 0);
+
+            setCurrentClassData(prev => {
+                if (!prev) return null;
+                const reportTeachers = buildReportTeachers(arr, prev.reportTeachers || []);
+                return { ...prev, teacherNames: arr, teacherName: arr[0] || '', reportTeachers };
+            });
+            return;
+        }
+
         setCurrentClassData(prev => prev ? { ...prev, [name]: value } : null);
     };
 
+    const handleToggleReportTeacher = (teacher: string) => {
+        if (!currentClassData) return;
+        const current = currentClassData.reportTeachers || [];
+        const exists = current.map(t => t.trim().toLowerCase()).includes(teacher.trim().toLowerCase());
+        const newList = exists ? current.filter(t => t.trim().toLowerCase() !== teacher.trim().toLowerCase()) : [...current, teacher];
+        setCurrentClassData(prev => prev ? { ...prev, reportTeachers: newList } : null);
+    };
 
+    useEffect(() => {
+        if (!currentClassData) return;
+        const teacherList = currentClassData.teacherNames && currentClassData.teacherNames.length
+            ? currentClassData.teacherNames
+            : currentClassData.teacherName
+                ? [currentClassData.teacherName]
+                : [];
+
+        if (teacherList.length === 0) return;
+
+        const normalizedSelected = (currentClassData.reportTeachers || []).map(t => t.trim().toLowerCase());
+        if (normalizedSelected.length === 0) {
+            setCurrentClassData(prev => prev ? { ...prev, reportTeachers: [teacherList[0]] } : null);
+        }
+    }, [currentClassData?.teacherNames, currentClassData?.teacherName, currentClassData?.reportTeachers]);
 
     const handleExportExcel = () => {
         const headers = ['Class Name', 'Teacher Name'];
-        const keys = ['name', 'teacherName'];
+        const keys = ['name', 'teacherNames'];
         exportToExcel(filteredClasses, headers, keys, 'Teachers_List', 'Teachers');
     };
 
     const handleExportPDF = () => {
         const headers = ['Class Name', 'Teacher Name'];
-        const data = filteredClasses.map(c => [c.name, c.teacherName]);
+        const data = filteredClasses.map(c => [c.name, (c.teacherNames && c.teacherNames.join(', ')) || c.teacherName]);
         exportToPDF('Teachers List', headers, data, 'Teachers_List');
     };
 
@@ -324,11 +375,13 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta, onNavigate }) => {
         }
 
         // DUPLICATE PREVENTION: Check if Class Name + Teacher Name already exists
-        const isDuplicate = classes.some(cls =>
-            (cls.name || '').trim().toLowerCase() === (currentClassData.name || '').trim().toLowerCase() &&
-            (cls.teacherName || '').trim().toLowerCase() === (currentClassData.teacherName || '').trim().toLowerCase() &&
-            ('id' in currentClassData ? cls.id !== currentClassData.id : true)
-        );
+        const currentTeachers = (currentClassData.teacherNames && currentClassData.teacherNames.length) ? currentClassData.teacherNames : [(currentClassData.teacherName || '').trim()];
+        const isDuplicate = classes.some(cls => {
+            const clsTeachers = (cls.teacherNames && cls.teacherNames.length) ? cls.teacherNames : [(cls.teacherName || '').trim()];
+            const sameClass = (cls.name || '').trim().toLowerCase() === (currentClassData.name || '').trim().toLowerCase();
+            const teacherOverlap = clsTeachers.some(ct => currentTeachers.some(nt => (ct || '').trim().toLowerCase() === (nt || '').trim().toLowerCase()));
+            return sameClass && teacherOverlap && ('id' in currentClassData ? cls.id !== currentClassData.id : true);
+        });
 
         if (isDuplicate) {
             setModalError("This Class + Teacher combination already exists.");
@@ -491,7 +544,7 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta, onNavigate }) => {
                                                     )}
                                                 </td>
                                                 <td className="p-4 font-medium">{cls.name}</td>
-                                                <td className={`p-4 ${isDirtyRow ? DIRTY_INDICATOR_SECONDARY_TEXT : 'text-gray-900'}`}>{cls.teacherName}</td>
+                                                <td className={`p-4 ${isDirtyRow ? DIRTY_INDICATOR_SECONDARY_TEXT : 'text-gray-900'}`}>{(cls.teacherNames && cls.teacherNames.join(', ')) || cls.teacherName}</td>
                                                 <td className="p-4 space-x-4 flex items-center">
                                                     {canEditClass(cls) && (
                                                         <button onClick={() => handleEdit(cls)} className={`${isDirtyRow ? `${DIRTY_INDICATOR_SECONDARY_TEXT} hover:text-white` : 'text-blue-600 hover:text-blue-800'}`} title="Edit">
@@ -537,7 +590,7 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta, onNavigate }) => {
                                             <span className={`${isDirtyRow ? 'text-white' : 'text-blue-700'} font-bold text-sm z-10`}>{index + 1}</span>
                                         </div>
                                         <div>
-                                            <p className="font-bold">{cls.teacherName}</p>
+                                            <p className="font-bold">{(cls.teacherNames && cls.teacherNames.join(', ')) || cls.teacherName}</p>
                                             <p className={`text-sm ${isDirtyRow ? DIRTY_INDICATOR_SECONDARY_TEXT : 'text-gray-600'}`}>Class Teacher for: {cls.name}</p>
                                         </div>
                                     </div>
@@ -645,8 +698,23 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta, onNavigate }) => {
                                     )}
                                 </div>
                                 <div className="col-span-1">
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-tight mb-1">Teacher's Name</label>
-                                    <input type="text" name="teacherName" value={currentClassData.teacherName} onChange={handleChange} required className={`${inputStyles} py-1.5 text-sm`} placeholder="e.g. John Doe" />
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-tight mb-1">Class Teachers</label>
+                                    <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 mb-2 text-xs text-blue-700">
+                                        Separate multiple class teachers with a comma or new line. The first entered teacher is auto-selected for report card display.
+                                    </div>
+                                    <textarea name="teacherNamesCSV" value={(currentClassData.teacherNames && currentClassData.teacherNames.join(', ')) || currentClassData.teacherName || ''} onChange={handleChange} required className={`${inputStyles} py-1.5 text-sm h-20`} placeholder="Enter teacher names separated by commas or new lines (e.g. John Doe, Jane Smith)" />
+
+                                    <div className="mt-2 text-xs text-gray-600">
+                                        <div className="font-semibold mb-1">Show on Report Card</div>
+                                        <div className="flex flex-wrap gap-2">
+                                            {((currentClassData.teacherNames && currentClassData.teacherNames.length) ? currentClassData.teacherNames : (currentClassData.teacherName ? [currentClassData.teacherName] : [])).map((t, i) => (
+                                                <label key={i} className="flex items-center gap-2 text-xs bg-white border border-gray-100 px-2 py-1 rounded shadow-sm">
+                                                    <input type="checkbox" checked={(currentClassData.reportTeachers || []).map(x => x.trim().toLowerCase()).includes((t || '').trim().toLowerCase())} onChange={() => handleToggleReportTeacher(t)} className="w-4 h-4 text-blue-600" />
+                                                    <span className="truncate max-w-[160px]">{t}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -685,7 +753,7 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta, onNavigate }) => {
                                             <label htmlFor="signature-upload" className={`cursor-pointer text-[10px] bg-white border border-gray-300 px-2.5 py-1.5 rounded-full font-bold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm ${isUploadingSignature ? 'opacity-50 cursor-not-allowed' : ''}`}>
                                                 Upload
                                             </label>
-                                            <CameraCapture onCapture={handleCameraCapture} disabled={isUploadingSignature} />
+                                            <CameraCapture onCapture={handleCameraCapture} />
                                             {/* Draw signature button */}
                                             <button
                                                 type="button"
