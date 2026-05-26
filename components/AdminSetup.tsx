@@ -3,7 +3,20 @@ import type { User, UserRole } from '../types';
 import { useData } from '../context/DataContext';
 import { hashPassword } from '../services/authService';
 import ConfirmationModal from './ConfirmationModal';
+import MessageBox from './MessageBox';
 import { useUser } from '../context/UserContext';
+
+type SetupMessageBoxState = {
+    isOpen: boolean;
+    title: string;
+    message: string | React.ReactNode;
+    confirmText?: string;
+    cancelText?: string;
+    onConfirm: () => void;
+    onCancel?: () => void;
+    variant?: 'info' | 'success' | 'warning' | 'danger';
+    hideCancel?: boolean;
+};
 
 interface AdminSetupProps {
     mode: 'setup' | 'management';
@@ -59,8 +72,48 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
     useEffect(() => {
         setHasUnsavedChanges(JSON.stringify(existingUsers) !== JSON.stringify(initialUsers));
     }, [existingUsers, initialUsers]);
+
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
+    const [messageBox, setMessageBox] = useState<SetupMessageBoxState>({
+        isOpen: false,
+        title: '',
+        message: '',
+        confirmText: 'OK',
+        hideCancel: true,
+        onConfirm: () => setMessageBox(prev => ({ ...prev, isOpen: false }))
+    });
+
+    const showSetupMessageBox = (
+        message: string | React.ReactNode,
+        title = 'Error',
+        variant: 'info' | 'success' | 'warning' | 'danger' = 'danger'
+    ) => {
+        setMessageBox({
+            isOpen: true,
+            title,
+            message,
+            confirmText: 'OK',
+            hideCancel: true,
+            variant,
+            onConfirm: () => setMessageBox(prev => ({ ...prev, isOpen: false }))
+        });
+    };
+
+    const showError = (message: string) => {
+        if (mode === 'setup') {
+            showSetupMessageBox(message, 'Error', 'danger');
+            return;
+        }
+        setError(message);
+    };
+
+    useEffect(() => {
+        if (mode === 'setup' && externalError) {
+            showSetupMessageBox(externalError, 'Error', 'danger');
+        }
+    }, [externalError, mode]);
+
     const [editingUserId, setEditingUserId] = useState<number | null>(null);
     const [deleteConfirmUserId, setDeleteConfirmUserId] = useState<number | null>(null);
     const [resetConfirmUserId, setResetConfirmUserId] = useState<number | null>(null);
@@ -130,7 +183,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
             setTimeout(() => setError(null), 2000);
         } catch (err) {
             console.error('Error refreshing data:', err);
-            setError('Failed to refresh data. Please try again.');
+            showError('Failed to refresh data. Please try again.');
         } finally {
             setIsRefreshing(false);
         }
@@ -138,11 +191,11 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
 
     const handleApplyChanges = async () => {
         if (isFetching && existingUsers.length === 0) {
-            setError('⏳ Still fetching users from cloud. Please wait...');
+            showError('⏳ Still fetching users from cloud. Please wait...');
             return;
         }
         if (existingUsers.length === 0) {
-            setError('Cannot save: no users to apply. Please add at least the admin user.');
+            showError('Cannot save: no users to apply. Please add at least the admin user.');
             return;
         }
 
@@ -435,22 +488,26 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                 setPendingNewClasses(prev => [...prev, { name: className, teacherNames: assignAsTeacher ? [teacher] : (teacher ? [teacher] : []) }]);
                 setLocalNewClasses(prev => [...new Set([...prev, className])]);
 
-                // If assign as teacher, update local pending mapping and user
-                if (assignAsTeacher && currentUserIndexForClass !== null) {
+                // Auto-select newly created class in user's allowedClasses if currently editing/adding a user
+                if (currentUserIndexForClass !== null) {
                     const userIndex = currentUserIndexForClass;
-                    const current = pendingClassTeacherChanges[className] || [];
-                    setPendingClassTeacherChanges(prev => ({ ...prev, [className]: Array.from(new Set([...current, teacher])) }));
-
                     const user = users[userIndex];
                     const currentClasses = user.allowedClasses || [];
                     if (!currentClasses.includes(className)) {
                         const updatedClasses = [...currentClasses, className].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
                         updateUser(userIndex, 'allowedClasses', updatedClasses);
                     }
+                    // Initialize classSubjects for this class if not exists
                     const classSubjects = user.classSubjects || {};
                     if (!classSubjects[className]) {
                         classSubjects[className] = [];
                         updateUser(userIndex, 'classSubjects', classSubjects);
+                    }
+
+                    // If assign as teacher, also add to pending teacher mapping
+                    if (assignAsTeacher) {
+                        const current = pendingClassTeacherChanges[className] || [];
+                        setPendingClassTeacherChanges(prev => ({ ...prev, [className]: Array.from(new Set([...current, teacher])) }));
                     }
                 }
 
@@ -471,7 +528,9 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
 
                 if (newId) {
                     setLocalNewClasses(prev => [...new Set([...prev, className])]);
-                    if (assignAsTeacher && currentUserIndexForClass !== null) {
+                    
+                    // Auto-select newly created class in user's allowedClasses if currently editing/adding a user
+                    if (currentUserIndexForClass !== null) {
                         const userIndex = currentUserIndexForClass;
                         const user = users[userIndex];
                         const currentClasses = user.allowedClasses || [];
@@ -479,10 +538,17 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                             const updatedClasses = [...currentClasses, className].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
                             updateUser(userIndex, 'allowedClasses', updatedClasses);
                         }
+                        // Initialize classSubjects for this class if not exists
                         const classSubjects = user.classSubjects || {};
                         if (!classSubjects[className]) {
                             classSubjects[className] = [];
                             updateUser(userIndex, 'classSubjects', classSubjects);
+                        }
+
+                        // If assign as teacher, also handle class teacher assignment
+                        if (assignAsTeacher) {
+                            // In setup mode, just note it locally for later
+                            // (This would be handled by the parent when saving)
                         }
                     }
 
@@ -531,18 +597,18 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
 
         // Validate all users have names
         if (users.some(u => !u.name || u.name.trim() === '')) {
-            setError('All users must have a name');
+            showError('All users must have a name');
             return;
         }
 
         // For setup mode, validate password
         if (mode === 'setup') {
             if (!adminPassword || adminPassword.trim() === '') {
-                setError('Admin password is required');
+                showError('Admin password is required');
                 return;
             }
             if (adminPassword !== confirmPassword) {
-                setError('Passwords do not match');
+                showError('Passwords do not match');
                 return;
             }
         }
@@ -624,7 +690,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
 
         const updatedUser = users[0];
         if (!updatedUser.name || updatedUser.name.trim() === '') {
-            setError('User must have a name');
+            showError('User must have a name');
             return;
         }
 
@@ -701,7 +767,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         if (mobileUserFormPage === 0) {
             // Page 1: Name & Role validation
             if (!currentUser.name || currentUser.name.trim() === '') {
-                setError('Please enter a user name');
+                showError('Please enter a user name');
                 return;
             }
             setError(null);
@@ -730,7 +796,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
             if (users.length > 0) {
                 const newUser = users[0];
                 if (!newUser.name || newUser.name.trim() === '') {
-                    setError('User must have a name');
+                    showError('User must have a name');
                     return;
                 }
 
@@ -796,8 +862,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         // Prevent deleting the last admin
         const admins = existingUsers.filter(u => u.role === 'Admin');
         if (admins.length === 1 && admins[0].id === userId) {
-            setError('Cannot delete the last admin user');
-            setDeleteConfirmUserId(null);
+            showError('Cannot delete the last admin user');
             return;
         }
 
@@ -850,7 +915,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         if (users.length > 0) {
             const newUser = users[0];
             if (!newUser.name || newUser.name.trim() === '') {
-                setError('User must have a name');
+                showError('User must have a name');
                 return;
             }
 
@@ -987,7 +1052,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
 
                 {/* Main Scrollable Content */}
                 <div className="flex-grow overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
-                    {(error || externalError) && (
+                    {mode !== 'setup' && (error || externalError) && (
                         <div className={`border-l-4 p-4 text-sm rounded-r-lg ${(error || externalError)?.startsWith('⏳')
                             ? 'bg-blue-50 border-blue-500 text-blue-700'
                             : 'bg-red-50 border-red-500 text-red-700'
@@ -1812,6 +1877,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                     </div>
                 </div>
             )}
+            <MessageBox {...messageBox} />
         </div>
     );
 };

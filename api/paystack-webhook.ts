@@ -384,7 +384,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
       const variantSnapshot = await qVariants.get();
       let variantCount = 0;
 
-      variantSnapshot.forEach((doc) => {
+      variantSnapshot.forEach((doc: admin.firestore.QueryDocumentSnapshot) => {
         if (doc.id === baseName || doc.id.startsWith(`${baseName}_`)) {
           batch.set(doc.ref, { Access: true }, { merge: true });
           variantCount += 1;

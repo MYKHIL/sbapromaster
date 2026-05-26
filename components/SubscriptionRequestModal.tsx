@@ -5,6 +5,7 @@ import { initializePayment, loadPaystackScript, activateSubscription, verifyPaym
 import MessageBox from './MessageBox';
 
 interface SubscriptionRequestModalProps {
+    isOpen: boolean;
     onClose: () => void;
     onSuccess?: (data: AppDataType, docId: string, password: string, subscription: any) => void;
     initialSchoolName?: string;
@@ -23,7 +24,6 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
 
     // Payment State
     const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-    const [paymentError, setPaymentError] = useState<string | null>(null);
     const [paymentEmail, setPaymentEmail] = useState('');
 
     // Duration State
@@ -48,7 +48,7 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
         onConfirm: () => { }
     });
 
-    const showMsg = (config: Omit<typeof messageBox, 'isOpen'>) => {
+    const showMsg = (config: Omit<typeof messageBox, 'isOpen' | 'onConfirm' | 'onCancel'>) => {
         return new Promise<boolean>((resolve) => {
             setMessageBox({
                 ...config,
@@ -198,9 +198,14 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
     const customDurationStr = `${durationValue} ${durationUnit}${durationValue > 1 ? 's' : ''}`;
 
     const handlePayment = async () => {
-        setPaymentError(null);
         if (!selectedSchool || !paymentEmail) {
-            setPaymentError("Please fill in all fields");
+            await showMsg({
+                title: 'Error',
+                message: 'Please fill in all fields',
+                confirmText: 'OK',
+                variant: 'danger',
+                hideCancel: true
+            });
             return;
         }
 
@@ -220,7 +225,13 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
         const amountInPesewas = Math.round(calculatedAmount * 100);
         const MIN_PAYSTACK_AMOUNT = 100; // 1.00 GHS in pesewas
         if (amountInPesewas > 0 && amountInPesewas < MIN_PAYSTACK_AMOUNT) {
-            setPaymentError(`Paystack transactions must be at least GH₵ ${(MIN_PAYSTACK_AMOUNT / 100).toFixed(2)}. Current amount is GH₵ ${calculatedAmount.toFixed(2)}.`);
+            await showMsg({
+                title: 'Error',
+                message: `Paystack transactions must be at least GH₵ ${(MIN_PAYSTACK_AMOUNT / 100).toFixed(2)}. Current amount is GH₵ ${calculatedAmount.toFixed(2)}.`,
+                confirmText: 'OK',
+                variant: 'danger',
+                hideCancel: true
+            });
             return;
         }
 
@@ -331,7 +342,13 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                         }
                     } catch (err: any) {
                         console.error("Local mock activation failed:", err);
-                        setPaymentError(err.message || "Local mock activation failed.");
+                        await showMsg({
+                            title: 'Error',
+                            message: err.message || 'Local mock activation failed.',
+                            confirmText: 'OK',
+                            variant: 'danger',
+                            hideCancel: true
+                        });
                     } finally {
                         setIsProcessingPayment(false);
                     }
@@ -343,7 +360,13 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
             const PaystackPop = (window as any).PaystackPop;
 
             if (!PaystackPop) {
-                setPaymentError("Paystack SDK not loaded. Please refresh.");
+                await showMsg({
+                    title: 'Error',
+                    message: 'Paystack SDK not loaded. Please refresh.',
+                    confirmText: 'OK',
+                    variant: 'danger',
+                    hideCancel: true
+                });
                 setIsProcessingPayment(false);
                 return;
             }
@@ -442,7 +465,13 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                                 hideCancel: true,
                                 variant: "warning"
                             });
-                            setPaymentError(userFriendlyMsg);
+                            await showMsg({
+                                title: 'Warning',
+                                message: userFriendlyMsg,
+                                confirmText: 'OK',
+                                variant: 'warning',
+                                hideCancel: true
+                            });
                         }
                     };
                     handleSuccess();
@@ -457,14 +486,26 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
         } catch (error: any) {
             console.error(error);
             const errMsg = error.response?.data?.details || error.response?.data?.message || error.message || "Payment initialization failed.";
-            setPaymentError(errMsg);
+            await showMsg({
+                title: 'Error',
+                message: errMsg,
+                confirmText: 'OK',
+                variant: 'danger',
+                hideCancel: true
+            });
             setIsProcessingPayment(false);
         }
     };
 
     const activateFreeTier = async () => {
         if (!selectedSchool) {
-            setPaymentError("Please select a school first.");
+            await showMsg({
+                title: 'Error',
+                message: 'Please select a school first.',
+                confirmText: 'OK',
+                variant: 'danger',
+                hideCancel: true
+            });
             return;
         }
 
@@ -478,7 +519,6 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
         if (!confirmTrial) return;
 
         setIsProcessingPayment(true);
-        setPaymentError(null);
 
         try {
             const trialTier = {
@@ -547,7 +587,6 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                 hideCancel: true,
                 variant: "danger"
             });
-            setPaymentError(userFriendlyMsg);
         } finally {
             setIsProcessingPayment(false);
         }
@@ -755,11 +794,6 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                         </div>
                     )}
 
-                    {paymentError && (
-                        <div className="p-3 bg-red-50 text-red-700 rounded-xl text-sm border border-red-200">
-                            {paymentError}
-                        </div>
-                    )}
                 </div>
 
 

@@ -161,7 +161,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
 
         // Initialize payment with Paystack
         const MAX_PAYSTACK_INIT_RETRIES = 3;
-        let paystackReference = `SBA_${randomUUID()}`;
+        let paystackReference = `SBA_${Date.now()}_${randomUUID()}`;
         let initResponse: Response | null = null;
         let initData: any = null;
 
@@ -201,7 +201,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
 
             if (isDuplicateReference && attempt < MAX_PAYSTACK_INIT_RETRIES) {
                 safeLog('[Paystack API] Duplicate reference detected, retrying with a new reference...');
-                paystackReference = `SBA_${randomUUID()}`;
+                paystackReference = `SBA_${Date.now()}_${randomUUID()}`;
                 continue;
             }
 
