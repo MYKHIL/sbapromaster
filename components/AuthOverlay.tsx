@@ -995,14 +995,25 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                         }}
                         initialSchoolName={selectedSchool?.displayName || pendingSchoolName || ''}
                         pendingRegistration={pendingRegistration}
-                        onSuccess={(data, docId, password, sub) => {
+                        onSuccess={async (data, docId, password, sub) => {
                             if (pendingRegistration) {
-                                handleRegistrationComplete(data, docId, password, sub);
-                            } else {
-                                // Just a renewal
-                                setIsSubscriptionModalOpen(false);
-                                window.location.reload();
+                                await handleRegistrationComplete(data, docId, password, sub);
+                                return;
                             }
+
+                            setIsSubscriptionModalOpen(false);
+
+                            await showMsg({
+                                title: 'Subscription Activated',
+                                message: 'Payment was successful and your professional tier is now active. Please continue by selecting your school from the list below.',
+                                confirmText: 'Continue',
+                                hideCancel: true,
+                                variant: 'success'
+                            });
+
+                            setSelectedSchool(null);
+                            setSelectedPeriod(null);
+                            setCurrentStep('school-list');
                         }}
                     />
                 )}

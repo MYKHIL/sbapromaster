@@ -335,7 +335,7 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                             } : undefined
                         );
 
-                        if (!pendingRegistration) {
+                        if (!pendingRegistration && !onSuccess) {
                             await showMsg({
                                 title: "Mock Activation Successful",
                                 message: `Success! [Mock] ${currentTier.name} activated for ${selectedSchool.displayName} for ${customDurationStr}.`,
@@ -345,7 +345,7 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                             });
                         }
 
-                        // Re-fetch schools
+                        // Re-fetch schools so the school list reflects the new subscription state
                         await loadSchools();
 
                         // If we registered a new school, we might need a reload for DB switch
@@ -454,7 +454,7 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                                 }
                             }
 
-                            if (!pendingRegistration) {
+                            if (!pendingRegistration && !onSuccess) {
                                 await showMsg({
                                     title: "Activation Successful",
                                     message: `Success! ${currentTier.name} activated for ${selectedSchool.displayName} for ${customDurationStr}.`,
@@ -463,6 +463,9 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
                                     variant: "success"
                                 });
                             }
+
+                            // Re-fetch schools so the school list reflects the new subscription state
+                            await loadSchools();
 
                             // If we registered a new school, we might need a reload for DB switch
                             const { ACTIVE_DATABASE_INDEX } = await import('../constants');
