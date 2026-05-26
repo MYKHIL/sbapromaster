@@ -143,7 +143,18 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         const baseName = schoolId.split('_')[0].toLowerCase();
-        const db = getAdminFirestore(Number(dbIndex));
+        
+        let db: admin.firestore.Firestore;
+        try {
+            db = getAdminFirestore(Number(dbIndex));
+        } catch (firebaseErr: any) {
+            console.error(`[Trial] Firebase initialization failed for dbIndex ${dbIndex}:`, firebaseErr.message);
+            return res.status(500).json({
+                error: 'Database initialization failed',
+                message: firebaseErr.message,
+                details: `Failed to initialize Firestore for database ${dbIndex}`
+            });
+        }
 
         // 1. Double check existing subscriptions (trials are one-time only)
         const subDocRef = db.collection('subscriptions').doc(baseName);
@@ -282,8 +293,15 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         });
 
     } catch (error: any) {
-        console.error('[Trial Error]:', error);
-        return res.status(500).json({ error: 'Internal server error', message: error.message });
+        console.error('[Trial Error] Full error:', error);
+        console.error('[Trial Error] Stack:', error?.stack);
+        console.error('[Trial Error] Message:', error?.message);
+        console.error('[Trial Error] Code:', error?.code);
+        return res.status(500).json({ 
+            error: 'Internal server error', 
+            message: error.message,
+            details: error?.code || 'Unknown error'
+        });
     }
 }
 
