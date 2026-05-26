@@ -22,7 +22,8 @@ const allowCors = (fn: (req: VercelRequest, res: VercelResponse) => Promise<any>
 };
 
 // Dynamically initialize Firestore admin for a specific database index using process.env
-function getAdminFirestore(dbIndex: number) {
+// Returns null if credentials are not available (graceful degradation)
+function getAdminFirestore(dbIndex: number): admin.firestore.Firestore | null {
     const appName = `db_admin_${dbIndex}`;
     const existingApp = Array.isArray((admin as any).apps)
         ? (admin as any).apps.find((app: any) => app?.name === appName)
@@ -34,47 +35,43 @@ function getAdminFirestore(dbIndex: number) {
     const tokenRaw = process.env[`FIREBASE_${dbIndex}_TOKEN`] || '';
     const projectId = process.env[`FIREBASE_${dbIndex}_PROJECT_ID`] || '';
 
-    if (!projectId) {
-        throw new Error(`Project ID for database ${dbIndex} is not configured.`);
+    if (!projectId || !tokenRaw) {
+        // No credentials available - gracefully return null instead of throwing
+        return null;
     }
 
-    let app: admin.app.App;
-    let credential: admin.credential.Credential | null = null;
-    if (tokenRaw) {
-        if (admin.credential && typeof admin.credential.cert === 'function') {
-            try {
-                const tokenValue = tokenRaw.trim();
-                let credentialPayload: any;
-                
-                // Try to parse as JSON (service account)
-                if (tokenValue.startsWith('{')) {
-                    credentialPayload = JSON.parse(tokenValue);
-                    credential = admin.credential.cert(credentialPayload);
-                } else if (admin.credential && typeof admin.credential.refreshToken === 'function') {
-                    // Otherwise try as refresh token string
-                    credential = admin.credential.refreshToken(tokenValue);
-                } else {
-                    console.error(`[Firebase Admin] Unsupported token format for database ${dbIndex}.`);
-                }
-            } catch (error: any) {
-                console.error(`[Firebase Admin] Failed to initialize credential for database ${dbIndex}:`, error?.message || error);
-                credential = null;
-            }
-        } else {
-            console.error(`[Firebase Admin] admin.credential methods are not available for database ${dbIndex}.`);
+    try {
+        if (!admin.credential || typeof admin.credential.cert !== 'function') {
+            console.warn(`[Firebase Admin] admin.credential.cert not available for database ${dbIndex}.`);
+            return null;
         }
+
+        const tokenValue = tokenRaw.trim();
+        let credentialPayload: any;
+        let credential: admin.credential.Credential;
+        
+        // Try to parse as JSON (service account)
+        if (tokenValue.startsWith('{')) {
+            credentialPayload = JSON.parse(tokenValue);
+            credential = admin.credential.cert(credentialPayload);
+        } else if (admin.credential && typeof admin.credential.refreshToken === 'function') {
+            // Otherwise try as refresh token string
+            credential = admin.credential.refreshToken(tokenValue);
+        } else {
+            console.warn(`[Firebase Admin] Unsupported token format for database ${dbIndex}.`);
+            return null;
+        }
+
+        const app = admin.initializeApp({
+            credential,
+            projectId: projectId
+        }, appName);
+
+        return app.firestore();
+    } catch (error: any) {
+        console.warn(`[Firebase Admin] Failed to initialize Firestore for database ${dbIndex}:`, error?.message || error);
+        return null;
     }
-
-    if (!credential) {
-        throw new Error(`Unable to initialize Firebase credentials for database ${dbIndex}. Ensure FIREBASE_${dbIndex}_TOKEN is set with a valid service account JSON or refresh token, and FIREBASE_${dbIndex}_PROJECT_ID is configured.`);
-    }
-
-    app = admin.initializeApp({
-        credential,
-        projectId: projectId
-    }, appName);
-
-    return app.firestore();
 }
 
 async function handler(req: VercelRequest, res: VercelResponse) {
@@ -139,13 +136,17 @@ async function handler(req: VercelRequest, res: VercelResponse) {
                 console.warn('[Verify Payment] Firestore REST API check failed:', restErr);
             }
 
-            // 2. Fallback to Admin SDK if REST check didn't succeed
+            // 2. Fallback to Admin SDK if REST check didn't succeed and credentials are available
             if (!dbActivated) {
                 try {
                     const db = getAdminFirestore(dbIndex);
-                    const subDoc = await db.collection('subscriptions').doc(baseName).get();
-                    if (subDoc.exists && subDoc.data()?.paymentReference === reference) {
-                        dbActivated = true;
+                    if (db) {
+                        const subDoc = await db.collection('subscriptions').doc(baseName).get();
+                        if (subDoc.exists && subDoc.data()?.paymentReference === reference) {
+                            dbActivated = true;
+                        }
+                    } else {
+                        console.warn('[Verify Payment] Firestore credentials not available for database activation check fallback.');
                     }
                 } catch (err) {
                     console.warn('[Verify Payment] Admin SDK database activation check failed:', err);

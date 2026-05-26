@@ -24,7 +24,8 @@ const allowCors = (fn: (req: VercelRequest, res: VercelResponse) => Promise<any>
 };
 
 // Dynamically initialize Firestore admin for a specific database index using process.env
-function getAdminFirestore(dbIndex: number) {
+// Returns null if credentials are not available (graceful degradation)
+function getAdminFirestore(dbIndex: number): admin.firestore.Firestore | null {
     const appName = `db_admin_${dbIndex}`;
     const existingApp = Array.isArray((admin as any).apps)
         ? (admin as any).apps.find((app: any) => app?.name === appName)
@@ -36,48 +37,43 @@ function getAdminFirestore(dbIndex: number) {
     const tokenRaw = process.env[`FIREBASE_${dbIndex}_TOKEN`] || '';
     const projectId = process.env[`FIREBASE_${dbIndex}_PROJECT_ID`] || '';
 
-    if (!projectId) {
-        throw new Error(`Project ID for database ${dbIndex} is not configured.`);
+    if (!projectId || !tokenRaw) {
+        // No credentials available - gracefully return null instead of throwing
+        return null;
     }
 
-    let app: admin.app.App;
-    let credential: admin.credential.Credential | null = null;
-
-    if (tokenRaw) {
-        if (admin.credential && typeof admin.credential.cert === 'function') {
-            try {
-                const tokenValue = tokenRaw.trim();
-                let credentialPayload: any;
-                
-                // Try to parse as JSON (service account)
-                if (tokenValue.startsWith('{')) {
-                    credentialPayload = JSON.parse(tokenValue);
-                    credential = admin.credential.cert(credentialPayload);
-                } else if (admin.credential && typeof admin.credential.refreshToken === 'function') {
-                    // Otherwise try as refresh token string
-                    credential = admin.credential.refreshToken(tokenValue);
-                } else {
-                    console.error(`[Firebase Admin] Unsupported token format for database ${dbIndex}.`);
-                }
-            } catch (error: any) {
-                console.error(`[Firebase Admin] Failed to initialize credential for database ${dbIndex}:`, error?.message || error);
-                credential = null;
-            }
-        } else {
-            console.error(`[Firebase Admin] admin.credential methods are not available for database ${dbIndex}.`);
+    try {
+        if (!admin.credential || typeof admin.credential.cert !== 'function') {
+            console.warn(`[Firebase Admin] admin.credential.cert not available for database ${dbIndex}.`);
+            return null;
         }
+
+        const tokenValue = tokenRaw.trim();
+        let credentialPayload: any;
+        let credential: admin.credential.Credential;
+        
+        // Try to parse as JSON (service account)
+        if (tokenValue.startsWith('{')) {
+            credentialPayload = JSON.parse(tokenValue);
+            credential = admin.credential.cert(credentialPayload);
+        } else if (admin.credential && typeof admin.credential.refreshToken === 'function') {
+            // Otherwise try as refresh token string
+            credential = admin.credential.refreshToken(tokenValue);
+        } else {
+            console.warn(`[Firebase Admin] Unsupported token format for database ${dbIndex}.`);
+            return null;
+        }
+
+        const app = admin.initializeApp({
+            credential,
+            projectId: projectId
+        }, appName);
+
+        return app.firestore();
+    } catch (error: any) {
+        console.warn(`[Firebase Admin] Failed to initialize Firestore for database ${dbIndex}:`, error?.message || error);
+        return null;
     }
-
-    if (!credential) {
-        throw new Error(`Unable to initialize Firebase credentials for database ${dbIndex}. Ensure FIREBASE_${dbIndex}_TOKEN is set with a valid service account JSON or refresh token, and FIREBASE_${dbIndex}_PROJECT_ID is configured.`);
-    }
-
-    app = admin.initializeApp({
-        credential,
-        projectId: projectId
-    }, appName);
-
-    return app.firestore();
 }
 
 // Map the tier display name to the environment variable key suffix
@@ -220,25 +216,28 @@ async function handler(req: VercelRequest, res: VercelResponse) {
 
         const reference = initData?.data?.reference || paystackReference;
 
-        // If there's a pending registration for a new school, store it securely on the server
+        // If there's a pending registration for a new school, attempt to store it securely
+        // If database credentials aren't available, warn and continue (pending registration will be stored on webhook)
         if (pendingRegistration) {
             try {
                 const db = getAdminFirestore(Number(targetDbIndex));
-                await db.collection('pending_registrations').doc(reference).set({
-                    schoolId,
-                    schoolName,
-                    dbIndex: Number(targetDbIndex),
-                    password: pendingRegistration.password,
-                    registrationData: pendingRegistration.registrationData,
-                    createdAt: new Date().toISOString()
-                });
-                safeLog(`[Paystack API] Pending registration saved successfully.`);
+                if (db) {
+                    await db.collection('pending_registrations').doc(reference).set({
+                        schoolId,
+                        schoolName,
+                        dbIndex: Number(targetDbIndex),
+                        password: pendingRegistration.password,
+                        registrationData: pendingRegistration.registrationData,
+                        createdAt: new Date().toISOString()
+                    });
+                    safeLog(`[Paystack API] Pending registration saved successfully.`);
+                } else {
+                    console.warn(`[Paystack API] Firestore credentials not available for database ${targetDbIndex}. Pending registration will be processed on webhook completion.`);
+                }
             } catch (firestoreError: any) {
                 console.error('[Paystack API] Failed to save pending registration:', firestoreError);
-                return res.status(500).json({
-                    error: 'Database write failed for pending registration',
-                    message: firestoreError.message
-                });
+                // Don't fail the payment init; webhook will handle it
+                console.warn('[Paystack API] Continuing without persisting pending registration—will be handled on webhook.');
             }
         }
 
