@@ -105,16 +105,8 @@ const ReportCard: React.FC<{ student: Student }> = ({ student }) => {
     };
 
     const reportTeacherNames = getReportTeacherNames();
-
-    const formatTeacherList = (names: string[]) => {
-        if (!names || names.length === 0) return '';
-        if (names.length === 1) return names[0];
-        if (names.length === 2) return `${names[0]} & ${names[1]}`;
-        return `${names.slice(0, -1).join(', ')} & ${names[names.length - 1]}`;
-    };
-
     const teacherSignatureLabel = reportTeacherNames.length > 1 ? "Class Teachers' Signature" : "Class Teacher's Signature";
-    const reportTeacherLine = reportTeacherNames.length > 0 ? formatTeacherList(reportTeacherNames) : classInfo?.teacherName || '';
+    const reportTeacherLine = reportTeacherNames.length > 0 ? reportTeacherNames.join(', ') : classInfo?.teacherName || '';
 
     const formatDate = (dateString: string): string => {
         if (!dateString || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return dateString;

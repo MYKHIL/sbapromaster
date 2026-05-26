@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getAdminFirestore } from './_lib/admin-firestore';
+import admin from 'firebase-admin';
+import { getAvailableFirestoreInstance, getFirestoreInstanceForSchool } from './firestore-routing';
 
 /**
  * Paystack Payment Initialization Endpoint
@@ -21,6 +22,43 @@ const allowCors = (fn: (req: VercelRequest, res: VercelResponse) => Promise<any>
     }
     return await fn(req, res);
 };
+
+// Dynamically initialize Firestore admin for a specific database index using process.env
+function getAdminFirestore(dbIndex: number) {
+    const appName = `db_admin_${dbIndex}`;
+    const existingApp = admin.apps.find(app => app?.name === appName);
+    if (existingApp) {
+        return existingApp.firestore();
+    }
+
+    const token = process.env[`FIREBASE_${dbIndex}_TOKEN`] || '';
+    const projectId = process.env[`FIREBASE_${dbIndex}_PROJECT_ID`] || '';
+
+    if (!projectId) {
+        throw new Error(`Project ID for database ${dbIndex} is not configured.`);
+    }
+
+    let app: admin.app.App;
+    if (token) {
+        app = admin.initializeApp({
+            credential: admin.credential.refreshToken(token),
+            projectId: projectId
+        }, appName);
+    } else {
+        const serviceAccountStr = process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT || '{}';
+        const serviceAccount = JSON.parse(serviceAccountStr);
+        if (serviceAccount && serviceAccount.project_id === projectId) {
+            app = admin.initializeApp({
+                credential: admin.credential.cert(serviceAccount),
+                projectId: projectId
+            }, appName);
+        } else {
+            throw new Error(`No credentials configured for database ${dbIndex}. Ensure FIREBASE_${dbIndex}_TOKEN is set.`);
+        }
+    }
+
+    return app.firestore();
+}
 
 // Map the tier display name to the environment variable key suffix
 function getTierKeySuffix(tierName: string): string {
@@ -62,10 +100,10 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         const secretKey = (process.env.PAYSTACK_SECRET_KEY || '').trim();
 
         // Validate inputs
-        if (!email || !tierName || !durationValue || !durationUnit || !schoolId || !schoolName || !dbIndex) {
+        if (!email || !tierName || !durationValue || !durationUnit || !schoolId || !schoolName) {
             return res.status(400).json({
                 error: 'Missing required fields',
-                required: ['email', 'tierName', 'durationValue', 'durationUnit', 'schoolId', 'schoolName', 'dbIndex']
+                required: ['email', 'tierName', 'durationValue', 'durationUnit', 'schoolId', 'schoolName']
             });
         }
 
@@ -92,6 +130,21 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         const secureAmount = (basePrice / 12) * totalMonths;
         const amountInPesewas = Math.round(secureAmount * 100);
 
+        const targetDbIndex = await (async () => {
+            const explicitIndex = Number(dbIndex);
+            if (explicitIndex && !Number.isNaN(explicitIndex)) {
+                return explicitIndex;
+            }
+
+            const existingRoute = await getFirestoreInstanceForSchool(schoolId);
+            if (existingRoute) {
+                return existingRoute.dbIndex;
+            }
+
+            const available = await getAvailableFirestoreInstance();
+            return available.dbIndex;
+        })();
+
         // Initialize payment with Paystack
         const response = await fetch('https://api.paystack.co/transaction/initialize', {
             method: 'POST',
@@ -106,7 +159,7 @@ async function handler(req: VercelRequest, res: VercelResponse) {
                 metadata: {
                     schoolId,
                     schoolName,
-                    dbIndex: Number(dbIndex),
+                    dbIndex: Number(targetDbIndex),
                     tierName,
                     durationValue,
                     durationUnit,
@@ -128,22 +181,25 @@ async function handler(req: VercelRequest, res: VercelResponse) {
 
         const reference = data.data.reference;
 
-        // Optional: stash pending registration for webhook-based activation (requires service account).
-        // Client-side activation after payment works without this write.
+        // If there's a pending registration for a new school, store it securely on the server
         if (pendingRegistration) {
             try {
-                const db = getAdminFirestore(Number(dbIndex));
+                const db = getAdminFirestore(Number(targetDbIndex));
                 await db.collection('pending_registrations').doc(reference).set({
                     schoolId,
                     schoolName,
-                    dbIndex: Number(dbIndex),
+                    dbIndex: Number(targetDbIndex),
                     password: pendingRegistration.password,
                     registrationData: pendingRegistration.registrationData,
                     createdAt: new Date().toISOString()
                 });
                 safeLog(`[Paystack API] Pending registration saved successfully.`);
             } catch (firestoreError: any) {
-                console.warn('[Paystack API] Pending registration not saved server-side (client will activate after payment):', firestoreError.message);
+                console.error('[Paystack API] Failed to save pending registration:', firestoreError);
+                return res.status(500).json({
+                    error: 'Database write failed for pending registration',
+                    message: firestoreError.message
+                });
             }
         }
 
