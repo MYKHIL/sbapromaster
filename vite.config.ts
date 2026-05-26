@@ -2,6 +2,7 @@ import path from 'path';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import dotenv from 'dotenv';
+import { invokeLocalApi } from './vite-api-dev';
 
 dotenv.config();
 
@@ -87,35 +88,19 @@ export default defineConfig(({ mode }) => {
             }));
           });
 
-          // Mock Payment Initialization
+          // Payment Initialization (local API handler when not in emulator mode)
           server.middlewares.use('/api/initialize-payment', async (req, res) => {
-            console.log('[Mock API] Initializing payment request...');
+            console.log('[Dev API] Initializing payment request...');
             res.setHeader('Content-Type', 'application/json');
 
             if (env.VITE_USE_EMULATOR !== 'true') {
               try {
-                console.log('[Mock API] Forwarding initialize-payment to Vercel...');
-                const chunks: any[] = [];
-                for await (const chunk of req) {
-                  chunks.push(chunk);
-                }
-                const body = Buffer.concat(chunks).toString();
-
-                const vercelRes = await fetch('https://sbapromaster.vercel.app/api/initialize-payment', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body
-                });
-
-                const vercelData = await vercelRes.json();
-                res.statusCode = vercelRes.status;
-                return res.end(JSON.stringify(vercelData));
+                await invokeLocalApi('initialize-payment', req, res);
+                return;
               } catch (err: any) {
-                console.error('[Mock API] Failed to forward initialize-payment to Vercel:', err);
+                console.error('[Dev API] initialize-payment failed:', err);
                 res.statusCode = 500;
-                return res.end(JSON.stringify({ success: false, error: err.message }));
+                return res.end(JSON.stringify({ success: false, error: err.message, message: err.message }));
               }
             }
 
@@ -173,24 +158,18 @@ export default defineConfig(({ mode }) => {
             }));
           });
 
-          // Mock Payment Verification
+          // Payment Verification (local API handler when not in emulator mode)
           server.middlewares.use('/api/verify-payment', async (req, res) => {
             res.setHeader('Content-Type', 'application/json');
 
             if (env.VITE_USE_EMULATOR !== 'true') {
               try {
-                const url = new URL(req.url || '', `http://${req.headers.host}`);
-                const reference = url.searchParams.get('reference') || '';
-                console.log(`[Mock API] Forwarding verify-payment to Vercel for reference: ${reference}...`);
-
-                const vercelRes = await fetch(`https://sbapromaster.vercel.app/api/verify-payment?reference=${reference}`);
-                const vercelData = await vercelRes.json();
-                res.statusCode = vercelRes.status;
-                return res.end(JSON.stringify(vercelData));
+                await invokeLocalApi('verify-payment', req, res);
+                return;
               } catch (err: any) {
-                console.error('[Mock API] Failed to forward verify-payment to Vercel:', err);
+                console.error('[Dev API] verify-payment failed:', err);
                 res.statusCode = 500;
-                return res.end(JSON.stringify({ success: false, error: err.message }));
+                return res.end(JSON.stringify({ success: false, error: err.message, message: err.message }));
               }
             }
 
@@ -237,34 +216,19 @@ export default defineConfig(({ mode }) => {
             res.end(JSON.stringify({ success: true, message: 'Mock activation successful' }));
           });
 
-          // Mock Trial Activation
+          // Trial activation (local API handler when not in emulator mode)
           server.middlewares.use('/api/activate-trial', async (req, res) => {
             res.setHeader('Content-Type', 'application/json');
 
             if (env.VITE_USE_EMULATOR !== 'true') {
               try {
-                console.log('[Mock API] Forwarding activate-trial to Vercel...');
-                const chunks: any[] = [];
-                for await (const chunk of req) {
-                  chunks.push(chunk);
-                }
-                const body = Buffer.concat(chunks).toString();
-
-                const vercelRes = await fetch('https://sbapromaster.vercel.app/api/activate-trial', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body
-                });
-
-                const vercelData = await vercelRes.json();
-                res.statusCode = vercelRes.status;
-                return res.end(JSON.stringify(vercelData));
+                console.log('[Dev API] Running activate-trial locally...');
+                await invokeLocalApi('activate-trial', req, res);
+                return;
               } catch (err: any) {
-                console.error('[Mock API] Failed to forward activate-trial to Vercel:', err);
+                console.error('[Dev API] activate-trial failed:', err);
                 res.statusCode = 500;
-                return res.end(JSON.stringify({ success: false, error: err.message }));
+                return res.end(JSON.stringify({ success: false, error: err.message, message: err.message }));
               }
             }
 

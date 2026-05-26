@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import admin from 'firebase-admin';
+import { getAdminFirestore } from './_lib/admin-firestore';
 
 /**
  * Paystack Payment Initialization Endpoint
@@ -22,43 +22,6 @@ const allowCors = (fn: (req: VercelRequest, res: VercelResponse) => Promise<any>
     return await fn(req, res);
 };
 
-// Dynamically initialize Firestore admin for a specific database index using process.env
-function getAdminFirestore(dbIndex: number) {
-    const appName = `db_admin_${dbIndex}`;
-    const existingApp = admin.apps.find(app => app?.name === appName);
-    if (existingApp) {
-        return existingApp.firestore();
-    }
-
-    const token = process.env[`FIREBASE_${dbIndex}_TOKEN`] || '';
-    const projectId = process.env[`FIREBASE_${dbIndex}_PROJECT_ID`] || '';
-
-    if (!projectId) {
-        throw new Error(`Project ID for database ${dbIndex} is not configured.`);
-    }
-
-    let app: admin.app.App;
-    if (token) {
-        app = admin.initializeApp({
-            credential: admin.credential.refreshToken(token),
-            projectId: projectId
-        }, appName);
-    } else {
-        const serviceAccountStr = process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT || '{}';
-        const serviceAccount = JSON.parse(serviceAccountStr);
-        if (serviceAccount && serviceAccount.project_id === projectId) {
-            app = admin.initializeApp({
-                credential: admin.credential.cert(serviceAccount),
-                projectId: projectId
-            }, appName);
-        } else {
-            throw new Error(`No credentials configured for database ${dbIndex}. Ensure FIREBASE_${dbIndex}_TOKEN is set.`);
-        }
-    }
-
-    return app.firestore();
-}
-
 // Map the tier display name to the environment variable key suffix
 function getTierKeySuffix(tierName: string): string {
     const name = tierName.toLowerCase();
@@ -71,6 +34,13 @@ function getTierKeySuffix(tierName: string): string {
     if (name.includes('custom')) return 'CUSTOM';
     return name.toUpperCase().replace(/[^A-Z0-9_]/g, '_');
 }
+
+const isLocal = process.env.NODE_ENV === 'development';
+const safeLog = (...args: any[]) => {
+    if (isLocal) {
+        console.log(...args);
+    }
+};
 
 async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
@@ -158,12 +128,9 @@ async function handler(req: VercelRequest, res: VercelResponse) {
 
         const reference = data.data.reference;
 
-        // If there's a pending registration for a new school, store it securely on the server
+        // Optional: stash pending registration for webhook-based activation (requires service account).
+        // Client-side activation after payment works without this write.
         if (pendingRegistration) {
-            const isLocal = process.env.NODE_ENV === 'development';
-            if (isLocal) {
-                console.log(`[Paystack API] Saving pending registration for reference: ${reference}`);
-            }
             try {
                 const db = getAdminFirestore(Number(dbIndex));
                 await db.collection('pending_registrations').doc(reference).set({
@@ -174,15 +141,9 @@ async function handler(req: VercelRequest, res: VercelResponse) {
                     registrationData: pendingRegistration.registrationData,
                     createdAt: new Date().toISOString()
                 });
-                if (isLocal) {
-                    console.log(`[Paystack API] Pending registration saved successfully.`);
-                }
+                safeLog(`[Paystack API] Pending registration saved successfully.`);
             } catch (firestoreError: any) {
-                console.error('[Paystack API] Failed to save pending registration:', firestoreError);
-                return res.status(500).json({
-                    error: 'Database write failed for pending registration',
-                    message: firestoreError.message
-                });
+                console.warn('[Paystack API] Pending registration not saved server-side (client will activate after payment):', firestoreError.message);
             }
         }
 

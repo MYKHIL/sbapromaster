@@ -66,7 +66,8 @@ export const verifyPayment = async (reference: string): Promise<VerifyPaymentRes
 };
 
 /**
- * Activates a subscription (Trial only on the client-side, delegates to backend)
+ * Activates a trial subscription via Firestore client SDK (same path as paid renewals).
+ * Avoids firebase-admin, which requires a service account for Firestore — not user refresh tokens.
  */
 export const activateSubscription = async (
     reference: string,
@@ -76,17 +77,19 @@ export const activateSubscription = async (
     registrationData?: { password: string; initialData: any }
 ): Promise<any> => {
     try {
-        const response = await axios.post(`${API_BASE_URL}/activate-trial`, {
-            schoolId: schoolDetails.id,
-            schoolName: schoolDetails.name,
-            dbIndex: schoolDetails.dbIndex,
-            email: 'trial-activation@sbapromaster.com',
-            pendingRegistration: registrationData ? {
-                password: registrationData.password,
-                registrationData: registrationData.initialData
-            } : undefined
-        });
-        return response.data;
+        const { activateSchoolSubscriptionLocally } = await import('./firebaseService');
+        const result = await activateSchoolSubscriptionLocally(
+            reference,
+            schoolDetails,
+            tier,
+            addRemainingTime,
+            registrationData
+        );
+        return {
+            success: true,
+            message: 'Trial activated successfully',
+            expiryDate: result.expiryDate?.toISOString?.() ?? result.expiryDate,
+        };
     } catch (error) {
         console.error('Subscription activation failed:', error);
         throw error;

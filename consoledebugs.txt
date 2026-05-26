@@ -1,28 +1,163 @@
-[DataContext] 📱 Mobile Lifecycle event detected. Forcing immediate data backup... 3 App-CUayhcMZ.js:3826:10007
-[Bootstrap] Subscription prices set dynamically main-BNs1egcn.js:54:583
-[Bootstrap] Configuration loaded. main-BNs1egcn.js:54:797
-[DataContext] Sync PAUSED App-CUayhcMZ.js:3826:29904
-[AuthOverlay] 🔍 restoreSession triggered! App-CUayhcMZ.js:4291:12169
-[AuthOverlay] localStorage keys - sba_school_id: ayirebida_2025-2026_Second-Term sba_force_term_select: null App-CUayhcMZ.js:4291:12227
-[DataContext] Sync PAUSED App-CUayhcMZ.js:3826:29904
-[Version] ⏸️ Already reloaded for v1.0.297. Waiting for CDN to propagate... App-CUayhcMZ.js:3826:6033
-Cookie “_ga_EHHNKZ5FBG” has been rejected for invalid domain. sbahub.vercel.app
-The value of the attribute “expires” for the cookie “_ga_EHHNKZ5FBG” has been overwritten. sbahub.vercel.app
-Cookie “_ga_EHHNKZ5FBG” has been rejected for invalid domain. sbahub.vercel.app
-Cookie “_ga” has been rejected for invalid domain. sbahub.vercel.app
-[DataContext] 🛡️ Initial Cloud Sync Guard: Verifying intentionality from disk... App-CUayhcMZ.js:3826:44109
-[DataContext] 📦 loadImportedData called (isRemote=true) with: 
-Object { hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 0, assessmentsCount: 0, scoresCount: 0, reportDataCount: 163, classDataCount: 10, usersCount: 16 }
-App-CUayhcMZ.js:3826:45032
-[DataContext] 🧠 Pre-empting context reset for: ayirebida_2025-2026_Second-Term-2025-2026-Second Term App-CUayhcMZ.js:3826:45622
-[DataContext] ✅ Updating userLogs App-CUayhcMZ.js:3826:46351
-[DataContext] ✅ Updating activeSessions App-CUayhcMZ.js:3826:46351
-[DataContext] ✅ Merged collection: users App-CUayhcMZ.js:3826:46061
-[DataContext] ✅ Updating users: 16 App-CUayhcMZ.js:3826:47339
-[DataContext] 🧹 Selectively cleared dirty fields after remote data load App-CUayhcMZ.js:3826:47990
-[DataContext] 💾 Updated originalData baseline with merge strategy App-CUayhcMZ.js:3826:48578
-[DataContext] 🔍 Performing full dirty recheck against cloud baseline... App-CUayhcMZ.js:3826:14872
-[AuthOverlay] Checking for sba_force_term_select in localStorage... App-CUayhcMZ.js:4291:13640
-[AuthOverlay] sba_force_term_select value is: false App-CUayhcMZ.js:4291:13790
-[DataContext] Sync PAUSED 2 App-CUayhcMZ.js:3826:29904
-[DataContext] 🔍 Performing full dirty recheck against cloud baseline... App-CUayhcMZ.js:3826:14872
+DataContext.tsx:2130 [DataContext] Sync PAUSED
+(index):1 [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://www.chromium.org/developers/design-documents/create-amazing-password-forms) <input id=​"password" class=​"w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-xl focus:​border-blue-500 focus:​outline-none transition-colors" placeholder=​"Enter password" type=​"password" value>​
+(index):1 [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://www.chromium.org/developers/design-documents/create-amazing-password-forms) <input id=​"confirmPassword" class=​"w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:​border-blue-500 focus:​outline-none transition-colors" placeholder=​"Confirm password" type=​"password" value>​
+paystackService.ts:79  POST http://localhost:3000/api/activate-trial 500 (Internal Server Error)
+dispatchXhrRequest @ xhr.js:198
+(anonymous) @ xhr.js:15
+dispatchRequest @ dispatchRequest.js:51
+_request @ Axios.js:194
+request @ Axios.js:41
+httpMethod @ Axios.js:233
+wrap @ bind.js:12
+(anonymous) @ paystackService.ts:79
+(anonymous) @ SubscriptionRequestModal.tsx:485
+await in (anonymous)
+(anonymous) @ SubscriptionRequestModal.tsx:211
+executeDispatch @ react-dom-client.development.js:19116
+runWithFiberInDEV @ react-dom-client.development.js:871
+processDispatchQueue @ react-dom-client.development.js:19166
+anonymousCallbackTo: batchedUpdates$1 @ react-dom-client.development.js:19767
+batchedUpdates$1 @ react-dom-client.development.js:3255
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:19320
+dispatchEvent @ react-dom-client.development.js:23585
+dispatchDiscreteEvent @ react-dom-client.development.js:23553
+<button>
+(anonymous) @ react-jsx-dev-runtime.development.js:335
+SubscriptionRequestModal @ SubscriptionRequestModal.tsx:774
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooksAgain @ react-dom-client.development.js:7762
+renderWithHooks @ react-dom-client.development.js:7674
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performSyncWorkOnRoot @ react-dom-client.development.js:18972
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:18814
+processRootScheduleInMicrotask @ react-dom-client.development.js:18853
+anonymousCallbackTo: scheduleMicrotask @ react-dom-client.development.js:18991
+<SubscriptionRequestModal>
+(anonymous) @ react-jsx-dev-runtime.development.js:335
+AuthOverlay @ AuthOverlay.tsx:950
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooksAgain @ react-dom-client.development.js:7762
+renderWithHooks @ react-dom-client.development.js:7674
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performSyncWorkOnRoot @ react-dom-client.development.js:18972
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:18814
+processRootScheduleInMicrotask @ react-dom-client.development.js:18853
+anonymousCallbackTo: scheduleMicrotask @ react-dom-client.development.js:18991
+App.tsx:229 Subscription activation failed: AxiosError: Request failed with status code 500
+    at settle (settle.js:19:12)
+    at XMLHttpRequest.onloadend (xhr.js:59:7)
+    at Axios.request (Axios.js:46:41)
+    at async activateSubscription (paystackService.ts:79:26)
+    at async activateFreeTier (SubscriptionRequestModal.tsx:485:13)
+(anonymous) @ App.tsx:229
+(anonymous) @ paystackService.ts:91
+await in (anonymous)
+(anonymous) @ SubscriptionRequestModal.tsx:485
+await in (anonymous)
+(anonymous) @ SubscriptionRequestModal.tsx:211
+executeDispatch @ react-dom-client.development.js:19116
+runWithFiberInDEV @ react-dom-client.development.js:871
+processDispatchQueue @ react-dom-client.development.js:19166
+anonymousCallbackTo: batchedUpdates$1 @ react-dom-client.development.js:19767
+batchedUpdates$1 @ react-dom-client.development.js:3255
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:19320
+dispatchEvent @ react-dom-client.development.js:23585
+dispatchDiscreteEvent @ react-dom-client.development.js:23553
+<button>
+(anonymous) @ react-jsx-dev-runtime.development.js:335
+SubscriptionRequestModal @ SubscriptionRequestModal.tsx:774
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooksAgain @ react-dom-client.development.js:7762
+renderWithHooks @ react-dom-client.development.js:7674
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performSyncWorkOnRoot @ react-dom-client.development.js:18972
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:18814
+processRootScheduleInMicrotask @ react-dom-client.development.js:18853
+anonymousCallbackTo: scheduleMicrotask @ react-dom-client.development.js:18991
+<SubscriptionRequestModal>
+(anonymous) @ react-jsx-dev-runtime.development.js:335
+AuthOverlay @ AuthOverlay.tsx:950
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooksAgain @ react-dom-client.development.js:7762
+renderWithHooks @ react-dom-client.development.js:7674
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performSyncWorkOnRoot @ react-dom-client.development.js:18972
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:18814
+processRootScheduleInMicrotask @ react-dom-client.development.js:18853
+anonymousCallbackTo: scheduleMicrotask @ react-dom-client.development.js:18991
+App.tsx:229 Trial activation failed: AxiosError: Request failed with status code 500
+    at settle (settle.js:19:12)
+    at XMLHttpRequest.onloadend (xhr.js:59:7)
+    at Axios.request (Axios.js:46:41)
+    at async activateSubscription (paystackService.ts:79:26)
+    at async activateFreeTier (SubscriptionRequestModal.tsx:485:13)
+(anonymous) @ App.tsx:229
+(anonymous) @ SubscriptionRequestModal.tsx:531
+await in (anonymous)
+(anonymous) @ SubscriptionRequestModal.tsx:211
+executeDispatch @ react-dom-client.development.js:19116
+runWithFiberInDEV @ react-dom-client.development.js:871
+processDispatchQueue @ react-dom-client.development.js:19166
+anonymousCallbackTo: batchedUpdates$1 @ react-dom-client.development.js:19767
+batchedUpdates$1 @ react-dom-client.development.js:3255
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:19320
+dispatchEvent @ react-dom-client.development.js:23585
+dispatchDiscreteEvent @ react-dom-client.development.js:23553
+<button>
+(anonymous) @ react-jsx-dev-runtime.development.js:335
+SubscriptionRequestModal @ SubscriptionRequestModal.tsx:774
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooksAgain @ react-dom-client.development.js:7762
+renderWithHooks @ react-dom-client.development.js:7674
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performSyncWorkOnRoot @ react-dom-client.development.js:18972
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:18814
+processRootScheduleInMicrotask @ react-dom-client.development.js:18853
+anonymousCallbackTo: scheduleMicrotask @ react-dom-client.development.js:18991
+<SubscriptionRequestModal>
+(anonymous) @ react-jsx-dev-runtime.development.js:335
+AuthOverlay @ AuthOverlay.tsx:950
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooksAgain @ react-dom-client.development.js:7762
+renderWithHooks @ react-dom-client.development.js:7674
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performSyncWorkOnRoot @ react-dom-client.development.js:18972
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:18814
+processRootScheduleInMicrotask @ react-dom-client.development.js:18853
+anonymousCallbackTo: scheduleMicrotask @ react-dom-client.development.js:18991

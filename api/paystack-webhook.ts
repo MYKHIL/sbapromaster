@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import admin from 'firebase-admin';
 import crypto from 'crypto';
+import { getAdminFirestore } from './_lib/admin-firestore';
 
 const isLocal = process.env.NODE_ENV === 'development';
 const safeLog = (...args: any[]) => {
@@ -28,43 +29,6 @@ const allowCors = (fn: (req: VercelRequest, res: VercelResponse) => Promise<any>
     }
     return await fn(req, res);
 };
-
-// Dynamically initialize Firestore admin for a specific database index using process.env
-function getAdminFirestore(dbIndex: number) {
-    const appName = `db_admin_${dbIndex}`;
-    const existingApp = admin.apps.find(app => app?.name === appName);
-    if (existingApp) {
-        return existingApp.firestore();
-    }
-
-    const token = process.env[`FIREBASE_${dbIndex}_TOKEN`] || '';
-    const projectId = process.env[`FIREBASE_${dbIndex}_PROJECT_ID`] || '';
-
-    if (!projectId) {
-        throw new Error(`Project ID for database ${dbIndex} is not configured.`);
-    }
-
-    let app: admin.app.App;
-    if (token) {
-        app = admin.initializeApp({
-            credential: admin.credential.refreshToken(token),
-            projectId: projectId
-        }, appName);
-    } else {
-        const serviceAccountStr = process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT || '{}';
-        const serviceAccount = JSON.parse(serviceAccountStr);
-        if (serviceAccount && serviceAccount.project_id === projectId) {
-            app = admin.initializeApp({
-                credential: admin.credential.cert(serviceAccount),
-                projectId: projectId
-            }, appName);
-        } else {
-            throw new Error(`No credentials configured for database ${dbIndex}. Ensure FIREBASE_${dbIndex}_TOKEN is set.`);
-        }
-    }
-
-    return app.firestore();
-}
 
 // Map the tier display name to the environment variable key suffix
 function getTierKeySuffix(tierName: string): string {
