@@ -49,33 +49,38 @@ function getAdminFirestore(dbIndex: number) {
     let app: admin.app.App;
     let credential: admin.credential.Credential | null = null;
     if (tokenRaw) {
-        try {
-            const tokenValue = tokenRaw.trim();
-            const tokenPayload = tokenValue.startsWith('{') ? JSON.parse(tokenValue) : tokenValue;
-            credential = admin.credential.refreshToken(tokenPayload as any);
-        } catch (error: any) {
-            console.error(`[Firebase Admin] Invalid FIREBASE_${dbIndex}_TOKEN payload:`, error?.message || error);
-            credential = null;
+        if (admin.credential && typeof admin.credential.cert === 'function') {
+            try {
+                const tokenValue = tokenRaw.trim();
+                let credentialPayload: any;
+                
+                // Try to parse as JSON (service account)
+                if (tokenValue.startsWith('{')) {
+                    credentialPayload = JSON.parse(tokenValue);
+                    credential = admin.credential.cert(credentialPayload);
+                } else if (admin.credential && typeof admin.credential.refreshToken === 'function') {
+                    // Otherwise try as refresh token string
+                    credential = admin.credential.refreshToken(tokenValue);
+                } else {
+                    console.error(`[Firebase Admin] Unsupported token format for database ${dbIndex}.`);
+                }
+            } catch (error: any) {
+                console.error(`[Firebase Admin] Failed to initialize credential for database ${dbIndex}:`, error?.message || error);
+                credential = null;
+            }
+        } else {
+            console.error(`[Firebase Admin] admin.credential methods are not available for database ${dbIndex}.`);
         }
     }
 
-    if (credential) {
-        app = admin.initializeApp({
-            credential,
-            projectId: projectId
-        }, appName);
-    } else {
-        const serviceAccountStr = process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT || '{}';
-        const serviceAccount = JSON.parse(serviceAccountStr);
-        if (serviceAccount && serviceAccount.project_id === projectId) {
-            app = admin.initializeApp({
-                credential: admin.credential.cert(serviceAccount),
-                projectId: projectId
-            }, appName);
-        } else {
-            throw new Error(`No valid Firebase credentials configured for database ${dbIndex}. Ensure FIREBASE_${dbIndex}_TOKEN or FIREBASE_ADMIN_SERVICE_ACCOUNT is set.`);
-        }
+    if (!credential) {
+        throw new Error(`Unable to initialize Firebase credentials for database ${dbIndex}. Ensure FIREBASE_${dbIndex}_TOKEN is set with a valid service account JSON or refresh token, and FIREBASE_${dbIndex}_PROJECT_ID is configured.`);
     }
+
+    app = admin.initializeApp({
+        credential,
+        projectId: projectId
+    }, appName);
 
     return app.firestore();
 }
