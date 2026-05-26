@@ -1,51 +1,28 @@
- [vite] connecting...
- Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
- [pdf-viewer-detect][isBrowserPdfViewerPage] final: false
- [vite] connected.
- [Bootstrap] Subscription prices set dynamically
- [Bootstrap] Configuration loaded.
-chunk-H2C4J2EX.js?v=6fcf0491:1231 [2026-05-26T11:20:24.619Z]  @firebase/analytics: Analytics: Firebase Analytics is not supported in this environment. Wrap initialization of analytics in analytics.isSupported() to prevent initialization in unsupported environments. Details: (1) This is a browser extension environment. (analytics/invalid-analytics-context).
-defaultLogHandler @ chunk-H2C4J2EX.js?v=6fcf0491:1231
-DataContext.tsx:2130 [DataContext] Sync PAUSED
-AuthOverlay.tsx:119 [AuthOverlay] 🔍 restoreSession triggered!
-AuthOverlay.tsx:120 [AuthOverlay] localStorage keys - sba_school_id: null sba_force_term_select: null
-DataContext.tsx:2130 [DataContext] Sync PAUSED
-AuthOverlay.tsx:119 [AuthOverlay] 🔍 restoreSession triggered!
-AuthOverlay.tsx:120 [AuthOverlay] localStorage keys - sba_school_id: null sba_force_term_select: null
-DataContext.tsx:2130 [DataContext] Sync PAUSED
-DataContext.tsx:456 [Version] ⏸️ Already reloaded for v1.0.10. Waiting for CDN to propagate...
-client:964 [vite] server connection lost. Polling for restart...
-App.tsx:229 Paystack initialization failed: AxiosError: Network Error
-    at XMLHttpRequest.handleError (axios.js?v=6fcf0491:1669:19)
-    at Axios.request (axios.js?v=6fcf0491:2255:41)
-    at async initializePayment (paystackService.ts:36:26)
-    at async handlePayment (SubscriptionRequestModal.tsx:242:34)
-(anonymous) @ App.tsx:229
-App.tsx:229 AxiosError: Network Error
-    at XMLHttpRequest.handleError (axios.js?v=6fcf0491:1669:19)
-    at Axios.request (axios.js?v=6fcf0491:2255:41)
-    at async initializePayment (paystackService.ts:36:26)
-    at async handlePayment (SubscriptionRequestModal.tsx:242:34)
-(anonymous) @ App.tsx:229
-:3000/api/initialize-payment:1  Failed to load resource: net::ERR_CONNECTION_RESET
- WebSocket connection to 'ws://localhost:3000/' failed: 
-DataContext.tsx:711 [DataContext] 📱 Mobile Lifecycle event detected. Forcing immediate data backup...
-DataContext.tsx:711 [DataContext] 📱 Mobile Lifecycle event detected. Forcing immediate data backup...
-DataContext.tsx:711 [DataContext] 📱 Mobile Lifecycle event detected. Forcing immediate data backup...
-client:1035 WebSocket connection to 'ws://localhost:3000/' failed: 
-ping @ client:1035
 academia-7OvxaULB.js:38 [pdf-viewer-detect][isBrowserPdfViewerPage] final: false
-client:1035 WebSocket connection to 'ws://localhost:3000/' failed: 
-ping @ client:1035
-client:1035 WebSocket connection to 'ws://localhost:3000/' failed: 
-ping @ client:1035
-DataContext.tsx:711 [DataContext] 📱 Mobile Lifecycle event detected. Forcing immediate data backup...
-DataContext.tsx:711 [DataContext] 📱 Mobile Lifecycle event detected. Forcing immediate data backup...
-DataContext.tsx:711 [DataContext] 📱 Mobile Lifecycle event detected. Forcing immediate data backup...
-client:1035 WebSocket connection to 'ws://localhost:3000/' failed: 
-ping @ client:1035
-academia-7OvxaULB.js:38 [pdf-viewer-detect][isBrowserPdfViewerPage] final: false
-client:1035 WebSocket connection to 'ws://localhost:3000/' failed: 
-ping @ client:1035
-client:1035 WebSocket connection to 'ws://localhost:3000/' failed: 
-ping @ client:1035
+main-WTYBohE8.js:54 [Bootstrap] Subscription prices set dynamically
+main-WTYBohE8.js:54 [Bootstrap] Configuration loaded.
+App-D73Meuhr.js:242 [2026-05-26T13:16:08.599Z]  @firebase/analytics: Analytics: Firebase Analytics is not supported in this environment. Wrap initialization of analytics in analytics.isSupported() to prevent initialization in unsupported environments. Details: (1) This is a browser extension environment. (analytics/invalid-analytics-context).
+LS @ App-D73Meuhr.js:242
+App-D73Meuhr.js:3826 [DataContext] Sync PAUSED
+App-D73Meuhr.js:4291 [AuthOverlay] 🔍 restoreSession triggered!
+App-D73Meuhr.js:4291 [AuthOverlay] localStorage keys - sba_school_id: null sba_force_term_select: null
+App-D73Meuhr.js:3826 [DataContext] Sync PAUSED
+App-D73Meuhr.js:3826 [Version] ⏸️ Already reloaded for v1.0.306. Waiting for CDN to propagate...
+App-D73Meuhr.js:3826 [DataContext] Sync PAUSED
+(index):1 [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://www.chromium.org/developers/design-documents/create-amazing-password-forms) null
+(index):1 [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://www.chromium.org/developers/design-documents/create-amazing-password-forms) null
+/api/initialize-payment:1  Failed to load resource: the server responded with a status of 500 ()
+App-D73Meuhr.js:4293 Paystack initialization failed: AxiosError: Request failed with status code 500
+    at c6 (App-D73Meuhr.js:3836:1091)
+    at XMLHttpRequest.y (App-D73Meuhr.js:3836:5953)
+    at Tl.request (App-D73Meuhr.js:3838:2094)
+    at async AM (App-D73Meuhr.js:4289:74346)
+    at async H (App-D73Meuhr.js:4289:78835)
+console.error @ App-D73Meuhr.js:4293
+App-D73Meuhr.js:4293 AxiosError: Request failed with status code 500
+    at c6 (App-D73Meuhr.js:3836:1091)
+    at XMLHttpRequest.y (App-D73Meuhr.js:3836:5953)
+    at Tl.request (App-D73Meuhr.js:3838:2094)
+    at async AM (App-D73Meuhr.js:4289:74346)
+    at async H (App-D73Meuhr.js:4289:78835)
+console.error @ App-D73Meuhr.js:4293

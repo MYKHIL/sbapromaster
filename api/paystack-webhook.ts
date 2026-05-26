@@ -28,7 +28,9 @@ const allowCors = (fn: (req: VercelRequest, res: VercelResponse) => Promise<any>
 
 function getAdminFirestoreForIndex(dbIndex: number) {
   const appName = `db_admin_${dbIndex}`;
-  const existingApp = admin.apps.find(app => app?.name === appName);
+  const existingApp = Array.isArray((admin as any).apps)
+    ? (admin as any).apps.find((app: any) => app?.name === appName)
+    : undefined;
   if (existingApp) {
     return existingApp.firestore();
   }

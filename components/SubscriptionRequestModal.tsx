@@ -217,6 +217,13 @@ const SubscriptionRequestModal: React.FC<SubscriptionRequestModalProps> = ({ isO
             }
         }
 
+        const amountInPesewas = Math.round(calculatedAmount * 100);
+        const MIN_PAYSTACK_AMOUNT = 100; // 1.00 GHS in pesewas
+        if (amountInPesewas > 0 && amountInPesewas < MIN_PAYSTACK_AMOUNT) {
+            setPaymentError(`Paystack transactions must be at least GH₵ ${(MIN_PAYSTACK_AMOUNT / 100).toFixed(2)}. Current amount is GH₵ ${calculatedAmount.toFixed(2)}.`);
+            return;
+        }
+
         setIsProcessingPayment(true);
 
         // Define checkPaymentAndDbStatus helper to poll verification endpoint

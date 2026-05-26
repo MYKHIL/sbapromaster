@@ -199,6 +199,16 @@ export default defineConfig(({ mode }) => {
                   }
                 }
 
+                const MIN_PAYSTACK_AMOUNT = 100;
+                if (paymentAmount > 0 && paymentAmount < MIN_PAYSTACK_AMOUNT) {
+                  res.statusCode = 400;
+                  return res.end(JSON.stringify({
+                    success: false,
+                    error: 'Paystack requires a minimum amount',
+                    message: `Paystack transactions must be at least GH₵ ${(MIN_PAYSTACK_AMOUNT / 100).toFixed(2)}.`
+                  }));
+                }
+
                 console.log(`[Mock API DEBUG] Real Paystack init for ${email}. Full Secret Key: "${secretKey}"`);
                 
                 const response = await fetch('https://api.paystack.co/transaction/initialize', {

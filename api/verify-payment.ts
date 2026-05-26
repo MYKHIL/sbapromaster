@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import admin from 'firebase-admin';
+import * as admin from 'firebase-admin';
 
 /**
  * Paystack Payment Verification Endpoint
@@ -24,7 +24,9 @@ const allowCors = (fn: (req: VercelRequest, res: VercelResponse) => Promise<any>
 // Dynamically initialize Firestore admin for a specific database index using process.env
 function getAdminFirestore(dbIndex: number) {
     const appName = `db_admin_${dbIndex}`;
-    const existingApp = admin.apps.find(app => app?.name === appName);
+    const existingApp = Array.isArray((admin as any).apps)
+        ? (admin as any).apps.find((app: any) => app?.name === appName)
+        : undefined;
     if (existingApp) {
         return existingApp.firestore();
     }

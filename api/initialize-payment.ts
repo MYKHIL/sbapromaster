@@ -26,7 +26,9 @@ const allowCors = (fn: (req: VercelRequest, res: VercelResponse) => Promise<any>
 // Dynamically initialize Firestore admin for a specific database index using process.env
 function getAdminFirestore(dbIndex: number) {
     const appName = `db_admin_${dbIndex}`;
-    const existingApp = admin.apps.find(app => app?.name === appName);
+    const existingApp = Array.isArray((admin as any).apps)
+        ? (admin as any).apps.find((app: any) => app?.name === appName)
+        : undefined;
     if (existingApp) {
         return existingApp.firestore();
     }
@@ -129,6 +131,14 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         const totalMonths = durationUnit === 'Year' ? durationValue * 12 : durationValue * 4;
         const secureAmount = (basePrice / 12) * totalMonths;
         const amountInPesewas = Math.round(secureAmount * 100);
+        const MIN_PAYSTACK_AMOUNT = 100; // 1.00 GHS in pesewas
+
+        if (amountInPesewas < MIN_PAYSTACK_AMOUNT) {
+            return res.status(400).json({
+                error: 'Invalid payment amount',
+                message: `Paystack transactions must be at least GH₵ ${(MIN_PAYSTACK_AMOUNT / 100).toFixed(2)}. Current amount is GH₵ ${ (amountInPesewas / 100).toFixed(2) }.`
+            });
+        }
 
         const targetDbIndex = (() => {
             const explicitIndex = Number(dbIndex);
