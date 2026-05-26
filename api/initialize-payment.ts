@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import admin from 'firebase-admin';
-import { getAvailableFirestoreInstance, getFirestoreInstanceForSchool } from './firestore-routing';
+import { randomUUID } from 'crypto';
+import * as admin from 'firebase-admin';
 
 /**
  * Paystack Payment Initialization Endpoint
@@ -130,56 +130,67 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         const secureAmount = (basePrice / 12) * totalMonths;
         const amountInPesewas = Math.round(secureAmount * 100);
 
-        const targetDbIndex = await (async () => {
+        const targetDbIndex = (() => {
             const explicitIndex = Number(dbIndex);
-            if (explicitIndex && !Number.isNaN(explicitIndex)) {
-                return explicitIndex;
-            }
-
-            const existingRoute = await getFirestoreInstanceForSchool(schoolId);
-            if (existingRoute) {
-                return existingRoute.dbIndex;
-            }
-
-            const available = await getAvailableFirestoreInstance();
-            return available.dbIndex;
+            return explicitIndex && !Number.isNaN(explicitIndex) ? explicitIndex : 1;
         })();
 
         // Initialize payment with Paystack
-        const response = await fetch('https://api.paystack.co/transaction/initialize', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${secretKey}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                email,
-                amount: amountInPesewas,
-                currency: 'GHS',
-                metadata: {
-                    schoolId,
-                    schoolName,
-                    dbIndex: Number(targetDbIndex),
-                    tierName,
-                    durationValue,
-                    durationUnit,
-                    email
-                }
-            }),
-        });
+        const MAX_PAYSTACK_INIT_RETRIES = 3;
+        let paystackReference = `SBA_${randomUUID()}`;
+        let initResponse: Response | null = null;
+        let initData: any = null;
 
-        const data = await response.json();
+        for (let attempt = 1; attempt <= MAX_PAYSTACK_INIT_RETRIES; attempt++) {
+            safeLog(`[Paystack API] Attempt ${attempt} initializing transaction with reference:`, paystackReference);
 
-        if (!response.ok) {
-            console.error('Paystack initialization error:', data);
-            return res.status(response.status).json({
+            initResponse = await fetch('https://api.paystack.co/transaction/initialize', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${secretKey}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email,
+                    amount: amountInPesewas,
+                    currency: 'GHS',
+                    reference: paystackReference,
+                    metadata: {
+                        schoolId,
+                        schoolName,
+                        dbIndex: Number(targetDbIndex),
+                        tierName,
+                        durationValue,
+                        durationUnit,
+                        email
+                    }
+                }),
+            });
+
+            initData = await initResponse.json();
+            const errorMessage = String(initData?.message || initData?.data?.message || '');
+            const isDuplicateReference = /duplicate transaction reference/i.test(errorMessage);
+
+            if (initResponse.ok && initData?.status !== false) {
+                break;
+            }
+
+            if (isDuplicateReference && attempt < MAX_PAYSTACK_INIT_RETRIES) {
+                safeLog('[Paystack API] Duplicate reference detected, retrying with a new reference...');
+                paystackReference = `SBA_${randomUUID()}`;
+                continue;
+            }
+
+            console.error('Paystack initialization error:', initData);
+            const statusCode = initResponse.status || 500;
+            return res.status(statusCode).json({
                 error: 'Payment initialization failed',
-                message: data.message || 'Unknown error',
-                details: data.data?.message || data.message || 'Unknown error',
+                message: initData?.message || errorMessage || 'Unknown error',
+                details: initData?.data?.message || initData?.message || 'Unknown error',
             });
         }
 
-        const reference = data.data.reference;
+        const reference = initData?.data?.reference || paystackReference;
 
         // If there's a pending registration for a new school, store it securely on the server
         if (pendingRegistration) {
@@ -206,8 +217,8 @@ async function handler(req: VercelRequest, res: VercelResponse) {
         // Return authorization URL and reference
         return res.status(200).json({
             success: true,
-            authorizationUrl: data.data.authorization_url,
-            accessCode: data.data.access_code,
+            authorizationUrl: initData.data.authorization_url,
+            accessCode: initData.data.access_code,
             reference: reference,
         });
 

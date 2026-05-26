@@ -1,11 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import admin from 'firebase-admin';
-import crypto from 'crypto';
-import {
-  getAdminFirestoreForIndex,
-  getAvailableFirestoreInstance,
-  getFirestoreInstanceForSchool,
-} from './firestore-routing';
+import * as admin from 'firebase-admin';
+import * as crypto from 'crypto';
 
 const isLocal = process.env.NODE_ENV === 'development';
 const safeLog = (...args: any[]) => {
@@ -30,6 +25,48 @@ const allowCors = (fn: (req: VercelRequest, res: VercelResponse) => Promise<any>
 
     return await fn(req, res);
   };
+
+function getAdminFirestoreForIndex(dbIndex: number) {
+  const appName = `db_admin_${dbIndex}`;
+  const existingApp = admin.apps.find(app => app?.name === appName);
+  if (existingApp) {
+    return existingApp.firestore();
+  }
+
+  const token = process.env[`FIREBASE_${dbIndex}_TOKEN`] || '';
+  const projectId = process.env[`FIREBASE_${dbIndex}_PROJECT_ID`] || '';
+
+  if (!projectId) {
+    throw new Error(`Project ID for database ${dbIndex} is not configured.`);
+  }
+
+  let app: admin.app.App;
+  if (token) {
+    app = admin.initializeApp(
+      {
+        credential: admin.credential.refreshToken(token),
+        projectId,
+      },
+      appName
+    );
+  } else {
+    const serviceAccountStr = process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT || '{}';
+    const serviceAccount = JSON.parse(serviceAccountStr);
+    if (serviceAccount && serviceAccount.project_id === projectId) {
+      app = admin.initializeApp(
+        {
+          credential: admin.credential.cert(serviceAccount),
+          projectId,
+        },
+        appName
+      );
+    } else {
+      throw new Error(`No credentials configured for database ${dbIndex}. Ensure FIREBASE_${dbIndex}_TOKEN is set.`);
+    }
+  }
+
+  return app.firestore();
+}
 
 function getTierKeySuffix(tierName: string): string {
   const name = tierName.toLowerCase();
@@ -211,26 +248,8 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     const maxStudents = parseInt(process.env[`VITE_TIER_STUDENTS_${tierKeySuffix}`] || '500', 10) || 500;
     const maxClass = parseInt(process.env[`VITE_TIER_CLASSES_${tierKeySuffix}`] || '20', 10) || 20;
 
-    let db = null as unknown as admin.firestore.Firestore;
-    let dbIndex = requestedDbIndex;
-
-    if (requestedDbIndex && !Number.isNaN(requestedDbIndex)) {
-      db = getAdminFirestoreForIndex(requestedDbIndex);
-    } else {
-      const existingRoute = await getFirestoreInstanceForSchool(schoolId);
-      if (existingRoute) {
-        db = existingRoute.db;
-        dbIndex = existingRoute.dbIndex;
-      } else {
-        const available = await getAvailableFirestoreInstance();
-        db = available.db;
-        dbIndex = available.dbIndex;
-      }
-    }
-
-    if (!db) {
-      throw new Error('Unable to resolve Firestore target instance for this school.');
-    }
+    const dbIndex = requestedDbIndex && !Number.isNaN(requestedDbIndex) ? requestedDbIndex : 1;
+    const db = getAdminFirestoreForIndex(dbIndex);
 
     const subDocRef = db.collection('subscriptions').doc(baseName);
     const existingSub = await subDocRef.get();
