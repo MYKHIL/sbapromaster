@@ -35,7 +35,7 @@ function getAdminFirestoreForIndex(dbIndex: number) {
     return existingApp.firestore();
   }
 
-  const token = process.env[`FIREBASE_${dbIndex}_TOKEN`] || '';
+  const tokenRaw = process.env[`FIREBASE_${dbIndex}_TOKEN`] || '';
   const projectId = process.env[`FIREBASE_${dbIndex}_PROJECT_ID`] || '';
 
   if (!projectId) {
@@ -43,10 +43,22 @@ function getAdminFirestoreForIndex(dbIndex: number) {
   }
 
   let app: admin.app.App;
-  if (token) {
+  let credential: admin.credential.Credential | null = null;
+  if (tokenRaw) {
+    try {
+      const tokenValue = tokenRaw.trim();
+      const tokenPayload = tokenValue.startsWith('{') ? JSON.parse(tokenValue) : tokenValue;
+      credential = admin.credential.refreshToken(tokenPayload as any);
+    } catch (error: any) {
+      console.error(`[Firebase Admin] Invalid FIREBASE_${dbIndex}_TOKEN payload:`, error?.message || error);
+      credential = null;
+    }
+  }
+
+  if (credential) {
     app = admin.initializeApp(
       {
-        credential: admin.credential.refreshToken(token),
+        credential,
         projectId,
       },
       appName
@@ -63,7 +75,7 @@ function getAdminFirestoreForIndex(dbIndex: number) {
         appName
       );
     } else {
-      throw new Error(`No credentials configured for database ${dbIndex}. Ensure FIREBASE_${dbIndex}_TOKEN is set.`);
+      throw new Error(`No valid Firebase credentials configured for database ${dbIndex}. Ensure FIREBASE_${dbIndex}_TOKEN or FIREBASE_ADMIN_SERVICE_ACCOUNT is set.`);
     }
   }
 
