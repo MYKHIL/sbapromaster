@@ -50,6 +50,40 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return () => clearInterval(intervalId);
     }, [currentUser, sendHeartbeat]);
 
+    // Keep currentUser in sync when the global users list is updated (e.g. locking/unlocking)
+    useEffect(() => {
+        if (!currentUser) return;
+        const refreshed = users.find(u => u.id === currentUser.id) || null;
+        // If the user was removed (refreshed === null), sign them out.
+        if (!refreshed) {
+            setCurrentUser(null);
+            setIsAuthenticated(false);
+            // Notify user with a lightweight global toast that they were signed out
+            try {
+                window.dispatchEvent(new CustomEvent('sba-toast', { detail: { message: 'You have been signed out: your account was removed or updated.', type: 'warning' } }));
+            } catch (e) {
+                // ignore if CustomEvent is not supported
+            }
+            return;
+        }
+
+        // If any important fields changed (like isReadOnly), update currentUser state
+        // Use a shallow comparison for the common fields to avoid unnecessary updates.
+        const keysToCheck: (keyof typeof refreshed)[] = ['id', 'name', 'role', 'isReadOnly', 'passwordHash'];
+        let changed = false;
+        for (const k of keysToCheck) {
+            // @ts-ignore
+            if ((refreshed as any)[k] !== (currentUser as any)[k]) {
+                changed = true;
+                break;
+            }
+        }
+
+        if (changed) {
+            setCurrentUser(refreshed);
+        }
+    }, [users, currentUser]);
+
     /**
      * Check for auto-login using device credentials
      */

@@ -75,7 +75,7 @@ const OnlineUsersModal: React.FC<OnlineUsersModalProps> = ({ isOpen, onClose, on
                                         <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                                         <span className="text-xs text-gray-600">Active</span>
                                     </div>
-                                    <p className="text-xs text-gray-500 mt-1">{formatLastActive(user.lastActive)}</p>
+                                    <p className="text-xs text-gray-500 mt-1">{formatLastActive(user.lastHeartbeat)}</p>
                                 </div>
                             </div>
                         ))}

@@ -4,7 +4,7 @@ import { INITIAL_SETTINGS } from '../../constants';
 
 interface RegistrationFormProps {
     // onRegister may return false to indicate registration was cancelled (e.g., duplicate name -> change name)
-    onRegister: (schoolName: string, year: string, term: string, password: string, docId: string) => Promise<boolean | void> | boolean | void;
+    onRegister: (schoolName: string, year: string, term: string, circuit: string, password: string, docId: string) => Promise<boolean | void> | boolean | void;
     onBack: () => void;
 }
 
@@ -12,6 +12,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister, onBack 
     const [schoolName, setSchoolName] = useState('');
     const [academicYear, setAcademicYear] = useState('');
     const [academicTerm, setAcademicTerm] = useState('First Term');
+    const [circuit, setCircuit] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -29,6 +30,10 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister, onBack 
         }
         if (!academicYear.trim()) {
             setError('Please enter an academic year');
+            return;
+        }
+        if (!circuit.trim()) {
+            setError('Please enter the school circuit');
             return;
         }
         if (!password) {
@@ -54,7 +59,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister, onBack 
             clearAuthCaches();
 
             // Call parent handler and await result in case parent needs to cancel
-            const result = await Promise.resolve(onRegister(schoolName, academicYear, academicTerm, password, docId));
+            const result = await Promise.resolve(onRegister(schoolName, academicYear, academicTerm, circuit, password, docId));
 
             // If parent explicitly returned false, cancel loading so user can edit
             if (result === false) {
@@ -89,7 +94,9 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister, onBack 
                                 // We need to generate ID manually or call helper. Helper is imported.
                                 // But createDocumentId is imported at line 2.
                                 const docId = createDocumentId(name, year, term);
-                                onRegister(name, year, term, pass, docId);
+                                const circuit = 'Default Circuit';
+                                // Pass circuit before password and docId to match the handler signature
+                                onRegister(name, year, term, circuit, pass, docId);
                             }}
                             className="mt-2 bg-purple-100 text-purple-700 px-3 py-1 rounded text-xs font-mono hover:bg-purple-200"
                         >
@@ -115,6 +122,22 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister, onBack 
                                 placeholder="e.g., Ayirebi D/A Basic School 'B'"
                                 disabled={loading}
                                 autoFocus
+                            />
+                        </div>
+
+                        {/* Circuit */}
+                        <div>
+                            <label htmlFor="circuit" className="block text-sm font-medium text-gray-700 mb-2">
+                                Circuit *
+                            </label>
+                            <input
+                                id="circuit"
+                                type="text"
+                                value={circuit}
+                                onChange={(e) => setCircuit(e.target.value)}
+                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors"
+                                placeholder="e.g., East Akim Circuit"
+                                disabled={loading}
                             />
                         </div>
 

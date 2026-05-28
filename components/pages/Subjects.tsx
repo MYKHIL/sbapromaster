@@ -607,7 +607,7 @@ const Subjects: React.FC = () => {
                                             <label htmlFor="subject-signature-upload" className={`cursor-pointer text-[10px] bg-white border border-gray-300 px-2.5 py-1.5 rounded-full font-bold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm ${isUploadingSignature ? 'opacity-50 cursor-not-allowed' : ''}`}>
                                                 Upload
                                             </label>
-                                            <CameraCapture onCapture={handleSigCameraCapture} disabled={isUploadingSignature} />
+                                            <CameraCapture onCapture={handleSigCameraCapture} />
                                             <button
                                                 type="button"
                                                 onClick={() => setShowSignaturePad(true)}

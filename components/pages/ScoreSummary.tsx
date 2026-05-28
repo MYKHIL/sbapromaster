@@ -111,7 +111,7 @@ const ScoreSummary: React.FC = () => {
                         if (classSpecificSubjects && classSpecificSubjects.length > 0) {
                             // Detailed Mapping: User has specific subjects for this specific class
                             classSpecificSubjects.forEach(subjectName => {
-                                const subNameLower = (subjectName || '').trim().toLowerCase();
+                                const subNameLower = String(subjectName || '').trim().toLowerCase();
                                 const subject = subjects.find(s => (s.subject || '').trim().toLowerCase() === subNameLower);
                                 if (subject) mappedSubjects.add(subject.id);
                             });
@@ -119,7 +119,7 @@ const ScoreSummary: React.FC = () => {
                             // Legacy Fallback: ONLY IF they haven't started using the specific assignment system AT ALL.
                             // If they are assigned to this class broadly, we assume all their 'allowedSubjects' are for this class.
                             (user.allowedSubjects || []).forEach(subjectName => {
-                                const subNameLower = (subjectName || '').trim().toLowerCase();
+                                const subNameLower = String(subjectName || '').trim().toLowerCase();
                                 const subject = subjects.find(s => (s.subject || '').trim().toLowerCase() === subNameLower);
                                 if (subject) mappedSubjects.add(subject.id);
                             });

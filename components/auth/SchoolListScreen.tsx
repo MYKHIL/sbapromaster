@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { getSchoolList, SchoolListItem } from '../../services/firebaseService';
+import {
+    School2,
+    MapPinned,
+    ArrowUpRight,
+    Clock3,
+    Landmark,
+    Sparkles
+} from "lucide-react";
 
 interface SchoolListScreenProps {
     onSelectSchool: (school: SchoolListItem) => void;
@@ -100,8 +108,8 @@ const SchoolListScreen: React.FC<SchoolListScreenProps> = ({ onSelectSchool, onB
             <div className="w-full max-w-2xl">
                 {/* Header */}
                 <div className="text-center mb-6">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Select Your School</h1>
-                    <p className="text-gray-600">Choose from the list of registered schools</p>
+                    <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-2 leading-tight">Select Your School</h1>
+                    <p className="text-gray-600 text-sm md:text-base">Choose from the list of registered schools</p>
                 </div>
 
                 {/* Main Card */}
@@ -154,7 +162,7 @@ const SchoolListScreen: React.FC<SchoolListScreenProps> = ({ onSelectSchool, onB
                             <div className="text-center py-12">
                                 <p className="text-red-600 mb-4">{error}</p>
                                 <button
-                                    onClick={loadSchools}
+                                    onClick={() => { void loadSchools(); }}
                                     className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
                                 >
                                     Retry
@@ -216,31 +224,85 @@ const SchoolListScreen: React.FC<SchoolListScreenProps> = ({ onSelectSchool, onB
                                             onSelectSchool(school);
                                         }}
                                         className={`w-full text-left p-4 rounded-xl border-2 transition-all duration-200 group ${isRecent ? 'border-blue-500 bg-blue-50/50' : 'border-gray-200 hover:border-blue-500 hover:bg-blue-50'}`}
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <div className="flex items-center gap-2">
-                                                    <h3 className="font-semibold text-gray-900 group-hover:text-blue-600">
-                                                        {school.displayName}
-                                                    </h3>
-                                                    {isRecent && (
-                                                        <span className="bg-blue-600 text-white text-[10px] uppercase font-bold px-1.5 py-0.5 rounded shadow-sm">
-                                                            Recent
-                                                        </span>
-                                                    )}
+                                        >
+                                        <div className="relative overflow-hidden rounded-3xl border border-gray-200/70 bg-white shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 group">
+
+                                            {/* Background Glow */}
+                                            <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-indigo-50 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                                            {/* Decorative Blur */}
+                                            <div className="absolute -top-10 -right-10 h-28 w-28 bg-blue-200/30 blur-3xl rounded-full group-hover:scale-125 transition-transform duration-500" />
+
+                                            <div className="relative flex items-center justify-between p-5">
+
+                                                {/* LEFT SECTION */}
+                                                <div className="flex items-start gap-4 min-w-0">
+
+                                                    {/* School Icon */}
+                                                    <div className="relative shrink-0">
+                                                        <div className="absolute inset-0 rounded-2xl bg-blue-500 blur-md opacity-20 group-hover:opacity-40 transition-opacity" />
+
+                                                        <div className="relative h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-200 group-hover:scale-105 transition-transform duration-300">
+                                                            <School2 className="h-7 w-7 text-white" />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* TEXT CONTENT */}
+                                                    <div className="min-w-0">
+
+                                                        {/* Name + Badge */}
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <h3 className="text-base md:text-xl font-extrabold tracking-tight text-gray-900 truncate group-hover:text-blue-700 transition-colors leading-snug">
+                                                                {school.displayName}
+                                                            </h3>
+
+                                                            {isRecent && (
+                                                                <div className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white shadow-md">
+                                                                    <Clock3 className="h-3.5 w-3.5" />
+                                                                    Recent
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Location Pills */}
+                                                        {(school.settings?.district || school.settings?.circuit) && (
+                                                            <div className="flex flex-wrap items-center gap-2 mt-2">
+
+                                                                {school.settings?.district && (
+                                                                    <div className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-sm font-medium text-gray-700">
+                                                                        <Landmark className="h-4 w-4 text-blue-500" />
+                                                                        {school.settings.district}
+                                                                    </div>
+                                                                )}
+
+                                                                {school.settings?.circuit && (
+                                                                    <div className="inline-flex items-center gap-1.5 rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700">
+                                                                        <MapPinned className="h-4 w-4" />
+                                                                        {school.settings.circuit}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+
+                                                        {/* Bottom Action Text */}
+                                                        <div className="mt-3 flex items-center gap-2 text-sm md:text-base font-medium text-gray-600 group-hover:text-blue-600 transition-colors">
+                                                            <Sparkles className="h-4 w-4" />
+                                                            <span className="leading-snug">
+                                                                {isRecent
+                                                                    ? "Continue your previous session"
+                                                                    : "Click / Tap to Login"}
+                                                            </span>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <p className="text-sm text-gray-500 mt-1">
-                                                    {isRecent ? 'Click to login again' : 'Click to continue'}
-                                                </p>
+
+                                                {/* RIGHT ACTION */}
+                                                <div className="shrink-0">
+                                                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-gray-200 bg-white shadow-sm group-hover:border-blue-200 group-hover:bg-blue-50 group-hover:shadow-md transition-all duration-300">
+                                                        <ArrowUpRight className="h-5 w-5 text-gray-500 group-hover:text-blue-600 group-hover:scale-110 transition-all duration-300" />
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <svg
-                                                className="h-6 w-6 text-gray-400 group-hover:text-blue-600 transition-colors"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                stroke="currentColor"
-                                            >
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                            </svg>
                                         </div>
                                     </button>
                                 );

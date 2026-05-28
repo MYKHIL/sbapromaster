@@ -221,7 +221,7 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ isOpen, onClose }) =>
         <div className="absolute top-0 left-0 right-0 z-[60] flex items-center justify-between p-4 md:p-6 bg-gradient-to-b from-white/95 to-white/50 backdrop-blur-sm md:bg-transparent md:backdrop-blur-none pointer-events-none">
             <div className="flex items-center gap-2 md:gap-4 pointer-events-auto">
                 <div className="w-8 h-8 md:w-10 md:h-10 bg-indigo-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200">
-                    <Info className="text-white" size={16} md:size={20} strokeWidth={3} />
+                    <Info className="text-white h-4 md:h-5" strokeWidth={3} />
                 </div>
                 <div className="flex flex-col">
                     <h2 className="font-black text-xs md:text-sm tracking-tight text-gray-800 leading-none">{activeSection.title}</h2>
@@ -238,7 +238,7 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ isOpen, onClose }) =>
                   <Menu size={18} />
                 </button>
                 <button onClick={onClose} className="p-2 bg-gray-100 md:bg-white/80 rounded-full text-gray-400 hover:text-red-500 shadow-sm transition-all">
-                    <X size={18} md:size={24} />
+                  <X className="h-4 md:h-6" />
                 </button>
             </div>
         </div>

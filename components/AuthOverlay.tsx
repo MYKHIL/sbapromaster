@@ -390,6 +390,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
         schoolName: string,
         year: string,
         term: string,
+        circuit: string,
         password: string,
         docId: string
     ) => {
@@ -422,6 +423,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 settings: {
                     ...INITIAL_SETTINGS,
                     schoolName,
+                    circuit,
                     academicYear: year,
                     academicTerm: term
                 },

@@ -28,6 +28,7 @@ import { TeacherPageRedirect } from './components/TeacherPageRedirect';
 import { SyncOverlayConnected } from './components/SyncOverlayConnected';
 import { SITE_ACTIVE } from './constants';
 import GreetingToast from './components/GreetingToast';
+import GlobalToast from './components/GlobalToast';
 import DatabaseErrorModal from './components/DatabaseErrorModal';
 import QuotaExceededBar from './components/QuotaExceededBar';
 import { isQuotaExhaustedError } from './utils/databaseErrorHandler';
@@ -164,6 +165,7 @@ const AppContent: React.FC = () => {
   return (
     <>
       <AuthOverlay>
+      <GlobalToast />
         <SyncOverlayConnected />
         <DatabaseErrorModalWrapper />
         <ConfirmationModal

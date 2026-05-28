@@ -3,6 +3,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 interface CameraCaptureProps {
     onCapture: (imageData: string) => void;
     label?: string;
+    disabled?: boolean;
 }
 
 const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, label = "Take Photo" }) => {

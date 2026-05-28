@@ -28,6 +28,7 @@
   },
   "exclude": [
     "**/*.backup.ts",
+    "**/*.bak.ts",
     "Load Testing"
   ]
 }

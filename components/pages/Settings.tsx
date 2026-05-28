@@ -163,10 +163,10 @@ const Settings: React.FC = () => {
 
 
   // Update handlers inside Settings component
-  const vacationRef = React.useRef<HTMLInputElement>(null);
-  const reopeningRef = React.useRef<HTMLInputElement>(null);
+  const vacationRef = React.useRef<HTMLInputElement | null>(null);
+  const reopeningRef = React.useRef<HTMLInputElement | null>(null);
 
-  const handleDateClick = (ref: React.RefObject<HTMLInputElement>) => {
+  const handleDateClick = (ref: React.RefObject<HTMLInputElement | null>) => {
     try {
       if (ref.current) {
         ref.current.showPicker();
@@ -261,12 +261,16 @@ const Settings: React.FC = () => {
               <input type="text" name="district" value={formData.district} onChange={handleChange} className={`${inputStyles} ${isSettingDirty('district') ? 'bg-amber-50 border-amber-500' : ''}`} disabled={!isAdmin} />
             </div>
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Address {isSettingDirty('address') && <UnsavedBadge />}</label>
-            <textarea name="address" value={formData.address} onChange={handleChange} className={`${inputStyles} ${isSettingDirty('address') ? 'bg-amber-50 border-amber-500' : ''}`} rows={3} disabled={!isAdmin} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Circuit {isSettingDirty('circuit') && <UnsavedBadge />}</label>
+              <input type="text" name="circuit" value={formData.circuit || ''} onChange={handleChange} className={`${inputStyles} ${isSettingDirty('circuit') ? 'bg-amber-50 border-amber-500' : ''}`} disabled={!isAdmin} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Address {isSettingDirty('address') && <UnsavedBadge />}</label>
+              <textarea name="address" value={formData.address} onChange={handleChange} className={`${inputStyles} ${isSettingDirty('address') ? 'bg-amber-50 border-amber-500' : ''}`} rows={3} disabled={!isAdmin} />
+            </div>
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Academic Year {isSettingDirty('academicYear') && <UnsavedBadge />}</label>
@@ -511,7 +515,7 @@ const Settings: React.FC = () => {
                 {isAdmin && (
                   <div className="space-y-2 w-full">
                     <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'logo')} disabled={isUploadingLogo} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 disabled:opacity-50" />
-                    <CameraCapture onCapture={(img) => handleCameraCapture(img, 'logo')} label={isUploadingLogo ? "Uploading..." : "Take Logo Photo"} disabled={isUploadingLogo} />
+                    <CameraCapture onCapture={(img) => handleCameraCapture(img, 'logo')} label={isUploadingLogo ? "Uploading..." : "Take Logo Photo"} />
                     {settings.logo && (
                       <button
                         type="button"
@@ -564,7 +568,7 @@ const Settings: React.FC = () => {
                 {isAdmin && (
                   <div className="space-y-2 w-full">
                     <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'headmasterSignature')} disabled={isUploadingSignature} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 disabled:opacity-50" />
-                    <CameraCapture onCapture={(img) => handleCameraCapture(img, 'headmasterSignature')} label={isUploadingSignature ? "Uploading..." : "Take Signature Photo"} disabled={isUploadingSignature} />
+                    <CameraCapture onCapture={(img) => handleCameraCapture(img, 'headmasterSignature')} label={isUploadingSignature ? "Uploading..." : "Take Signature Photo"} />
                     {/* Draw signature button */}
                     <button
                       type="button"

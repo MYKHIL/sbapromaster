@@ -27,6 +27,7 @@ export interface SchoolSettings {
   academicTerm: string;
   headmasterName: string;
   district: string;
+  circuit?: string;
   logo: string;
   headmasterSignature: string;
   vacationDate: string;
@@ -211,6 +212,8 @@ export interface OnlineUser {
   userName: string;
   role?: string;
   lastHeartbeat: string;
+  // Backwards-compatible alias used in some components
+  lastActive?: string;
 }
 
 export interface AppDataType {

@@ -192,7 +192,7 @@ export const normalizeSchoolData = (data: any): AppDataType => {
     // This handles schools created in very early versions of the app.
     const settingFields = [
         'schoolName', 'address', 'academicYear', 'academicTerm',
-        'headmasterName', 'district', 'logo', 'headmasterSignature',
+        'headmasterName', 'district', 'circuit', 'logo', 'headmasterSignature',
         'vacationDate', 'reopeningDate', 'allowStudentProgressView',
         'isPromotionTerm', 'allowPersistence', 'isDataEntryLocked',
         'indexNumberGlobalPrefix', 'indexNumberGlobalSuffix', 'indexNumberPerClass',
@@ -486,8 +486,8 @@ export const getSchoolData = async (docId: string, keysToFetch?: (keyof AppDataT
                 // CRITICAL FIX: We NO LONGER strip classes, subjects, assessments, and grades.
                 // These are metadata that act as Source of Truth for schools that haven't
                 // migrated to the 'metadata_bundle' or subcollections yet.
-                if (data.students) delete data.students;
-                if (data.scores) delete data.scores;
+                if ((data as any).students) (data as any).students = undefined;
+                if ((data as any).scores) (data as any).scores = undefined;
 
                 return data;
             } else {
@@ -554,8 +554,8 @@ export const fetchStudents = async (
                 chunkSnaps.forEach(snap => {
                     if (snap.exists()) {
                         const data = snap.data();
-                        if (data?.students) {
-                            allStudents = allStudents.concat(data.students as Student[]);
+                        if ((data as any)?.students) {
+                            allStudents = allStudents.concat((data as any).students as Student[]);
                         }
                     }
                 });
@@ -2322,11 +2322,11 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
 
                 // OPTIMIZATION: Return ONLY main data. Do not fan-in.
                 // STRIP LEGACY DATA: Same as getSchoolData
-                if (data.students) delete data.students;
-                if (data.scores) delete data.scores;
-                if (data.classes) delete data.classes;
-                if (data.subjects) delete data.subjects;
-                if (data.assessments) delete data.assessments;
+                if ((data as any).students) (data as any).students = undefined;
+                if ((data as any).scores) (data as any).scores = undefined;
+                if ((data as any).classes) (data as any).classes = undefined;
+                if ((data as any).subjects) (data as any).subjects = undefined;
+                if ((data as any).assessments) (data as any).assessments = undefined;
 
                 0 && console.log(`[FIREBASE_DEBUG] Login successful. Returning data.`);
 

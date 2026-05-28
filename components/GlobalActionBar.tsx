@@ -164,7 +164,7 @@ const GlobalActionBar: React.FC<GlobalActionBarProps> = ({ onOpenDebugModal, cur
     const getSubjectName = (id: number) => subjects.find(s => s.id === id)?.subject || `Subject #${id}`;
     const getAssessmentName = (id: number) => {
         const a = assessments.find(x => x.id === id);
-        return a ? (a.title || a.name) : `Assessment #${id}`;
+        return a ? (a.name || `Assessment #${id}`) : `Assessment #${id}`;
     };
     const getClassName = (id: number) => classes.find(c => c.id === id)?.name || `Class #${id}`;
 

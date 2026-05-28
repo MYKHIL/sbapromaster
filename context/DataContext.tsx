@@ -436,7 +436,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.319"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.320"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -471,7 +471,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, []);
 
     // Track original cloud data to compare against current state
-    const originalData = React.useRef<Partial<AppDataType>>({});
+    // Use a flexible any-ref for originalData to simplify deep-copying and assignments
+    // (assignments frequently use `any` shapes during import/merge operations).
+    const originalData = React.useRef<any>({});
     // Flag to track if we are in the initial sync phase after login
     const isInitialSyncing = React.useRef(true);
 
@@ -655,10 +657,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (draftScores.current.has(draftKey)) return true;
 
         // 2. Check individual assessment within a "locally saved" score
-        const existingScore = scores.find(s => s.id === scoreId);
+        const existingScore = scores.find((s: any) => s.id === scoreId);
         if (!existingScore) return false;
 
-        const originalScore = originalData.current.scores?.find(s => String(s.id) === scoreId);
+        const originalScore = originalData.current.scores?.find((s: any) => String(s.id) === scoreId);
         if (!originalScore) {
             // If it's a completely new score item, it's dirty if it has any meaningful content
             const _existingAssessmentScores: any = existingScore.assessmentScores;
@@ -1662,7 +1664,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const scoreId = `${studentId}-${subjectId}`;
 
         // FIX: Check if scores actually changed to prevent false dirty flags
-        const existingScore = scores.find(s => s.id === scoreId);
+        const existingScore = scores.find((s: any) => s.id === scoreId);
         const currentScores = (existingScore?.assessmentScores as any)?.[assessmentId] || [];
 
         if (deepEqual(currentScores, newScores)) {
@@ -1670,7 +1672,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
 
         // SMART DIRTY CHECK
-        const originalScore = originalData.current.scores?.find(s => String(s.id) === scoreId);
+        const originalScore = originalData.current.scores?.find((s: any) => String(s.id) === scoreId);
         const originalAssessmentScores = (originalScore?.assessmentScores as any)?.[assessmentId] || [];
         const isActuallyChanged = !deepEqual(newScores, originalAssessmentScores);
 
@@ -1730,7 +1732,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const getStudentScores = (studentId: number, subjectId: number, assessmentId: number): string[] => {
         const scoreId = `${studentId}-${subjectId}`;
-        const score = scores.find(s => s.id === scoreId);
+        const score = scores.find((s: any) => s.id === scoreId);
         return (score?.assessmentScores as any)?.[assessmentId] || [];
     };
 
@@ -3298,9 +3300,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     markDirty('scores', true);
                 }
             }
-        } else if (isRemote && Array.isArray(importedScores) && importedScores.length === 0) {
+        } else if (isRemote && Array.isArray(importedScores) && (importedScores as any).length === 0) {
             // Explicit empty array update from cloud
-            if (scores.length > 0) {
+            if ((scores as any).length > 0) {
                 setScores([]);
                 nextState.scores = [];
                 // Update baseline as well
@@ -3608,7 +3610,7 @@ const refreshFromCloud = React.useCallback(async (ignoreSyncLock: boolean = fals
                         Object.entries(mergedAssessmentScores).forEach(([assessmentId, val]) => {
                             const aid = Number(assessmentId);
                             const scores = (val || []) as any[];
-                            if (scores.length > 1) {
+                            if ((scores as any).length > 1) {
                                 const assessment = assessments.find(a => a.id === aid);
                                 const defaultBasis = assessment?.weight || 100;
                                 
@@ -3662,7 +3664,7 @@ const refreshFromCloud = React.useCallback(async (ignoreSyncLock: boolean = fals
                 // allowedSubjects
                 let allowedSubjects = user.allowedSubjects || [];
                 // Support both ID and Name (legacy)
-                const targetSubject = subjects.find(s => s.id === targetId);
+                const targetSubject = subjects.find((s: any) => s.id === targetId);
                 const duplicateSubjects = subjects.filter(s => duplicateIds.includes(s.id));
                 const duplicateNames = duplicateSubjects.map(s => s.subject);
                 

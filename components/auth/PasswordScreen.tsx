@@ -50,6 +50,11 @@ const PasswordScreen: React.FC<PasswordScreenProps> = ({ school, onPasswordVerif
                 <div className="text-center mb-6">
                     <h1 className="text-3xl font-bold text-gray-900 mb-2">Enter Password</h1>
                     <p className="text-gray-600">{school.displayName}</p>
+                    {(school.settings?.district || school.settings?.circuit) && (
+                        <p className="text-sm text-gray-500 mt-1">
+                            {[school.settings?.district, school.settings?.circuit].filter(Boolean).join(' • ')}
+                        </p>
+                    )}
                 </div>
 
                 {/* Main Card */}

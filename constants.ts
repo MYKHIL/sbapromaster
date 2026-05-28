@@ -103,6 +103,7 @@ export const setPaystackPublicKey = (key: string) => {
 export const INITIAL_SETTINGS: SchoolSettings = {
   schoolName: '',
   district: '',
+  circuit: '',
   address: '',
   academicYear: '',
   academicTerm: '',

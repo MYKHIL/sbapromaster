@@ -277,9 +277,9 @@ const SubjectAnalysis: React.FC = () => {
                 let total = 0;
                 gradeNames.forEach(grade => {
                     const count = subjectGradeCounts[subject][gender][grade] || 0;
-                    row.push(count); total += count;
+                    row.push(String(count)); total += count;
                 });
-                row.push(total);
+                row.push(String(total));
                 pdfDataSubject.push(row);
             });
         });
@@ -291,11 +291,11 @@ const SubjectAnalysis: React.FC = () => {
             let genTotal = 0;
             sortedAggregates.forEach(agg => {
                 const count = gender === 'Total' ? (aggregateCountsByGender['Male'][agg] || 0) + (aggregateCountsByGender['Female'][agg] || 0) : (aggregateCountsByGender[gender][agg] || 0);
-                row.push(count); genTotal += count;
+                row.push(String(count)); genTotal += count;
             });
             const stats = gender === 'Total' ? analysisData.passStats.Total : (gender === 'Male' ? analysisData.passStats.Male : analysisData.passStats.Female);
-            row.push(stats.count); row.push(`${stats.percentage.toFixed(1)}%`);
-            row.push(gender === 'Total' ? totalStudents : genTotal);
+            row.push(String(stats.count)); row.push(`${stats.percentage.toFixed(1)}%`);
+            row.push(String(gender === 'Total' ? totalStudents : genTotal));
             pdfDataAgg.push(row);
         });
 
