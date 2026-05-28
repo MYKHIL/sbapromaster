@@ -233,22 +233,18 @@ const SchoolListScreen: React.FC<SchoolListScreenProps> = ({ onSelectSchool, onB
                                             {/* Decorative Blur */}
                                             <div className="absolute -top-10 -right-10 h-28 w-28 bg-blue-200/30 blur-3xl rounded-full group-hover:scale-125 transition-transform duration-500" />
 
-                                            <div className="relative flex items-center justify-between p-3 sm:p-5">
+                                            <div className="relative flex items-start justify-between p-3 sm:p-5">
 
-                                                {/* School Icon - Moved to the far left */}
-                                                <div className="relative shrink-0 mr-4 sm:mr-5">
-                                                    <div className="absolute inset-0 rounded-2xl bg-blue-500 blur-md opacity-20 group-hover:opacity-40 transition-opacity" />
-
-                                                    <div className="relative h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-200 group-hover:scale-105 transition-transform duration-300">
-                                                        <School2 className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
-                                                    </div>
-                                                </div>
-
-                                                {/* LEFT SECTION (TEXT CONTENT) */}
                                                 <div className="flex-1 min-w-0">
 
-                                                    {/* TEXT CONTENT */} 
-                                                    <div className="min-w-0 flex-1">
+                                                    {/* Icon + School Name */}
+                                                    <div className="mb-3 flex items-start gap-3">
+                                                        <div className="relative h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-200 group-hover:scale-105 transition-transform duration-300">
+                                                            <School2 className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="min-w-0">
 
                                                         {/* Name + Badge */}
                                                         <div className="flex items-center gap-2 flex-wrap">

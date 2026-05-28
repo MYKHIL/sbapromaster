@@ -436,7 +436,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.322"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.323"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
