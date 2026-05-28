@@ -235,24 +235,24 @@ const SchoolListScreen: React.FC<SchoolListScreenProps> = ({ onSelectSchool, onB
 
                                             <div className="relative flex items-center justify-between p-3 sm:p-5">
 
-                                                {/* LEFT SECTION */}
-                                                <div className="flex items-start gap-4 min-w-0">
+                                                {/* School Icon - Moved to the far left */}
+                                                <div className="relative shrink-0 mr-4 sm:mr-5">
+                                                    <div className="absolute inset-0 rounded-2xl bg-blue-500 blur-md opacity-20 group-hover:opacity-40 transition-opacity" />
 
-                                                    {/* School Icon */}
-                                                    <div className="relative shrink-0">
-                                                        <div className="absolute inset-0 rounded-2xl bg-blue-500 blur-md opacity-20 group-hover:opacity-40 transition-opacity" />
-
-                                                        <div className="relative h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-200 group-hover:scale-105 transition-transform duration-300">
-                                                            <School2 className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
-                                                        </div>
+                                                    <div className="relative h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-200 group-hover:scale-105 transition-transform duration-300">
+                                                        <School2 className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
                                                     </div>
+                                                </div>
 
-                                                    {/* TEXT CONTENT */}
-                                                    <div className="min-w-0">
+                                                {/* LEFT SECTION (TEXT CONTENT) */}
+                                                <div className="flex-1 min-w-0">
+
+                                                    {/* TEXT CONTENT */} 
+                                                    <div className="min-w-0 flex-1">
 
                                                         {/* Name + Badge */}
                                                         <div className="flex items-center gap-2 flex-wrap">
-                                                            <h3 className="text-sm sm:text-base md:text-xl font-extrabold tracking-tight text-gray-900 truncate group-hover:text-blue-700 transition-colors leading-snug">
+                                                            <h3 className="text-base sm:text-lg md:text-xl font-extrabold tracking-tight text-gray-900 truncate group-hover:text-blue-700 transition-colors leading-snug">
                                                                 {school.displayName}
                                                             </h3>
 
@@ -266,19 +266,19 @@ const SchoolListScreen: React.FC<SchoolListScreenProps> = ({ onSelectSchool, onB
 
                                                         {/* Location Pills */}
                                                         {(school.settings?.district || school.settings?.circuit) && (
-                                                            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-2">
+                                                            <div className="flex flex-wrap items-center gap-1 mt-1.5 sm:mt-2">
 
                                                                 {school.settings?.district && (
-                                                                    <div className="inline-flex items-center gap-1 sm:gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap">
-                                                                        <Landmark className="h-3 w-3 sm:h-4 sm:w-4 text-blue-500" />
-                                                                        {school.settings.district}
+                                                                    <div className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-700 whitespace-nowrap">
+                                                                        <Landmark className="h-3 w-3 text-blue-500" />
+                                                                        <span className="hidden sm:inline">District: </span>{school.settings.district}
                                                                     </div>
                                                                 )}
 
                                                                 {school.settings?.circuit && (
-                                                                    <div className="inline-flex items-center gap-1 sm:gap-1.5 rounded-full border border-blue-100 bg-blue-50 px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium text-blue-700 whitespace-nowrap">
-                                                                        <MapPinned className="h-3 w-3 sm:h-4 sm:w-4" />
-                                                                        {school.settings.circuit}
+                                                                    <div className="inline-flex items-center gap-1 rounded-full border border-blue-100 bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 whitespace-nowrap">
+                                                                        <MapPinned className="h-3 w-3" />
+                                                                        <span className="hidden sm:inline">Circuit: </span>{school.settings.circuit}
                                                                     </div>
                                                                 )}
                                                             </div>
