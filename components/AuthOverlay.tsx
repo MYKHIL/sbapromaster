@@ -388,6 +388,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
 
     const handleRegistration = async (
         schoolName: string,
+        district: string,
         year: string,
         term: string,
         circuit: string,
@@ -423,6 +424,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 settings: {
                     ...INITIAL_SETTINGS,
                     schoolName,
+                    district,
                     circuit,
                     academicYear: year,
                     academicTerm: term

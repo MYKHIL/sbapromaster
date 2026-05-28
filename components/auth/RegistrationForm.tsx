@@ -4,7 +4,8 @@ import { INITIAL_SETTINGS } from '../../constants';
 
 interface RegistrationFormProps {
     // onRegister may return false to indicate registration was cancelled (e.g., duplicate name -> change name)
-    onRegister: (schoolName: string, year: string, term: string, circuit: string, password: string, docId: string) => Promise<boolean | void> | boolean | void;
+    // New signature includes `district` (asked immediately after School Name)
+    onRegister: (schoolName: string, district: string, year: string, term: string, circuit: string, password: string, docId: string) => Promise<boolean | void> | boolean | void;
     onBack: () => void;
 }
 
@@ -12,6 +13,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister, onBack 
     const [schoolName, setSchoolName] = useState('');
     const [academicYear, setAcademicYear] = useState('');
     const [academicTerm, setAcademicTerm] = useState('First Term');
+    const [district, setDistrict] = useState('');
     const [circuit, setCircuit] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -26,6 +28,10 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister, onBack 
         // Validation
         if (!schoolName.trim()) {
             setError('Please enter a school name');
+            return;
+        }
+        if (!district.trim()) {
+            setError('Please enter the school district');
             return;
         }
         if (!academicYear.trim()) {
@@ -59,7 +65,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister, onBack 
             clearAuthCaches();
 
             // Call parent handler and await result in case parent needs to cancel
-            const result = await Promise.resolve(onRegister(schoolName, academicYear, academicTerm, circuit, password, docId));
+            const result = await Promise.resolve(onRegister(schoolName, district, academicYear, academicTerm, circuit, password, docId));
 
             // If parent explicitly returned false, cancel loading so user can edit
             if (result === false) {
@@ -90,13 +96,11 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister, onBack 
                                 const year = "2024-2025";
                                 const term = "First Term";
                                 const pass = "password";
-                                // const docId = createDocumentId(name, year, term); // Use import
-                                // We need to generate ID manually or call helper. Helper is imported.
-                                // But createDocumentId is imported at line 2.
                                 const docId = createDocumentId(name, year, term);
+                                const district = 'Default District';
                                 const circuit = 'Default Circuit';
-                                // Pass circuit before password and docId to match the handler signature
-                                onRegister(name, year, term, circuit, pass, docId);
+                                // Pass district after name as per new handler signature
+                                onRegister(name, district, year, term, circuit, pass, docId);
                             }}
                             className="mt-2 bg-purple-100 text-purple-700 px-3 py-1 rounded text-xs font-mono hover:bg-purple-200"
                         >
