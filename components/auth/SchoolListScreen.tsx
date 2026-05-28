@@ -224,7 +224,7 @@ const SchoolListScreen: React.FC<SchoolListScreenProps> = ({ onSelectSchool, onB
                                             onSelectSchool(school);
                                         }}
                                         className={`w-full text-left p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 group ${isRecent ? 'border-blue-500 bg-blue-50/50' : 'border-gray-200 hover:border-blue-500 hover:bg-blue-50'}`}
-                                        >
+                                    >
                                         <div className="relative overflow-hidden rounded-3xl border border-gray-200/70 bg-white shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 group">
 
                                             {/* Background Glow */}
@@ -238,56 +238,54 @@ const SchoolListScreen: React.FC<SchoolListScreenProps> = ({ onSelectSchool, onB
                                                 <div className="flex-1 min-w-0">
 
                                                     {/* Icon + School Name */}
-                                                    <div className="mb-3 flex items-start gap-3">
-                                                        <div className="relative h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-200 group-hover:scale-105 transition-transform duration-300">
-                                                            <School2 className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="min-w-0">
-
-                                                        {/* Name + Badge */}
-                                                        <div className="flex items-center gap-2 flex-wrap">
-                                                            <h3 className="text-base sm:text-lg md:text-xl font-extrabold tracking-tight text-gray-900 truncate group-hover:text-blue-700 transition-colors leading-snug">
-                                                                {school.displayName}
-                                                            </h3>
-
-                                                            {isRecent && (
-                                                                <div className="inline-flex items-center gap-1 sm:gap-1.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-2.5 sm:px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white shadow-md whitespace-nowrap">
-                                                                    <Clock3 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                                                                    <span className="text-xs">Recent</span>
-                                                                </div>
-                                                            )}
+                                                    <div className="mb-2 flex flex-col items-center text-center gap-2">
+                                                        <div className="relative h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-200 group-hover:scale-105 transition-transform duration-300">
+                                                            <School2 className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                                                         </div>
 
-                                                        {/* Location Pills */}
-                                                        {(school.settings?.district || school.settings?.circuit) && (
-                                                            <div className="flex flex-wrap items-center gap-1 mt-1.5 sm:mt-2">
+                                                        <div className="min-w-0">
+                                                            <div className="flex items-center justify-center gap-2 flex-wrap">
+                                                                <h3 className="text-sm sm:text-base md:text-xl font-extrabold tracking-tight text-gray-900 truncate group-hover:text-blue-700 transition-colors leading-snug">
+                                                                    {school.displayName}
+                                                                </h3>
 
-                                                                {school.settings?.district && (
-                                                                    <div className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-700 whitespace-nowrap">
-                                                                        <Landmark className="h-3 w-3 text-blue-500" />
-                                                                        <span className="hidden sm:inline">District: </span>{school.settings.district}
-                                                                    </div>
-                                                                )}
-
-                                                                {school.settings?.circuit && (
-                                                                    <div className="inline-flex items-center gap-1 rounded-full border border-blue-100 bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 whitespace-nowrap">
-                                                                        <MapPinned className="h-3 w-3" />
-                                                                        <span className="hidden sm:inline">Circuit: </span>{school.settings.circuit}
+                                                                {isRecent && (
+                                                                    <div className="inline-flex items-center gap-1 sm:gap-1.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-2.5 sm:px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white shadow-md whitespace-nowrap">
+                                                                        <Clock3 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                                                                        <span className="text-xs">Recent</span>
                                                                     </div>
                                                                 )}
                                                             </div>
-                                                        )}
 
-                                                        {/* Bottom Action Text */}
-                                                        <div className="mt-3 flex items-center gap-2 text-xs sm:text-sm md:text-base font-medium text-gray-600 group-hover:text-blue-600 transition-colors">
-                                                            <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                                                            <span className="leading-snug">
-                                                                {isRecent
-                                                                    ? "Continue your previous session"
-                                                                    : "Click / Tap to Login"}
-                                                            </span>
+                                                            {/* Location Pills */}
+                                                            {(school.settings?.district || school.settings?.circuit) && (
+                                                                <div className="flex flex-wrap justify-center items-center gap-1 mt-1.5 sm:mt-2">
+
+                                                                    {school.settings?.district && (
+                                                                        <div className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-[0.68rem] sm:text-xs font-medium text-gray-700 whitespace-nowrap">
+                                                                            <Landmark className="h-3 w-3 text-blue-500" />
+                                                                            <span className="hidden sm:inline">District: </span>{school.settings.district}
+                                                                        </div>
+                                                                    )}
+
+                                                                    {school.settings?.circuit && (
+                                                                        <div className="inline-flex items-center gap-1 rounded-full border border-blue-100 bg-blue-50 px-2 py-0.5 text-[0.68rem] sm:text-xs font-medium text-blue-700 whitespace-nowrap">
+                                                                            <MapPinned className="h-3 w-3" />
+                                                                            <span className="hidden sm:inline">Circuit: </span>{school.settings.circuit}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+
+                                                            {/* Bottom Action Text */}
+                                                            <div className="mt-3 flex items-center justify-center gap-2 text-xs sm:text-sm md:text-base font-medium text-gray-600 group-hover:text-blue-600 transition-colors">
+                                                                <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                                                <span className="leading-snug">
+                                                                    {isRecent
+                                                                        ? "Continue your previous session"
+                                                                        : "Click / Tap to Login"}
+                                                                </span>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
