@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { getSchoolList, SchoolListItem } from '../../services/firebaseService';
 import {
     School2,
-    MapPinned,
-    ArrowUpRight,
+    ArrowRight,
     Clock3,
-    Landmark,
-    Sparkles
+    Sparkles,
+    Search,
+    RefreshCw,
+    ChevronLeft
 } from "lucide-react";
 
 interface SchoolListScreenProps {
@@ -104,74 +105,82 @@ const SchoolListScreen: React.FC<SchoolListScreenProps> = ({ onSelectSchool, onB
     };
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-            <div className="w-full max-w-2xl">
+        /* The dynamic flowing background is applied here to the entire screen viewport */
+        <div className="flex flex-col items-center justify-center min-h-screen p-3 sm:p-6 antialiased selection:bg-blue-500/10 water-flow-bg">
+            
+            {/* Direct, high-visibility animation definitions */}
+            <style>{`
+                @keyframes fluidMovement {
+                    0% { background-position: 0% 50%; }
+                    50% { background-position: 100% 50%; }
+                    100% { background-position: 0% 50%; }
+                }
+                .water-flow-bg {
+                    background: linear-gradient(-45deg, #eff6ff, #dbeafe, #bfdbfe, #e0f2fe, #f0fdf4);
+                    background-size: 300% 300%;
+                    animation: fluidMovement 10s ease infinite !important;
+                }
+            `}</style>
+
+            <div className="w-full max-w-xl">
+                
                 {/* Header */}
-                <div className="text-center mb-6">
-                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 mb-2 leading-tight">Select Your School</h1>
-                    <p className="text-gray-600 text-xs sm:text-sm md:text-base">Choose from the list of registered schools</p>
+                <div className="text-center mb-6 sm:mb-8">
+                    <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-1.5 drop-shadow-xs">
+                        Select Your School
+                    </h1>
+                    <p className="text-slate-600 text-sm font-medium">
+                        Choose from the list of registered institutions below
+                    </p>
                 </div>
 
-                {/* Main Card */}
-                <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6">
-                    {/* Search Bar with Reload Button */}
-                    <div className="mb-6 flex flex-col sm:flex-row gap-3">
+                {/* Translucent Main Card Wrapper to let the flow shine through */}
+                <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-white/40 shadow-xl overflow-hidden">
+                    
+                    {/* Controls Toolbar */}
+                    <div className="p-3 sm:p-4 border-b border-slate-200/50 bg-white/40 flex gap-2">
                         <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                             <input
                                 type="text"
-                                placeholder="Search schools..."
+                                placeholder="Search school name..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 text-sm sm:text-base border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors"
+                                className="w-full pl-9 pr-4 py-2 text-sm sm:text-base bg-white/90 border border-slate-200 rounded-xl placeholder-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 focus:outline-none transition-all duration-200"
                             />
-                            <svg
-                                className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
                         </div>
                         <button
                             onClick={() => loadSchools(true)}
                             disabled={loading}
-                            className="px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 text-gray-700 rounded-xl transition-colors flex items-center justify-center sm:justify-start gap-2 border-2 border-gray-200 text-sm sm:text-base"
+                            className="p-2 sm:px-4 bg-white/90 hover:bg-white disabled:bg-slate-50/50 text-slate-600 hover:text-slate-900 rounded-xl transition-all border border-slate-200 flex items-center justify-center gap-2 text-sm font-medium shadow-2xs active:scale-95"
                             title="Reload school list"
                         >
-                            <svg
-                                className={`h-4 w-4 sm:h-5 sm:w-5 ${loading ? 'animate-spin' : ''}`}
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
+                            <RefreshCw className={`h-4 w-4 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
                             <span className="hidden sm:inline">Reload</span>
                         </button>
                     </div>
 
-                    {/* School List */}
-                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {/* School List Viewport */}
+                    <div className="divide-y divide-slate-200/40 max-h-[460px] overflow-y-auto">
                         {loading ? (
-                            <div className="text-center py-12">
-                                <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                                <p className="mt-4 text-sm sm:text-base text-gray-600">Loading schools...</p>
+                            <div className="text-center py-16 px-4">
+                                <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-slate-200 border-b-blue-600"></div>
+                                <p className="mt-3 text-sm font-medium text-slate-500">Loading institutions...</p>
                             </div>
                         ) : error ? (
-                            <div className="text-center py-12">
-                                <p className="text-sm sm:text-base text-red-600 mb-4">{error}</p>
+                            <div className="text-center py-16 px-6">
+                                <p className="text-sm font-medium text-red-600 mb-4">{error}</p>
                                 <button
                                     onClick={() => { void loadSchools(); }}
-                                    className="bg-blue-600 text-white px-4 py-2 text-sm sm:text-base rounded-lg hover:bg-blue-700"
+                                    className="inline-flex items-center justify-center bg-slate-900 text-white font-medium px-4 py-2 text-sm rounded-xl hover:bg-slate-800 transition-colors shadow-2xs active:scale-95"
                                 >
                                     Retry
                                 </button>
                             </div>
                         ) : filteredSchools.length === 0 ? (
-                            <div className="text-center py-12">
-                                <p className="text-sm sm:text-base text-gray-600">
-                                    {searchQuery ? 'No schools found matching your search.' : 'No schools registered yet.'}
+                            <div className="text-center py-16 px-6">
+                                <p className="text-sm font-medium text-slate-500">
+                                    {searchQuery ? 'No schools matched your search criteria.' : 'No schools registered yet.'}
                                 </p>
                             </div>
                         ) : (
@@ -223,80 +232,67 @@ const SchoolListScreen: React.FC<SchoolListScreenProps> = ({ onSelectSchool, onB
 
                                             onSelectSchool(school);
                                         }}
-                                        className={`w-full text-left p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 group ${isRecent ? 'border-blue-500 bg-blue-50/50' : 'border-gray-200 hover:border-blue-500 hover:bg-blue-50'}`}
+                                        className={`w-full text-left p-4 flex items-center justify-between gap-3 transition-all duration-150 group relative ${
+                                            isRecent 
+                                                ? 'bg-blue-50/50 hover:bg-blue-100/60' 
+                                                : 'bg-white/40 hover:bg-blue-50/40'
+                                        }`}
                                     >
-                                        <div className="relative overflow-hidden rounded-3xl border border-gray-200/70 bg-white shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 group">
+                                        <div className="flex items-start gap-3 min-w-0 flex-1">
+                                            {/* Colored School Icon Box */}
+                                            <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 border transition-all duration-200 shadow-xs ${
+                                                isRecent 
+                                                    ? 'bg-blue-600 text-white border-blue-600' 
+                                                    : 'bg-blue-50 text-blue-600 border-blue-100 group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600'
+                                            }`}>
+                                                <School2 className="h-5 w-5" />
+                                            </div>
 
-                                            {/* Background Glow */}
-                                            <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-indigo-50 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-                                            {/* Decorative Blur */}
-                                            <div className="absolute -top-10 -right-10 h-28 w-28 bg-blue-200/30 blur-3xl rounded-full group-hover:scale-125 transition-transform duration-500" />
-
-                                            <div className="relative flex items-start justify-between p-3 sm:p-5">
-
-                                                <div className="flex-1 min-w-0">
-
-                                                    {/* Icon + School Name */}
-                                                    <div className="mb-2 flex flex-col items-center text-center gap-2">
-                                                        <div className="relative h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-200 group-hover:scale-105 transition-transform duration-300">
-                                                            <School2 className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                                                        </div>
-
-                                                        <div className="min-w-0">
-                                                            <div className="flex items-center justify-center gap-2 flex-wrap">
-                                                                <h3 className="text-sm sm:text-base md:text-xl font-extrabold tracking-tight text-gray-900 truncate group-hover:text-blue-700 transition-colors leading-snug">
-                                                                    {school.displayName}
-                                                                </h3>
-
-                                                                {isRecent && (
-                                                                    <div className="inline-flex items-center gap-1 sm:gap-1.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-2.5 sm:px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white shadow-md whitespace-nowrap">
-                                                                        <Clock3 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                                                                        <span className="text-xs">Recent</span>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-
-                                                            {/* Location Pills */}
-                                                            {(school.settings?.district || school.settings?.circuit) && (
-                                                                <div className="flex flex-wrap justify-center items-center gap-1 mt-1.5 sm:mt-2">
-
-                                                                    {school.settings?.district && (
-                                                                        <div className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-[0.68rem] sm:text-xs font-medium text-gray-700 whitespace-nowrap">
-                                                                            <Landmark className="h-3 w-3 text-blue-500" />
-                                                                            <span className="hidden sm:inline">District: </span>{school.settings.district}
-                                                                        </div>
-                                                                    )}
-
-                                                                    {school.settings?.circuit && (
-                                                                        <div className="inline-flex items-center gap-1 rounded-full border border-blue-100 bg-blue-50 px-2 py-0.5 text-[0.68rem] sm:text-xs font-medium text-blue-700 whitespace-nowrap">
-                                                                            <MapPinned className="h-3 w-3" />
-                                                                            <span className="hidden sm:inline">Circuit: </span>{school.settings.circuit}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            )}
-
-                                                            {/* Bottom Action Text */}
-                                                            <div className="mt-3 flex items-center justify-center gap-2 text-xs sm:text-sm md:text-base font-medium text-gray-600 group-hover:text-blue-600 transition-colors">
-                                                                <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                                                                <span className="leading-snug">
-                                                                    {isRecent
-                                                                        ? "Continue your previous session"
-                                                                        : "Click / Tap to Login"}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                            {/* School Details */}
+                                            <div className="min-w-0 flex-1 flex flex-col gap-1">
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <h3 className="font-bold text-slate-800 group-hover:text-blue-700 transition-colors text-sm sm:text-base leading-snug break-words pr-2">
+                                                        {school.displayName}
+                                                    </h3>
+                                                    {isRecent && (
+                                                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-600 text-white px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase shrink-0 shadow-xs">
+                                                            <Clock3 className="h-2.5 w-2.5" />
+                                                            Recent
+                                                        </span>
+                                                    )}
                                                 </div>
 
-                                                {/* RIGHT ACTION */}
-                                                <div className="shrink-0">
-                                                    <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl border border-gray-200 bg-white shadow-sm group-hover:border-blue-200 group-hover:bg-blue-50 group-hover:shadow-md transition-all duration-300">
-                                                        <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500 group-hover:text-blue-600 group-hover:scale-110 transition-all duration-300" />
+                                                {/* Meta Info Badges with Custom Emojis */}
+                                                {(school.settings?.district || school.settings?.circuit) && (
+                                                    <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                                                        {school.settings?.district && (
+                                                            <span className="inline-flex items-center gap-1 rounded-md bg-white border border-slate-200/60 px-1.5 py-0.5 text-xs font-medium text-slate-700 max-w-full shadow-3xs">
+                                                                <span className="text-sm shrink-0">🏛️</span>
+                                                                <span className="truncate"><span className="text-slate-400 font-normal">Dist:</span> {school.settings.district}</span>
+                                                            </span>
+                                                        )}
+                                                        {school.settings?.circuit && (
+                                                            <span className="inline-flex items-center gap-1 rounded-md bg-white border border-slate-200/60 px-1.5 py-0.5 text-xs font-medium text-slate-700 max-w-full shadow-3xs">
+                                                                <span className="text-sm shrink-0">📍</span>
+                                                                <span className="truncate"><span className="text-slate-400 font-normal">Circ:</span> {school.settings.circuit}</span>
+                                                            </span>
+                                                        )}
                                                     </div>
+                                                )}
+
+                                                {/* Interactive Action Prompt Footer Sub-text */}
+                                                <div className="flex items-center gap-1 text-[11px] font-medium text-blue-600/70 group-hover:text-blue-600 transition-colors mt-0.5">
+                                                    <Sparkles className="h-3 w-3 shrink-0 text-blue-500/80" />
+                                                    <span>
+                                                        {isRecent ? "Continue session" : "Tap to choose school"}
+                                                    </span>
                                                 </div>
                                             </div>
+                                        </div>
+
+                                        {/* Action Arrow Display Guard */}
+                                        <div className="h-7 w-7 rounded-lg border border-blue-200 bg-blue-50 flex items-center justify-center shrink-0 opacity-0 scale-95 translate-x-2 group-hover:opacity-100 group-hover:scale-100 group-hover:translate-x-0 transition-all duration-200 shadow-xs">
+                                            <ArrowRight className="h-3.5 w-3.5 text-blue-600" />
                                         </div>
                                     </button>
                                 );
@@ -304,25 +300,23 @@ const SchoolListScreen: React.FC<SchoolListScreenProps> = ({ onSelectSchool, onB
                         )}
                     </div>
 
-                    {/* Back Button */}
-                    <div className="mt-6 pt-6 border-t border-gray-200">
+                    {/* Return Action Footer Element */}
+                    <div className="p-3 sm:p-4 bg-white/40 border-t border-slate-200/50">
                         <button
                             onClick={onBack}
-                            className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2.5 sm:py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
+                            className="w-full bg-white hover:bg-slate-50 text-slate-700 font-semibold py-2 px-4 rounded-xl transition-all border border-slate-200 flex items-center justify-center gap-2 text-sm shadow-2xs active:scale-98"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                            </svg>
+                            <ChevronLeft className="h-4 w-4 text-slate-500" />
                             <span>Back</span>
                         </button>
                     </div>
                 </div>
 
-                {/* Results Count */}
+                {/* Sub Counter */}
                 {!loading && !error && (
-                    <div className="text-center mt-4">
-                        <p className="text-xs sm:text-sm text-gray-600">
-                            {searchQuery ? `Found ${filteredSchools.length} matches` : `Showing ${filteredSchools.length} recommended schools`}
+                    <div className="text-center mt-3">
+                        <p className="text-xs font-medium text-slate-500">
+                            {searchQuery ? `Found ${filteredSchools.length} matches` : `Showing ${filteredSchools.length} items`}
                         </p>
                     </div>
                 )}
