@@ -208,7 +208,7 @@ const SchoolListScreen: React.FC<SchoolListScreenProps> = ({ onSelectSchool, onB
                                             localStorage.setItem('sba_last_accessed_school', JSON.stringify(school));
                                             onSelectSchool(school);
                                         }}
-                                        className={`group relative flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 sm:p-5 rounded-2xl border cursor-pointer transition-all duration-300 shadow-lg hover:-translate-y-1 hover:shadow-2xl ${
+                                        className={`group relative flex flex-col gap-3 p-3 sm:p-4 rounded-2xl border cursor-pointer transition-all duration-300 shadow-lg hover:-translate-y-0.5 hover:shadow-2xl ${
                                             isRecent 
                                                 ? 'border-indigo-600 bg-white/95 ring-1 ring-indigo-600/40' 
                                                 : 'border-slate-200 bg-white hover:border-indigo-400 hover:bg-white'
@@ -217,62 +217,55 @@ const SchoolListScreen: React.FC<SchoolListScreenProps> = ({ onSelectSchool, onB
                                         {/* Premium Subtle Internal Hover Glow Mesh */}
                                         <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-indigo-500/0 to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
-                                        {/* Left Side Info Panel */}
-                                        <div className="flex flex-col sm:flex-row sm:items-center gap-4 min-w-0 z-10 w-full">
-                                            {/* School Icon Avatar Frame - Always colored to enhance design premiumness */}
-                                            <div className={`h-11 w-11 shrink-0 rounded-xl flex items-center justify-center transition-all duration-300 shadow-sm group-hover:scale-105 ${
-                                                isRecent 
-                                                    ? 'bg-gradient-to-br from-indigo-600 to-violet-600 text-white' 
-                                                    : 'bg-indigo-50 border border-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-transparent'
-                                            }`}>
-                                                <School2 className="h-5 w-5" />
+                                        <div className="relative z-10 w-full">
+                                            <div className="flex items-center justify-between gap-3 w-full">
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className={`h-10 w-10 flex-shrink-0 rounded-xl flex items-center justify-center transition-all duration-300 shadow-sm group-hover:scale-105 ${
+                                                        isRecent 
+                                                            ? 'bg-gradient-to-br from-indigo-600 to-violet-600 text-white' 
+                                                            : 'bg-indigo-50 border border-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-transparent'
+                                                    }`}>
+                                                        <School2 className="h-5 w-5" />
+                                                    </div>
+
+                                                    <div className="min-w-0">
+                                                        <h3 className={`text-sm sm:text-base font-semibold leading-tight text-slate-900 ${
+                                                            isRecent 
+                                                                ? 'text-indigo-950' 
+                                                                : 'text-slate-700'
+                                                        }`}>
+                                                            {school.displayName}
+                                                        </h3>
+                                                    </div>
+                                                </div>
+
+                                                <div className="shrink-0">
+                                                    <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-300/40 bg-white/60 text-slate-950 opacity-0 group-hover:opacity-100 group-hover:border-indigo-300 group-hover:bg-indigo-700 group-hover:text-white transition-all duration-300 shadow-sm">
+                                                        <ArrowUpRight className="h-4.5 w-4.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-300" />
+                                                    </div>
+                                                </div>
                                             </div>
 
-                                            {/* Details Metadata Wrapper */}
-                                            <div className="min-w-0 flex-1 space-y-2">
-                                                <div className="flex flex-col gap-2">
-                                                    <h3 className={`text-base sm:text-lg font-semibold leading-tight text-slate-900 ${
-                                                        isRecent 
-                                                            ? 'text-indigo-950' 
-                                                            : 'text-slate-700'
-                                                    }`}>
-                                                        {school.displayName}
-                                                    </h3>
-                                                    {isRecent && (
-                                                        <span className="inline-flex items-center gap-0.5 rounded-full bg-indigo-700 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-white shadow-sm">
-                                                            <Clock3 className="h-2.5 w-2.5" /> Recent
+                                            {(school.settings?.district || school.settings?.circuit) && (
+                                                <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] font-semibold leading-snug">
+                                                    {school.settings?.district && (
+                                                        <span className="inline-flex items-center gap-1 rounded-md bg-indigo-950/10 border border-indigo-950/10 px-2 py-1 text-indigo-950">
+                                                            <Landmark className="h-3 w-3 text-indigo-800" />
+                                                            {school.settings.district}
+                                                        </span>
+                                                    )}
+                                                    {school.settings?.circuit && (
+                                                        <span className="inline-flex items-center gap-1 rounded-md bg-sky-950/10 border border-sky-950/10 px-2 py-1 text-sky-950">
+                                                            <MapPinned className="h-3 w-3 text-sky-800" />
+                                                            {school.settings.circuit}
                                                         </span>
                                                     )}
                                                 </div>
+                                            )}
 
-                                                {(school.settings?.district || school.settings?.circuit) && (
-                                                    <div className="flex flex-wrap items-center gap-2">
-                                                        {school.settings?.district && (
-                                                            <span className="inline-flex items-center gap-1 rounded-md bg-indigo-950/10 border border-indigo-950/10 px-2 py-0.5 text-[11px] font-bold text-indigo-950">
-                                                                <Landmark className="h-3 w-3 text-indigo-800" />
-                                                                {school.settings.district}
-                                                            </span>
-                                                        )}
-                                                        {school.settings?.circuit && (
-                                                            <span className="inline-flex items-center gap-1 rounded-md bg-sky-950/10 border border-sky-950/10 px-2 py-0.5 text-[11px] font-bold text-sky-950">
-                                                                <MapPinned className="h-3 w-3 text-sky-800" />
-                                                                {school.settings.circuit}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                )}
-
-                                                <p className="text-xs sm:text-sm text-slate-700 font-semibold leading-snug">
-                                                    {isRecent ? 'Resume active session' : 'Secure gateway authentication'}
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        {/* Right-Aligned Navigation Indicator */}
-                                        <div className="shrink-0 z-10 mt-4 sm:mt-0 sm:ml-3">
-                                            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-300/40 bg-white/60 text-slate-950 opacity-0 group-hover:opacity-100 group-hover:border-indigo-300 group-hover:bg-indigo-700 group-hover:text-white transition-all duration-300 shadow-sm">
-                                                <ArrowUpRight className="h-5 w-5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-300" />
-                                            </div>
+                                            <p className="mt-2 text-xs sm:text-sm text-slate-700 font-semibold leading-snug">
+                                                {isRecent ? 'Resume active session' : 'Secure gateway authentication'}
+                                            </p>
                                         </div>
                                     </div>
                                 );
