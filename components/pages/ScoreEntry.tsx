@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useData } from '../../context/DataContext';
 import { DIRTY_INDICATOR_BG, DIRTY_INDICATOR_TEXT, DIRTY_INDICATOR_SECONDARY_TEXT, DIRTY_INDICATOR_HOVER_BG, DIRTY_INDICATOR_BORDER } from '../../constants';
 import { useUser } from '../../context/UserContext';
@@ -17,6 +17,14 @@ const ScoreEntry: React.FC<{ onNavigate?: (page: Page, meta?: NavigationMeta) =>
     const { students = [], subjects: allSubjects = [], assessments = [], classes: allClasses = [], users: allUsers = [], getStudentScores, updateStudentScores, isOnline, isSyncing, isFetching, queuedCount, hasLocalChanges, setHasLocalChanges, isDirty, updateDraftScore, removeDraftScore, getComputedScore, draftVersion, scores, saveToCloud, refreshFromCloud, pendingCount, getPendingUploadData, loadScores, isDraftScore, isScoreDirty, refreshVersion } = useData();
     const { currentUser } = useUser();
     const isReadOnly = currentUser?.role === 'Guest';
+
+    const navigateTo = useCallback((page: Page, meta?: NavigationMeta) => {
+        if (onNavigate) {
+            onNavigate(page, meta);
+        } else {
+            window.dispatchEvent(new CustomEvent('app-navigate', { detail: { page, meta } }));
+        }
+    }, [onNavigate]);
 
     // Debug Modal State
     const [isDebugModalOpen, setIsDebugModalOpen] = useState(false);
@@ -1143,7 +1151,6 @@ const ScoreEntry: React.FC<{ onNavigate?: (page: Page, meta?: NavigationMeta) =>
             </div>
 
             {/* Desktop View: Grid Table & Mobile Card View */}
-            <ReadOnlyWrapper allowedRoles={['Admin', 'Teacher']}>
                 {!canEnterScores ? (
                     // Show prioritized helpful panels when any required control is missing
                     classes.length === 0 ? (
@@ -1155,10 +1162,8 @@ const ScoreEntry: React.FC<{ onNavigate?: (page: Page, meta?: NavigationMeta) =>
                                 <h3 className="text-lg font-bold text-red-800">No Registered Classes Found</h3>
                                 <p className="text-sm text-red-700">You must register classes and assign teachers before entering academic scores.</p>
                                 <button
-                                    onClick={() => {
-                                        if (onNavigate) onNavigate('Classes & Teachers');
-                                        else window.dispatchEvent(new CustomEvent('app-navigate', { detail: { page: 'Classes & Teachers' } }));
-                                    }}
+                                    type="button"
+                                    onClick={() => navigateTo('Classes & Teachers')}
                                     className="mt-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow transition duration-200 transform hover:scale-105 active:scale-95"
                                 >
                                     Click here to add teachers and classes
@@ -1176,10 +1181,8 @@ const ScoreEntry: React.FC<{ onNavigate?: (page: Page, meta?: NavigationMeta) =>
                                     <h3 className="text-lg font-bold text-red-800">No Subjects Assigned</h3>
                                     <p className="text-sm text-red-700">No subjects are linked to teachers for this class.</p>
                                     <button
-                                        onClick={() => {
-                                            if (onNavigate) onNavigate('Settings', { openUserManagement: true, returnTo: 'Score Entry' });
-                                            else window.dispatchEvent(new CustomEvent('app-navigate', { detail: { page: 'Settings', meta: { openUserManagement: true, returnTo: 'Score Entry' } } }));
-                                        }}
+                                        type="button"
+                                        onClick={() => navigateTo('Settings', { openUserManagement: true, returnTo: 'Score Entry' })}
                                         className="mt-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow transition duration-200"
                                     >Open User Management</button>
                                 </div>
@@ -1205,10 +1208,8 @@ const ScoreEntry: React.FC<{ onNavigate?: (page: Page, meta?: NavigationMeta) =>
                                 <h3 className="text-lg font-bold text-amber-800">No Registered Students Found</h3>
                                 <p className="text-sm text-amber-700">You must add students before entering academic scores.</p>
                                 <button
-                                    onClick={() => {
-                                        if (onNavigate) onNavigate('Students');
-                                        else window.dispatchEvent(new CustomEvent('app-navigate', { detail: { page: 'Students' } }));
-                                    }}
+                                    type="button"
+                                    onClick={() => navigateTo('Students')}
                                     className="mt-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg shadow transition duration-200 transform hover:scale-105 active:scale-95"
                                 >
                                     Click here to add students
@@ -1222,9 +1223,10 @@ const ScoreEntry: React.FC<{ onNavigate?: (page: Page, meta?: NavigationMeta) =>
                         </div>
                     )
                 ) : (
-                    <div className={`lg:bg-white lg:rounded-xl lg:shadow-md lg:border lg:border-gray-200 ${useMobileView ? 'hidden lg:block' : 'block'}`}>
-                        <div className="overflow-x-visible lg:overflow-x-auto pb-4 lg:pb-0">
-                            <table className="min-w-full text-left block lg:table">
+                    <ReadOnlyWrapper allowedRoles={['Admin', 'Teacher']}>
+                        <div className={`lg:bg-white lg:rounded-xl lg:shadow-md lg:border lg:border-gray-200 ${useMobileView ? 'hidden lg:block' : 'block'}`}>
+                            <div className="overflow-x-visible lg:overflow-x-auto pb-4 lg:pb-0">
+                                <table className="min-w-full text-left block lg:table">
                                 <thead className="bg-gray-50 hidden lg:table-header-group">
                                     <tr className="border-b">
                                         <th className="p-4 font-semibold text-gray-600 w-12 text-center">#</th>
@@ -1263,8 +1265,8 @@ const ScoreEntry: React.FC<{ onNavigate?: (page: Page, meta?: NavigationMeta) =>
                             </table>
                         </div>
                     </div>
+                    </ReadOnlyWrapper>
                 )}
-            </ReadOnlyWrapper>
 
             {isModalOpen && modalData && (
                 <ScoreManagementModal

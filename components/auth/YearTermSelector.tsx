@@ -3,7 +3,7 @@ import { getSchoolYearsAndTerms, SchoolPeriod, SchoolListItem } from '../../serv
 
 interface YearTermSelectorProps {
     school: SchoolListItem; // Changed from schoolName to full school object
-    onSelectPeriod: (period: SchoolPeriod) => void;
+    onSelectPeriod: (period: SchoolPeriod) => Promise<void> | void;
     onBack: () => void;
 }
 
@@ -11,6 +11,7 @@ const YearTermSelector: React.FC<YearTermSelectorProps> = ({ school, onSelectPer
     const [periods, setPeriods] = useState<SchoolPeriod[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [selectedLoadingDocId, setSelectedLoadingDocId] = useState<string | null>(null);
     const hasFetchedRef = React.useRef(false);
 
     const [mostRecentDocId, setMostRecentDocId] = useState<string | null>(null);
@@ -117,14 +118,20 @@ const YearTermSelector: React.FC<YearTermSelectorProps> = ({ school, onSelectPer
         }
     };
 
-    const handleSelectPeriod = (period: SchoolPeriod) => {
+    const handleSelectPeriod = async (period: SchoolPeriod) => {
+        setSelectedLoadingDocId(period.docId);
         try {
             const storageKey = `last_accessed_period_${school.docId}`;
             localStorage.setItem(storageKey, period.docId);
         } catch (e) {
             console.warn('Failed to save MRU preference:', e);
         }
-        onSelectPeriod(period);
+
+        try {
+            await onSelectPeriod(period);
+        } finally {
+            setSelectedLoadingDocId(null);
+        }
     };
 
     return (
@@ -211,11 +218,14 @@ const YearTermSelector: React.FC<YearTermSelectorProps> = ({ school, onSelectPer
                                         <div className={`bg-white border-t border-gray-200 transition-[max-height,opacity] duration-300 overflow-hidden ${isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
                                             {yearPeriods.map(period => {
                                                 const isMostRecentPeriod = period.docId === mostRecentDocId;
+                                                const isSelectedLoading = period.docId === selectedLoadingDocId;
                                                 return (
                                                     <button
                                                         key={period.docId}
+                                                        type="button"
                                                         onClick={() => handleSelectPeriod(period)}
-                                                        className={`w-full text-left px-5 py-4 border-b last:border-b-0 transition-colors group flex items-center justify-between gap-4 ${isMostRecentPeriod ? 'bg-blue-50 border-blue-200' : 'hover:bg-blue-50 border-transparent'}`}
+                                                        disabled={Boolean(selectedLoadingDocId)}
+                                                        className={`w-full text-left px-5 py-4 border-b last:border-b-0 transition-colors group flex items-center justify-between gap-4 ${isMostRecentPeriod ? 'bg-blue-50 border-blue-200' : 'hover:bg-blue-50 border-transparent'} ${selectedLoadingDocId ? 'opacity-80 cursor-not-allowed' : ''}`}
                                                     >
                                                         <div className="flex items-center gap-3">
                                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 group-hover:text-indigo-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -223,7 +233,18 @@ const YearTermSelector: React.FC<YearTermSelectorProps> = ({ school, onSelectPer
                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l6.16-3.422A12.083 12.083 0 0118 20.5c0 .667-.057 1.316-.167 1.942L12 14z" />
                                                             </svg>
                                                             <div>
-                                                                <p className="font-medium text-gray-900">{period.term}</p>
+                                                                <p className="font-medium text-gray-900 flex items-center gap-2">
+                                                                    <span>{period.term}</span>
+                                                                    {isSelectedLoading && (
+                                                                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600">
+                                                                            <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                                                <circle cx="12" cy="12" r="10" strokeWidth="3" opacity="0.2" />
+                                                                                <path d="M22 12a10 10 0 00-10-10" strokeWidth="3" strokeLinecap="round" />
+                                                                            </svg>
+                                                                            Loading
+                                                                        </span>
+                                                                    )}
+                                                                </p>
                                                                 {isMostRecentPeriod && (
                                                                     <span className="text-xs text-blue-700">Last accessed term</span>
                                                                 )}

@@ -688,6 +688,15 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
         setCurrentStep('password');
     };
 
+    const handleBackToYearTerm = () => {
+        if (!selectedSchool) {
+            setSelectedPeriod(null);
+            setCurrentStep('school-list');
+            return;
+        }
+        setCurrentStep('year-term');
+    };
+
     // ========== LOGIN EXECUTION ==========
 
     const executeLogin = async (docId: string) => {
@@ -977,7 +986,7 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                         users={sortedUsers}
                         onLogin={handleUserLogin}
                         onSetPassword={handleSetPassword}
-                        onBack={handleLogoutSession}
+                        onBack={handleBackToYearTerm}
                     />
                 );
             default:
