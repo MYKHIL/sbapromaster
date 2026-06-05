@@ -60,18 +60,26 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ onSave, onClose }) => {
 
   // Update ctx stroke style whenever color or tool changes
   const applyCtxStyle = useCallback((ctx: CanvasRenderingContext2D, currentTool: Tool, currentColor: string) => {
-    if (currentTool === 'eraser') {
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = ERASER_WIDTH;
-    } else {
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = currentColor;
-      ctx.lineWidth = PEN_WIDTH;
-    }
+    ctx.globalCompositeOperation = 'source-over';
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
+    if (currentTool === 'eraser') {
+      ctx.strokeStyle = '#ffffff';
+      ctx.fillStyle = '#ffffff';
+      ctx.lineWidth = ERASER_WIDTH;
+    } else {
+      ctx.strokeStyle = currentColor;
+      ctx.fillStyle = currentColor;
+      ctx.lineWidth = PEN_WIDTH;
+    }
   }, []);
+
+  const drawDot = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
+    ctx.beginPath();
+    ctx.arc(x, y, ctx.lineWidth / 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.closePath();
+  };
 
   const getPos = (e: React.MouseEvent | React.TouchEvent, canvas: HTMLCanvasElement) => {
     const rect = canvas.getBoundingClientRect();
@@ -88,10 +96,17 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ onSave, onClose }) => {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+    const pos = getPos(e, canvas);
     applyCtxStyle(ctx, tool, color);
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+    lastPos.current = pos;
     setIsDrawing(true);
-    if (tool === 'pen') setIsEmpty(false);
-    lastPos.current = getPos(e, canvas);
+
+    if (tool === 'pen') {
+      setIsEmpty(false);
+      drawDot(ctx, pos.x, pos.y);
+    }
   }, [tool, color, applyCtxStyle]);
 
   const draw = useCallback((e: React.MouseEvent | React.TouchEvent) => {

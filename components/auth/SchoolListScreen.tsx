@@ -112,7 +112,7 @@ const SchoolListScreen: React.FC<SchoolListScreenProps> = ({ onSelectSchool, onB
                 <div className="text-center mb-8">
                     <div className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-indigo-600/10 backdrop-blur-md border border-indigo-600/20 text-indigo-950 font-extrabold text-xs tracking-wider uppercase mb-4 shadow-sm">
                         <Sparkles className="h-4 w-4 text-indigo-700 animate-pulse" /> 
-                        Portals Gateway
+                        SBA Portals Gateway
                     </div>
                     <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight mb-3">
                         Select Your School

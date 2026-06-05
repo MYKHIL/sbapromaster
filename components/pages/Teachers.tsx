@@ -52,6 +52,7 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta, onNavigate }) => {
     const [modalError, setModalError] = useState<string | null>(null);
     const [showSignaturePad, setShowSignaturePad] = useState(false);
     const [isUploadingSignature, setIsUploadingSignature] = useState(false);
+    const [teacherNamesText, setTeacherNamesText] = useState('');
 
     // Context menu state for teacher signature download
     const [sigContextMenu, setSigContextMenu] = useState<{ x: number; y: number } | null>(null);
@@ -192,6 +193,7 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta, onNavigate }) => {
     const handleAddNew = () => {
         setModalError(null);
         setCurrentClassData(EMPTY_TEACHER_FORM);
+        setTeacherNamesText('');
         setIsModalOpen(true);
         recordAction('Opened modal to add new teacher/class');
     };
@@ -200,6 +202,9 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta, onNavigate }) => {
         if (canEditClass(cls)) {
             setModalError(null);
             setCurrentClassData(cls);
+            setTeacherNamesText((cls.teacherNames && cls.teacherNames.length)
+                ? cls.teacherNames.join('\n')
+                : cls.teacherName || '');
             setIsModalOpen(true);
             recordAction(`Opened modal to edit teacher for class: ${cls.name}`);
         }
@@ -256,7 +261,8 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta, onNavigate }) => {
 
         if (name === 'teacherNamesCSV') {
             const valueString: string = String(value || '');
-            const arr = (valueString.split(/[\n,;]+/) as string[])
+            setTeacherNamesText(valueString);
+            const arr = (valueString.split(/[\n\r,;]+/) as string[])
                 .map((s: string) => s.trim())
                 .filter((s: string): s is string => s.length > 0);
 
@@ -399,6 +405,7 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta, onNavigate }) => {
             // STAY OPEN ON ADD
             setSaveFeedback("Class Added Successfully!");
             setCurrentClassData(EMPTY_TEACHER_FORM);
+            setTeacherNamesText('');
 
             // Explicit focus AND select for batch entry (after reset)
             setTimeout(() => {
@@ -702,7 +709,7 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta, onNavigate }) => {
                                     <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 mb-2 text-xs text-blue-700">
                                         Separate multiple class teachers with a comma or new line. The first entered teacher is auto-selected for report card display.
                                     </div>
-                                    <textarea name="teacherNamesCSV" value={(currentClassData.teacherNames && currentClassData.teacherNames.join(', ')) || currentClassData.teacherName || ''} onChange={handleChange} required className={`${inputStyles} py-1.5 text-sm h-20`} placeholder="Enter teacher names separated by commas or new lines (e.g. John Doe, Jane Smith)" />
+                                    <textarea name="teacherNamesCSV" value={teacherNamesText} onChange={handleChange} required className={`${inputStyles} py-1.5 text-sm h-20`} placeholder="Enter teacher names separated by commas or new lines (e.g. John Doe, Jane Smith)" />
 
                                     <div className="mt-2 text-xs text-gray-600">
                                         <div className="font-semibold mb-1">Show on Report Card</div>

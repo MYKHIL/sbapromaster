@@ -31,46 +31,40 @@ const ReadOnlyWrapper: React.FC<ReadOnlyWrapperProps> = ({
     const { settings } = useData();
     const { currentUser, isAuthenticated } = useUser();
 
-    // If global lock is on, ONLY admins can edit.
-    // Use isReadOnly flag from user profile
-    const isLocked = settings.isDataEntryLocked;
+    const isLocked = Boolean(settings?.isDataEntryLocked);
     const isUserReadOnly = currentUser?.isReadOnly || false;
 
-    const canEdit = isAuthenticated && currentUser && !isUserReadOnly && (
-        currentUser.role === 'Admin' || (!isLocked && allowedRoles.includes(currentUser.role))
+    const hasRolePermission = isAuthenticated && currentUser && (
+        currentUser.role === 'Admin' || allowedRoles.includes(currentUser.role)
     ) && (requiresAdmin ? currentUser.role === 'Admin' : true);
 
-    const permissionValue: PermissionContextType = {
-        canEdit,
-        canDelete: canEdit,
-        canAdd: canEdit,
-        isReadOnly: !canEdit,
-        userRole: currentUser?.role || null,
-    };
+    const canEditValue: boolean = (hasRolePermission && !isUserReadOnly && (!isLocked || (currentUser && currentUser.role === 'Admin'))) || false;
 
-    // Use fieldset when read-only to automatically disable all native inputs and buttons
-    // We add simple reset styles to avoid breaking layout as much as possible
-    if (!canEdit) {
-        return (
-            <PermissionContext.Provider value={permissionValue}>
+    const permissionValue = {
+        canEdit: canEditValue,
+        canDelete: canEditValue,
+        canAdd: canEditValue as boolean,
+        isReadOnly: (!canEditValue) as boolean,
+        userRole: (currentUser?.role || null) as UserRole | null,
+    } as PermissionContextType;
+
+    const wrapperContent = (
+        <PermissionContext.Provider value={permissionValue}>
+            {canEditValue ? (
+                <div className="w-full">{children}</div>
+            ) : (
                 <fieldset
                     disabled={true}
                     className="read-only-mode w-full border-none p-0 m-0 min-w-0 block"
-                    style={{ inheritParams: 'none' } as any} // Helper for some CSS-in-JS issues? No, just standard valid props
+                    style={{ inheritParams: 'none' } as any}
                 >
                     {children}
                 </fieldset>
-            </PermissionContext.Provider>
-        );
-    }
-
-    return (
-        <PermissionContext.Provider value={permissionValue}>
-            <div className="">
-                {children}
-            </div>
+            )}
         </PermissionContext.Provider>
     );
+
+    return wrapperContent;
 };
 
 /**

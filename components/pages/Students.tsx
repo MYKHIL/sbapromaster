@@ -152,9 +152,9 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
     // Filter students based on user permissions
     const accessibleStudents = useMemo(() => {
         if (!isAuthenticated || !currentUser) return students;
-        if (currentUser.role === 'Admin') return students;
-        // Teachers and Guests are restricted to allowed classes
-        return students.filter(s => currentUser.allowedClasses.includes(s.class));
+            if (currentUser.role === 'Admin') return students;
+            // Teachers and Guests are restricted to allowed classes
+            return students.filter(s => (currentUser?.allowedClasses || []).includes(s.class));
     }, [students, currentUser, isAuthenticated]);
 
     // Derived list of classes available for "Add Student" or filtering
@@ -237,7 +237,7 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
         const keys = ['name', 'indexNumber', 'gender', 'class', 'dateOfBirth', 'age'];
         const data = filteredStudents.map(s => ({
             ...s,
-            age: calculateAge(s.dateOfBirth)
+            age: calculateAge(s.dateOfBirth || '')
         }));
         exportToExcel(data, headers, keys, 'Students_List', 'Students');
     };
@@ -246,7 +246,7 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
 
     const handleConfirmPdfExport = () => {
         exportStudentListPDF(
-            filteredStudents.map(s => ({ name: s.name, indexNumber: s.indexNumber, gender: s.gender, class: s.class, dateOfBirth: s.dateOfBirth || '' })),
+            filteredStudents.map(s => ({ name: s.name, indexNumber: s.indexNumber || '', gender: s.gender, class: s.class, dateOfBirth: s.dateOfBirth || '' })),
             selectedClass,
             settings.schoolName || '',
             'Students_List',
@@ -396,7 +396,8 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
             }
         } else {
             // In manual mode, index number is also required
-            if (!currentStudent.name.trim() || !currentStudent.indexNumber.trim() || !currentStudent.class) {
+            const indexNumberTrimmed = (currentStudent.indexNumber || '').trim();
+            if (!currentStudent.name.trim() || !indexNumberTrimmed || !currentStudent.class) {
                 setModalError("Please ensure Name, Index Number, and Class are filled out.");
                 return;
             }
@@ -518,7 +519,7 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
 
                     {/* Add Student Button */}
                     <ReadOnlyWrapper allowedRoles={['Admin', 'Teacher']}>
-                        {(currentUser?.role === 'Admin' || (currentUser?.role === 'Teacher' && currentUser.allowedClasses.length > 0)) && (
+                        {(currentUser?.role === 'Admin' || (currentUser?.role === 'Teacher' && (currentUser?.allowedClasses || []).length > 0)) && (
                             <div className="flex items-center gap-3">
                                 <button
                                     onClick={handleAddNew}

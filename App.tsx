@@ -101,6 +101,7 @@ const DatabaseErrorModalWrapper: React.FC = () => {
 };
 
 import ConfirmationModal from './components/ConfirmationModal';
+import LockNoticeBanner from './components/LockNoticeBanner';
 
 const AppContent: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>(() => {
@@ -189,6 +190,7 @@ const AppContent: React.FC = () => {
         <div className="flex h-screen overflow-hidden bg-gray-50">
           <Sidebar currentPage={currentPage} setCurrentPage={handleNavigate} />
           <main className="flex-1 p-4 pt-20 pb-36 md:p-6 md:pt-20 md:pb-32 lg:p-10 overflow-auto">
+            <LockNoticeBanner />
             <PageWrapper name="Settings" currentPage={currentPage}>
               <DataManagement navigationMeta={navigationMeta} />
             </PageWrapper>
