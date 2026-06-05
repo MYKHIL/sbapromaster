@@ -12,6 +12,7 @@ const LockNoticeBanner: React.FC = () => {
     const { currentUser } = useUser();
 
     const [isLockModalOpen, setIsLockModalOpen] = React.useState(false);
+    const [navigateToUserManagement, setNavigateToUserManagement] = React.useState(false);
 
     // Hidden until refresh only
     const [isDismissed, setIsDismissed] = React.useState(
@@ -24,6 +25,20 @@ const LockNoticeBanner: React.FC = () => {
         (window as any).__lockBannerDismissed = true;
         setIsDismissed(true);
     };
+
+    React.useEffect(() => {
+        if (navigateToUserManagement && !isLockModalOpen) {
+            window.dispatchEvent(
+                new CustomEvent('app-navigate', {
+                    detail: {
+                        page: 'Settings',
+                        meta: { openUserManagement: true },
+                    },
+                })
+            );
+            setNavigateToUserManagement(false);
+        }
+    }, [navigateToUserManagement, isLockModalOpen]);
 
     if (!isLocked || isDismissed) return null;
 
@@ -38,14 +53,8 @@ const LockNoticeBanner: React.FC = () => {
             : 'Your account is restricted from editing. You can still view pages, but cannot make any changes. Please contact an administrator to unlock your account.';
 
     const openUserManagement = () => {
-        window.dispatchEvent(
-            new CustomEvent('app-navigate', {
-                detail: {
-                    page: 'Settings',
-                    meta: { openUserManagement: true },
-                },
-            })
-        );
+        setIsLockModalOpen(false);
+        setNavigateToUserManagement(true);
     };
 
     return (
