@@ -128,7 +128,22 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister, onBack 
                                 autoFocus
                             />
                         </div>
-
+                        
+                        {/* District */}
+                        <div>
+                            <label htmlFor="district" className="block text-sm font-medium text-gray-700 mb-2">
+                                District *
+                            </label>
+                            <input
+                                id="district"
+                                type="text"
+                                value={district}
+                                onChange={(e) => setDistrict(e.target.value)}
+                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors"
+                                placeholder="e.g., Accra Metropolitan"
+                                disabled={loading}
+                            />
+                        </div>
                         {/* Circuit */}
                         <div>
                             <label htmlFor="circuit" className="block text-sm font-medium text-gray-700 mb-2">

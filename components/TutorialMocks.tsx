@@ -73,6 +73,7 @@ export const MockRegistrationForm: React.FC<{ typingField?: string; typingVal?: 
       <h2 className="font-bold text-gray-800 text-sm mb-4">Register New School</h2>
       {[
         { label: 'School Name', id: 'name' },
+        { label: 'District', id: 'district' },
         { label: 'Academic Year', id: 'year' },
         { label: 'Term', id: 'term' },
         { label: 'Password', id: 'pass' }
