@@ -197,7 +197,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegister, onBack 
                         {/* Password */}
                         <div>
                             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                                Password *
+                                Set School's Password *
                             </label>
                             <div className="relative">
                                 <input
