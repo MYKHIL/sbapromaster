@@ -837,67 +837,74 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         if (editingUserId) {
             // Editing existing user - update and close form
             await handleUpdateExistingUser();
-        } else {
-            // New user flow - create the user
-            if (users.length > 0) {
-                const newUser = users[0];
-                if (!newUser.name || newUser.name.trim() === '') {
-                    showError('User must have a name');
-                    return;
-                }
+            return;
+        }
 
-                // Create new user object and add to existingUsers
-                const newUserObj: User = {
-                    id: Date.now(),
-                    name: newUser.name!,
-                    role: newUser.role!,
-                    allowedClasses: newUser.role === 'Admin' ? classNames : (newUser.allowedClasses || []),
-                    allowedSubjects: newUser.role === 'Admin' ? subjectList.map(s => s.id) : (newUser.allowedSubjects || []),
-                    classSubjects: newUser.classSubjects || {},
-                    passwordHash: '',
-                };
+        // For setup mode, route mobile submit through the setup create handler
+        if (mode === 'setup') {
+            await handleCreateSetupUser();
+            return;
+        }
 
-                const updatedUsers = [...existingUsers, newUserObj];
-                setExistingUsers(updatedUsers);
-
-                // Notify parent of immediate update
-                if (onUpdate) {
-                    try {
-                        onUpdate(updatedUsers);
-                    } catch (err) {
-                        0 && console.error('[AdminSetup] onUpdate callback failed', err);
-                    }
-                }
-
-                // If in management mode, persist immediately so users aren't lost on reload
-                if (mode === 'management' && onComplete) {
-                    setIsApplyingChanges(true);
-                    try {
-                        await onComplete(updatedUsers);
-                        setError('✅ User changes saved to cloud.');
-                    } catch (err) {
-                        console.error('[AdminSetup] Failed to save new user immediately:', err);
-                        setError('Failed to save new user. Please try Apply Changes.');
-                    } finally {
-                        setIsApplyingChanges(false);
-                    }
-                }
-
-                // Close form and return to selection page
-                setUsers([]);
-                setError(null);
-                setMobileUserFormPage(0);
-
-                // Select newly created user and restore scroll
-                setSelectedMobileUser(newUserObj.id);
-                previousSelectedMobileUserRef.current = null;
-
-                setTimeout(() => {
-                    if (existingUsersListRef.current) {
-                        existingUsersListRef.current.scrollTop = savedScrollPosition;
-                    }
-                }, 0);
+        // Non-setup (management) new user flow - create the user
+        if (users.length > 0) {
+            const newUser = users[0];
+            if (!newUser.name || newUser.name.trim() === '') {
+                showError('User must have a name');
+                return;
             }
+
+            // Create new user object and add to existingUsers
+            const newUserObj: User = {
+                id: Date.now(),
+                name: newUser.name!,
+                role: newUser.role!,
+                allowedClasses: newUser.role === 'Admin' ? classNames : (newUser.allowedClasses || []),
+                allowedSubjects: newUser.role === 'Admin' ? subjectList.map(s => s.id) : (newUser.allowedSubjects || []),
+                classSubjects: newUser.classSubjects || {},
+                passwordHash: '',
+            };
+
+            const updatedUsers = [...existingUsers, newUserObj];
+            setExistingUsers(updatedUsers);
+
+            // Notify parent of immediate update
+            if (onUpdate) {
+                try {
+                    onUpdate(updatedUsers);
+                } catch (err) {
+                    0 && console.error('[AdminSetup] onUpdate callback failed', err);
+                }
+            }
+
+            // If in management mode, persist immediately so users aren't lost on reload
+            if (mode === 'management' && onComplete) {
+                setIsApplyingChanges(true);
+                try {
+                    await onComplete(updatedUsers);
+                    setError('✅ User changes saved to cloud.');
+                } catch (err) {
+                    console.error('[AdminSetup] Failed to save new user immediately:', err);
+                    setError('Failed to save new user. Please try Apply Changes.');
+                } finally {
+                    setIsApplyingChanges(false);
+                }
+            }
+
+            // Close form and return to selection page
+            setUsers([]);
+            setError(null);
+            setMobileUserFormPage(0);
+
+            // Select newly created user and restore scroll
+            setSelectedMobileUser(newUserObj.id);
+            previousSelectedMobileUserRef.current = null;
+
+            setTimeout(() => {
+                if (existingUsersListRef.current) {
+                    existingUsersListRef.current.scrollTop = savedScrollPosition;
+                }
+            }, 0);
         }
     };
 
