@@ -32,7 +32,7 @@ interface AdminSetupProps {
 const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, currentUser, onComplete, onUpdate, onCancel, externalError, isFetching }) => {
     const [showCloseWarning, setShowCloseWarning] = useState(false);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-    const { classes, subjects, addClass, updateClass, saveClasses, subscription } = useData();
+    const { classes, subjects, addClass, updateClass, deleteClass, saveClasses, subscription } = useData();
     const { logout } = useUser();
     const [users, setUsers] = useState<Partial<User>[]>(mode === 'setup' ? [{ role: 'Admin' as UserRole, allowedClasses: [], allowedSubjects: [] }] : []);
     const [existingUsers, setExistingUsers] = useState<User[]>(initialUsers);
@@ -46,6 +46,8 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
     const [addClassError, setAddClassError] = useState<string | null>(null);
     const [isCreatingClass, setIsCreatingClass] = useState(false);
     const [localNewClasses, setLocalNewClasses] = useState<string[]>([]);
+    const [editingClassId, setEditingClassId] = useState<number | null>(null);
+    const [deleteConfirmClassId, setDeleteConfirmClassId] = useState<number | null>(null);
     const [pendingClassTeacherChanges, setPendingClassTeacherChanges] = useState<Record<string, string[]>>({});
     const [pendingReportTeacherChanges, setPendingReportTeacherChanges] = useState<Record<string, string[]>>({});
     const [pendingNewClasses, setPendingNewClasses] = useState<Array<{ name: string; teacherNames?: string[] }>>([]);
@@ -439,6 +441,29 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         setShowAddClassModal(true);
     };
 
+    const handleEditClass = (cls: any) => {
+        setEditingClassId(cls.id);
+        setNewClassName(cls.name || '');
+        setNewTeacherName(cls.teacherName || '');
+        setAssignAsTeacher(false);
+        setCurrentUserIndexForClass(null);
+        setAddClassError(null);
+        setShowAddClassModal(true);
+    };
+
+    const executeDeleteClass = (id: number) => {
+        try {
+            deleteClass(id);
+            // Clean local caches
+            setLocalNewClasses(prev => prev.filter(cn => cn !== (classes.find(c => c.id === id)?.name || '')));
+            setDeleteConfirmClassId(null);
+            setAddClassError(null);
+        } catch (e) {
+            console.error('Failed to delete class', e);
+            setAddClassError('Failed to delete class. Please try again.');
+        }
+    };
+
     const handleCreateClass = async () => {
         setAddClassError(null);
 
@@ -459,9 +484,11 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         }
 
         // Check for duplicates (including locally created ones)
+        const isEditing = editingClassId !== null;
+        const lcNewName = (newClassName || '').trim().toLowerCase();
         const isDuplicate = classNames.some(cn =>
-            (cn || '').trim().toLowerCase() === (newClassName || '').trim().toLowerCase()
-        );
+            (cn || '').trim().toLowerCase() === lcNewName
+        ) && !isEditing;
         if (isDuplicate) {
             setAddClassError('A class with this name already exists');
             return;
@@ -469,8 +496,9 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
 
         // Check for duplicate class + teacher combination
         const isDuplicateCombination = classes.some(cls =>
-            (cls.name || '').trim().toLowerCase() === (newClassName || '').trim().toLowerCase() &&
-            (cls.teacherName || '').trim().toLowerCase() === (newTeacherName || '').trim().toLowerCase()
+            (cls.name || '').trim().toLowerCase() === lcNewName &&
+            (cls.teacherName || '').trim().toLowerCase() === (newTeacherName || '').trim().toLowerCase() &&
+            (!isEditing || cls.id !== editingClassId)
         );
         if (isDuplicateCombination) {
             setAddClassError('This Class + Teacher combination already exists');
@@ -485,7 +513,12 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
 
             if (mode === 'management') {
                 // Add to pending new classes
-                setPendingNewClasses(prev => [...prev, { name: className, teacherNames: assignAsTeacher ? [teacher] : (teacher ? [teacher] : []) }]);
+                if (isEditing) {
+                    // Update existing class in management mode
+                    updateClass({ id: editingClassId!, name: className, teacherName: teacher, teacherNames: teacher ? [teacher] : [] } as any);
+                } else {
+                    setPendingNewClasses(prev => [...prev, { name: className, teacherNames: assignAsTeacher ? [teacher] : (teacher ? [teacher] : []) }]);
+                }
                 setLocalNewClasses(prev => [...new Set([...prev, className])]);
 
                 // Auto-select newly created class in user's allowedClasses if currently editing/adding a user
@@ -515,18 +548,29 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                 setNewTeacherName('');
                 setAssignAsTeacher(false);
                 setCurrentUserIndexForClass(null);
+                setEditingClassId(null);
                 setShowAddClassModal(false);
                 setAddClassError(null);
             } else {
-                // Immediate creation (setup mode)
-                const newId = addClass({
-                    name: className,
-                    teacherName: teacher,
-                    teacherNames: teacher ? [teacher] : [],
-                    teacherSignature: ''
-                });
+                // Immediate creation (setup mode) or update if editing
+                if (isEditing) {
+                    updateClass({ id: editingClassId!, name: className, teacherName: teacher, teacherNames: teacher ? [teacher] : [] } as any);
+                    setNewClassName('');
+                    setNewTeacherName('');
+                    setAssignAsTeacher(false);
+                    setCurrentUserIndexForClass(null);
+                    setEditingClassId(null);
+                    setShowAddClassModal(false);
+                    setAddClassError(null);
+                } else {
+                    const newId = addClass({
+                        name: className,
+                        teacherName: teacher,
+                        teacherNames: teacher ? [teacher] : [],
+                        teacherSignature: ''
+                    });
 
-                if (newId) {
+                    if (newId) {
                     setLocalNewClasses(prev => [...new Set([...prev, className])]);
                     
                     // Auto-select newly created class in user's allowedClasses if currently editing/adding a user
@@ -552,14 +596,15 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                         }
                     }
 
-                    setNewClassName('');
-                    setNewTeacherName('');
-                    setAssignAsTeacher(false);
-                    setCurrentUserIndexForClass(null);
-                    setShowAddClassModal(false);
-                    setAddClassError(null);
-                } else {
-                    setAddClassError('Failed to create class. Please try again.');
+                        setNewClassName('');
+                        setNewTeacherName('');
+                        setAssignAsTeacher(false);
+                        setCurrentUserIndexForClass(null);
+                        setShowAddClassModal(false);
+                        setAddClassError(null);
+                    } else {
+                        setAddClassError('Failed to create class. Please try again.');
+                    }
                 }
             }
         } catch (err) {
@@ -1991,6 +2036,27 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                 </div>
                             )}
 
+                            {/* Existing classes list with edit/delete */}
+                            {classes && classes.filter(c => !c.deleted).length > 0 && (
+                                <div className="mt-3">
+                                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Existing Classes</h4>
+                                    <div className="max-h-40 overflow-y-auto space-y-2">
+                                        {classes.filter(c => !c.deleted).map(cls => (
+                                            <div key={cls.id} className="flex items-center justify-between p-2 bg-gray-50 border border-gray-100 rounded-md">
+                                                <div>
+                                                    <div className="text-sm font-medium text-gray-800">{cls.name}</div>
+                                                    <div className="text-xs text-gray-500">{cls.teacherName || 'No teacher'}</div>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <button type="button" onClick={() => handleEditClass(cls)} className="text-xs px-2 py-1 bg-blue-50 text-blue-700 rounded-md border border-blue-100">Edit</button>
+                                                    <button type="button" onClick={() => setDeleteConfirmClassId(cls.id)} className="text-xs px-2 py-1 bg-rose-50 text-rose-700 rounded-md border border-rose-100">Delete</button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             {addClassError && (
                                 <p className="text-red-600 text-sm font-semibold p-2 bg-red-50 rounded-lg border border-red-200">
                                     {addClassError}
@@ -2022,6 +2088,19 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                 </button>
                             </div>
                         </form>
+                        {/* Confirm delete modal for classes */}
+                        <ConfirmationModal
+                            isOpen={deleteConfirmClassId !== null}
+                            onClose={() => setDeleteConfirmClassId(null)}
+                            onConfirm={() => {
+                                if (deleteConfirmClassId !== null) executeDeleteClass(deleteConfirmClassId);
+                            }}
+                            title="Delete Class"
+                            message={
+                                `Are you sure you want to delete ${classes.find(c => c.id === deleteConfirmClassId)?.name || 'this class'}? This action can be undone by restoring from history.`
+                            }
+                            variant="warning"
+                        />
                     </div>
                 </div>
             )}
