@@ -772,8 +772,17 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             }
 
             // Auto-login as admin - call UserContext.login with (userId, password, userOverride)
-            await login(adminUser.id, adminPassword, adminUser);
-            await setUserPassword(adminUser.id, adminPassword);
+            let loginSuccess = await login(adminUser.id, adminPassword, adminUser);
+
+            if (!loginSuccess) {
+                0 && console.log('[AuthOverlay] 🔁 Initial admin login failed, retrying after setting password');
+                await setUserPassword(adminUser.id, adminPassword);
+                loginSuccess = await login(adminUser.id, adminPassword, adminUser);
+            }
+
+            if (!loginSuccess) {
+                throw new Error('Auto-login failed after admin setup');
+            }
 
             // Save user credentials
             localStorage.setItem('sba_user_id', adminUser.id.toString());

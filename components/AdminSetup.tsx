@@ -592,17 +592,17 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
     // Calculate if all users are read-only for the bulk checkbox
     const allReadOnly = existingUsers.length > 0 && existingUsers.every(u => u.isReadOnly);
 
-    const handleSubmit = async () => {
-        setError(null);
+    const handleCreateSetupUser = async () => {
+        if (users.length === 0) return;
 
-        // Validate all users have names
-        if (users.some(u => !u.name || u.name.trim() === '')) {
-            showError('All users must have a name');
+        const newUser = users[0];
+        if (!newUser.name || newUser.name.trim() === '') {
+            showError('User must have a name');
             return;
         }
 
-        // For setup mode, validate password
-        if (mode === 'setup') {
+        const isFirstAdmin = mode === 'setup' && existingUsers.length === 0 && newUser.role === 'Admin';
+        if (isFirstAdmin) {
             if (!adminPassword || adminPassword.trim() === '') {
                 showError('Admin password is required');
                 return;
@@ -613,29 +613,75 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
             }
         }
 
-        // Show loading feedback for setup mode
+        const newUserObj: User = {
+            id: Date.now(),
+            name: newUser.name!,
+            role: newUser.role!,
+            allowedClasses: newUser.role === 'Admin' ? classNames : (newUser.allowedClasses || []),
+            allowedSubjects: newUser.role === 'Admin' ? subjectList.map(s => s.id) : (newUser.allowedSubjects || []),
+            classSubjects: newUser.classSubjects || {},
+            passwordHash: isFirstAdmin ? await hashPassword(adminPassword) : (newUser.passwordHash || ''),
+        };
+
+        const updatedUsers = [...existingUsers, newUserObj];
+        setExistingUsers(updatedUsers);
+        setUsers([]);
+        setError(null);
+        setMobileUserFormPage(0);
+        setSelectedMobileUser(newUserObj.id);
+        previousSelectedMobileUserRef.current = null;
+
+        setTimeout(() => {
+            if (existingUsersListRef.current) {
+                existingUsersListRef.current.scrollTop = savedScrollPosition;
+            }
+        }, 0);
+    };
+
+    const handleSubmit = async () => {
+        setError(null);
+
         if (mode === 'setup') {
-            setError('⏳ Setting up users and logging you in...');
+            if (editingUserId !== null) {
+                await handleUpdateExistingUser();
+                return;
+            }
+
+            if (users.length > 0) {
+                await handleCreateSetupUser();
+                return;
+            }
+
+            if (existingUsers.length === 0) {
+                showError('Please create at least one user before completing setup');
+                return;
+            }
+
+            setError('⏳ Finalizing setup and logging you in...');
+            await onComplete(existingUsers, adminPassword);
+            return;
         }
 
-        // Create final user list with IDs and hashed passwords (if in setup mode)
-        // CRITICAL: All fields must be defined (not undefined) for Firestore
+        // Validate all users have names
+        if (users.some(u => !u.name || u.name.trim() === '')) {
+            showError('All users must have a name');
+            return;
+        }
+
+        // Create final user list with IDs and hashed passwords
         const finalUsers: User[] = await Promise.all(
             users.map(async (u, index) => ({
-                id: mode === 'setup' ? Date.now() + index : (u.id || Date.now() + index),
-                name: u.name || '',  // Ensure string, not undefined
-                role: u.role || 'Teacher',  // Ensure role is defined
+                id: u.id || Date.now() + index,
+                name: u.name || '',
+                role: u.role || 'Teacher',
                 allowedClasses: u.role === 'Admin' ? classNames : (u.allowedClasses || []),
                 allowedSubjects: u.role === 'Admin' ? subjectList.map(s => s.id) : (u.allowedSubjects || []),
-                classSubjects: u.classSubjects || {},  // Include classSubjects mapping for all roles
-                passwordHash: mode === 'setup' && index === 0
-                    ? await hashPassword(adminPassword)
-                    : (u.passwordHash || ''),  // Empty string instead of undefined
+                classSubjects: u.classSubjects || {},
+                passwordHash: u.passwordHash || '',
             }))
         );
 
-        // Call onComplete - parent will handle saving and auto-login
-        await onComplete(finalUsers, mode === 'setup' ? adminPassword : undefined);
+        await onComplete(finalUsers);
     };
 
     const handleEditUser = (user: User) => {
@@ -940,7 +986,13 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
     };
 
     const handleCancelNewUser = () => {
-        setUsers([]);
+        if (users.length > 1 && editingUserId === null) {
+            // If multiple new users are in progress, cancel should remove only the current form.
+            setUsers(prevUsers => prevUsers.slice(0, -1));
+        } else {
+            setUsers([]);
+        }
+
         setEditingUserId(null);
         setError(null);
         setSelectedMobileUser(previousSelectedMobileUserRef.current ?? (existingUsers.length > 0 ? existingUsers[0].id : null));
@@ -957,6 +1009,31 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
     const getAssignmentClassNames = (user: Partial<User>) => {
         const list = user.role === 'Admin' ? classNames : (user.allowedClasses || []);
         return [...list].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+    };
+
+    const getUserSubjectCount = (user: Partial<User>) => {
+        const subjectIds = new Set<number>();
+
+        const normalizeSubject = (subject: number | string) => {
+            if (typeof subject === 'number') {
+                subjectIds.add(subject);
+            } else {
+                const found = subjectList.find(sub => sub.name === subject);
+                if (found) {
+                    subjectIds.add(found.id);
+                }
+            }
+        };
+
+        (user.allowedSubjects || []).forEach(normalizeSubject);
+
+        if (user.classSubjects) {
+            Object.values(user.classSubjects).forEach((subs) => {
+                (subs || []).forEach(normalizeSubject);
+            });
+        }
+
+        return subjectIds.size;
     };
 
     const getEffectiveClassTeachers = (className: string) => {
@@ -1314,6 +1391,61 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                         </div>
                     )}
 
+                    {mode === 'setup' && users.length === 0 && existingUsers.length > 0 && (
+                        <div className="space-y-4">
+                            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+                                <div>
+                                    <h3 className="text-xl font-semibold text-gray-800">Created Users</h3>
+                                    <p className="text-sm text-gray-500">Review your created accounts before completing setup.</p>
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                    {existingUsers.length} {existingUsers.length === 1 ? 'user created' : 'users created'}
+                                </div>
+                            </div>
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                {existingUsers.map((user) => (
+                                    <div key={user.id} className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div>
+                                                <p className="text-base font-bold text-gray-900">{user.name || 'Unnamed User'}</p>
+                                                <p className="text-sm text-gray-500">{user.role}</p>
+                                                <div className="mt-3 text-sm text-gray-600 space-y-1">
+                                                    {user.role !== 'Guest' && (
+                                                        <p>Classes: {(user.allowedClasses || []).length}</p>
+                                                    )}
+                                                    {user.role !== 'Guest' && (
+                                                        <p>Subjects: {getUserSubjectCount(user)}</p>
+                                                    )}
+                                                    {user.role === 'Admin' && (
+                                                        <p className="text-sm text-emerald-700">Admin password is set for this user.</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleEditUser(user)}
+                                                    className="rounded-lg border border-blue-200 bg-blue-50 text-blue-700 px-3 py-1 text-sm font-semibold hover:bg-blue-100 transition"
+                                                >
+                                                    Edit
+                                                </button>
+                                                {!(mode === 'setup' && user.role === 'Admin' && existingUsers[0]?.id === user.id) && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setDeleteConfirmUserId(user.id)}
+                                                        className="rounded-lg border border-rose-200 bg-rose-50 text-rose-700 px-3 py-1 text-sm font-semibold hover:bg-rose-100 transition"
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {(mode === 'setup' || users.length > 0) && (
                         <div ref={userListRef} className="space-y-6">
                             {users.map((user, index) => (
@@ -1386,7 +1518,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                                     value={user.role || 'Teacher'}
                                                     onChange={(e) => updateUser(index, 'role', e.target.value as UserRole)}
                                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-                                                    disabled={mode === 'setup' && index === 0}
+                                                    disabled={mode === 'setup' && index === 0 && existingUsers.length === 0}
                                                 >
                                                     <option value="Admin">Admin</option>
                                                     <option value="Teacher">Teacher</option>
@@ -1396,8 +1528,8 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                         </div>
                                     ) : null}
 
-                                    {/* Show admin password fields inline with the first user's form in setup mode */}
-                                    {mode === 'setup' && index === 0 && (
+                                    {/* Show admin password fields only while creating the first admin during initial setup */}
+                                    {mode === 'setup' && index === 0 && editingUserId === null && existingUsers.length === 0 && (
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-gray-100">
                                             <div>
                                                 <label className="block text-sm font-semibold text-gray-700 mb-1">Admin Password</label>
@@ -1594,7 +1726,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                         </div>
                     )}
 
-                    {mode === 'setup' && (
+                    {mode === 'setup' && users.length === 0 && (
                         <div className="pt-2">
                             <button
                                 onClick={addNewUser}
@@ -1616,7 +1748,9 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                             {/* Cancel button when editing/adding on mobile */}
                             <button
                                 onClick={() => {
-                                    if (hasUnsavedChanges) {
+                                    if (mode === 'setup' && users.length > 0) {
+                                        handleCancelNewUser();
+                                    } else if (hasUnsavedChanges) {
                                         setShowCloseWarning(true);
                                     } else {
                                         handleCancelNewUser();
@@ -1698,7 +1832,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                 </button>
                             )}
 
-                            {mode === 'management' && users.length > 0 && (
+                            {(mode === 'management' || (mode === 'setup' && users.length > 0)) && (
                                 <button
                                     onClick={handleCancelNewUser}
                                     className="flex-1 py-2 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-bold shadow-sm text-sm"
@@ -1719,7 +1853,11 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                     className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-bold shadow-sm text-sm"
                                 >
                                     {mode === 'setup'
-                                        ? 'Complete Setup'
+                                        ? editingUserId !== null
+                                            ? 'Update User'
+                                            : users.length > 0
+                                            ? 'Create User'
+                                            : 'Complete Setup'
                                         : editingUserId !== null
                                         ? 'Update User'
                                         : users.length > 0
