@@ -28,7 +28,7 @@ interface AuthOverlayProps {
 }
 
 const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
-    const { loadImportedData, setSchoolId, pauseSync, resumeSync, isFetching } = useData();
+    const { loadImportedData, setSchoolId, pauseSync, resumeSync, isFetching, saveClasses, saveSubjects } = useData();
     const { setUsers, users, login, setPassword: setUserPassword, checkAutoLogin, isAuthenticated, switchAccount } = useUser();
 
     // Navigation state
@@ -768,7 +768,22 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 0 && console.log('[AuthOverlay] ✅ Users saved to Firestore');
 
                 // Then update local state which might trigger dirty check but data is already safe
-                loadImportedData({ users: users }, true);
+                // Treat this as a local update to avoid the remote-import guard clearing dirty flags
+                loadImportedData({ users: users }, false);
+
+                // Wait one tick for React state to flush before attempting to save classes/subjects
+                await new Promise(resolve => setTimeout(resolve, 0));
+
+                // Persist any classes/subjects that were created during setup (so Teachers page sees them)
+                try {
+                    await Promise.all([
+                        saveClasses ? saveClasses() : Promise.resolve(),
+                        saveSubjects ? saveSubjects() : Promise.resolve()
+                    ]);
+                    0 && console.log('[AuthOverlay] ✅ Classes and subjects saved to Firestore');
+                } catch (err) {
+                    console.warn('[AuthOverlay] Failed to save classes/subjects during admin setup:', err);
+                }
             }
 
             // Auto-login as admin - call UserContext.login with (userId, password, userOverride)
