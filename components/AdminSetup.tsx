@@ -1396,6 +1396,32 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                         </div>
                                     ) : null}
 
+                                    {/* Show admin password fields inline with the first user's form in setup mode */}
+                                    {mode === 'setup' && index === 0 && (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-gray-100">
+                                            <div>
+                                                <label className="block text-sm font-semibold text-gray-700 mb-1">Admin Password</label>
+                                                <input
+                                                    type="password"
+                                                    value={adminPassword}
+                                                    onChange={(e) => setAdminPassword(e.target.value)}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                                                    placeholder="Set admin password"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-gray-700 mb-1">Confirm Password</label>
+                                                <input
+                                                    type="password"
+                                                    value={confirmPassword}
+                                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                                                    placeholder="Confirm password"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {/* PAGE 2: Allowed Classes (Teachers only) */}
                                     {((mobileUserFormPage === 1 || window.innerWidth >= 1024) && user.role === 'Teacher') ? (
                                         <div className="mb-5">
@@ -1579,30 +1605,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                         </div>
                     )}
 
-                    {mode === 'setup' && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-gray-100">
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-1">Admin Password</label>
-                                <input
-                                    type="password"
-                                    value={adminPassword}
-                                    onChange={(e) => setAdminPassword(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-                                    placeholder="Set admin password"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-1">Confirm Password</label>
-                                <input
-                                    type="password"
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-                                    placeholder="Confirm password"
-                                />
-                            </div>
-                        </div>
-                    )}
+                    
                 </div>
 
                 {/* Fixed Footer */}
