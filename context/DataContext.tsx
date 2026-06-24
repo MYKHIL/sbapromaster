@@ -436,7 +436,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.344"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.345"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -1625,10 +1625,55 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const updateClass = (updatedClass: Class) => {
         markDirty('classes', true);
         markItemDirty('classes', updatedClass.id);
+
+        const oldClass = classes.find(item => item.id === updatedClass.id);
+        const oldName = oldClass?.name?.trim();
+        const newName = updatedClass.name?.trim();
+        const shouldRenameClass = oldName && newName && oldName.toLowerCase() !== newName.toLowerCase();
+
         setClasses(prev => {
             const next = prev.map(item => item.id === updatedClass.id ? updatedClass : item);
             return next;
         });
+
+        if (shouldRenameClass) {
+            const normalize = (value: string) => value.trim().toLowerCase();
+            setUsers(prev => prev.map(user => {
+                let changed = false;
+                const allowedClasses = user.allowedClasses || [];
+                const nextAllowedClasses = allowedClasses.map(cls => normalize(cls) === normalize(oldName) ? newName : cls);
+                if (JSON.stringify(nextAllowedClasses) !== JSON.stringify(allowedClasses)) {
+                    changed = true;
+                }
+
+                let classSubjects = user.classSubjects || {};
+                if (oldName in classSubjects) {
+                    const renamedSubjects = { ...classSubjects };
+                    renamedSubjects[newName] = renamedSubjects[oldName];
+                    delete renamedSubjects[oldName];
+                    classSubjects = renamedSubjects;
+                    changed = true;
+                } else {
+                    // Also handle case-insensitive key matches
+                    const matchingKey = Object.keys(classSubjects).find(key => normalize(key) === normalize(oldName));
+                    if (matchingKey) {
+                        const renamedSubjects = { ...classSubjects };
+                        renamedSubjects[newName] = renamedSubjects[matchingKey];
+                        delete renamedSubjects[matchingKey];
+                        classSubjects = renamedSubjects;
+                        changed = true;
+                    }
+                }
+
+                if (!changed) return user;
+                markItemDirty('users', user.id);
+                return {
+                    ...user,
+                    allowedClasses: nextAllowedClasses,
+                    classSubjects,
+                };
+            }));
+        }
     };
 
     const deleteClass = (id: number) => {

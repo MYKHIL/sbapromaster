@@ -147,6 +147,79 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         });
     }, [classes, localNewClasses]);
 
+    const normalizeClassName = (name: string) => name.trim();
+
+    const transformClassMapping = (mapping: Record<string, any>, oldName: string, newName?: string): Record<string, any> => {
+        const normalizedOld = normalizeClassName(oldName);
+        const normalizedNew = newName?.trim();
+        const result: Record<string, any> = {};
+        Object.entries(mapping).forEach(([key, value]) => {
+            const normalizedKey = normalizeClassName(key);
+            if (normalizedKey === normalizedOld) {
+                if (normalizedNew) {
+                    result[normalizedNew] = value;
+                }
+            } else {
+                result[key] = value;
+            }
+        });
+        return result;
+    };
+
+    const syncClassReferences = (oldName: string, newName?: string) => {
+        const normalizedOld = normalizeClassName(oldName);
+        const normalizedNew = newName?.trim();
+        if (!normalizedOld) return;
+
+        const updateUserClasses = <U extends Partial<User>>(user: U): U => {
+            const currentClasses = user.allowedClasses || [];
+            const nextClasses = Array.from(new Set(currentClasses.flatMap(c => {
+                const normalizedClass = normalizeClassName(c);
+                if (normalizedClass === normalizedOld) {
+                    return normalizedNew ? [normalizedNew] : [];
+                }
+                return [c];
+            })));
+
+            const nextClassSubjects = user.classSubjects
+                ? Object.entries(user.classSubjects).reduce((acc, [cls, subs]) => {
+                    const normalizedClass = normalizeClassName(cls);
+                    if (normalizedClass === normalizedOld) {
+                        if (normalizedNew) {
+                            acc[normalizedNew] = subs;
+                        }
+                    } else {
+                        acc[cls] = subs;
+                    }
+                    return acc;
+                }, {} as Record<string, number[]>)
+                : user.classSubjects;
+
+            return {
+                ...user,
+                allowedClasses: nextClasses,
+                classSubjects: nextClassSubjects,
+            };
+        };
+
+        setExistingUsers(prev => prev.map(u => updateUserClasses(u)));
+        setUsers(prev => prev.map(u => updateUserClasses(u)));
+
+        setPendingClassTeacherChanges(prev => transformClassMapping(prev, normalizedOld, normalizedNew));
+        setPendingReportTeacherChanges(prev => transformClassMapping(prev, normalizedOld, normalizedNew));
+        setPendingNewClasses(prev => prev
+            .map(entry => normalizeClassName(entry.name) === normalizedOld && normalizedNew
+                ? { ...entry, name: normalizedNew }
+                : entry
+            )
+            .filter(entry => normalizedNew ? true : normalizeClassName(entry.name) !== normalizedOld)
+        );
+        setLocalNewClasses(prev => prev
+            .map(name => normalizeClassName(name) === normalizedOld && normalizedNew ? normalizedNew : name)
+            .filter(name => normalizedNew ? true : normalizeClassName(name) !== normalizedOld)
+        );
+    };
+
     // Ref for auto-scrolling to the add-user form
     const userListRef = React.useRef<HTMLDivElement>(null);
     // Ref for main modal wrapper
@@ -453,9 +526,12 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
 
     const executeDeleteClass = (id: number) => {
         try {
+            const classToDelete = classes.find(c => c.id === id);
+            const classNameToDelete = classToDelete?.name || '';
             deleteClass(id);
+            syncClassReferences(classNameToDelete);
             // Clean local caches
-            setLocalNewClasses(prev => prev.filter(cn => cn !== (classes.find(c => c.id === id)?.name || '')));
+            setLocalNewClasses(prev => prev.filter(cn => cn !== classNameToDelete));
             setDeleteConfirmClassId(null);
             setAddClassError(null);
         } catch (e) {
@@ -512,11 +588,17 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
             const teacher = newTeacherName.trim();
 
             if (mode === 'management') {
-                // Add to pending new classes
-                if (isEditing) {
-                    // Update existing class in management mode
-                    updateClass({ id: editingClassId!, name: className, teacherName: teacher, teacherNames: teacher ? [teacher] : [] } as any);
-                } else {
+                    const previousClassName = isEditing
+                        ? classes.find(c => c.id === editingClassId!)?.name || ''
+                        : '';
+
+                    // Add to pending new classes
+                    if (isEditing) {
+                        // Update existing class in management mode
+                        updateClass({ id: editingClassId!, name: className, teacherName: teacher, teacherNames: teacher ? [teacher] : [] } as any);
+                        if (previousClassName && previousClassName !== className) {
+                            syncClassReferences(previousClassName, className);
+                        }
                     setPendingNewClasses(prev => [...prev, { name: className, teacherNames: assignAsTeacher ? [teacher] : (teacher ? [teacher] : []) }]);
                 }
                 setLocalNewClasses(prev => [...new Set([...prev, className])]);
@@ -554,10 +636,11 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
             } else {
                 // Immediate creation (setup mode) or update if editing
                 if (isEditing) {
-                    updateClass({ id: editingClassId!, name: className, teacherName: teacher, teacherNames: teacher ? [teacher] : [] } as any);
-                    setNewClassName('');
-                    setNewTeacherName('');
-                    setAssignAsTeacher(false);
+                        const previousClassName = classes.find(c => c.id === editingClassId!)?.name || '';
+                        updateClass({ id: editingClassId!, name: className, teacherName: teacher, teacherNames: teacher ? [teacher] : [] } as any);
+                        if (previousClassName && previousClassName !== className) {
+                            syncClassReferences(previousClassName, className);
+                        }
                     setCurrentUserIndexForClass(null);
                     setEditingClassId(null);
                     setShowAddClassModal(false);
