@@ -109,7 +109,7 @@ export const INITIAL_SETTINGS: SchoolSettings = {
   academicTerm: '',
   vacationDate: '',
   reopeningDate: '',
-  headmasterName: 'Mr. Michael Darko',
+  headmasterName: '',
   logo: '',
   headmasterSignature: '',
   isDataEntryLocked: false,

@@ -229,6 +229,8 @@ export interface AppDataType {
   users: User[];
   password?: string;
   Access?: boolean;
+  headmasterName?: string;
+  headmasterSignature?: string;
   activeSessions?: Record<string, string>;
   userLogs?: UserLog[];
   metadata?: {

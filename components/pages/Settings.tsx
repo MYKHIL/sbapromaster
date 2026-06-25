@@ -73,14 +73,17 @@ const Settings: React.FC = () => {
     try {
       const url = await processAndUploadImage(dataUrl);
       console.log(`[Settings] ✅ Signature processed/uploaded. Local Update:`, url);
+      // Update local form state and context, then persist
+      setFormData(prev => ({ ...prev, headmasterSignature: url }));
       updateSettings({ headmasterSignature: url });
+      await saveSettings();
     } catch (error) {
       console.error("[Settings] ❌ Signature upload failed", error);
       alert("Failed to upload signature. Please try again.");
     } finally {
       setIsUploadingSignature(false);
     }
-  }, [updateSettings]);
+  }, [updateSettings, saveSettings]);
 
   const downloadImage = useCallback(async () => {
     if (!sigContextMenu) return;
@@ -194,7 +197,10 @@ const Settings: React.FC = () => {
         const rawBase64 = event.target?.result as string;
         try {
           const url = await processAndUploadImage(rawBase64);
-          updateSettings({ [field]: url });
+          // Update formData and context then persist
+          setFormData(prev => ({ ...prev, [field]: url } as any));
+          updateSettings({ [field]: url } as any);
+          await saveSettings();
         } catch (error) {
           console.error(`${field} upload failed`, error);
           alert(`Failed to upload ${isLogo ? 'logo' : 'signature'}. Please try again.`);
@@ -211,7 +217,9 @@ const Settings: React.FC = () => {
     isLogo ? setIsUploadingLogo(true) : setIsUploadingSignature(true);
     try {
       const url = await processAndUploadImage(imageData);
-      updateSettings({ [field]: url });
+      setFormData(prev => ({ ...prev, [field]: url } as any));
+      updateSettings({ [field]: url } as any);
+      await saveSettings();
     } catch (error) {
       console.error(`${field} camera capture upload failed`, error);
       alert(`Failed to upload captured ${isLogo ? 'logo' : 'signature'}.`);
@@ -221,7 +229,11 @@ const Settings: React.FC = () => {
   };
 
   const handleClearImage = (field: 'logo' | 'headmasterSignature') => {
-    updateSettings({ [field]: '' });
+    // Clear locally then persist
+    setFormData(prev => ({ ...prev, [field]: '' } as any));
+    updateSettings({ [field]: '' } as any);
+    // fire-and-forget save
+    void saveSettings();
   };
 
   const handleEnhance = async (field: 'logo' | 'headmasterSignature', setLoading: (loading: boolean) => void) => {
@@ -233,7 +245,9 @@ const Settings: React.FC = () => {
     setLoading(true);
     try {
       const enhancedImage = await enhanceImage(currentImage);
-      updateSettings({ [field]: enhancedImage });
+      setFormData(prev => ({ ...prev, [field]: enhancedImage } as any));
+      updateSettings({ [field]: enhancedImage } as any);
+      await saveSettings();
     } catch (error) {
       console.error(error);
       alert((error as Error).message);

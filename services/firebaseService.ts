@@ -6,6 +6,7 @@ import {
     connectFirestoreEmulator,
     doc,
     getDoc,
+    getDocFromServer,
     setDoc,
     collection,
     getDocs,
@@ -188,8 +189,8 @@ export const normalizeSchoolData = (data: any): AppDataType => {
         }
     });
 
-    // 3. Legacy Fallback: Collect root fields into settings if they are missing in the settings object
-    // This handles schools created in very early versions of the app.
+    // 3. Legacy Fallback: Copy root fields into settings only when the nested setting is missing.
+    // This keeps settings.headmasterName / settings.headmasterSignature as the authoritative values.
     const settingFields = [
         'schoolName', 'address', 'academicYear', 'academicTerm',
         'headmasterName', 'district', 'circuit', 'logo', 'headmasterSignature',
@@ -201,10 +202,15 @@ export const normalizeSchoolData = (data: any): AppDataType => {
     ];
 
     settingFields.forEach(field => {
-        if (data[field] !== undefined && (data.settings[field] === undefined || data.settings[field] === '')) {
-            data.settings[field] = data[field];
+        const settingValue = data.settings[field as keyof SchoolSettings];
+        if ((data[field] !== undefined || data[field] === '') && (settingValue === undefined || settingValue === '')) {
+            data.settings[field as keyof SchoolSettings] = data[field];
         }
     });
+
+    // Enforce settings as the authoritative source by removing legacy root-level headmaster scalars.
+    delete data.headmasterName;
+    delete data.headmasterSignature;
 
     return data as AppDataType;
 };
@@ -214,10 +220,11 @@ export const normalizeSchoolData = (data: any): AppDataType => {
 // -----------------------------------------------------------------------------
 import { isLoggingEnabled } from './loggingControl';
 
-export const loggedGetDoc = async (ref: any, label: string) => {
+export const loggedGetDoc = async (ref: any, label: string, options?: { source?: 'default' | 'server' | 'cache' }) => {
     try {
-        if (isLoggingEnabled()) 0 && console.log(`[Firestore Read] ${label} -> ${ref.path}`);
-        const snap = await getDoc(ref);
+        const source = options?.source || 'default';
+        if (isLoggingEnabled()) 0 && console.log(`[Firestore Read] ${label} -> ${ref.path} [source=${source}]`);
+        const snap = source === 'server' ? await getDocFromServer(ref) : await getDoc(ref);
         if (isLoggingEnabled()) 0 && console.log(`[Firestore Read] ${label} -> exists=${snap.exists()}`);
         return snap;
     } catch (e) {
@@ -471,7 +478,13 @@ export const getSchoolData = async (docId: string, keysToFetch?: (keyof AppDataT
         try {
             const docRef = doc(db, "schools", docId);
             trackFirebaseRead('getSchoolData', 'schools', 1, 'Loading main school data');
-            const docSnap = await loggedGetDoc(docRef, `getSchoolData/${docId}`);
+            let docSnap;
+            try {
+                docSnap = await loggedGetDoc(docRef, `getSchoolData/${docId}`, { source: 'server' });
+            } catch (error) {
+                console.warn(`[Firebase] getSchoolData server read failed for ${docId}, falling back to default source.`, error);
+                docSnap = await loggedGetDoc(docRef, `getSchoolData/${docId}`);
+            }
 
             if (docSnap.exists()) {
                 // Apply Normalization Layer to handle flattened/legacy formats
@@ -1934,6 +1947,10 @@ export const saveDataTransaction = async (
             }
         }
 
+        // Explicitly ignore legacy root-level headmaster payload values.
+        delete updates.headmasterName;
+        delete updates.headmasterSignature;
+
         // --- COMPOSITE STORAGE: Write Metadata Bundle (if metadata updated) ---
         // This implements "Write-Double" strategy: Update both individual collections AND the bundle
         const METADATA_KEYS = ['classes', 'subjects', 'assessments', 'grades'];
@@ -2241,11 +2258,15 @@ export const loginOrRegisterSchool = async (docId: string, password: string, ini
 
             0 && console.log(`[FIREBASE_DEBUG] Fetching document: schools/${targetDocId}`);
             trackFirebaseRead('loginOrRegisterSchool', 'schools', 1, `Checking school existence: ${targetDocId}`);
-            let docSnap = await loggedGetDoc(docRef, `loginOrRegisterSchool/${targetDocId}`);
-            0 && console.log(`[FIREBASE_DEBUG] Document exists? ${docSnap.exists()}`);
+            let docSnap;
+            try {
+                docSnap = await loggedGetDoc(docRef, `loginOrRegisterSchool/${targetDocId}`, { source: 'server' });
+            } catch (error) {
+                console.warn(`[Firebase] loginOrRegisterSchool server read failed for ${targetDocId}, falling back to default source.`, error);
+                docSnap = await loggedGetDoc(docRef, `loginOrRegisterSchool/${targetDocId}`);
+            }
 
             if (!docSnap.exists()) {
-                0 && console.log(`[FIREBASE_DEBUG] Document not found. Attempting case-insensitive fallback search...`);
                 // Case-insensitive fallback
                 const schoolsRef = collection(db, "schools");
                 const q = query(schoolsRef, where(documentId(), '>=', targetDocId.toLowerCase()), limit(5)); // Optimize fallback

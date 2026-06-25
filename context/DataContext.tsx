@@ -1,5 +1,5 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect, useRef, useMemo } from 'react';
-import { updateHeartbeat, logUserActivity, getSchoolData, saveDataTransaction, fetchStudents, fetchScoresForClass, fetchSubcollection, fetchMetadataBundle, updateMetadataBundle, updateStudentBucket, ensureStudentBucketExists, db } from '../services/firebaseService';
+import { updateHeartbeat, logUserActivity, getSchoolData, normalizeSchoolData, saveDataTransaction, fetchStudents, fetchScoresForClass, fetchSubcollection, fetchMetadataBundle, updateMetadataBundle, updateStudentBucket, ensureStudentBucketExists, db } from '../services/firebaseService';
 import { onSnapshot, doc, collection, Unsubscribe } from 'firebase/firestore';
 import { getDeviceCredential } from '../services/authService';
 import * as SyncLogger from '../services/syncLogger';
@@ -342,20 +342,20 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [schoolId, setSchoolId] = useLocalStorage<string | null>(schoolIdKey, null);
 
     // All data uses schoolId-namespaced keys
-    const [settings, setSettings] = useLocalStorage<SchoolSettings>(getKey('settings'), INITIAL_SETTINGS);
+    const [settings, setSettings] = useLocalStorage<SchoolSettings>(getKey('settings'), INITIAL_SETTINGS, true, { preserveCurrentStateOnKeyChange: false });
     const isPersistenceEnabled = settings.allowPersistence ?? true;
 
     // SENSITIVE DATA: Respects allowPersistence flag
-    const [students, setStudents] = useLocalStorage<Student[]>(getKey('students'), INITIAL_STUDENTS, isPersistenceEnabled);
-    const [scores, setScores] = useLocalStorage<Score[]>(getKey('scores'), INITIAL_SCORES, isPersistenceEnabled);
-    const [reportData, setReportData] = useLocalStorage<ReportSpecificData[]>(getKey('report-data'), INITIAL_REPORT_DATA, isPersistenceEnabled);
-    const [classData, setClassData] = useLocalStorage<ClassSpecificData[]>(getKey('class-data'), INITIAL_CLASS_DATA, isPersistenceEnabled);
+    const [students, setStudents] = useLocalStorage<Student[]>(getKey('students'), INITIAL_STUDENTS, isPersistenceEnabled, { preserveCurrentStateOnKeyChange: true });
+    const [scores, setScores] = useLocalStorage<Score[]>(getKey('scores'), INITIAL_SCORES, isPersistenceEnabled, { preserveCurrentStateOnKeyChange: true });
+    const [reportData, setReportData] = useLocalStorage<ReportSpecificData[]>(getKey('report-data'), INITIAL_REPORT_DATA, isPersistenceEnabled, { preserveCurrentStateOnKeyChange: true });
+    const [classData, setClassData] = useLocalStorage<ClassSpecificData[]>(getKey('class-data'), INITIAL_CLASS_DATA, isPersistenceEnabled, { preserveCurrentStateOnKeyChange: true });
 
     // STRUCTURAL DATA & SELECTIONS: Always persisted for smooth UI (not considered sensitive)
-    const [subjects, setSubjects] = useLocalStorage<Subject[]>(getKey('subjects'), INITIAL_SUBJECTS);
-    const [classes, setClasses] = useLocalStorage<Class[]>(getKey('classes'), INITIAL_CLASSES);
-    const [grades, setGrades] = useLocalStorage<Grade[]>(getKey('grades'), INITIAL_GRADES);
-    const [assessments, setAssessments] = useLocalStorage<Assessment[]>(getKey('assessments'), INITIAL_ASSESSMENTS);
+    const [subjects, setSubjects] = useLocalStorage<Subject[]>(getKey('subjects'), INITIAL_SUBJECTS, true, { preserveCurrentStateOnKeyChange: true });
+    const [classes, setClasses] = useLocalStorage<Class[]>(getKey('classes'), INITIAL_CLASSES, true, { preserveCurrentStateOnKeyChange: true });
+    const [grades, setGrades] = useLocalStorage<Grade[]>(getKey('grades'), INITIAL_GRADES, true, { preserveCurrentStateOnKeyChange: true });
+    const [assessments, setAssessments] = useLocalStorage<Assessment[]>(getKey('assessments'), INITIAL_ASSESSMENTS, true, { preserveCurrentStateOnKeyChange: true });
 
     const isRemoteUpdate = React.useRef(false);
     const lastLocalUpdate = React.useRef(Date.now());
@@ -436,7 +436,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.345"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.346"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -1206,10 +1206,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 // system to perpetually flag those collections as "pending save", ultimately
                 // causing permission-denied errors when the save payload includes deleted items.
                 const { grades: _g, classes: _c, subjects: _s, assessments: _a, students: _st, scores: _sc, reportData: _rd, classData: _cd, ...mainDocData } = data;
+                const normalizedMainDocData = normalizeSchoolData({ ...mainDocData });
 
                 // ATOMIC BASELINE SYNC: Instantly force the baseline to match the incoming main doc data
                 // before loadImportedData captures closure state. This stops the async batch lag.
-                Object.entries(mainDocData).forEach(([key, val]) => {
+                Object.entries(normalizedMainDocData).forEach(([key, val]) => {
                     const validKey = key as keyof AppDataType;
                     // Protect locally typed/unsaved settings from sudden clobbering, but sync otherwise
                     if (originalData.current && val !== undefined && !dirtyFields.current.has(validKey)) {
@@ -1217,7 +1218,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     }
                 });
 
-                loadImportedData(mainDocData, true);
+                loadImportedData(normalizedMainDocData, true);
                 if (data.metadata?.lastUpdated) {
                     lastLoadedTimestamps.current = { ...data.metadata.lastUpdated };
                 }
@@ -1320,6 +1321,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 transactionPayload[k] = currentData[k as keyof AppDataType];
             }
         });
+
+        if (fieldsToSave.includes('settings')) {
+            console.log('[DataContext] saveToCloud transactionPayload preview:', {
+                settings: transactionPayload.settings,
+            });
+        }
 
         // Check network status
         if (!isOnline) {
@@ -1845,6 +1852,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const isEqual = deepEqual(settings[k], updates[k]);
             if (!isEqual) {
                 markItemDirty('settings', key);
+                // Ensure pendingChangesMap.current.settings exists and include the key
+                if (!pendingChangesMap.current.settings) pendingChangesMap.current.settings = new Set();
+                pendingChangesMap.current.settings.add(key);
             }
         });
         
@@ -1892,6 +1902,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     updates[k] = stateRef.current[k as keyof AppDataType];
                 }
             });
+
+            // We no longer mirror root-level headmaster fields from settings here.
+            // settings.headmasterName / settings.headmasterSignature are the source of truth.
 
             // Use transaction for all saves to ensure consistency
 
@@ -2176,14 +2189,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Removed logPageVisit to prevent excessive logging
 
     // Sync control functions
-    const pauseSync = () => {
+    const pauseSync = React.useCallback(() => {
+        if (isSyncPaused.current) return; // already paused
         console.log('[DataContext] Sync PAUSED');
         isSyncPaused.current = true;
         isSyncingRef.current = false;
         setIsSessionUnlocked(false); // Lock session on pause
-    };
+    }, []);
 
-    const resumeSync = () => {
+    const resumeSync = React.useCallback(() => {
+        if (!isSyncPaused.current) return; // already resumed
         console.log('[DataContext] Sync RESUMED');
         isSyncPaused.current = false;
         setIsSessionUnlocked(true); // Unlock session on resume
@@ -2192,18 +2207,18 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Without this, if user navigates quickly after login, the 10-second check
         // in the Firebase subscription prevents data from loading
         lastLocalUpdate.current = 0;
-    };
+    }, []);
 
     // Form blocking control functions
-    const blockRemoteUpdates = () => {
+    const blockRemoteUpdates = React.useCallback(() => {
         console.log('[DataContext] Blocking remote updates - form opened');
         isFormOpen.current = true;
-    };
+    }, []);
 
-    const allowRemoteUpdates = () => {
+    const allowRemoteUpdates = React.useCallback(() => {
         console.log('[DataContext] Allowing remote updates - form closed');
         isFormOpen.current = false;
-    };
+    }, []);
 
     // Helper to check if specific fields are dirty
     const isDirty = (...fields: (keyof AppDataType)[]) => {
@@ -2304,10 +2319,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         // Case 1.5: Revert Specific Setting Field
         if (field === 'settings' && id !== undefined) {
-             const originalVal = originalData.current.settings;
-             if (originalVal) {
+             const originalSettingsVal = originalData.current.settings;
+             if (originalSettingsVal) {
                  const key = String(id) as keyof SchoolSettings;
-                 setSettings(prev => ({ ...prev, [key]: originalVal[key] }));
+                 setSettings(prev => ({ ...prev, [key]: originalSettingsVal[key] }));
                  markItemClean('settings', id);
              }
              return;
@@ -2421,6 +2436,38 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         fieldsToSave.forEach(f => {
             const field = f as keyof AppDataType;
 
+            // Pull values from the current snapshot early so branches can reference them
+            // @ts-ignore
+            const currentFieldVal = currentData[field];
+            const originalFieldVal = originalData.current[field];
+
+            // Quick-exit: `settings` is a configuration object, not an array.
+            // Exempt it from the array-based Zombie/Soft-Delete validation.
+            if (field === 'settings') {
+                // 5. SETTINGS GUARD: Admin only
+                if (!isAdmin) {
+                    console.warn(`[DataContext] 🛡️ Role-Based Guard: stripping unauthorized change to 'settings'`);
+                    return;
+                }
+
+                // Granular diff for settings
+                const pendingSet = pendingChangesMap.current.settings;
+                if (pendingSet && pendingSet.size > 0) {
+                    const settingsPayload: any = {};
+                    pendingSet.forEach(key => {
+                        const k = key as keyof SchoolSettings;
+                        settingsPayload[k] = currentData.settings[k];
+                    });
+                    payload.settings = settingsPayload;
+                    console.log(`[DataContext] ⚙️ settings granular payload:`, settingsPayload);
+                } else if (dirtyFields.current.has('settings')) {
+                    // Fallback to full object if marked dirty but map is somehow empty (safety)
+                    payload.settings = currentData.settings;
+                }
+
+                return;
+            }
+
             // 1. METADATA GUARD: Non-admins cannot modify global metadata
             // RELAXED: During preview (getPendingUploadData), we allow seeing these changes
             // even if the final saveToCloud might block them, so the user knows they are "Unsaved".
@@ -2429,18 +2476,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 console.log(`[DataContext] ℹ️ Note: Non-admin changing metadata field '${String(field)}'. This will be tracked locally.`);
             }
 
-            // @ts-ignore
-            const currentVal = currentData[field];
-            const originalVal = originalData.current[field];
-
             // Perform smart diff for arrays to only show changed items in preview
-            if (Array.isArray(currentVal) && Array.isArray(originalVal)) {
+            if (Array.isArray(currentFieldVal) && Array.isArray(originalFieldVal)) {
 
                 // 2. DELETION GUARD (Scoped Data)
-                let deletedIds = originalVal
+                let deletedIds = originalFieldVal
                     .filter((o: any) => {
                         const oid = getItemId(o);
-                        return oid && !currentVal.find((c: any) => getItemId(c) === oid);
+                        return oid && !currentFieldVal.find((c: any) => getItemId(c) === oid);
                     })
                     .map((o: any) => getItemId(o) as string);
 
@@ -2448,8 +2491,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     // Filter deletions based on user scope if not admin
                     if (!isAdmin && (field === 'students' || field === 'reportData')) {
                         const originalDeletedIdsLength = deletedIds.length;
-                        deletedIds = deletedIds.filter(id => {
-                            const item = originalVal.find((o: any) => getItemId(o) === id);
+                        deletedIds = deletedIds.filter((id: string) => {
+                            const item = originalFieldVal.find((o: any) => getItemId(o) === id);
                             // Only allow deletion if item class is in allowedClasses
                             const itemClass = (item as any)?.class || (item as any)?.name || (item as any)?.className;
                             return itemClass && allowedClasses.includes(itemClass);
@@ -2461,7 +2504,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     }
 
                     // 3. MASS-DELETION PROTECTION
-                    const isMassDeletion = deletedIds.length > 5 && (deletedIds.length > originalVal.length * 0.2);
+                    const isMassDeletion = deletedIds.length > 5 && (deletedIds.length > originalFieldVal.length * 0.2);
                     if (isMassDeletion && !isAdmin) {
                         console.error(`[DataContext] 🚫 SAFETY BLOCK: Preventing suspicious mass deletion of ${deletedIds.length} ${String(field)} by non-admin user.`);
                         // Do not add to deletions map
@@ -2476,10 +2519,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
                 // 4. Update Logic
                 // @ts-ignore
-                const updates = currentVal.filter(item => {
+                        const updates = currentFieldVal.filter(item => {
                     const itemId = getItemId(item);
                     if (itemId) {
-                        const originalItem = originalVal.find((o: any) => getItemId(o) === itemId);
+                        const originalItem = originalFieldVal.find((o: any) => getItemId(o) === itemId);
 
                         // ATOMIC PAYLOAD SANITIZATION: Prevents Firestore Security Rule Rejection
                         // If taking actions mid-app instantly adds the item to the pending set before background sanitization can run,
@@ -2515,35 +2558,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     return true;
                 });
 
-                if (updates.length > 0) {
+                        if (updates.length > 0) {
                     payload[field] = updates;
                 }
 
-            } else if (field === 'settings') {
-                // 5. SETTINGS GUARD: Admin only
-                if (!isAdmin) {
-                    console.warn(`[DataContext] 🛡️ Role-Based Guard: stripping unauthorized change to 'settings'`);
-                    return;
-                }
-                
-                // Granular diff for settings
-                const pendingSet = pendingChangesMap.current.settings;
-                if (pendingSet && pendingSet.size > 0) {
-                    const settingsPayload: any = {};
-                    pendingSet.forEach(key => {
-                        const k = key as keyof SchoolSettings;
-                        settingsPayload[k] = currentData.settings[k];
-                    });
-                    payload.settings = settingsPayload;
-                    console.log(`[DataContext] ⚙️ settings granular payload:`, settingsPayload);
-                } else if (dirtyFields.current.has('settings')) {
-                    // Fallback to full object if marked dirty but map is somehow empty (safety)
-                    payload.settings = currentVal;
-                }
             } else {
                 // Non-array fields (activeSessions, etc.)
                 // @ts-ignore
-                payload[field] = currentVal;
+                payload[field] = currentFieldVal;
             }
         });
 
@@ -3197,7 +3219,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }, 1000);
         }
 
-        const importedSettings = data.settings;
+        const normalizedData = normalizeSchoolData({ ...data });
+        const importedSettings = normalizedData.settings;
+        if (isRemote && importedSettings) {
+            console.log('[DataContext] Debug incoming settings:', importedSettings);
+            console.log('[DataContext] Current in-memory settings:', settings);
+            console.log('[DataContext] pendingChangesMap.settings:', pendingChangesMap.current.settings);
+        }
         // IMPORTANT: Context is determined by academicYear and academicTerm ONLY.
         // schoolName is intentionally excluded because it is a user-editable field.
         // Including it would incorrectly flag a school name edit as a school context shift,
@@ -3224,7 +3252,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             reportData: importedReportData,
             classData: importedClassData,
             users: importedUsers,
-        } = data;
+            userLogs: importedUserLogs,
+            activeSessions: importedActiveSessions,
+        } = normalizedData;
 
         console.log(`[DataContext] 📦 loadImportedData called (isRemote=${isRemote}) with:`, {
             hasSettings: !!importedSettings,
@@ -3236,7 +3266,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             scoresCount: importedScores?.length || 0,
             reportDataCount: importedReportData?.length || 0,
             classDataCount: importedClassData?.length || 0,
-            usersCount: importedUsers?.length || 0
+            usersCount: importedUsers?.length || 0,
+            userLogsCount: importedUserLogs?.length || 0,
+            activeSessionsCount: importedActiveSessions ? Object.keys(importedActiveSessions).length : 0,
         });
 
         // CRITICAL: Update lastContextKey ref to match THE INCOMING DATA
@@ -3301,6 +3333,22 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (!isDataEqual(imported, current)) {
                 console.log(`[DataContext] ✅ Updating ${String(field)}`);
                 setter(imported);
+
+                // Synchronously persist remote settings to localStorage to avoid
+                // hydration races where the useLocalStorage hook might read an
+                // older cached value and overwrite the freshly-applied remote data.
+                // We only do this for top-level settings and for remote updates.
+                try {
+                    if (isRemote && field === 'settings') {
+                        const jsonString = JSON.stringify(imported);
+                        const compressed = LZ.compress(jsonString);
+                        const storageKey = getKey('settings');
+                        // Record synchronous write so other tabs / same-window handlers can ignore
+                        window.localStorage.setItem(storageKey, compressed);
+                    }
+                } catch (err) {
+                    console.warn('[DataContext] Failed to synchronously persist settings to localStorage', err);
+                }
                 (nextState as any)[field] = imported;
                 if (!isRemote) markDirty(field, true);
             }
@@ -3318,8 +3366,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         updateCollection('reportData', importedReportData, reportData, setReportData);
         updateCollection('classData', importedClassData, classData, setClassData);
         
-        processField('userLogs', data.userLogs, userLogs, setUserLogs);
-        processField('activeSessions', data.activeSessions, activeSessions, setActiveSessions);
+        processField('userLogs', importedUserLogs, userLogs, setUserLogs);
+        processField('activeSessions', importedActiveSessions, activeSessions, setActiveSessions);
         updateCollection('users', importedUsers, users, setUsers);
 
         // SCORES: Custom Logic using the same Smart Merge pattern
@@ -3394,8 +3442,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (importedReportData !== undefined) dirtyFields.current.delete('reportData');
             if (importedClassData !== undefined) dirtyFields.current.delete('classData');
             if (importedUsers !== undefined) dirtyFields.current.delete('users');
-            if (data.userLogs !== undefined) dirtyFields.current.delete('userLogs');
-            if (data.activeSessions !== undefined) dirtyFields.current.delete('activeSessions');
+            if (importedUserLogs !== undefined) dirtyFields.current.delete('userLogs');
+            if (importedActiveSessions !== undefined) dirtyFields.current.delete('activeSessions');
 
             console.log('[DataContext] 🧹 Selectively cleared dirty fields after remote data load');
             // Recalculate global dirty state
@@ -3428,8 +3476,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (importedReportData) mergeArrays('reportData', importedReportData);
             if (importedClassData) mergeArrays('classData', importedClassData);
             if (importedUsers) mergeArrays('users', importedUsers);
-            if (data.userLogs) originalData.current.userLogs = data.userLogs;
-            if (data.activeSessions) originalData.current.activeSessions = data.activeSessions;
+            if (importedUserLogs) originalData.current.userLogs = importedUserLogs;
+            if (importedActiveSessions) originalData.current.activeSessions = importedActiveSessions;
 
             console.log('[DataContext] 💾 Updated originalData baseline with merge strategy');
 

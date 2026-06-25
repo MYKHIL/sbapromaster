@@ -196,10 +196,11 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
                 }
 
                 // Load basic school data
+                setSchoolId(result.docId || savedSchoolId);
+                console.log('[AuthOverlay] Restored remote settings object:', result.data.settings);
                 loadImportedData(result.data, true, (result as any).subscription);
                 setSchoolData(result.data);
                 setCurrentSchoolId(result.docId || savedSchoolId);
-                setSchoolId(result.docId || savedSchoolId);
                 setUsers(result.data.users || []);
 
                 console.log("[AuthOverlay] Checking for sba_force_term_select in localStorage...");
@@ -591,12 +592,10 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             // SUCCESS HANDLER (Bots)
             if (result.status === 'success' && result.data) {
                 0 && console.log('[AuthOverlay] ✅ School registered successfully (Bot Mode)');
-                loadImportedData(result.data, true, (result as any).subscription);
-                setSchoolData(result.data);
-                setCurrentSchoolId(result.docId || docId);
-                setSchoolId(result.docId || docId);
-                localStorage.setItem('sba_school_id', result.docId || docId);
-                localStorage.setItem('sba_school_password', password);
+                    setSchoolId(result.docId || docId);
+                    loadImportedData(result.data, true, (result as any).subscription);
+                    setSchoolData(result.data);
+                    setCurrentSchoolId(result.docId || docId);
                 clearAuthCaches();
 
                 // -------------------------------------------------------------
@@ -720,10 +719,10 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             0 && console.log('[AuthOverlay] ✅ School data loaded successfully');
 
             // Load data into context
+            setSchoolId(result.docId || docId);
             loadImportedData(result.data, true, (result as any).subscription);
             setSchoolData(result.data);
             setCurrentSchoolId(result.docId || docId);
-            setSchoolId(result.docId || docId);
 
             // Save school credentials
             localStorage.setItem('sba_school_id', result.docId || docId);
