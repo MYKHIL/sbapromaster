@@ -3,7 +3,7 @@ react-dom-client.development.js:28004 Download the React DevTools for a better d
 client:912 [vite] connected.
 index.tsx:140 [Bootstrap] Subscription prices set dynamically
 index.tsx:148 [Bootstrap] Configuration loaded.
-firebaseService.ts:75 [2026-06-25T01:16:43.827Z]  @firebase/analytics: Analytics: Firebase Analytics is not supported in this environment. Wrap initialization of analytics in analytics.isSupported() to prevent initialization in unsupported environments. Details: (1) This is a browser extension environment. (analytics/invalid-analytics-context).
+firebaseService.ts:75 [2026-06-25T02:05:56.164Z]  @firebase/analytics: Analytics: Firebase Analytics is not supported in this environment. Wrap initialization of analytics in analytics.isSupported() to prevent initialization in unsupported environments. Details: (1) This is a browser extension environment. (analytics/invalid-analytics-context).
 (anonymous) @ logger.ts:115
 warn @ logger.ts:206
 warnOnBrowserContextMismatch @ factory.ts:169
@@ -14,19 +14,23 @@ initialize @ provider.ts:242
 initializeAnalytics @ api.ts:112
 getAnalytics @ api.ts:85
 (anonymous) @ firebaseService.ts:75
-DataContext.tsx:2193 [DataContext] Sync PAUSED
+DataContext.tsx:2197 [DataContext] Sync PAUSED
 AuthOverlay.tsx:154 [AuthOverlay] 🔍 restoreSession triggered!
 AuthOverlay.tsx:155 [AuthOverlay] localStorage keys - sba_school_id: odumasemethodistd.abasic_20252026_Third-Term sba_force_term_select: null
 AuthOverlay.tsx:154 [AuthOverlay] 🔍 restoreSession triggered!
 AuthOverlay.tsx:155 [AuthOverlay] localStorage keys - sba_school_id: odumasemethodistd.abasic_20252026_Third-Term sba_force_term_select: null
- [AuthOverlay] Restored remote settings object: {logo: '', vacationDate: '', allowPersistence: true, schoolName: 'Odumase Methodist/D. A Basic ', indexNumberGlobalPrefix: '', …}
+DataContext.tsx:716 [DataContext] 📱 Mobile Lifecycle event detected. Forcing immediate data backup...
+DataContext.tsx:716 [DataContext] 📱 Mobile Lifecycle event detected. Forcing immediate data backup...
+AuthOverlay.tsx:200 [AuthOverlay] Restored remote settings object: {headmasterName: 'Mr. Stephen Kwakye Ahenkorah', logo: '', academicYear: '2025/2026', aggregateScoreClasses: Array(0), headmasterSignature: 'https://i.ibb.co/xSjY6pnP/4fbc8f1cdbbc.jpg', …}
  [DataContext] 🛡️ Initial Cloud Sync Guard: Verifying intentionality from disk...
- [DataContext] Debug incoming settings: {logo: '', vacationDate: '', allowPersistence: true, schoolName: 'Odumase Methodist/D. A Basic ', indexNumberGlobalPrefix: '', …}
- [DataContext] Current in-memory settings: {logo: '', vacationDate: '', allowPersistence: true, schoolName: 'Odumase Methodist/D. A Basic ', indexNumberGlobalPrefix: '', …}
- [DataContext] pendingChangesMap.settings: Set(0) {size: 0}
+ [DataContext] Debug incoming settings: {headmasterName: 'Mr. Stephen Kwakye Ahenkorah', logo: '', academicYear: '2025/2026', aggregateScoreClasses: Array(0), headmasterSignature: 'https://i.ibb.co/xSjY6pnP/4fbc8f1cdbbc.jpg', …}
+ [DataContext] Current in-memory settings: {schoolName: '', district: '', circuit: '', address: '', academicYear: '', …}
+ [DataContext] pendingChangesMap.settings: Set(1) {'academicYear'}
  [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 9, …}
  [DataContext] 🧠 Pre-empting context reset for: odumasemethodistd.abasic_20252026_Third-Term-2025/2026-Third Term
  [DataContext] ✅ Updating settings
+ [DataContext] ✅ Merged collection: reportData
+ [DataContext] ✅ Merged collection: classData
  [DataContext] ✅ Updating userLogs
  [DataContext] ✅ Updating activeSessions
  [DataContext] ✅ Merged collection: users
@@ -36,59 +40,71 @@ AuthOverlay.tsx:155 [AuthOverlay] localStorage keys - sba_school_id: odumasemeth
  [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
  [AuthOverlay] Checking for sba_force_term_select in localStorage...
  [AuthOverlay] sba_force_term_select value is: false
- [AuthOverlay] Restored remote settings object: {logo: '', vacationDate: '', allowPersistence: true, schoolName: 'Odumase Methodist/D. A Basic ', indexNumberGlobalPrefix: '', …}
-DataContext.tsx:3190 [DataContext] 🛡️ Initial Cloud Sync Guard: Verifying intentionality from disk...
-DataContext.tsx:3223 [DataContext] Debug incoming settings: {logo: '', vacationDate: '', allowPersistence: true, schoolName: 'Odumase Methodist/D. A Basic ', indexNumberGlobalPrefix: '', …}
-DataContext.tsx:3224 [DataContext] Current in-memory settings: {logo: '', vacationDate: '', allowPersistence: true, schoolName: 'Odumase Methodist/D. A Basic ', indexNumberGlobalPrefix: '', …}
-DataContext.tsx:3225 [DataContext] pendingChangesMap.settings: Set(0) {size: 0}
-DataContext.tsx:3255 [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 9, …}
-DataContext.tsx:3273 [DataContext] 🧠 Pre-empting context reset for: odumasemethodistd.abasic_20252026_Third-Term-2025/2026-Third Term
-DataContext.tsx:3328 [DataContext] ✅ Updating settings
-DataContext.tsx:3328 [DataContext] ✅ Updating userLogs
-DataContext.tsx:3328 [DataContext] ✅ Updating activeSessions
-DataContext.tsx:3308 [DataContext] ✅ Merged collection: users
-DataContext.tsx:3411 [DataContext] ✅ Updating users: 11
-DataContext.tsx:3442 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
-DataContext.tsx:3476 [DataContext] 💾 Updated originalData baseline with merge strategy
-DataContext.tsx:1066 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+ [AuthOverlay] Restored remote settings object: {headmasterName: 'Mr. Stephen Kwakye Ahenkorah', logo: '', academicYear: '2025/2026', aggregateScoreClasses: Array(0), headmasterSignature: 'https://i.ibb.co/xSjY6pnP/4fbc8f1cdbbc.jpg', …}
+ [DataContext] 🛡️ Initial Cloud Sync Guard: Verifying intentionality from disk...
+ [DataContext] Debug incoming settings: {headmasterName: 'Mr. Stephen Kwakye Ahenkorah', logo: '', academicYear: '2025/2026', aggregateScoreClasses: Array(0), headmasterSignature: 'https://i.ibb.co/xSjY6pnP/4fbc8f1cdbbc.jpg', …}
+DataContext.tsx:3229 [DataContext] Current in-memory settings: {schoolName: '', district: '', circuit: '', address: '', academicYear: '', …}
+DataContext.tsx:3230 [DataContext] pendingChangesMap.settings: Set(1) {'academicYear'}
+DataContext.tsx:3262 [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 9, …}
+DataContext.tsx:3282 [DataContext] 🧠 Pre-empting context reset for: odumasemethodistd.abasic_20252026_Third-Term-2025/2026-Third Term
+DataContext.tsx:3337 [DataContext] ✅ Updating settings
+DataContext.tsx:3317 [DataContext] ✅ Merged collection: reportData
+DataContext.tsx:3317 [DataContext] ✅ Merged collection: classData
+DataContext.tsx:3337 [DataContext] ✅ Updating userLogs
+DataContext.tsx:3337 [DataContext] ✅ Updating activeSessions
+DataContext.tsx:3317 [DataContext] ✅ Merged collection: users
+DataContext.tsx:3420 [DataContext] ✅ Updating users: 11
+DataContext.tsx:3451 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
+DataContext.tsx:3485 [DataContext] 💾 Updated originalData baseline with merge strategy
+DataContext.tsx:1068 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
 AuthOverlay.tsx:206 [AuthOverlay] Checking for sba_force_term_select in localStorage...
 AuthOverlay.tsx:208 [AuthOverlay] sba_force_term_select value is: false
-DataContext.tsx:1066 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
-DataContext.tsx:1066 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
-DataContext.tsx:2548 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1782350209005 for userLogs
-DataContext.tsx:2548 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1782350209005 for userLogs
-DataContext.tsx:2201 [DataContext] Sync RESUMED
-DataContext.tsx:2548 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1782350209005 for userLogs
-DataContext.tsx:2548 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1782350209005 for userLogs
-DataContext.tsx:2548 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1782350209005 for userLogs
-DataContext.tsx:2548 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1782350209005 for userLogs
-DataContext.tsx:2992 [DataContext] 🔍 loadMetadata Check: {hasData: true, previouslyLoaded: false, isUpToDate: false, inflight: false}
-DataContext.tsx:3023 [DataContext] 📥 Loading Metadata (Classes, Subjects, Assessments)...
-DataContext.tsx:1152 [DataContext] 🛰️ Setting up True Listeners for odumasemethodistd.abasic_20252026_Third-Term...
-DataContext.tsx:2117 [DataContext] 📦 Checking student bucket existence for odumasemethodistd.abasic_20252026_Third-Term...
-DataContext.tsx:2992 [DataContext] 🔍 loadMetadata Check: {hasData: true, previouslyLoaded: false, isUpToDate: false, inflight: true}
-DataContext.tsx:3016 [DataContext] ⏳ Metadata fetch already in progress. Deduping...
-DataContext.tsx:2548 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1782350209005 for userLogs
-DataContext.tsx:2548 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1782350209005 for userLogs
-DataContext.tsx:1198 [DataContext] 📥 Real-time update for School Main Doc
-DataContext.tsx:3190 [DataContext] 🛡️ Initial Cloud Sync Guard: Verifying intentionality from disk...
-DataContext.tsx:3223 [DataContext] Debug incoming settings: {logo: '', vacationDate: '', allowPersistence: true, schoolName: 'Odumase Methodist/D. A Basic ', indexNumberGlobalPrefix: '', …}
-DataContext.tsx:3224 [DataContext] Current in-memory settings: {logo: '', vacationDate: '', allowPersistence: true, schoolName: 'Odumase Methodist/D. A Basic ', indexNumberGlobalPrefix: '', …}
-DataContext.tsx:3225 [DataContext] pendingChangesMap.settings: Set(0) {size: 0}
-DataContext.tsx:3255 [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 0, …}
-DataContext.tsx:3273 [DataContext] 🧠 Pre-empting context reset for: odumasemethodistd.abasic_20252026_Third-Term-2025/2026-Third Term
-DataContext.tsx:3328 [DataContext] ✅ Updating settings
-DataContext.tsx:3328 [DataContext] ✅ Updating userLogs
-DataContext.tsx:3328 [DataContext] ✅ Updating activeSessions
-DataContext.tsx:3442 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
-DataContext.tsx:3476 [DataContext] 💾 Updated originalData baseline with merge strategy
-DataContext.tsx:1066 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
-DataContext.tsx:1164 [DataContext] 📥 Real-time update for students
-DataContext.tsx:1164 [DataContext] 📥 Real-time update for classes
-DataContext.tsx:1066 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
-DataContext.tsx:1164 [DataContext] 📥 Real-time update for subjects
-DataContext.tsx:1164 [DataContext] 📥 Real-time update for assessments
-DataContext.tsx:1164 [DataContext] 📥 Real-time update for grades
-DataContext.tsx:1066 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
-DataContext.tsx:3161 [DataContext] ✅ Metadata Merge triggered for School: odumasemethodistd.abasic_20252026_Third-Term
-DataContext.tsx:1066 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:1068 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:1068 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:2552 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1782353167167 for userLogs
+DataContext.tsx:2552 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1782353167167 for userLogs
+DataContext.tsx:2205 [DataContext] Sync RESUMED
+DataContext.tsx:2552 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1782353167167 for userLogs
+DataContext.tsx:2552 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1782353167167 for userLogs
+DataContext.tsx:2552 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1782353167167 for userLogs
+DataContext.tsx:2552 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1782353167167 for userLogs
+DataContext.tsx:1154 [DataContext] 🛰️ Setting up True Listeners for odumasemethodistd.abasic_20252026_Third-Term...
+DataContext.tsx:2121 [DataContext] 📦 Checking student bucket existence for odumasemethodistd.abasic_20252026_Third-Term...
+DataContext.tsx:2552 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1782353167167 for userLogs
+DataContext.tsx:2552 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1782353167167 for userLogs
+DataContext.tsx:1200 [DataContext] 📥 Real-time update for School Main Doc
+DataContext.tsx:3194 [DataContext] 🛡️ Initial Cloud Sync Guard: Verifying intentionality from disk...
+DataContext.tsx:3228 [DataContext] Debug incoming settings: {headmasterName: 'Mr. Stephen Kwakye Ahenkorah', logo: '', academicYear: '2025/2026', aggregateScoreClasses: Array(0), headmasterSignature: 'https://i.ibb.co/xSjY6pnP/4fbc8f1cdbbc.jpg', …}
+DataContext.tsx:3229 [DataContext] Current in-memory settings: {headmasterName: 'Mr. Stephen Kwakye Ahenkorah', logo: '', academicYear: '2025/2026', aggregateScoreClasses: Array(0), headmasterSignature: 'https://i.ibb.co/xSjY6pnP/4fbc8f1cdbbc.jpg', …}
+DataContext.tsx:3230 [DataContext] pendingChangesMap.settings: Set(0) {size: 0}
+DataContext.tsx:3262 [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 0, …}
+DataContext.tsx:3282 [DataContext] 🧠 Pre-empting context reset for: odumasemethodistd.abasic_20252026_Third-Term-2025/2026-Third Term
+DataContext.tsx:3337 [DataContext] ✅ Updating userLogs
+DataContext.tsx:3337 [DataContext] ✅ Updating activeSessions
+DataContext.tsx:3451 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
+DataContext.tsx:3485 [DataContext] 💾 Updated originalData baseline with merge strategy
+DataContext.tsx:1068 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:1166 [DataContext] 📥 Real-time update for students
+DataContext.tsx:1166 [DataContext] 📥 Real-time update for classes
+DataContext.tsx:1166 [DataContext] 📥 Real-time update for subjects
+DataContext.tsx:1068 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:1166 [DataContext] 📥 Real-time update for assessments
+DataContext.tsx:1166 [DataContext] 📥 Real-time update for grades
+DataContext.tsx:2465 [DataContext] ⚙️ settings granular payload: {academicYear: '2025/2026d'}
+DataContext.tsx:2465 [DataContext] ⚙️ settings granular payload: {academicYear: '2025/2026d'}
+DataContext.tsx:2465 [DataContext] ⚙️ settings granular payload: {academicYear: '2025/2026'}
+DataContext.tsx:2465 [DataContext] ⚙️ settings granular payload: {academicYear: '2025/2026'}
+DataContext.tsx:777 [DataContext] 🔄 SCHOOL SWITCH Change Detected: odumasemethodistd.abasic_20252026_Third-Term-2025/2026-Third Term -> odumasemethodistd.abasic_20252026_Third-Term-2025/2026d-Third Term. Resetting records.
+DataContext.tsx:794 [DataContext] 🧹 School switch detected. Resetting shared settings...
+DataContext.tsx:2465 [DataContext] ⚙️ settings granular payload: {academicYear: ''}
+DataContext.tsx:2465 [DataContext] ⚙️ settings granular payload: {academicYear: ''}
+DataContext.tsx:2465 [DataContext] ⚙️ settings granular payload: {academicYear: '2025/2026d'}
+DataContext.tsx:2465 [DataContext] ⚙️ settings granular payload: {academicYear: '2025/2026d'}
+DataContext.tsx:777 [DataContext] 🔄 SCHOOL SWITCH Change Detected: odumasemethodistd.abasic_20252026_Third-Term-2025/2026d-Third Term -> odumasemethodistd.abasic_20252026_Third-Term--. Resetting records.
+DataContext.tsx:794 [DataContext] 🧹 School switch detected. Resetting shared settings...
+DataContext.tsx:2465 [DataContext] ⚙️ settings granular payload: {academicYear: ''}
+DataContext.tsx:2465 [DataContext] ⚙️ settings granular payload: {academicYear: ''}
+DataContext.tsx:2465 [DataContext] ⚙️ settings granular payload: {academicYear: ''}
+DataContext.tsx:2465 [DataContext] ⚙️ settings granular payload: {academicYear: ''}
+DataContext.tsx:2465 [DataContext] ⚙️ settings granular payload: {academicYear: ''}
+DataContext.tsx:2465 [DataContext] ⚙️ settings granular payload: {academicYear: ''}

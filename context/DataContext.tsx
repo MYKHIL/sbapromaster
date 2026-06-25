@@ -88,7 +88,7 @@ export interface DataContextType {
     saveToCloud: (isManualSave?: boolean) => Promise<void>;
 
     // Page-specific save functions
-    saveSettings: () => Promise<void>;
+    saveSettings: (settingsOverride?: SchoolSettings) => Promise<void>;
     saveStudents: () => Promise<void>;
     saveTeachers: () => Promise<void>;
     saveSubjects: () => Promise<void>;
@@ -436,7 +436,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.346"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.347"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -755,20 +755,25 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // CRITICAL: When the Context (School, Year, or Term) changes, reset all state
     // to prevent legacy data from contaminating the new context.
     const lastContextKey = React.useRef<string | null>(null);
+    const lastSchoolIdRef = React.useRef<string | null>(null);
     React.useEffect(() => {
         const currentContextKey = `${schoolId}-${settings.academicYear}-${settings.academicTerm}`;
 
         // ONLY reset if it's a REAL context shift (remote load or saved change).
         // If the context changed but it's currently marked as DIRTY locally, skip reset.
         // This prevents data loss while typing a new Academic Year or Term.
-        const isLocallyChangingContext = isSettingDirty('academicYear') || isSettingDirty('academicTerm');
+        // Consider user typing: treat any local settings edits as an in-progress edit
+        // to avoid resetting all page state while the user is entering a new Year/Term.
+        const isLocallyChangingContext = dirtyFields.current.has('settings') || isSettingDirty('academicYear') || isSettingDirty('academicTerm');
 
         if (lastContextKey.current !== null && lastContextKey.current !== currentContextKey) {
-            const lastSchoolId = lastContextKey.current.split('-')[0];
-            const isSchoolSwitch = lastSchoolId !== schoolId;
+            // Compare schoolId directly instead of parsing from contextKey (schoolId may contain hyphens)
+            const isSchoolSwitch = lastSchoolIdRef.current !== null && lastSchoolIdRef.current !== schoolId;
 
             if (isLocallyChangingContext && !isSchoolSwitch) {
                 console.log("[DataContext] Context shift detected but marked as local edit. Skipping reset during typing.");
+                lastContextKey.current = currentContextKey;
+                lastSchoolIdRef.current = schoolId;
                 return;
             }
 
@@ -820,6 +825,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             lastLoadedTimestamps.current = {};
         }
         lastContextKey.current = currentContextKey;
+        lastSchoolIdRef.current = schoolId;
     }, [schoolId, settings.academicYear, settings.academicTerm, dirtyVersion]);
 
     // -------------------------------------------------------------------------
@@ -1865,7 +1871,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // PAGE-SPECIFIC SAVE FUNCTIONS
     // -------------------------------------------------------------------------
 
-    const savePageData = async (field: keyof AppDataType, data: any) => {
+    const savePageData = async (field: keyof AppDataType, data?: any) => {
         if (!schoolId) {
             console.log(`No school ID, skipping ${String(field)} save.`);
             return;
@@ -1889,7 +1895,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // FIX: Granular Save - Only get data for THIS field (and potentially logs/sessions if needed)
             // This prevents "Bleeding Saves" and correctly handles deletions for this field.
             // We include 'userLogs' and 'activeSessions' to ensure they sync often.
-            const { _deletions, ...updates } = getPendingUploadData([field, 'userLogs', 'activeSessions']);
+            const currentDataOverride = data !== undefined ? ({ ...stateRef.current, [field]: data } as AppDataType) : undefined;
+            const { _deletions, ...updates } = getPendingUploadData([field, 'userLogs', 'activeSessions'], currentDataOverride);
             if (field === 'students' && _deletions?.students) {
                 console.log(`[DELETE DEBUG] savePageData sending students deletions:`, _deletions.students);
             }
@@ -1925,14 +1932,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // Update originalData baseline to the NEWly saved data
             // This prevents the UI from showing "Modified" highlights after a successful save
             if (field === 'settings') {
-                originalData.current.settings = { ...stateRef.current.settings };
-            } else if (Array.isArray(data)) {
+                originalData.current.settings = data !== undefined ? { ...data } : { ...stateRef.current.settings };
+            } else if (data !== undefined && Array.isArray(data)) {
                 // Replace the baseline with the current live state after a successful save.
                 // CRITICAL: We must NOT use a merge-only Map here because deleted items would
                 // remain in originalData, causing them to re-appear on the next remote sync
                 // (the smart merge would see them as "local-only unsaved items" and re-add them).
                 // stateRef.current[field] reflects the true post-deletion state.
-                originalData.current[field] = [...(stateRef.current[field] as any[])] as any;
+                originalData.current[field] = [...data] as any;
             }
 
             // Clear granular dirty map for this field
@@ -1960,7 +1967,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
-    const saveSettings = () => savePageData('settings', settings);
+    const saveSettings = (settingsOverride?: SchoolSettings) => savePageData('settings', settingsOverride ?? settings);
     const saveStudents = () => savePageData('students', students);
     const saveTeachers = () => savePageData('users', users);
     const saveSubjects = () => savePageData('subjects', subjects);

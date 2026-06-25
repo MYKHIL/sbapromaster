@@ -74,9 +74,9 @@ const Settings: React.FC = () => {
       const url = await processAndUploadImage(dataUrl);
       console.log(`[Settings] ✅ Signature processed/uploaded. Local Update:`, url);
       // Update local form state and context, then persist
-      setFormData(prev => ({ ...prev, headmasterSignature: url }));
-      updateSettings({ headmasterSignature: url });
-      await saveSettings();
+        setFormData(prev => ({ ...prev, headmasterSignature: url }));
+        // Mark as dirty only — do NOT auto-save to cloud. User will trigger save.
+        updateSettings({ headmasterSignature: url });
     } catch (error) {
       console.error("[Settings] ❌ Signature upload failed", error);
       alert("Failed to upload signature. Please try again.");
@@ -199,8 +199,8 @@ const Settings: React.FC = () => {
           const url = await processAndUploadImage(rawBase64);
           // Update formData and context then persist
           setFormData(prev => ({ ...prev, [field]: url } as any));
+          // Mark updated image locally and mark settings dirty; do not persist immediately
           updateSettings({ [field]: url } as any);
-          await saveSettings();
         } catch (error) {
           console.error(`${field} upload failed`, error);
           alert(`Failed to upload ${isLogo ? 'logo' : 'signature'}. Please try again.`);
@@ -218,8 +218,8 @@ const Settings: React.FC = () => {
     try {
       const url = await processAndUploadImage(imageData);
       setFormData(prev => ({ ...prev, [field]: url } as any));
+      // Mark dirty only; do not auto-save
       updateSettings({ [field]: url } as any);
-      await saveSettings();
     } catch (error) {
       console.error(`${field} camera capture upload failed`, error);
       alert(`Failed to upload captured ${isLogo ? 'logo' : 'signature'}.`);
@@ -229,11 +229,9 @@ const Settings: React.FC = () => {
   };
 
   const handleClearImage = (field: 'logo' | 'headmasterSignature') => {
-    // Clear locally then persist
+    // Clear locally and mark dirty (do not persist to cloud automatically)
     setFormData(prev => ({ ...prev, [field]: '' } as any));
     updateSettings({ [field]: '' } as any);
-    // fire-and-forget save
-    void saveSettings();
   };
 
   const handleEnhance = async (field: 'logo' | 'headmasterSignature', setLoading: (loading: boolean) => void) => {
@@ -246,8 +244,8 @@ const Settings: React.FC = () => {
     try {
       const enhancedImage = await enhanceImage(currentImage);
       setFormData(prev => ({ ...prev, [field]: enhancedImage } as any));
+      // Mark enhanced image dirty only
       updateSettings({ [field]: enhancedImage } as any);
-      await saveSettings();
     } catch (error) {
       console.error(error);
       alert((error as Error).message);
