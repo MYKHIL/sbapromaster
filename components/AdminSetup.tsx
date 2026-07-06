@@ -1897,21 +1897,22 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                     {/* Mobile Pagination Controls - only show on mobile when editing/adding user on small screen */}
                     {users.length > 0 && window.innerWidth < 1024 && (
                         <>
-                            {/* Cancel button when editing/adding on mobile */}
-                            <button
-                                onClick={() => {
-                                    if (mode === 'setup' && users.length > 0) {
-                                        handleCancelNewUser();
-                                    } else if (hasUnsavedChanges) {
-                                        setShowCloseWarning(true);
-                                    } else {
-                                        handleCancelNewUser();
-                                    }
-                                }}
-                                className="flex-1 py-2 px-4 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition font-bold shadow-sm text-sm"
-                            >
-                                Cancel
-                            </button>
+                            {editingUserId !== null && (
+                                <button
+                                    onClick={() => {
+                                        if (mode === 'setup' && users.length > 0) {
+                                            handleCancelNewUser();
+                                        } else if (hasUnsavedChanges) {
+                                            setShowCloseWarning(true);
+                                        } else {
+                                            handleCancelNewUser();
+                                        }
+                                    }}
+                                    className="flex-1 py-2 px-4 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition font-bold shadow-sm text-sm"
+                                >
+                                    Cancel
+                                </button>
+                            )}
 
                             {/* Previous button - show on page 2+ */}
                             {mobileUserFormPage > 0 && (
@@ -1984,7 +1985,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                 </button>
                             )}
 
-                            {(mode === 'management' || (mode === 'setup' && users.length > 0)) && (
+                            {(mode === 'management' && editingUserId !== null) && (
                                 <button
                                     onClick={handleCancelNewUser}
                                     className="flex-1 py-2 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-bold shadow-sm text-sm"
