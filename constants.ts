@@ -132,13 +132,14 @@ export const INITIAL_SUBJECTS: Subject[] = [
   { id: 4, subject: 'Social Studies', type: 'Core', facilitator: '', signature: '' },
   { id: 5, subject: 'Computing', type: 'Elective', facilitator: '', signature: '' },
   { id: 6, subject: 'Career Technology', type: 'Elective', facilitator: '', signature: '' },
-  { id: 7, subject: 'Creative Arts & Design', type: 'Elective', facilitator: '', signature: '' },
+  { id: 7, subject: 'Creative Arts & Design', type: 'Elective', facilitator: '', signature: '' },  
   { id: 8, subject: 'Religious & Moral Education', type: 'Elective', facilitator: '', signature: '' },
   { id: 9, subject: 'Ghanaian Language', type: 'Elective', facilitator: '', signature: '' },
   { id: 10, subject: 'Creative Arts', type: 'Elective', facilitator: '', signature: '' },
   { id: 11, subject: 'OWOP', type: 'Elective', facilitator: '', signature: '' },
   { id: 12, subject: 'Numeracy', type: 'Core', facilitator: '', signature: '' },
   { id: 13, subject: 'Language & Literacy', type: 'Core', facilitator: '', signature: '' },
+  { id: 14, subject: 'History', type: 'Core', facilitator: '', signature: '' }
 ];
 
 export const INITIAL_CLASSES: Class[] = [];

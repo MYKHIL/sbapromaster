@@ -35,7 +35,7 @@ const GradingSystem: React.FC = () => {
     const [isPermanentConfirmOpen, setIsPermanentConfirmOpen] = useState(false);
     const [isRestoreConfirmOpen, setIsRestoreConfirmOpen] = useState(false);
     const [itemIdToDelete, setItemIdToDelete] = useState<number | null>(null);
-    const [idToPermanentlyDelete, setIdToPermanentlyDelete] = useState<number | null>(null);
+    const [idsToPermanentlyDelete, setIdsToPermanentlyDelete] = useState<number[]>([]);
     const [modalError, setModalError] = useState('');
     const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
     const [sessionAddedIds, setSessionAddedIds] = useState<number[]>([]);
@@ -122,17 +122,17 @@ const GradingSystem: React.FC = () => {
         setItemIdToDelete(null);
     };
 
-    const handlePermanentDeleteClick = (id: number) => {
-        setIdToPermanentlyDelete(id);
+    const handlePermanentDeleteClick = (ids: number[] | number) => {
+        setIdsToPermanentlyDelete(Array.isArray(ids) ? ids : [ids]);
         setIsPermanentConfirmOpen(true);
     };
 
     const handleConfirmPermanentDelete = () => {
-        if (idToPermanentlyDelete !== null) {
-            permanentlyDeleteItem('grades', idToPermanentlyDelete);
+        if (idsToPermanentlyDelete.length > 0) {
+            idsToPermanentlyDelete.forEach(id => permanentlyDeleteItem('grades', id));
         }
         setIsPermanentConfirmOpen(false);
-        setIdToPermanentlyDelete(null);
+        setIdsToPermanentlyDelete([]);
     };
 
 
@@ -229,16 +229,16 @@ const GradingSystem: React.FC = () => {
                 </div>
 
                 <div className="bg-gray-100 py-4">
-                    <div className="flex justify-start gap-4">
+                    <div className="flex flex-wrap justify-start gap-2 sm:gap-3">
                         {isAdmin && (
                             <>
-                                <button onClick={handleAddNew} className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors">
+                                <button onClick={handleAddNew} className="flex min-w-[180px] flex-1 items-center justify-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                                     </svg>
                                     Add New Grade
                                 </button>
-                                <button onClick={handleRestoreDefault} className="flex items-center bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition-colors">
+                                <button onClick={handleRestoreDefault} className="flex items-center justify-center bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition-colors">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-7.714 2.143L11 21l-2.286-6.857L1 12l7.714-2.143L11 3z" />
                                     </svg>
@@ -247,13 +247,11 @@ const GradingSystem: React.FC = () => {
                                 {visibleDeletedGrades.length > 0 && (
                                     <button
                                         onClick={() => setIsRestoreModalOpen(true)}
-                                        className="flex items-center space-x-2 px-3 py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition shadow-sm font-semibold border border-red-200 ml-auto"
+                                        className="group flex items-center justify-center gap-2 px-3 py-2 text-sm text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-all shadow-sm font-semibold border border-red-200"
                                         title="Restore Deleted Grades"
                                     >
-                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                                        </svg>
-                                        <span className="hidden sm:inline">Restore</span>
+                                        <span className="text-lg leading-none transition-transform duration-300 group-hover:rotate-180 group-hover:scale-110" aria-hidden="true">♻</span>
+                                        <span className="font-semibold">Recycle Bin</span>
                                     </button>
                                 )}
                             </>
@@ -473,7 +471,7 @@ const GradingSystem: React.FC = () => {
                     onClose={() => setIsRestoreModalOpen(false)}
                     title="Restore Deleted Grades"
                     items={deletedGrades}
-                    onRestore={(id) => restoreItem('grades', id)}
+                    onRestore={(ids) => restoreItem('grades', ids)}
                     onDeletePermanently={handlePermanentDeleteClick}
                     itemNameKey="name"
                 />
@@ -482,7 +480,7 @@ const GradingSystem: React.FC = () => {
                     isOpen={isPermanentConfirmOpen}
                     message={
                         <>
-                            Are you sure you want to <span className="font-bold text-red-600 underline">permanently delete</span> this grade? 
+                            Are you sure you want to <span className="font-bold text-red-600 underline">permanently delete</span> {idsToPermanentlyDelete.length > 1 ? 'these selected grades' : 'this grade'}? 
                             <br /><br />
                             This action <span className="font-bold">cannot be undone</span> and all related records will be completely removed from the system.
                         </>
@@ -490,7 +488,7 @@ const GradingSystem: React.FC = () => {
                     onConfirm={handleConfirmPermanentDelete}
                     onClose={() => {
                         setIsPermanentConfirmOpen(false);
-                        setIdToPermanentlyDelete(null);
+                        setIdsToPermanentlyDelete([]);
                     }}
                     title="Permanent Deletion"
                     variant="danger"

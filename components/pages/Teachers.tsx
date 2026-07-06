@@ -43,7 +43,7 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta, onNavigate }) => {
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [isPermanentConfirmOpen, setIsPermanentConfirmOpen] = useState(false);
     const [itemIdToDelete, setItemIdToDelete] = useState<number | null>(null);
-    const [idToPermanentlyDelete, setIdToPermanentlyDelete] = useState<number | null>(null);
+    const [idsToPermanentlyDelete, setIdsToPermanentlyDelete] = useState<number[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [isEnhancing, setIsEnhancing] = useState(false);
     const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
@@ -224,17 +224,17 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta, onNavigate }) => {
         setItemIdToDelete(null);
     };
 
-    const handlePermanentDeleteClick = (id: number) => {
-        setIdToPermanentlyDelete(id);
+    const handlePermanentDeleteClick = (ids: number[] | number) => {
+        setIdsToPermanentlyDelete(Array.isArray(ids) ? ids : [ids]);
         setIsPermanentConfirmOpen(true);
     };
 
     const handleConfirmPermanentDelete = () => {
-        if (idToPermanentlyDelete !== null) {
-            permanentlyDeleteItem('classes', idToPermanentlyDelete);
+        if (idsToPermanentlyDelete.length > 0) {
+            idsToPermanentlyDelete.forEach(id => permanentlyDeleteItem('classes', id));
         }
         setIsPermanentConfirmOpen(false);
-        setIdToPermanentlyDelete(null);
+        setIdsToPermanentlyDelete([]);
     };
 
     const handleCloseModal = () => {
@@ -460,11 +460,11 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta, onNavigate }) => {
                     </div>
                     <ReadOnlyWrapper allowedRoles={['Admin', 'Teacher']}>
                         {isAdmin && (
-                            <div className="flex items-center gap-3">
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                                 <button
                                     onClick={handleAddNew}
                                     disabled={isLimitReached}
-                                    className={`flex items-center space-x-2 px-4 py-2 text-white rounded-lg transition shadow-sm ${isLimitReached ? 'bg-gray-400 cursor-not-allowed opacity-75' : 'bg-blue-600 hover:bg-blue-700'}`}
+                                    className={`flex min-w-[180px] flex-1 items-center justify-center space-x-2 px-4 py-2 text-white rounded-lg transition shadow-sm ${isLimitReached ? 'bg-gray-400 cursor-not-allowed opacity-75' : 'bg-blue-600 hover:bg-blue-700'}`}
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -476,7 +476,7 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta, onNavigate }) => {
                                         if (onNavigate) onNavigate('Settings', { openUserManagement: true, returnTo: 'Classes & Teachers' });
                                         else window.dispatchEvent(new CustomEvent('app-navigate', { detail: { page: 'Settings', meta: { openUserManagement: true, returnTo: 'Classes & Teachers' } } }));
                                     }}
-                                    className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition shadow-sm border border-gray-200"
+                                    className="flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition shadow-sm border border-gray-200"
                                     title="Manage Users & Permissions"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -487,33 +487,41 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta, onNavigate }) => {
                                 {visibleDeletedClasses.length > 0 && (
                                     <button
                                         onClick={() => setIsRestoreModalOpen(true)}
-                                        className="flex items-center space-x-2 px-3 py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition shadow-sm font-semibold border border-red-200"
+                                        className="group flex items-center justify-center gap-2 px-3 py-2 text-sm text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-all shadow-sm font-semibold border border-red-200"
                                         title="Restore Deleted Classes"
                                     >
-                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                                        </svg>
-                                        <span className="hidden sm:inline">Restore</span>
+                                        <span className="text-lg leading-none transition-transform duration-300 group-hover:rotate-180 group-hover:scale-110" aria-hidden="true">♻</span>
+                                        <span className="font-semibold">Recycle Bin</span>
                                     </button>
                                 )}
-                                <button
-                                    onClick={handleExportExcel}
-                                    className="p-2 hover:bg-gray-100 rounded-full transition-colors group"
-                                    title="Export to Excel"
-                                >
-                                    <svg className="w-8 h-8 text-green-600 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 16 16">
-                                        <path d="M9.293 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.707A1 1 0 0 0 13.707 4L10 .293A1 1 0 0 0 9.293 0zM9.5 3.5v-2l3 3h-2a1 1 0 0 1-1-1zM5.884 6.68 8 9.219l2.116-2.54a.5.5 0 1 1 .768.641L8.651 10l2.233 2.68a.5.5 0 0 1-.768.64L8 10.781l-2.116 2.54a.5.5 0 0 1-.768-.641L7.349 10 5.116 7.32a.5.5 0 1 1 .768-.64z" />
-                                    </svg>
-                                </button>
-                                <button
-                                    onClick={handleExportPDF}
-                                    className="p-2 hover:bg-gray-100 rounded-full transition-colors group"
-                                    title="Export to PDF"
-                                >
-                                    <svg className="w-8 h-8 text-red-600 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M20 2H8c-1.1 0-2 .9-2 2v12H4v5c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5v1.5H19v2h-1.5V7h2V8.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z" />
-                                    </svg>
-                                </button>
+                                <div className="flex flex-col items-center">
+                                    <button
+                                        onClick={handleExportExcel}
+                                        className="group flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white px-2 py-2 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-green-50 hover:shadow-md"
+                                        title="Export to Excel"
+                                    >
+                                        <svg className="h-5 w-5 text-green-600 transition-transform duration-200 group-hover:scale-110" fill="currentColor" viewBox="0 0 16 16">
+                                            <path d="M9.293 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.707A1 1 0 0 0 13.707 4L10 .293A1 1 0 0 0 9.293 0zM9.5 3.5v-2l3 3h-2a1 1 0 0 1-1-1zM5.884 6.68 8 9.219l2.116-2.54a.5.5 0 1 1 .768.641L8.651 10l2.233 2.68a.5.5 0 0 1-.768.64L8 10.781l-2.116 2.54a.5.5 0 0 1-.768-.641L7.349 10 5.116 7.32a.5.5 0 1 1 .768-.64z" />
+                                        </svg>
+                                    </button>
+                                    <span className="mt-1 whitespace-nowrap text-[10px] font-semibold text-green-700 transition-colors duration-200 group-hover:text-green-800">
+                                        Excel
+                                    </span>
+                                </div>
+                                <div className="flex flex-col items-center">
+                                    <button
+                                        onClick={handleExportPDF}
+                                        className="group flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white px-2 py-2 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-red-50 hover:shadow-md"
+                                        title="Export to PDF"
+                                    >
+                                        <svg className="h-5 w-5 text-red-600 transition-transform duration-200 group-hover:scale-110" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M20 2H8c-1.1 0-2 .9-2 2v12H4v5c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5v1.5H19v2h-1.5V7h2V8.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z" />
+                                        </svg>
+                                    </button>
+                                    <span className="mt-1 whitespace-nowrap text-[10px] font-semibold text-red-700 transition-colors duration-200 group-hover:text-red-800">
+                                        PDF
+                                    </span>
+                                </div>
                             </div>
                         )}
                     </ReadOnlyWrapper>
@@ -852,7 +860,7 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta, onNavigate }) => {
                 onClose={() => setIsRestoreModalOpen(false)}
                 title="Restore Deleted Classes"
                 items={deletedClasses}
-                onRestore={(id) => restoreItem('classes', id)}
+                onRestore={(ids) => restoreItem('classes', ids)}
                 onDeletePermanently={handlePermanentDeleteClick}
                 itemNameKey="name"
             />
@@ -861,15 +869,15 @@ const Teachers: React.FC<TeachersProps> = ({ navigationMeta, onNavigate }) => {
                 isOpen={isPermanentConfirmOpen}
                 message={
                     <>
-                        Are you sure you want to <span className="font-bold text-red-600 underline">permanently delete</span> this class? 
+                        Are you sure you want to <span className="font-bold text-red-600 underline">permanently delete</span> {idsToPermanentlyDelete.length > 1 ? 'these selected classes' : 'this class'}? 
                         <br /><br />
-                        This action <span className="font-bold">cannot be undone</span> and all related records (including student enrollments in this class) will be completely removed from the system.
+                        This action <span className="font-bold">cannot be undone</span> and all related records (including student enrollments in these classes) will be completely removed from the system.
                     </>
                 }
                 onConfirm={handleConfirmPermanentDelete}
                 onClose={() => {
                     setIsPermanentConfirmOpen(false);
-                    setIdToPermanentlyDelete(null);
+                    setIdsToPermanentlyDelete([]);
                 }}
                 title="Permanent Deletion"
                 variant="danger"

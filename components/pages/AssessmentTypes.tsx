@@ -38,7 +38,7 @@ const AssessmentTypes: React.FC = () => {
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [isPermanentConfirmOpen, setIsPermanentConfirmOpen] = useState(false);
     const [itemIdToDelete, setItemIdToDelete] = useState<number | null>(null);
-    const [idToPermanentlyDelete, setIdToPermanentlyDelete] = useState<number | null>(null);
+    const [idsToPermanentlyDelete, setIdsToPermanentlyDelete] = useState<number[]>([]);
     const [modalError, setModalError] = useState('');
     const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
     const [sessionAddedIds, setSessionAddedIds] = useState<number[]>([]);
@@ -155,17 +155,17 @@ const AssessmentTypes: React.FC = () => {
         setItemIdToDelete(null);
     };
 
-    const handlePermanentDeleteClick = (id: number) => {
-        setIdToPermanentlyDelete(id);
+    const handlePermanentDeleteClick = (ids: number[] | number) => {
+        setIdsToPermanentlyDelete(Array.isArray(ids) ? ids : [ids]);
         setIsPermanentConfirmOpen(true);
     };
 
     const handleConfirmPermanentDelete = () => {
-        if (idToPermanentlyDelete !== null) {
-            permanentlyDeleteItem('assessments', idToPermanentlyDelete);
+        if (idsToPermanentlyDelete.length > 0) {
+            idsToPermanentlyDelete.forEach(id => permanentlyDeleteItem('assessments', id));
         }
         setIsPermanentConfirmOpen(false);
-        setIdToPermanentlyDelete(null);
+        setIdsToPermanentlyDelete([]);
     };
 
     const handleCloseModal = () => {
@@ -251,10 +251,10 @@ const AssessmentTypes: React.FC = () => {
                 </div>
 
                 <div className="bg-gray-100 py-4">
-                    <div className="flex justify-start gap-3">
+                    <div className="flex flex-wrap justify-start gap-2 sm:gap-3">
                         {isAdmin && (
                             <>
-                                <button onClick={handleAddNew} className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors">
+                                <button onClick={handleAddNew} className="flex min-w-[180px] flex-1 items-center justify-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                                     </svg>
@@ -263,13 +263,11 @@ const AssessmentTypes: React.FC = () => {
                                 {visibleDeletedAssessments.length > 0 && (
                                     <button
                                         onClick={() => setIsRestoreModalOpen(true)}
-                                        className="flex items-center space-x-2 px-3 py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition shadow-sm font-semibold border border-red-200"
+                                        className="group flex items-center justify-center gap-2 px-3 py-2 text-sm text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-all shadow-sm font-semibold border border-red-200"
                                         title="Restore Deleted Assessments"
                                     >
-                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                                        </svg>
-                                        <span className="hidden sm:inline">Restore</span>
+                                        <span className="text-lg leading-none transition-transform duration-300 group-hover:rotate-180 group-hover:scale-110" aria-hidden="true">♻</span>
+                                        <span className="font-semibold">Recycle Bin</span>
                                     </button>
                                 )}
                             </>
@@ -525,7 +523,7 @@ const AssessmentTypes: React.FC = () => {
                 onClose={() => setIsRestoreModalOpen(false)}
                 title="Restore Deleted Assessments"
                 items={deletedAssessments}
-                onRestore={(id) => restoreItem('assessments', id)}
+                onRestore={(ids) => restoreItem('assessments', ids)}
                 onDeletePermanently={handlePermanentDeleteClick}
                 itemNameKey="name"
             />
@@ -534,7 +532,7 @@ const AssessmentTypes: React.FC = () => {
                 isOpen={isPermanentConfirmOpen}
                 message={
                     <>
-                        Are you sure you want to <span className="font-bold text-red-600 underline">permanently delete</span> this assessment type? 
+                        Are you sure you want to <span className="font-bold text-red-600 underline">permanently delete</span> {idsToPermanentlyDelete.length > 1 ? 'these selected assessment types' : 'this assessment type'}? 
                         <br /><br />
                         This action <span className="font-bold">cannot be undone</span> and all related records will be completely removed from the system.
                     </>
@@ -542,7 +540,7 @@ const AssessmentTypes: React.FC = () => {
                 onConfirm={handleConfirmPermanentDelete}
                 onClose={() => {
                     setIsPermanentConfirmOpen(false);
-                    setIdToPermanentlyDelete(null);
+                    setIdsToPermanentlyDelete([]);
                 }}
                 title="Permanent Deletion"
                 variant="danger"

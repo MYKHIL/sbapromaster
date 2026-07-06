@@ -24,6 +24,13 @@ import {
     MULTI_SCORE_ENTRY_ENABLED,
 } from '../constants';
 
+type PendingRestoreDeleteAction = {
+    field: keyof AppDataType;
+    action: 'restore' | 'permanent-delete';
+    ids: number[];
+    beforeItems: any[];
+};
+
 export interface DataContextType {
     loadMetadata: (force?: boolean) => Promise<any>; // Exposed Metadata Loader
     refreshFromCloud: (ignoreSyncLock?: boolean, keysToRefresh?: (keyof AppDataType)[]) => Promise<'throttled' | 'success' | 'error'>;
@@ -146,8 +153,12 @@ export interface DataContextType {
     unreadNotificationCount: number;
     markNotificationAsRead: (id: number) => void;
     markAllNotificationsAsRead: () => void;
-    restoreItem: (field: keyof AppDataType, id: number) => void;
-    permanentlyDeleteItem: (field: keyof AppDataType, id: number) => void;
+    restoreItem: (field: keyof AppDataType, id: number | number[]) => void;
+    permanentlyDeleteItem: (field: keyof AppDataType, id: number | number[]) => void;
+    undoPendingRestoreDeleteAction: () => void;
+    redoPendingRestoreDeleteAction: () => void;
+    canUndoPendingRestoreDeleteAction: boolean;
+    canRedoPendingRestoreDeleteAction: boolean;
     mergeSubjects: (targetId: number, duplicateIds: number[]) => void;
 }
 
@@ -427,6 +438,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [hasLocalChanges, setHasLocalChanges] = useState(false);
     // Force re-renders when dirty state changes (since dirtyFields is a ref)
     const [dirtyVersion, setDirtyVersion] = useState(0);
+    const [restoreDeleteUndoStack, setRestoreDeleteUndoStack] = useState<PendingRestoreDeleteAction[]>([]);
+    const [restoreDeleteRedoStack, setRestoreDeleteRedoStack] = useState<PendingRestoreDeleteAction[]>([]);
     // Track manual refreshes to force components to drop unsaved data
     const [refreshVersion, setRefreshVersion] = useState(0);
 
@@ -436,7 +449,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.348"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.349"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -3831,6 +3844,79 @@ const refreshFromCloud = React.useCallback(async (ignoreSyncLock: boolean = fals
         console.log(`[DataContext] ✅ Subject merge complete locally. ${duplicateIds.length} subjects consolidated.`);
     }, [schoolId, subjects, markDirty, markItemDirty, deleteSubject]);
 
+    const getCollectionItems = React.useCallback((field: keyof AppDataType) => {
+        const items = stateRef.current[field];
+        return Array.isArray(items) ? items : [];
+    }, []);
+
+    const applyCollectionUpdate = React.useCallback((field: keyof AppDataType, updater: (prev: any[]) => any[]) => {
+        if (field === 'students') setStudents(updater as any);
+        else if (field === 'subjects') setSubjects(updater as any);
+        else if (field === 'classes') setClasses(updater as any);
+        else if (field === 'grades') setGrades(updater as any);
+        else if (field === 'assessments') setAssessments(updater as any);
+    }, []);
+
+    const applyRestoreDeleteAction = React.useCallback((field: keyof AppDataType, action: PendingRestoreDeleteAction, reverse: boolean = false) => {
+        const targetIds = new Set(action.ids.map(String));
+        const isTarget = (item: any) => !!item && targetIds.has(String(getItemId(item)));
+
+        if (action.action === 'restore') {
+            const applyRestore = (prev: any[]) => prev.map(item => {
+                if (!isTarget(item)) return item;
+
+                if (reverse) {
+                    const beforeItem = action.beforeItems.find(before => String(getItemId(before)) === String(getItemId(item)));
+                    return {
+                        ...item,
+                        deleted: true,
+                        deletedAt: beforeItem?.deletedAt ?? item.deletedAt ?? null,
+                        deletedBy: beforeItem?.deletedBy ?? item.deletedBy ?? null,
+                    };
+                }
+
+                return { ...item, deleted: false, deletedAt: null, deletedBy: null };
+            });
+            applyCollectionUpdate(field, applyRestore);
+        } else {
+            if (reverse) {
+                const existingIds = new Set(getCollectionItems(field).map(item => String(getItemId(item))));
+                const toRestore = action.beforeItems.filter(item => !existingIds.has(String(getItemId(item))));
+                const restoreDeleted = (prev: any[]) => {
+                    const next = prev.filter(item => !isTarget(item));
+                    return [...next, ...toRestore.map(item => ({ ...item }))];
+                };
+                applyCollectionUpdate(field, restoreDeleted);
+            } else {
+                const removeDeleted = (prev: any[]) => prev.filter(item => !isTarget(item));
+                applyCollectionUpdate(field, removeDeleted);
+            }
+        }
+
+        markDirty(field, true);
+        action.ids.forEach(itemId => markItemDirty(field as string, itemId));
+    }, [applyCollectionUpdate, getCollectionItems, markDirty, markItemDirty]);
+
+    const undoPendingRestoreDeleteAction = React.useCallback(() => {
+        setRestoreDeleteUndoStack(prev => {
+            if (prev.length === 0) return prev;
+            const action = prev[prev.length - 1];
+            setRestoreDeleteRedoStack(next => [...next, action]);
+            applyRestoreDeleteAction(action.field, action, true);
+            return prev.slice(0, -1);
+        });
+    }, [applyRestoreDeleteAction]);
+
+    const redoPendingRestoreDeleteAction = React.useCallback(() => {
+        setRestoreDeleteRedoStack(prev => {
+            if (prev.length === 0) return prev;
+            const action = prev[prev.length - 1];
+            setRestoreDeleteUndoStack(next => [...next, action]);
+            applyRestoreDeleteAction(action.field, action, false);
+            return prev.slice(0, -1);
+        });
+    }, [applyRestoreDeleteAction]);
+
     const value: DataContextType = {
         users, setUsers,
         settings, setSettings, updateSettings,
@@ -3942,59 +4028,74 @@ const refreshFromCloud = React.useCallback(async (ignoreSyncLock: boolean = fals
             setUserLogs(prev => prev.map(log => ({ ...log, isRead: true })));
             setHasLocalChanges(true);
         },
-        restoreItem: (field: keyof AppDataType, id: number) => {
+        restoreItem: (field: keyof AppDataType, id: number | number[]) => {
             const userId = Number(localStorage.getItem('sba_user_id') || localStorage.getItem('emulator-sba_user_id'));
             const user = users?.find(u => u.id === userId);
             const isAdmin = user?.role === 'Admin';
+            const ids = Array.isArray(id) ? id : [id];
+            const targetIds = new Set(ids.map(String));
+            const currentItems = getCollectionItems(field);
+            const beforeItems = currentItems.filter(item => targetIds.has(String(getItemId(item))));
 
-            // Generic restoration logic
+            if (beforeItems.length === 0) return;
+
+            const hasEligibleChanges = beforeItems.some(item => {
+                const record = item as any;
+                return Boolean(record?.deleted || record?.deletedAt || record?.deletedBy);
+            });
+            if (!hasEligibleChanges) return;
+
             const restore = (prev: any[]) => prev.map(item => {
-                if (item.id === id) {
-                    // Permission check
-                    if (!isAdmin && item.deletedBy !== userId) {
-                        console.error(`[DataContext] 🚫 Restoration blocked: User ${userId} is not an admin nor the original deleter of item ${id}`);
-                        return item;
-                    }
-                    return { ...item, deleted: false, deletedAt: null, deletedBy: null };
+                if (!targetIds.has(String(getItemId(item)))) {
+                    return item;
                 }
-                return item;
+
+                const record = item as any;
+                if (!isAdmin && record.deletedBy !== userId) {
+                    console.error(`[DataContext] 🚫 Restoration blocked: User ${userId} is not an admin nor the original deleter of items ${ids.join(', ')}`);
+                    return item;
+                }
+                return { ...item, deleted: false, deletedAt: null, deletedBy: null };
             });
 
-            if (field === 'students') setStudents(restore);
-            else if (field === 'subjects') setSubjects(restore);
-            else if (field === 'classes') setClasses(restore);
-            else if (field === 'grades') setGrades(restore);
-            else if (field === 'assessments') setAssessments(restore);
-            else return;
-
+            applyCollectionUpdate(field, restore);
             markDirty(field, true);
-            markItemDirty(field as string, id);
+            ids.forEach(itemId => markItemDirty(field as string, itemId));
+
+            setRestoreDeleteUndoStack(prev => [...prev, { field, action: 'restore', ids, beforeItems }]);
+            setRestoreDeleteRedoStack([]);
         },
-        permanentlyDeleteItem: (field: keyof AppDataType, id: number) => {
+        permanentlyDeleteItem: (field: keyof AppDataType, id: number | number[]) => {
             const userId = Number(localStorage.getItem('sba_user_id') || localStorage.getItem('emulator-sba_user_id'));
             const user = users?.find(u => u.id === userId);
             const isAdmin = user?.role === 'Admin';
+            const ids = Array.isArray(id) ? id : [id];
+            const targetIds = new Set(ids.map(String));
+            const currentItems = getCollectionItems(field);
+            const beforeItems = currentItems.filter(item => targetIds.has(String(getItemId(item))));
 
             if (!isAdmin) {
                 console.error(`[DataContext] 🚫 Permanent deletion blocked: User ${userId} is not an admin.`);
                 return;
             }
 
-            // Generic permanent deletion logic (filtering out from state)
-            const remove = (prev: any[]) => prev.filter(item => item.id !== id);
+            if (beforeItems.length === 0) return;
 
-            if (field === 'students') setStudents(remove);
-            else if (field === 'subjects') setSubjects(remove);
-            else if (field === 'classes') setClasses(remove);
-            else if (field === 'grades') setGrades(remove);
-            else if (field === 'assessments') setAssessments(remove);
-            else return;
+            const remove = (prev: any[]) => prev.filter(item => !targetIds.has(String(getItemId(item))));
+            applyCollectionUpdate(field, remove);
 
             markDirty(field, true);
-            markItemDirty(field as string, id);
+            ids.forEach(itemId => markItemDirty(field as string, itemId));
 
-            console.log(`[DataContext] 🗑️ Permanently deleted ${String(field)} item ${id}`);
+            setRestoreDeleteUndoStack(prev => [...prev, { field, action: 'permanent-delete', ids, beforeItems }]);
+            setRestoreDeleteRedoStack([]);
+
+            console.log(`[DataContext] 🗑️ Permanently deleted ${String(field)} items ${ids.join(', ')}`);
         },
+        undoPendingRestoreDeleteAction,
+        redoPendingRestoreDeleteAction,
+        canUndoPendingRestoreDeleteAction: restoreDeleteUndoStack.length > 0,
+        canRedoPendingRestoreDeleteAction: restoreDeleteRedoStack.length > 0,
         mergeSubjects,
     };
 
