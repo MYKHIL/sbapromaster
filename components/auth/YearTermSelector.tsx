@@ -188,74 +188,80 @@ const YearTermSelector: React.FC<YearTermSelectorProps> = ({ school, onSelectPer
                                 const isExpanded = expandedYear === year;
                                 const isLastAccessedYear = year === mostRecentYear;
                                 return (
-                                    <div key={year} className="border rounded-2xl overflow-hidden bg-gray-50">
+                                    <div key={year} className="rounded-2xl border border-slate-200 bg-slate-50 shadow-sm overflow-hidden transition-all duration-300">
                                         <button
                                             type="button"
                                             onClick={() => setExpandedYear(isExpanded ? null : year)}
-                                            className={`w-full text-left px-5 py-4 flex items-center justify-between gap-4 ${isExpanded ? 'bg-white' : 'bg-gray-50'} hover:bg-white transition-colors`}
+                                            className={`w-full text-left px-5 py-4 flex items-center justify-between gap-4 transition-all duration-300 ${isExpanded ? 'bg-indigo-600 text-white shadow-inner' : 'bg-slate-100 text-slate-800 hover:bg-slate-200'}`}
                                         >
                                             <div className="flex items-center gap-3">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                </svg>
+                                                <div className={`rounded-xl p-2 ${isExpanded ? 'bg-white/20' : 'bg-indigo-100 text-indigo-700'}`}>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                    </svg>
+                                                </div>
                                                 <div>
                                                     <div className="flex flex-wrap items-center gap-2">
-                                                        <h3 className="text-lg font-semibold text-gray-900">{year}</h3>
+                                                        <h3 className="text-lg font-semibold">{year}</h3>
                                                         {isLastAccessedYear && (
-                                                            <span className="inline-flex items-center text-xs font-semibold uppercase tracking-wide bg-blue-600 text-white px-2 py-1 rounded-full">
+                                                            <span className={`inline-flex items-center text-xs font-semibold uppercase tracking-wide px-2 py-1 rounded-full ${isExpanded ? 'bg-white/20 text-white' : 'bg-blue-600 text-white'}`}>
                                                                 Last Accessed
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <p className="text-sm text-gray-500 mt-1">{yearPeriods.length} term{yearPeriods.length === 1 ? '' : 's'}</p>
+                                                    <p className={`text-sm mt-1 ${isExpanded ? 'text-indigo-100' : 'text-slate-500'}`}>{yearPeriods.length} term{yearPeriods.length === 1 ? '' : 's'}</p>
                                                 </div>
                                             </div>
-                                            <svg className={`h-5 w-5 text-gray-400 transform transition-transform duration-200 ${isExpanded ? 'rotate-90' : 'rotate-0'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <svg className={`h-5 w-5 transform transition-transform duration-300 ${isExpanded ? 'rotate-90' : 'rotate-0'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                             </svg>
                                         </button>
 
-                                        <div className={`bg-white border-t border-gray-200 transition-[max-height,opacity] duration-300 overflow-hidden ${isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
-                                            {yearPeriods.map(period => {
-                                                const isMostRecentPeriod = period.docId === mostRecentDocId;
-                                                const isSelectedLoading = period.docId === selectedLoadingDocId;
-                                                return (
-                                                    <button
-                                                        key={period.docId}
-                                                        type="button"
-                                                        onClick={() => handleSelectPeriod(period)}
-                                                        disabled={Boolean(selectedLoadingDocId)}
-                                                        className={`w-full text-left px-5 py-4 border-b last:border-b-0 transition-colors group flex items-center justify-between gap-4 ${isMostRecentPeriod ? 'bg-blue-50 border-blue-200' : 'hover:bg-blue-50 border-transparent'} ${selectedLoadingDocId ? 'opacity-80 cursor-not-allowed' : ''}`}
-                                                    >
-                                                        <div className="flex items-center gap-3">
-                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 group-hover:text-indigo-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5z" />
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l6.16-3.422A12.083 12.083 0 0118 20.5c0 .667-.057 1.316-.167 1.942L12 14z" />
-                                                            </svg>
-                                                            <div>
-                                                                <p className="font-medium text-gray-900 flex items-center gap-2">
-                                                                    <span>{period.term}</span>
-                                                                    {isSelectedLoading && (
-                                                                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600">
-                                                                            <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                                                                <circle cx="12" cy="12" r="10" strokeWidth="3" opacity="0.2" />
-                                                                                <path d="M22 12a10 10 0 00-10-10" strokeWidth="3" strokeLinecap="round" />
-                                                                            </svg>
-                                                                            Loading
-                                                                        </span>
+                                        <div className={`overflow-hidden transition-all duration-300 ease-out ${isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+                                            <div className="bg-white/80 border-t border-slate-200 px-2 py-2 space-y-2">
+                                                {yearPeriods.map(period => {
+                                                    const isMostRecentPeriod = period.docId === mostRecentDocId;
+                                                    const isSelectedLoading = period.docId === selectedLoadingDocId;
+                                                    return (
+                                                        <button
+                                                            key={period.docId}
+                                                            type="button"
+                                                            onClick={() => handleSelectPeriod(period)}
+                                                            disabled={Boolean(selectedLoadingDocId)}
+                                                            className={`w-full text-left px-4 py-3 rounded-xl border transition-all duration-200 group flex items-center justify-between gap-4 ${isMostRecentPeriod ? 'bg-blue-50 border-blue-200 shadow-sm' : 'bg-amber-50/70 border-amber-100 hover:bg-amber-100 hover:border-amber-200'} ${selectedLoadingDocId ? 'opacity-80 cursor-not-allowed' : ''}`}
+                                                        >
+                                                            <div className="flex items-center gap-3">
+                                                                <div className={`rounded-lg p-2 ${isMostRecentPeriod ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5z" />
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l6.16-3.422A12.083 12.083 0 0118 20.5c0 .667-.057 1.316-.167 1.942L12 14z" />
+                                                                    </svg>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="font-medium text-slate-900 flex items-center gap-2">
+                                                                        <span>{period.term}</span>
+                                                                        {isSelectedLoading && (
+                                                                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600">
+                                                                                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                                                    <circle cx="12" cy="12" r="10" strokeWidth="3" opacity="0.2" />
+                                                                                    <path d="M22 12a10 10 0 00-10-10" strokeWidth="3" strokeLinecap="round" />
+                                                                                </svg>
+                                                                                Loading
+                                                                            </span>
+                                                                        )}
+                                                                    </p>
+                                                                    {isMostRecentPeriod && (
+                                                                        <span className="text-xs text-blue-700">Last accessed term</span>
                                                                     )}
-                                                                </p>
-                                                                {isMostRecentPeriod && (
-                                                                    <span className="text-xs text-blue-700">Last accessed term</span>
-                                                                )}
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                        <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                                        </svg>
-                                                    </button>
-                                                );
-                                            })}
+                                                            <svg className="h-5 w-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                                            </svg>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
                                     </div>
                                 );
