@@ -224,6 +224,8 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
     const userListRef = React.useRef<HTMLDivElement>(null);
     // Ref for main modal wrapper
     const modalRef = React.useRef<HTMLDivElement>(null);
+    // Ref for the mobile selected-user detail card
+    const mobileUserDetailRef = React.useRef<HTMLDivElement>(null);
     // Ref for the scrollable existing users list container
     const existingUsersListRef = React.useRef<HTMLDivElement>(null);
     // State to preserve scroll position when opening/closing forms
@@ -1182,6 +1184,15 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
         ? existingUsers.find(u => u.id === selectedMobileUser)
         : undefined;
 
+    const handleSelectMobileUser = (userId: number) => {
+        setSelectedMobileUser(userId);
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                mobileUserDetailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 80);
+        });
+    };
+
     return (
         <div ref={modalRef} className="fixed inset-0 bg-gray-900 bg-opacity-95 z-50 flex items-center justify-center p-3 sm:p-4 overflow-hidden">
             <ConfirmationModal
@@ -1327,98 +1338,104 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                 </label>
                             </div>
 
-                            {/* Mobile Combobox + Badge View */}
-                           {existingUsers.length > 0 && editingUserId === null && users.length === 0 && (
-    <div className="lg:hidden mb-4">
-        <label className="block text-sm font-semibold text-gray-700 mb-2">Select a User</label>
-        <select
-            value={selectedMobileUser || ''}
-            onChange={(e) => setSelectedMobileUser(e.target.value ? Number(e.target.value) : null)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-        >
-            <option value="">-- Choose a user --</option>
-            {existingUsers.map((u) => (
-                <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
-            ))}
-        </select>
+                            {/* Mobile User Picker */}
+                            {existingUsers.length > 0 && editingUserId === null && users.length === 0 && (
+                                <div className="lg:hidden mb-4 space-y-3">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <div>
+                                            <p className="text-sm font-semibold text-gray-700">Users</p>
+                                            <p className="text-[11px] text-gray-500">Tap a profile to manage it quickly</p>
+                                        </div>
+                                        <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600">
+                                            {existingUsers.length} total
+                                        </span>
+                                    </div>
 
-        {selectedMobileUserData ? (
-            <div className="mt-3 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-                <div className="flex flex-col gap-3.5">
-                    
-                    {/* TOP AREA: Name & Descriptors aligned horizontally */}
-                    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 w-full">
-                        <div className="text-base font-bold text-slate-900">{selectedMobileUserData.name || 'Unnamed User'}</div>
-                        
-                        {/* Role Badge (Main anchor) */}
-                        <div className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-700 bg-slate-100">
-                            {selectedMobileUserData.role}
-                        </div>
-                        
-                        {/* Access Status Minimal Indicator */}
-                        <span className={`inline-flex items-center gap-0.5 text-[9px] font-medium ${selectedMobileUserData.isReadOnly ? 'text-rose-600' : 'text-emerald-600'}`}>
-                            <svg className="h-2.5 w-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                {selectedMobileUserData.isReadOnly ? (
-                                    <path fillRule="evenodd" d="M6 8V7a4 4 0 118 0v1h1a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1V9a1 1 0 011-1h1zm2-1a2 2 0 114 0v1H8V7z" clipRule="evenodd" />
-                                ) : (
-                                    <path fillRule="evenodd" d="M5 11V9a5 5 0 1110 0v2h1a1 1 0 011 1v5a1 1 0 01-1 1H4a1 1 0 01-1-1v-5a1 1 0 011-1h1zm2-2a3 3 0 116 0v2H7V9z" clipRule="evenodd" />
-                                )}
-                            </svg>
-                            {selectedMobileUserData.isReadOnly ? 'Restricted' : 'Unlocked'}
-                        </span>
-                        
-                        {/* Password Status Minimal Indicator */}
-                        <span className={`inline-flex items-center gap-0.5 text-[9px] font-medium ${selectedMobileUserData.passwordHash && selectedMobileUserData.passwordHash.trim() !== '' ? 'text-emerald-600' : 'text-amber-600'}`}>
-                            <svg className="h-2.5 w-2.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                {selectedMobileUserData.passwordHash && selectedMobileUserData.passwordHash.trim() !== '' ? (
-                                    <path d="M10 2a4 4 0 00-4 4v2h8V6a4 4 0 00-4-4zm-1 7a1 1 0 100 2 1 1 0 000-2zm4 5H7a1 1 0 01-1-1v-3a1 1 0 011-1h6a1 1 0 011 1v3a1 1 0 01-1 1z" />
-                                ) : (
-                                    <path fillRule="evenodd" d="M5 8a5 5 0 1110 0v2h1a1 1 0 011 1v5a1 1 0 01-1 1H4a1 1 0 01-1-1v-5a1 1 0 011-1h1V8zm2 0V6a3 3 0 116 0v2H7z" clipRule="evenodd" />
-                                )}
-                            </svg>
-                            {selectedMobileUserData.passwordHash && selectedMobileUserData.passwordHash.trim() !== '' ? 'Secure' : 'No Pass'}
-                        </span>
-                    </div>
+                                    <div className="flex gap-2 overflow-x-auto pb-1">
+                                        {existingUsers.map((user) => {
+                                            const isSelected = selectedMobileUser === user.id;
+                                            return (
+                                                <button
+                                                    key={user.id}
+                                                    type="button"
+                                                    onClick={() => handleSelectMobileUser(user.id)}
+                                                    className={`min-w-[112px] rounded-2xl border px-2.5 py-2 text-left shadow-sm transition ${isSelected
+                                                        ? 'border-blue-500 bg-blue-50 shadow-md'
+                                                        : 'border-slate-200 bg-white hover:border-slate-300'}`}
+                                                >
+                                                    <div className="truncate text-[12px] font-semibold text-slate-900">
+                                                        {user.name || 'Unnamed User'}
+                                                    </div>
+                                                    <div className="mt-1 flex items-center justify-between gap-2">
+                                                        <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ${user.role === 'Admin'
+                                                            ? 'bg-purple-50 text-purple-700'
+                                                            : user.role === 'Teacher'
+                                                                ? 'bg-blue-50 text-blue-700'
+                                                                : 'bg-slate-100 text-slate-600'}`}>
+                                                            {user.role}
+                                                        </span>
+                                                        <span className={`h-2.5 w-2.5 rounded-full ${user.isReadOnly ? 'bg-rose-400' : 'bg-emerald-400'}`} />
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
 
-                    {/* BOTTOM AREA: Action Buttons aligned horizontally */}
-                    <div className="flex flex-wrap items-center gap-1.5 w-full">
-                        <button
-                            type="button"
-                            onClick={() => handleEditUser(selectedMobileUserData)}
-                            className="px-2.5 py-1 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 text-[10px] font-semibold transition shadow-sm"
-                        >
-                            Edit
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => toggleExistingUserReadOnly(selectedMobileUserData.id)}
-                            className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition shadow-sm ${selectedMobileUserData.isReadOnly ? 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100' : 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200'}`}
-                        >
-                            {selectedMobileUserData.isReadOnly ? 'Unlock' : 'Restrict'}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setResetConfirmUserId(selectedMobileUserData.id)}
-                            className="px-2.5 py-1 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 text-[10px] font-semibold transition shadow-sm"
-                        >
-                            Clear Password
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setDeleteConfirmUserId(selectedMobileUserData.id)}
-                            className="px-2.5 py-1 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 text-[10px] font-semibold transition shadow-sm"
-                        >
-                            Delete
-                        </button>
-                    </div>
+                                    {selectedMobileUserData ? (
+                                        <div ref={mobileUserDetailRef} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div>
+                                                    <div className="text-sm font-bold text-slate-900">{selectedMobileUserData.name || 'Unnamed User'}</div>
+                                                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                                                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${selectedMobileUserData.isReadOnly ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                                                            {selectedMobileUserData.isReadOnly ? 'Restricted' : 'Unlocked'}
+                                                        </span>
+                                                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${selectedMobileUserData.passwordHash && selectedMobileUserData.passwordHash.trim() !== '' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                                                            {selectedMobileUserData.passwordHash && selectedMobileUserData.passwordHash.trim() !== '' ? 'Secure' : 'No Pass'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-700">
+                                                    {selectedMobileUserData.role}
+                                                </div>
+                                            </div>
 
-                </div>
-            </div>
-        ) : (
-            <p className="mt-4 text-sm text-gray-500">Choose a user to preview their badge and status.</p>
-        )}
-    </div>
-)}
+                                            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleEditUser(selectedMobileUserData)}
+                                                    className="rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-[10px] font-semibold text-blue-700 shadow-sm transition hover:bg-blue-100"
+                                                >
+                                                    Edit
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => toggleExistingUserReadOnly(selectedMobileUserData.id)}
+                                                    className={`rounded-lg px-2.5 py-1 text-[10px] font-semibold shadow-sm transition ${selectedMobileUserData.isReadOnly ? 'border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100' : 'border border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+                                                >
+                                                    {selectedMobileUserData.isReadOnly ? 'Unlock' : 'Restrict'}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setResetConfirmUserId(selectedMobileUserData.id)}
+                                                    className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold text-amber-700 shadow-sm transition hover:bg-amber-100"
+                                                >
+                                                    Clear Password
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setDeleteConfirmUserId(selectedMobileUserData.id)}
+                                                    className="rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10px] font-semibold text-rose-700 shadow-sm transition hover:bg-rose-100"
+                                                >
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-gray-500">Choose a user to preview their status and actions.</p>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Desktop Grid View */}
                             <div ref={existingUsersListRef} className="hidden lg:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-1 max-h-[40vh] overflow-y-auto z-20 relative">
