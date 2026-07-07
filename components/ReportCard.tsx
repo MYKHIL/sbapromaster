@@ -272,7 +272,7 @@ const ReportCard: React.FC<{ student: Student }> = ({ student }) => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {subjectResults.map((res, index) => (
+                                {subjectResults.map((res: any, index: number) => (
                                     <tr key={index} className="text-center text-black">
                                         <td className="border border-black p-1 text-left font-bold whitespace-nowrap overflow-hidden text-ellipsis">{res.subject}</td>
                                         <td className="border border-black p-1 whitespace-nowrap overflow-hidden">{formatScore(res.classScore)}</td>
