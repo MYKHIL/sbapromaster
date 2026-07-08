@@ -1819,7 +1819,7 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                                                     </span>
                                                                 </div>
                                                                 </div>
-                                                                <div className="flex items-center gap-3">
+                                                                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
                                                                     {/* Assign as class teacher checkbox */}
                                                                     <label className="flex items-center gap-2 text-sm">
                                                                         <input
