@@ -1843,16 +1843,17 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
 
                                                                         {assignedSubjects.length > 0 && (
                                                                             <button
-                                                                                type="button"
-                                                                                onClick={() => copySubjectsToAllClasses(index, className)}
-                                                                                className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 font-semibold"
-                                                                                title="Copy this class's subjects to all classes"
-                                                                            >
-                                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                                                                </svg>
-                                                                                Sync selected
-                                                                            </button>
+    type="button"
+    onClick={() => copySubjectsToAllClasses(index, className)}
+    className="text-[10px] text-blue-600 hover:text-blue-800 flex items-center gap-1 font-bold tracking-wider uppercase bg-blue-50 hover:bg-blue-100/80 px-2 py-1 rounded-md transition-colors"
+    title="Sync this class's selected subjects to all other classes"
+>
+    {/* Clean Sync Loop SVG */}
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3 shrink-0 animate-hover:spin">
+        <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.399zM16.011 4.25a.75.75 0 00-.75.75v2.43l-.31-.31a7 7 0 00-11.712 3.138.75.75 0 001.449.399 5.5 5.5 0 019.201-2.466l.312.311h-2.433a.75.75 0 000 1.5h4.243a.75.75 0 00.75-.75V4.25a.75.75 0 00-.75-.75z" clipRule="evenodd" />
+    </svg>
+    Sync Selected Subjects
+</button>
                                                                         )}
                                                                     </div>
                                                                 </div>
