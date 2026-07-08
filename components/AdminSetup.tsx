@@ -1806,76 +1806,79 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                                 </p>
                                             ) : (
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                    {getAssignmentClassNames(user).map(className => (
-                                                        <div key={className} className="border border-gray-200 rounded-xl p-4 bg-white shadow-sm flex flex-col justify-between">
-                                                            <div className="flex justify-between items-center mb-3">
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className="inline-flex flex-col items-start px-3.5 py-1.5 rounded-xl bg-gradient-to-br from-fuchsia-500 via-purple-600 to-indigo-700 shadow-[0_4px_14px_rgba(168,85,247,0.35)] border border-fuchsia-400/20 min-w-[75px]">
-                                                                    <span className="text-[9px] font-black tracking-widest uppercase text-fuchsia-100 leading-none mb-1">
-                                                                        Class
-                                                                    </span>
-                                                                    <span className="text-sm font-black text-white tracking-tight leading-tight antialiased">
-                                                                        {className}
-                                                                    </span>
-                                                                </div>
-                                                                </div>
-                                                                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
-                                                                    {/* Assign as class teacher checkbox */}
-                                                                    <label className="flex items-center gap-2 text-sm">
-                                                                        <input
-                                                                            type="checkbox"
-                                                                            checked={(() => {
-                                                                                const userName = (user.name || '').trim().toLowerCase();
-                                                                                const cls = classes.find(c => (c.name || '').trim().toLowerCase() === className.trim().toLowerCase());
-                                                                                const liveTeachers = cls ? (cls.teacherNames && cls.teacherNames.length ? cls.teacherNames : (cls.teacherName ? [cls.teacherName] : [])) : [];
-                                                                                const pending = pendingClassTeacherChanges[className];
-                                                                                const effective = pending || liveTeachers || [];
-                                                                                return effective.map(t => t.trim().toLowerCase()).includes(userName);
-                                                                            })()}
-                                                                            onChange={() => toggleAssignClassTeacher(index, className)}
-                                                                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
-                                                                        />
-                                                                        <span className="text-xs text-gray-700 font-medium">Set as class teacher</span>
-                                                                    </label>
+                                                    {getAssignmentClassNames(user).map(className => {
+                                                        const classSubjects = user.classSubjects || {};
+                                                        const assignedSubjects = classSubjects[className] || [];
+                                                        return (
+                                                            <div key={className} className="border border-gray-200 rounded-xl p-4 bg-white shadow-sm flex flex-col justify-between">
+                                                                <div className="flex justify-between items-center mb-3">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div className="inline-flex flex-col items-start px-3.5 py-1.5 rounded-xl bg-gradient-to-br from-fuchsia-500 via-purple-600 to-indigo-700 shadow-[0_4px_14px_rgba(168,85,247,0.35)] border border-fuchsia-400/20 min-w-[75px]">
+                                                                            <span className="text-[9px] font-black tracking-widest uppercase text-fuchsia-100 leading-none mb-1">
+                                                                                Class
+                                                                            </span>
+                                                                            <span className="text-sm font-black text-white tracking-tight leading-tight antialiased">
+                                                                                {className}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
+                                                                        {/* Assign as class teacher checkbox */}
+                                                                        <label className="flex items-center gap-2 text-sm">
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={(() => {
+                                                                                    const userName = (user.name || '').trim().toLowerCase();
+                                                                                    const cls = classes.find(c => (c.name || '').trim().toLowerCase() === className.trim().toLowerCase());
+                                                                                    const liveTeachers = cls ? (cls.teacherNames && cls.teacherNames.length ? cls.teacherNames : (cls.teacherName ? [cls.teacherName] : [])) : [];
+                                                                                    const pending = pendingClassTeacherChanges[className];
+                                                                                    const effective = pending || liveTeachers || [];
+                                                                                    return effective.map(t => t.trim().toLowerCase()).includes(userName);
+                                                                                })()}
+                                                                                onChange={() => toggleAssignClassTeacher(index, className)}
+                                                                                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                                                                            />
+                                                                            <span className="text-xs text-gray-700 font-medium">Set as class teacher</span>
+                                                                        </label>
 
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => copySubjectsToAllClasses(index, className)}
-                                                                        className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 font-semibold"
-                                                                        title="Copy this class's subjects to all classes"
-                                                                    >
-                                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                                                        </svg>
-                                                                        Copy to All
-                                                                    </button>
+                                                                        {assignedSubjects.length > 0 && (
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => copySubjectsToAllClasses(index, className)}
+                                                                                className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 font-semibold"
+                                                                                title="Copy this class's subjects to all classes"
+                                                                            >
+                                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                                                </svg>
+                                                                                Copy selected to all classes
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="flex flex-wrap gap-1.5">
+                                                                    {subjectList.map(subject => {
+                                                                        const isSelected = assignedSubjects.some((s: any) => s === subject.id || s === subject.name);
+                                                                        return (
+                                                                            <button
+                                                                                key={subject.id}
+                                                                                type="button"
+                                                                                onClick={() => toggleClassSubject(index, className, subject.id)}
+                                                                                className={`px-2.5 py-1.5 text-xs rounded-lg transition font-medium cursor-pointer border shadow-sm ${
+                                                                                    isSelected
+                                                                                        ? 'bg-green-600 text-white border-green-700'
+                                                                                        : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border-gray-200'
+                                                                                }`}
+                                                                            >
+                                                                                {subject.displayName}
+                                                                            </button>
+                                                                        );
+                                                                    })}
                                                                 </div>
                                                             </div>
-
-                                                            <div className="flex flex-wrap gap-1.5">
-                                                                {subjectList.map(subject => {
-                                                                    const classSubjects = user.classSubjects || {};
-                                                                    const assignedSubjects = classSubjects[className] || [];
-                                                                    const isSelected = assignedSubjects.some((s: any) => s === subject.id || s === subject.name);
-
-                                                                    return (
-                                                                        <button
-                                                                            key={subject.id}
-                                                                            type="button"
-                                                                            onClick={() => toggleClassSubject(index, className, subject.id)}
-                                                                            className={`px-2.5 py-1.5 text-xs rounded-lg transition font-medium cursor-pointer border shadow-sm ${
-                                                                                isSelected
-                                                                                    ? 'bg-green-600 text-white border-green-700'
-                                                                                    : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border-gray-200'
-                                                                            }`}
-                                                                        >
-                                                                            {subject.displayName}
-                                                                        </button>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        </div>
-                                                    ))}
+                                                        ); // <--- Fixed missing parenthesis here
+                                                    })}
                                                 </div>
                                             )}
                                         </div>
