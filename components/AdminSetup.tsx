@@ -1810,7 +1810,14 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                                                         <div key={className} className="border border-gray-200 rounded-xl p-4 bg-white shadow-sm flex flex-col justify-between">
                                                             <div className="flex justify-between items-center mb-3">
                                                                 <div className="flex items-center gap-3">
-                                                                    <h5 className="font-bold text-gray-800 text-sm">{className}</h5>
+                                                                    <div className="inline-flex flex-col items-start px-3.5 py-1.5 rounded-xl bg-gradient-to-br from-fuchsia-500 via-purple-600 to-indigo-700 shadow-[0_4px_14px_rgba(168,85,247,0.35)] border border-fuchsia-400/20 min-w-[75px]">
+                                                                    <span className="text-[9px] font-black tracking-widest uppercase text-fuchsia-100 leading-none mb-1">
+                                                                        Class
+                                                                    </span>
+                                                                    <span className="text-sm font-black text-white tracking-tight leading-tight antialiased">
+                                                                        {className}
+                                                                    </span>
+                                                                </div>
                                                                 </div>
                                                                 <div className="flex items-center gap-3">
                                                                     {/* Assign as class teacher checkbox */}
