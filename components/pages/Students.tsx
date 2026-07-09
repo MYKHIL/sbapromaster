@@ -58,7 +58,19 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
     const [currentStudent, setCurrentStudent] = useState<Student | Omit<Student, 'id'> | null>(null);
+    const [previewPhoto, setPreviewPhoto] = useState<{ src: string; name: string; class: string; age: string } | null>(null);
     const firstInputRef = React.useRef<HTMLInputElement>(null);
+
+    const openPhotoPreview = (student: Student) => {
+        if (student.picture) {
+            setPreviewPhoto({
+                src: student.picture,
+                name: student.name,
+                class: student.class,
+                age: student.age || ''
+            });
+        }
+    };
 
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [isPermanentConfirmOpen, setIsPermanentConfirmOpen] = useState(false);
@@ -631,7 +643,12 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
                                                     )}
                                                 </td>
                                                 <td className="p-2">
-                                                    <img src={student.picture || USER_PLACEHOLDER} alt={student.name} className="h-10 w-10 rounded-full object-cover bg-gray-200" />
+                                                    <img
+                                                    src={student.picture || USER_PLACEHOLDER}
+                                                    alt={student.name}
+                                                    className={`h-10 w-10 rounded-full object-cover bg-gray-200 ${student.picture ? 'cursor-pointer' : ''}`}
+                                                    onClick={student.picture ? () => openPhotoPreview(student) : undefined}
+                                                />
                                                 </td>
                                                 <td className={`p-4 ${isDirtyRow ? DIRTY_INDICATOR_SECONDARY_TEXT : 'text-gray-900'}`}>{student.indexNumber}</td>
                                                 <td className="p-4 font-medium">{student.name}</td>
@@ -716,7 +733,12 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
                                                 <div className={`absolute inset-0 rounded-full opacity-20 ${isDirtyRow ? 'bg-white' : 'bg-blue-500'}`}></div>
                                                 <span className={`${isDirtyRow ? 'text-white' : 'text-blue-700'} font-bold text-sm z-10`}>{index + 1}</span>
                                             </div>
-                                            <img src={student.picture || USER_PLACEHOLDER} alt={student.name} className="h-12 w-12 rounded-full object-cover bg-gray-200" />
+                                            <img
+                                                src={student.picture || USER_PLACEHOLDER}
+                                                alt={student.name}
+                                                className={`h-12 w-12 rounded-full object-cover bg-gray-200 ${student.picture ? 'cursor-pointer' : ''}`}
+                                                onClick={student.picture ? () => openPhotoPreview(student) : undefined}
+                                            />
                                             <div>
                                                 <p className="font-bold">{student.name}</p>
                                                 <p className={`text-sm ${isDirtyRow ? DIRTY_INDICATOR_SECONDARY_TEXT : 'text-gray-600'}`}>{student.indexNumber}</p>
@@ -1071,6 +1093,34 @@ const Students: React.FC<StudentsProps> = ({ onNavigate }) => {
                 confirmText="Yes, Delete Permanently"
             />
             {/* Student photo context menu (right-click / long-press) */}
+            {previewPhoto && (
+                <div
+                    className="fixed inset-0 z-50 backdrop-blur-sm flex items-center justify-center p-3"
+                    onClick={() => setPreviewPhoto(null)}
+                >
+                    <div className="relative inline-block max-w-[90vw] max-h-[90vh] rounded-3xl overflow-hidden bg-transparent" onClick={e => e.stopPropagation()}>
+                        <button
+                            type="button"
+                            onClick={() => setPreviewPhoto(null)}
+                            className="absolute left-3 top-3 z-20 text-white bg-black/50 hover:bg-black/70 rounded-full p-2 transition"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M18 6L6 18" />
+                                <path d="M6 6l12 12" />
+                            </svg>
+                        </button>
+                        <img
+                            src={previewPhoto.src}
+                            alt="Student preview"
+                            className="max-w-[90vw] max-h-[90vh] object-contain rounded-3xl"
+                        />
+                        <div className="absolute inset-x-0 bottom-0 bg-black/60 backdrop-blur-sm px-4 py-3 text-white text-sm">
+                            <div className="font-semibold truncate">{previewPhoto.name}</div>
+                            <div className="text-xs text-gray-200 truncate">Class: {previewPhoto.class} ┃ {previewPhoto.age ? `${previewPhoto.age} yrs` : 'Age unknown'}</div>
+                        </div>
+                    </div>
+                </div>
+            )}
             {photoContextMenu && (
                 <div
                     ref={photoContextMenuRef}

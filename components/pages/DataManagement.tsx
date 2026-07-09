@@ -1064,12 +1064,10 @@ const DataManagement: React.FC<DataManagementProps> = ({ navigationMeta = null }
             // Update local UserContext
             setUsers(updatedUsers);
 
-            // Persist users immediately to the cloud to avoid losing them on relogin.
-            // Since Apply button saves directly to cloud, we do NOT call loadImportedData 
-            // to avoid queuing for global save again.
+            // Persist users and any pending class changes atomically to the cloud.
             try {
-                await saveDataTransaction(schoolId, { users: updatedUsers });
-                setFeedback({ message: 'User changes saved to cloud successfully.', type: 'success' });
+                await saveDataTransaction(schoolId, { users: updatedUsers, classes: dataContext.classes });
+                setFeedback({ message: 'User and class changes saved to cloud successfully.', type: 'success' });
             } catch (cloudErr) {
                 console.error('Failed to save users to cloud:', cloudErr);
                 setFeedback({ message: 'User changes applied locally, but failed to save to cloud. Please click SAVE in the top bar to retry.', type: 'warning' });

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { User, UserRole } from '../types';
 import { useData } from '../context/DataContext';
 import { hashPassword } from '../services/authService';
+import { saveDataTransaction } from '../services/firebaseService';
 import ConfirmationModal from './ConfirmationModal';
 import MessageBox from './MessageBox';
 import { useUser } from '../context/UserContext';
@@ -32,7 +33,7 @@ interface AdminSetupProps {
 const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, currentUser, onComplete, onUpdate, onCancel, externalError, isFetching }) => {
     const [showCloseWarning, setShowCloseWarning] = useState(false);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-    const { classes, subjects, addClass, updateClass, deleteClass, saveClasses, subscription } = useData();
+    const { classes, subjects, addClass, updateClass, deleteClass, saveClasses, subscription, setUsers: setGlobalUsers, schoolId } = useData();
     const { logout } = useUser();
     const [users, setUsers] = useState<Partial<User>[]>(mode === 'setup' ? [{ role: 'Admin' as UserRole, allowedClasses: [], allowedSubjects: [] }] : []);
     const [existingUsers, setExistingUsers] = useState<User[]>(initialUsers);
@@ -148,6 +149,33 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
     }, [classes, localNewClasses]);
 
     const normalizeClassName = (name: string) => name.trim();
+
+    const previousClassesRef = React.useRef<Record<number, string>>({});
+
+    useEffect(() => {
+        const previousClasses = previousClassesRef.current;
+        const currentClasses = classes.reduce((acc, cls) => {
+            if (typeof cls.id === 'number') {
+                acc[cls.id] = cls.name || '';
+            }
+            return acc;
+        }, {} as Record<number, string>);
+
+        Object.entries(currentClasses).forEach(([id, currentName]) => {
+            const previousName = previousClasses[Number(id)];
+            if (previousName && previousName.trim() !== currentName.trim()) {
+                syncClassReferences(previousName, currentName);
+            }
+        });
+
+        Object.entries(previousClasses).forEach(([id, previousName]) => {
+            if (!currentClasses[Number(id)] && previousName.trim()) {
+                syncClassReferences(previousName);
+            }
+        });
+
+        previousClassesRef.current = currentClasses;
+    }, [classes]);
 
     const transformClassMapping = (mapping: Record<string, any>, oldName: string, newName?: string): Record<string, any> => {
         const normalizedOld = normalizeClassName(oldName);
@@ -335,15 +363,25 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
                 }
             }
 
-            const classesChanged = pendingNewClasses.length > 0 || entries.length > 0 || reportEntries.length > 0;
-            if (classesChanged && saveClasses) {
-                // Let React flush any pending class state updates before persisting.
+            const payload: any = {
+                users: existingUsers,
+                classes,
+            };
+
+            if (schoolId) {
+                // Keep the global user state in sync before saving.
+                setGlobalUsers(existingUsers);
+
+                // Let React flush any pending state updates before persisting.
                 await new Promise(resolve => setTimeout(resolve, 0));
-                await saveClasses();
+                await saveDataTransaction(schoolId, payload);
+            } else {
+                if (saveClasses) {
+                    await new Promise(resolve => setTimeout(resolve, 0));
+                    await saveClasses();
+                }
             }
 
-            // Finally persist users
-            await onComplete(existingUsers);
             setError('✅ User changes saved to cloud. You may now close this window.');
         } catch (err) {
             console.error('Failed to apply user changes:', err);
@@ -1843,17 +1881,17 @@ const AdminSetup: React.FC<AdminSetupProps> = ({ mode, users: initialUsers, curr
 
                                                                         {assignedSubjects.length > 0 && (
                                                                             <button
-    type="button"
-    onClick={() => copySubjectsToAllClasses(index, className)}
-    className="text-[10px] text-blue-600 hover:text-blue-800 flex items-center gap-1 font-bold tracking-wider uppercase bg-blue-50 hover:bg-blue-100/80 px-2 py-1 rounded-md transition-colors"
-    title="Sync this class's selected subjects to all other classes"
->
-    {/* Clean Sync Loop SVG */}
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3 shrink-0 animate-hover:spin">
-        <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.399zM16.011 4.25a.75.75 0 00-.75.75v2.43l-.31-.31a7 7 0 00-11.712 3.138.75.75 0 001.449.399 5.5 5.5 0 019.201-2.466l.312.311h-2.433a.75.75 0 000 1.5h4.243a.75.75 0 00.75-.75V4.25a.75.75 0 00-.75-.75z" clipRule="evenodd" />
-    </svg>
-    Sync Selected Subjects
-</button>
+                                                                                type="button"
+                                                                                onClick={() => copySubjectsToAllClasses(index, className)}
+                                                                                className="text-[10px] text-blue-600 hover:text-blue-800 flex items-center gap-1 font-bold tracking-wider uppercase bg-blue-50 hover:bg-blue-100/80 px-2 py-1 rounded-md transition-colors"
+                                                                                title="Sync this class's selected subjects to all other classes"
+                                                                            >
+                                                                                {/* Clean Sync Loop SVG */}
+                                                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3 shrink-0 animate-hover:spin">
+                                                                                    <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.399zM16.011 4.25a.75.75 0 00-.75.75v2.43l-.31-.31a7 7 0 00-11.712 3.138.75.75 0 001.449.399 5.5 5.5 0 019.201-2.466l.312.311h-2.433a.75.75 0 000 1.5h4.243a.75.75 0 00.75-.75V4.25a.75.75 0 00-.75-.75z" clipRule="evenodd" />
+                                                                                </svg>
+                                                                                Sync Selected Subjects
+                                                                            </button>
                                                                         )}
                                                                     </div>
                                                                 </div>

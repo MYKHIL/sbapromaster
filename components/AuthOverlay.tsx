@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { useUser } from '../context/UserContext';
-import { loginOrRegisterSchool, AppDataType, SchoolListItem, SchoolPeriod, clearAuthCaches, db, loggedSetDoc } from '../services/firebaseService';
+import { loginOrRegisterSchool, AppDataType, SchoolListItem, SchoolPeriod, clearAuthCaches, db, loggedSetDoc, saveDataTransaction } from '../services/firebaseService';
 import * as SyncLogger from '../services/syncLogger';
 import { doc, Timestamp } from 'firebase/firestore';
 import { INITIAL_SETTINGS, INITIAL_STUDENTS, INITIAL_SUBJECTS, INITIAL_CLASSES, INITIAL_GRADES, INITIAL_ASSESSMENTS, INITIAL_SCORES, INITIAL_REPORT_DATA, INITIAL_CLASS_DATA } from '../constants';
@@ -28,7 +28,7 @@ interface AuthOverlayProps {
 }
 
 const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
-    const { loadImportedData, setSchoolId, pauseSync, resumeSync, isFetching, saveClasses, saveSubjects } = useData();
+    const { loadImportedData, setSchoolId, pauseSync, resumeSync, isFetching, saveClasses, saveSubjects, classes, subjects } = useData();
     const { setUsers, users, login, setPassword: setUserPassword, checkAutoLogin, isAuthenticated, switchAccount } = useUser();
 
     // Navigation state
@@ -762,27 +762,16 @@ const AuthOverlay: React.FC<AuthOverlayProps> = ({ children }) => {
             // Update school data with new users
             if (currentSchoolId) {
                 // Explicitly save to Firestore first to ensure persistence
-                const { updateUsers } = await import('../services/firebaseService');
-                await updateUsers(currentSchoolId, users);
-                0 && console.log('[AuthOverlay] ✅ Users saved to Firestore');
+                await saveDataTransaction(currentSchoolId, {
+                    users,
+                    classes,
+                    subjects,
+                });
+                0 && console.log('[AuthOverlay] ✅ Initial admin setup data saved to Firestore');
 
                 // Then update local state which might trigger dirty check but data is already safe
                 // Treat this as a local update to avoid the remote-import guard clearing dirty flags
-                loadImportedData({ users: users }, false);
-
-                // Wait one tick for React state to flush before attempting to save classes/subjects
-                await new Promise(resolve => setTimeout(resolve, 0));
-
-                // Persist any classes/subjects that were created during setup (so Teachers page sees them)
-                try {
-                    await Promise.all([
-                        saveClasses ? saveClasses() : Promise.resolve(),
-                        saveSubjects ? saveSubjects() : Promise.resolve()
-                    ]);
-                    0 && console.log('[AuthOverlay] ✅ Classes and subjects saved to Firestore');
-                } catch (err) {
-                    console.warn('[AuthOverlay] Failed to save classes/subjects during admin setup:', err);
-                }
+                loadImportedData({ users, classes, subjects }, false);
             }
 
             // Auto-login as admin - call UserContext.login with (userId, password, userOverride)

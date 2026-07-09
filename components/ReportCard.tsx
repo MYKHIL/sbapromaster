@@ -1,4 +1,5 @@
-import React, { useRef, useLayoutEffect } from 'react';
+import React, { useState, useRef, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useData } from '../context/DataContext';
 import type { Student } from '../types';
 import { useReportCardData } from '../hooks/useReportCardData';
@@ -82,6 +83,7 @@ const FitText: React.FC<{
 
 const ReportCard: React.FC<{ student: Student }> = ({ student }) => {
     const { students, settings, classes, grades, getReportData, getClassData } = useData();
+    const [previewPhotoSrc, setPreviewPhotoSrc] = useState<string | null>(null);
     const { subjectResults, totalClassWeight, examWeight, aggregateScore, overallPosition, totalScore, formatScore, getOrdinal } = useReportCardData(student);
 
     const classInfo = classes.find(c => c.name === student.class);
@@ -250,10 +252,48 @@ const ReportCard: React.FC<{ student: Student }> = ({ student }) => {
                 </div>
                 {student.picture && (
                     <div className="w-32 h-40 flex-shrink-0 ml-4 mt-1">
-                        <img src={student.picture} alt="Student" className="w-full h-full object-cover border-2 border-black" />
+                        <img
+                            src={student.picture}
+                            alt="Student"
+                            className="w-full h-full object-cover border-2 border-black cursor-pointer"
+                            onClick={() => {
+                                if (student.picture) {
+                                    setPreviewPhotoSrc(student.picture);
+                                }
+                            }}
+                        />
                     </div>
                 )}
             </section>
+            {previewPhotoSrc && typeof document !== 'undefined' && createPortal(
+                <div
+                    className="fixed inset-0 z-50 backdrop-blur-sm flex items-center justify-center p-3"
+                    onClick={() => setPreviewPhotoSrc(null)}
+                >
+                    <div className="relative inline-block max-w-[90vw] max-h-[90vh] rounded-3xl overflow-hidden bg-transparent" onClick={e => e.stopPropagation()}>
+                        <button
+                            type="button"
+                            onClick={() => setPreviewPhotoSrc(null)}
+                            className="absolute left-3 top-3 z-20 text-white bg-black/50 hover:bg-black/70 rounded-full p-2 transition"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M18 6L6 18" />
+                                <path d="M6 6l12 12" />
+                            </svg>
+                        </button>
+                        <img
+                            src={previewPhotoSrc}
+                            alt="Student preview"
+                            className="max-w-[90vw] max-h-[90vh] object-contain rounded-3xl"
+                        />
+                        <div className="absolute inset-x-0 bottom-0 bg-black/60 backdrop-blur-sm px-4 py-3 text-white text-sm">
+                            <div className="font-semibold truncate">{student.name}</div>
+                            <div className="text-xs text-gray-200 truncate">Class: {student.class} ┃ {student.age ? `${student.age} yrs` : 'Age unknown'}</div>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
 
             <section className="mt-4 flex-shrink-0">
                 <div>
