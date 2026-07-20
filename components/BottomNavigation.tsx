@@ -17,11 +17,11 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ currentPage, onNavi
             label: 'Setup',
             icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M12 2l8 6-1.5 1.2L12 4 5.5 9.2 4 8l8-6zM3 10.5v6A2.5 2.5 0 005.5 19h13A2.5 2.5 0 0021 16.5v-6L12 4 3 10.5z"/></svg>
         },
-        ...(!isAdmin ? [{
+        {
             name: 'Classes & Teachers' as Page,
             label: 'Teachers',
             icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-        }] : []),
+        },
         {
             name: 'Students',
             label: 'Students',
