@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Page } from '../types';
+import { useUser } from '../context/UserContext';
 
 interface BottomNavigationProps {
     currentPage: Page;
@@ -7,12 +8,20 @@ interface BottomNavigationProps {
 }
 
 const BottomNavigation: React.FC<BottomNavigationProps> = ({ currentPage, onNavigate }) => {
+    const { currentUser } = useUser();
+    const isAdmin = currentUser?.role === 'Admin';
+
     const navItems: { name: Page; icon: React.ReactElement; label: string }[] = [
         {
             name: 'School Setup',
             label: 'Setup',
             icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M12 2l8 6-1.5 1.2L12 4 5.5 9.2 4 8l8-6zM3 10.5v6A2.5 2.5 0 005.5 19h13A2.5 2.5 0 0021 16.5v-6L12 4 3 10.5z"/></svg>
         },
+        ...(!isAdmin ? [{
+            name: 'Classes & Teachers' as Page,
+            label: 'Teachers',
+            icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+        }] : []),
         {
             name: 'Students',
             label: 'Students',
@@ -28,11 +37,11 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ currentPage, onNavi
             label: 'Reports',
             icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
         },
-        {
-            name: 'Settings',
+        ...(isAdmin ? [{
+            name: 'Settings' as Page,
             label: 'Settings',
             icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h15.75c.621 0 1.125.504 1.125 1.125v6.75C21 20.496 20.496 21 19.875 21H4.125A1.125 1.125 0 013 19.875v-6.75zM3 8.625C3 8.004 3.504 7.5 4.125 7.5h15.75c.621 0 1.125.504 1.125 1.125v2.25c0 .621-.504 1.125-1.125 1.125H4.125A1.125 1.125 0 013 11.25V8.625zM3 4.125C3 3.504 3.504 3 4.125 3h15.75c.621 0 1.125.504 1.125 1.125v2.25C21 6.996 20.496 7.5 19.875 7.5H4.125A1.125 1.125 0 013 6.375V4.125z" /></svg>
-        }
+        }] : [])
     ];
 
     return (
