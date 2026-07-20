@@ -9,6 +9,7 @@ import { SHOW_PDF_DOWNLOAD_BUTTON } from '../../constants';
 import { useUser } from '../../context/UserContext';
 import { getAvailableClasses } from '../../utils/permissions';
 import PdfErrorModal from '../PdfErrorModal';
+import ConfirmationModal from '../ConfirmationModal';
 import ReadOnlyWrapper from '../ReadOnlyWrapper';
 import { sortClassesByName } from '../../utils/classSort';
 import UnsavedChangesModal from '../UnsavedChangesModal';
@@ -130,6 +131,9 @@ const ReportViewer: React.FC = () => {
   }, [classes, currentUser]);
 
   const [isMissingDataModalOpen, setIsMissingDataModalOpen] = useState(false);
+  const [isMissingSettingsModalOpen, setIsMissingSettingsModalOpen] = useState(false);
+  const [pendingPdfStudents, setPendingPdfStudents] = useState<Student[] | null>(null);
+  const [missingSettingsList, setMissingSettingsList] = useState<string[]>([]);
 
   const missingDataList = useMemo(() => {
     if (!studentsInClass || studentsInClass.length === 0) return [];
@@ -518,6 +522,28 @@ const ReportViewer: React.FC = () => {
 
   const handleDownloadPdf = async () => {
     if (generatedReports.length === 0) return;
+    // Check for missing global settings before generating PDF
+    const missing = [] as string[];
+    const s = data.settings;
+    if (!s.schoolName) missing.push('School name');
+    if (!s.address) missing.push('Address');
+    if (!s.academicYear) missing.push('Academic year');
+    if (!s.academicTerm) missing.push('Academic term');
+    if (!s.district) missing.push('District');
+    if (!s.circuit) missing.push('Circuit');
+    if (!s.logo) missing.push('School logo');
+    if (!s.headmasterName) missing.push("Headmaster's name");
+    if (!s.headmasterSignature) missing.push("Headmaster's signature");
+    if (!s.vacationDate) missing.push('Vacation date');
+    if (!s.reopeningDate) missing.push('Reopening date');
+
+    if (missing.length > 0) {
+      setPendingPdfStudents(generatedReports);
+      setMissingSettingsList(missing);
+      setIsMissingSettingsModalOpen(true);
+      return;
+    }
+
     setIsGeneratingPdf(true);
     setPdfError(null);
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -534,23 +560,71 @@ const ReportViewer: React.FC = () => {
 
   const handleDownloadAllPdf = async () => {
     if (accessibleClasses.length <= 1) return;
+    // Build full student list
+    const allStudentsToPrint: Student[] = [];
+    accessibleClasses.forEach(cls => {
+      const classStudents = students.filter(s => s.class === cls.name);
+      classStudents.sort((a, b) => a.name.localeCompare(b.name));
+      allStudentsToPrint.push(...classStudents);
+    });
+    if (allStudentsToPrint.length === 0) return;
+
+    // Check missing settings
+    const missing = [] as string[];
+    const s = data.settings;
+    if (!s.schoolName) missing.push('School name');
+    if (!s.address) missing.push('Address');
+    if (!s.academicYear) missing.push('Academic year');
+    if (!s.academicTerm) missing.push('Academic term');
+    if (!s.district) missing.push('District');
+    if (!s.circuit) missing.push('Circuit');
+    if (!s.logo) missing.push('School logo');
+    if (!s.headmasterName) missing.push("Headmaster's name");
+    if (!s.headmasterSignature) missing.push("Headmaster's signature");
+    if (!s.vacationDate) missing.push('Vacation date');
+    if (!s.reopeningDate) missing.push('Reopening date');
+
+    if (missing.length > 0) {
+      setPendingPdfStudents(allStudentsToPrint);
+      setMissingSettingsList(missing);
+      setIsMissingSettingsModalOpen(true);
+      return;
+    }
+
     setIsGeneratingAllPdf(true);
     setPdfError(null);
     await new Promise(resolve => setTimeout(resolve, 100));
     try {
       const { generateReportsPDF } = await import('../../services/pdfGenerator');
-      const allStudentsToPrint: Student[] = [];
-      accessibleClasses.forEach(cls => {
-        const classStudents = students.filter(s => s.class === cls.name);
-        classStudents.sort((a, b) => a.name.localeCompare(b.name));
-        allStudentsToPrint.push(...classStudents);
-      });
-      if (allStudentsToPrint.length === 0) return;
       await generateReportsPDF(allStudentsToPrint, data);
     } catch (e) {
       console.error("Failed to generate All Classes PDF", e);
       setPdfError(e);
     } finally {
+      setIsGeneratingAllPdf(false);
+    }
+  };
+
+  const confirmMissingSettingsDownload = async (proceed: boolean) => {
+    setIsMissingSettingsModalOpen(false);
+    if (!proceed) {
+      setPendingPdfStudents(null);
+      return;
+    }
+    const studentsToPrint = pendingPdfStudents || [];
+    setPendingPdfStudents(null);
+    if (studentsToPrint.length === 0) return;
+    setIsGeneratingPdf(true);
+    setPdfError(null);
+    await new Promise(resolve => setTimeout(resolve, 100));
+    try {
+      const { generateReportsPDF } = await import('../../services/pdfGenerator');
+      await generateReportsPDF(studentsToPrint, data);
+    } catch (e) {
+      console.error("Failed to generate PDF", e);
+      setPdfError(e);
+    } finally {
+      setIsGeneratingPdf(false);
       setIsGeneratingAllPdf(false);
     }
   };
@@ -895,6 +969,80 @@ const ReportViewer: React.FC = () => {
           </div>
         </div>
       )}
+      {/* Missing Settings Modal (before PDF download) */}
+      <ConfirmationModal
+        isOpen={isMissingSettingsModalOpen}
+        onClose={() => { setIsMissingSettingsModalOpen(false); setPendingPdfStudents(null); }}
+        onConfirm={() => confirmMissingSettingsDownload(true)}
+        title="Missing School Settings"
+        variant="warning"
+        confirmText="Download Anyway"
+        cancelText="Cancel"
+        additionalActionText={(currentUser?.role === 'Admin') ? 'Open School Setup' : 'Remind Administrator'}
+        additionalAction={async () => {
+          setIsMissingSettingsModalOpen(false);
+            const missing = missingSettingsList.length > 0 ? missingSettingsList : ((): string[] => {
+              const s = data.settings;
+              const _m: string[] = [];
+              if (!s.schoolName) _m.push('School name');
+              if (!s.address) _m.push('Address');
+              if (!s.academicYear) _m.push('Academic year');
+              if (!s.academicTerm) _m.push('Academic term');
+              if (!s.district) _m.push('District');
+              if (!s.circuit) _m.push('Circuit');
+              if (!s.logo) _m.push('School logo');
+              if (!s.headmasterName) _m.push("Headmaster's name");
+              if (!s.headmasterSignature) _m.push("Headmaster's signature");
+              if (!s.vacationDate) _m.push('Vacation date');
+              if (!s.reopeningDate) _m.push('Reopening date');
+              return _m;
+            })();
+            const message = `The following school settings are missing: ${missing.join(', ')}.`;
+            if (currentUser?.role === 'Admin') {
+            try { window.dispatchEvent(new CustomEvent('app-navigate', { detail: { page: 'School Setup' } })); } catch { }
+          } else {
+            try {
+              await navigator.clipboard.writeText(message + ' Please update these settings.');
+              alert('Reminder copied to clipboard. Please send it to your administrator.');
+            } catch {
+              alert('Please contact your administrator to update school settings.');
+            }
+          }
+        }}
+        message={
+          <div>
+            <p className="mb-2">The generated report cards may be incomplete because some required school settings are missing:</p>
+              <ul className="list-disc pl-5">
+                {missingSettingsList.length > 0 ? (
+                  missingSettingsList.map((m, i) => <li key={i}>{m}</li>)
+                ) : (
+                  // Fallback: compute on the fly
+                  (() => {
+                    const s = data.settings;
+                    const fallback: string[] = [];
+                    if (!s.schoolName) fallback.push('School name');
+                    if (!s.address) fallback.push('Address');
+                    if (!s.academicYear) fallback.push('Academic year');
+                    if (!s.academicTerm) fallback.push('Academic term');
+                    if (!s.district) fallback.push('District');
+                    if (!s.circuit) fallback.push('Circuit');
+                    if (!s.logo) fallback.push('School logo');
+                    if (!s.headmasterName) fallback.push("Headmaster's name");
+                    if (!s.headmasterSignature) fallback.push("Headmaster's signature");
+                    if (!s.vacationDate) fallback.push('Vacation date');
+                    if (!s.reopeningDate) fallback.push('Reopening date');
+                    return fallback.map((m, i) => <li key={i}>{m}</li>);
+                  })()
+                )}
+              </ul>
+            {currentUser?.role === 'Admin' ? (
+              <p className="mt-2 text-sm text-gray-600">You are an administrator — you can open the School Setup page to update these values now.</p>
+            ) : (
+              <p className="mt-2 text-sm text-gray-600">Please remind your administrator to update these settings, or choose "Download Anyway" to continue.</p>
+            )}
+          </div>
+        }
+      />
     </div>
   );
 };

@@ -9,9 +9,9 @@ interface BottomNavigationProps {
 const BottomNavigation: React.FC<BottomNavigationProps> = ({ currentPage, onNavigate }) => {
     const navItems: { name: Page; icon: React.ReactElement; label: string }[] = [
         {
-            name: 'Dashboard',
-            label: 'Home',
-            icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" /></svg>
+            name: 'School Setup',
+            label: 'Setup',
+            icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M12 2l8 6-1.5 1.2L12 4 5.5 9.2 4 8l8-6zM3 10.5v6A2.5 2.5 0 005.5 19h13A2.5 2.5 0 0021 16.5v-6L12 4 3 10.5z"/></svg>
         },
         {
             name: 'Students',
