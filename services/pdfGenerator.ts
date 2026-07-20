@@ -43,7 +43,7 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
     };
 
     // Helper to draw dotted underline field
-    const addUnderlinedField = (label: string, value: string, x: number, y: number, totalWidth: number, labelWidth: number, align: 'left' | 'center' = 'left', isBold: boolean = false, fontSize: number = 10) => {
+    const addUnderlinedField = (label: string, value: string | undefined, x: number, y: number, totalWidth: number, labelWidth: number, align: 'left' | 'center' = 'left', isBold: boolean = false, fontSize: number = 10) => {
         doc.setFont('times', 'bold');
         doc.setFontSize(10); // Standard label size
         doc.text(label + ':', x, y);
@@ -59,9 +59,10 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
         doc.setLineDashPattern([], 0); // Reset
 
         // Draw value
+        const safeValue = value == null ? '' : String(value);
         let textX = valueX + (valueWidth / 2);
         if (align === 'left') textX = valueX + 2;
-        addFitText(value, textX, y, valueWidth - 2, fontSize, align, isBold);
+        addFitText(safeValue, textX, y, valueWidth - 2, fontSize, align, isBold);
     };
 
     // Sort grades for key
@@ -184,7 +185,7 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
         addUnderlinedField("Index Number", student.indexNumber, leftColX, currentY, colWidth, 25);
 
         // Calculate age as of vacation date (if available), otherwise use current date
-        const calculateAgeAsOf = (dobString: string, asOfDate: Date): string => {
+        const calculateAgeAsOf = (dobString: string | undefined, asOfDate: Date): string => {
             if (!dobString || !/^\d{4}-\d{2}-\d{2}$/.test(dobString)) return '';
             try {
                 const dob = new Date(dobString + 'T00:00:00');
@@ -235,7 +236,7 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
 
         // Row 4 (Dates)
         currentY += 8;
-        const fmtDate = (d: string) => {
+        const fmtDate = (d: string | undefined) => {
             if (!d) return '';
             try {
                 const dt = new Date(d);
@@ -382,7 +383,7 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
             rowHeight = Math.max(minRowHeight, availableHeight / numSubjects);
         }
 
-        reportCalcData.subjectResults.forEach(res => {
+        reportCalcData.subjectResults.forEach((res: { subject: string; classScore: number; examScore: number; totalScore: number; grade: string; position: number; remark: string }) => {
             x = tableX;
             doc.rect(x, y, colWidths[0], rowHeight);
             doc.setFont('times', 'bold');
@@ -497,6 +498,19 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
         const sigWidth = 50;
 
         const tSigX = MARGIN_X + 10;
+        // Determine teacher names similarly to the ReportCard component
+        const getReportTeacherNames = (c: any): string[] => {
+            if (!c) return [];
+            if (c.reportTeachers && Array.isArray(c.reportTeachers) && c.reportTeachers.length) return c.reportTeachers.map((n: string) => (n || '').trim()).filter(Boolean);
+            if (c.teacherNames && Array.isArray(c.teacherNames) && c.teacherNames.length) return c.teacherNames.map((n: string) => (n || '').trim()).filter(Boolean);
+            if (c.teacherName) return [(c.teacherName || '').trim()];
+            return [];
+        };
+
+        const reportTeacherNames = getReportTeacherNames(classInfo);
+        const teacherSignatureLabel = reportTeacherNames.length > 1 ? "Class Teachers' Signature" : "Class Teacher's Signature";
+        const reportTeacherLine = reportTeacherNames.length > 0 ? reportTeacherNames.join(', ') : (classInfo?.teacherName || '');
+
         if (classInfo?.teacherSignature) {
             try {
                 doc.addImage(classInfo.teacherSignature, 'PNG', tSigX + 10, currentY, 30, 15, undefined, 'FAST');
@@ -506,10 +520,10 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
         doc.line(tSigX, sigY, tSigX + sigWidth, sigY);
         doc.setFontSize(9);
         doc.setFont('times', 'bold');
-        doc.text("Class Teacher's Signature", tSigX + (sigWidth / 2), sigY + 4, { align: 'center' });
-        if (classInfo?.teacherName) {
+        doc.text(teacherSignatureLabel, tSigX + (sigWidth / 2), sigY + 4, { align: 'center' });
+        if (reportTeacherLine) {
             doc.setFont('times', 'normal');
-            doc.text(`(${classInfo.teacherName})`, tSigX + (sigWidth / 2), sigY + 8, { align: 'center' });
+            doc.text(`(${reportTeacherLine})`, tSigX + (sigWidth / 2), sigY + 8, { align: 'center' });
         }
 
         // Headmaster's Signature (Now Center)

@@ -121,13 +121,25 @@ const ReportCard: React.FC<{ student: Student }> = ({ student }) => {
         } catch (e) { return dateString; }
     };
 
-    const formatAge = (ageString: string): string => {
-        if (!ageString || isNaN(Number(ageString))) return ageString;
-        const age = Number(ageString);
-        if (age === 1) {
-            return '1 year';
-        }
-        return `${age} years`;
+    const calculateAgeAsOf = (dobString?: string, asOfDate?: Date): string => {
+        if (!dobString || !/^\d{4}-\d{2}-\d{2}$/.test(dobString)) return '';
+        try {
+            const dob = new Date(dobString + 'T00:00:00');
+            const asOf = asOfDate ?? new Date();
+            if (isNaN(dob.getTime()) || dob.getTime() > asOf.getTime()) return '';
+            let age = asOf.getFullYear() - dob.getFullYear();
+            const monthDifference = asOf.getMonth() - dob.getMonth();
+            if (monthDifference < 0 || (monthDifference === 0 && asOf.getDate() < dob.getDate())) {
+                age--;
+            }
+            return age >= 1 ? String(age) : '';
+        } catch (e) { return ''; }
+    };
+
+    const formatAge = (rawAge: string): string => {
+        if (!rawAge || isNaN(Number(rawAge))) return rawAge;
+        const age = Number(rawAge);
+        return age === 1 ? '1 year' : `${age} years`;
     };
 
     const printedDate = new Date();
@@ -143,9 +155,9 @@ const ReportCard: React.FC<{ student: Student }> = ({ student }) => {
     const InfoItem: React.FC<{ label: string; value?: React.ReactNode; className?: string; fitText?: boolean }> = ({ label, value, className = '', fitText = false }) => (
         <div className={`flex items-baseline py-0.5 ${className}`}>
             <span className="font-bold whitespace-nowrap pr-2 text-black">{label}:</span>
-            <div className="relative w-full h-5 border-b border-dotted border-black text-black overflow-hidden">
+                        <div className="relative w-full h-5 border-b border-dotted border-black text-black overflow-hidden">
                 <div className="absolute bottom-0 left-0 right-0">
-                    {value ? (
+                                    {value ? (
                         fitText ? (
                             <FitText maxFontSize={14} minFontSize={10} mode="single">{value}</FitText>
                         ) : (
@@ -230,7 +242,7 @@ const ReportCard: React.FC<{ student: Student }> = ({ student }) => {
                         {/* Row 3 */}
                         <div className="flex gap-x-4">
                             <div className="flex-1"><InfoItem label="Index Number" value={student.indexNumber} /></div>
-                            <div className="flex-1"><InfoItem label="Age" value={formatAge(student.age)} /></div>
+                            <div className="flex-1"><InfoItem label="Age" value={formatAge(student.dateOfBirth ? calculateAgeAsOf(student.dateOfBirth, settings.vacationDate ? new Date(settings.vacationDate + 'T00:00:00') : undefined) : (student.age || ''))} /></div>
                             <div className="flex-1"><InfoItem label="Gender" value={student.gender} /></div>
                         </div>
 
@@ -288,7 +300,7 @@ const ReportCard: React.FC<{ student: Student }> = ({ student }) => {
                         />
                         <div className="absolute inset-x-0 bottom-0 bg-black/60 backdrop-blur-sm px-4 py-3 text-white text-sm">
                             <div className="font-semibold truncate">{student.name}</div>
-                            <div className="text-xs text-gray-200 truncate">Class: {student.class} ┃ {student.age ? `${student.age} yrs` : 'Age unknown'}</div>
+                            <div className="text-xs text-gray-200 truncate">Class: {student.class} ┃ {(student.dateOfBirth ? formatAge(calculateAgeAsOf(student.dateOfBirth, settings.vacationDate ? new Date(settings.vacationDate + 'T00:00:00') : undefined)) : (student.age ? `${student.age} yrs` : 'Age unknown'))}</div>
                         </div>
                     </div>
                 </div>,
