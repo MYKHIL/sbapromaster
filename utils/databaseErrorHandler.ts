@@ -32,6 +32,35 @@ export const isQuotaExhaustedError = (error: any): boolean => {
 };
 
 /**
+ * Checks if an error is an IndexedDB persistence error
+ * These errors indicate that Firebase's offline persistence is failing
+ */
+export const isIndexedDBError = (error: any): boolean => {
+    if (!error) return false;
+
+    const errorMessage = error.message || error.toString() || '';
+    const errorCode = error.code || '';
+
+    // Check for IndexedDB-specific error patterns
+    const isIndexedDBFailure = 
+        errorMessage.includes('IndexedDB') ||
+        errorMessage.includes('indexedDB') ||
+        errorMessage.includes('Indexed Database') ||
+        errorMessage.includes('Transaction') ||
+        (errorCode === 'unavailable' && errorMessage.includes('mutation'));
+
+    return isIndexedDBFailure;
+};
+
+/**
+ * Checks if clearing persistence cache might help
+ * This includes quota exhaustion and IndexedDB connection loss
+ */
+export const shouldClearPersistenceCache = (error: any): boolean => {
+    return isQuotaExhaustedError(error) || isIndexedDBError(error);
+};
+
+/**
  * Checks if an error is a database-related error
  */
 export const isDatabaseError = (error: any): boolean => {

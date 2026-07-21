@@ -1,5 +1,5 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect, useRef, useMemo } from 'react';
-import { updateHeartbeat, logUserActivity, getSchoolData, normalizeSchoolData, saveDataTransaction, fetchStudents, fetchScoresForClass, fetchSubcollection, fetchMetadataBundle, updateMetadataBundle, updateStudentBucket, ensureStudentBucketExists, db } from '../services/firebaseService';
+import { updateHeartbeat, logUserActivity, getSchoolData, normalizeSchoolData, saveDataTransaction, fetchStudents, fetchScoresForClass, fetchSubcollection, fetchMetadataBundle, updateMetadataBundle, updateStudentBucket, ensureStudentBucketExists, db, recoverFromIndexedDBError } from '../services/firebaseService';
 import { onSnapshot, doc, collection, Unsubscribe } from 'firebase/firestore';
 import { getDeviceCredential } from '../services/authService';
 import * as SyncLogger from '../services/syncLogger';
@@ -8,7 +8,7 @@ import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { offlineQueue } from '../services/offlineQueue';
 import { useDatabaseError } from './DatabaseErrorContext';
 import { useFirebaseAnalytics } from './FirebaseAnalyticsContext';
-import { isQuotaExhaustedError } from '../utils/databaseErrorHandler';
+import { isQuotaExhaustedError, isIndexedDBError, shouldClearPersistenceCache } from '../utils/databaseErrorHandler';
 import * as LZ from 'lz-string';
 import type { Student, Subject, Class, Grade, Assessment, Score, SchoolSettings, ReportSpecificData, ClassSpecificData, User, UserLog, OnlineUser, Page, AppDataType } from '../types';
 import {
@@ -449,7 +449,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.366"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.367"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -1637,6 +1637,24 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             console.error('[DataContext] ❌ Failed to save data to cloud:', error);
             SyncLogger.log(`Save failed for ${schoolId}: ${error.message}`);
 
+            // --------- CRITICAL: IndexedDB Error Recovery ---------
+            // If Firebase's offline persistence is failing, we must recover BEFORE showing error to user
+            if (isIndexedDBError(error)) {
+                console.error('[DataContext] 🚨 IndexedDB persistence error detected. Attempting recovery...');
+                
+                showDatabaseError({
+                    message: 'Browser storage error. Attempting recovery... Please wait a moment and try again.',
+                    code: 'INDEXED_DB_ERROR'
+                }, 'write');
+
+                // Attempt to recover by clearing persistence cache
+                await recoverFromIndexedDBError();
+                
+                setIsSyncing(false);
+                isSyncingRef.current = false;
+                return;
+            }
+
             // Show database error modal for critical errors
             showDatabaseError(error, 'write');
 
@@ -2162,6 +2180,22 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             isSyncingRef.current = false;
         } catch (error: any) {
             console.error(`[savePageData] ❌ Failed to save ${String(field)}:`, error);
+            
+            // CRITICAL: Handle IndexedDB errors first before showing error to user
+            if (isIndexedDBError(error)) {
+                console.error('[DataContext] 🚨 IndexedDB persistence error in savePageData. Attempting recovery...');
+                
+                showDatabaseError({
+                    message: 'Browser storage error. Attempting recovery... Please wait and try saving again.',
+                    code: 'INDEXED_DB_ERROR'
+                }, 'write');
+
+                await recoverFromIndexedDBError();
+                setIsSyncing(false);
+                isSyncingRef.current = false;
+                return;
+            }
+
             showDatabaseError(error, 'write');
             setIsSyncing(false);
             isSyncingRef.current = false;
@@ -3827,8 +3861,21 @@ const refreshFromCloud = React.useCallback(async (ignoreSyncLock: boolean = fals
                 console.log('[DataContext] ⚠️ No data found for this school ID');
                 return 'error';
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('[DataContext] ❌ Failed to refresh data from cloud:', error);
+
+            // Handle IndexedDB persistence errors first and attempt recovery
+            if (isIndexedDBError(error)) {
+                console.error('[DataContext] 🚨 IndexedDB persistence error during refresh. Attempting recovery...');
+                showDatabaseError({
+                    message: 'Browser storage error. Attempting recovery... Please refresh the page if issues persist.',
+                    code: 'INDEXED_DB_ERROR'
+                }, 'read');
+
+                await recoverFromIndexedDBError();
+                return 'error';
+            }
+
             showDatabaseError(error, 'read');
             return 'error';
         } finally {

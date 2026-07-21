@@ -147,6 +147,60 @@ const debounce = (func: Function, wait: number) => {
     };
 };
 
+// -------------------------------------------------------------------------
+// INDEXEDDB PERSISTENCE RECOVERY
+// -------------------------------------------------------------------------
+// Track if we've already cleared persistence in this session to avoid loops
+let persistenceClearAttempted = false;
+
+/**
+ * Clears Firebase's IndexedDB persistence cache.
+ * Use this when IndexedDB transactions fail or quota is exceeded.
+ * WARNING: This will lose offline-pending mutations, so only call as a last resort.
+ */
+export const clearFirestorePersistence = async (): Promise<boolean> => {
+    try {
+        // Some Firebase SDK builds expose `clearPersistence` on the Firestore instance,
+        // but the TypeScript types don't always include it. Use an `any` cast to call
+        // it safely when available without causing type errors.
+        const anyDb: any = db as any;
+        if (typeof anyDb.clearPersistence === 'function') {
+            await anyDb.clearPersistence();
+            console.warn('[Firebase] ⚠️ Cleared IndexedDB persistence cache due to unavailability');
+            return true;
+        } else {
+            console.warn('[Firebase] clearPersistence not available in this Firebase instance');
+            return false;
+        }
+    } catch (error: any) {
+        console.error('[Firebase] Failed to clear persistence:', error);
+        return false;
+    }
+};
+
+/**
+ * Recovers from IndexedDB errors by clearing persistence and retrying.
+ * This is called when Firebase offline persistence becomes unavailable.
+ */
+export const recoverFromIndexedDBError = async (): Promise<void> => {
+    if (persistenceClearAttempted) {
+        console.error('[Firebase] Already attempted to clear persistence in this session. Giving up.');
+        return;
+    }
+
+    persistenceClearAttempted = true;
+    console.warn('[Firebase] 🔧 Attempting to recover from IndexedDB error...');
+    
+    try {
+        const cleared = await clearFirestorePersistence();
+        if (cleared) {
+            console.log('[Firebase] ✅ Persistence cleared. Please refresh the page to continue.');
+        }
+    } catch (error) {
+        console.error('[Firebase] Recovery failed:', error);
+    }
+};
+
 // Sanitize helpers
 export const sanitizeSchoolName = (schoolName: string): string =>
     (schoolName || '').trim().replace(/_/g, '-').replace(/\//g, '').replace(/\s+/g, '').toLowerCase();
