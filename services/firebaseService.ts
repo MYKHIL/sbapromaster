@@ -1862,21 +1862,67 @@ export const saveDataTransaction = async (
         console.error('[Auto-Upload] ⚠️ Failed to auto-upload images in transaction (proceeding with base64):', err);
     }
 
-    // Helper to manage batches
+    // Helper to manage batches with retry logic
     const executeBatch = async (operations: ((batch: WriteBatch) => void)[]) => {
         const BATCH_SIZE = 450; // Safety margin below 500
+        const MAX_RETRIES = 3;
 
         // DEBUG: Check auth state before batch
         const currentUser = auth.currentUser;
         0 && console.log(`[Firebase] Batch Save Starting. Auth UID: ${currentUser?.uid || 'NONE (Unauthenticated)'}`);
 
+        // CRITICAL FIX: Track which batches succeeded vs failed
+        // This allows us to provide better error diagnostics on mobile
+        const batchResults: Array<{ chunkIndex: number; success: boolean; error?: any; opCount: number }> = [];
+
         for (let i = 0; i < operations.length; i += BATCH_SIZE) {
-            const batch = writeBatch(db);
+            const chunkIndex = Math.floor(i / BATCH_SIZE);
             const chunk = operations.slice(i, i + BATCH_SIZE);
-            chunk.forEach(op => op(batch));
-            await batch.commit();
-            0 && console.log(`[Optimization] ✅ Committed batch chunk ${i / BATCH_SIZE + 1} (${chunk.length} ops)`);
+            
+            // Retry logic with exponential backoff for mobile reliability
+            let lastError: any = null;
+            for (let retry = 0; retry < MAX_RETRIES; retry++) {
+                try {
+                    const batch = writeBatch(db);
+                    chunk.forEach(op => op(batch));
+                    
+                    await batch.commit();
+                    0 && console.log(`[Optimization] ✅ Committed batch chunk ${chunkIndex + 1} (${chunk.length} ops)`);
+                    batchResults.push({ chunkIndex, success: true, opCount: chunk.length });
+                    lastError = null;
+                    break; // Success - exit retry loop
+                } catch (error: any) {
+                    lastError = error;
+                    const isRetryable = !error?.code || 
+                        error.code === 'unavailable' || 
+                        error.code === 'deadline-exceeded' || 
+                        error.code === 'resource-exhausted';
+                    
+                    if (retry < MAX_RETRIES - 1 && isRetryable) {
+                        // Exponential backoff: 100ms, 300ms, 900ms
+                        const backoffMs = Math.pow(3, retry) * 100;
+                        console.warn(`[Firebase] ⚠️ Batch chunk ${chunkIndex} failed (attempt ${retry + 1}/${MAX_RETRIES}). Retrying in ${backoffMs}ms...`, error);
+                        await new Promise(resolve => setTimeout(resolve, backoffMs));
+                    } else {
+                        console.error(`[Firebase] ❌ Batch chunk ${chunkIndex} failed after ${retry + 1} attempts:`, error);
+                        batchResults.push({ chunkIndex, success: false, error, opCount: chunk.length });
+                        throw error;
+                    }
+                }
+            }
+
+            if (lastError) {
+                throw lastError;
+            }
         }
+
+        // Provide diagnostics for large saves (especially on mobile)
+        if (batchResults.length > 1) {
+            const successCount = batchResults.filter(r => r.success).length;
+            console.log(`[Firebase] 📊 Batch execution summary: ${successCount}/${batchResults.length} chunks committed`);
+        }
+
+        return batchResults;
     };
 
     try {

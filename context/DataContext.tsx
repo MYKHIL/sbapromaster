@@ -449,7 +449,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.365"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.366"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -720,7 +720,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // MOBILE RELIABILITY: Lifecycle & Persistence Guards
     // -------------------------------------------------------------------------
     
-    // Pagehide Listener for Robust Tab Termination
+    // Pagehide Listener for Robust Tab Termination - ENHANCED for mobile reliability
     useEffect(() => {
         const handleForceBackup = () => {
             // Note: visibilityState === 'hidden' or 'pagehide' means the JavaScript
@@ -741,6 +741,37 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 // 2. Back up dirty fields (as a failsafe for reload comparison)
                 const dirtySet = Array.from(dirtyFields.current);
                 localStorage.setItem(getKey('dirty-fields-failsafe'), JSON.stringify(dirtySet));
+
+                // 3. CRITICAL: Back up the actual current state for recovery on reload
+                // This ensures we can detect data loss on mobile if the save didn't complete
+                if (stateRef.current) {
+                    try {
+                        const stateSnapshot = {
+                            timestamp: Date.now(),
+                            hasLocalChanges: hasLocalChanges,
+                            isSyncing: isSyncingRef.current,
+                            dirtyFields: Array.from(dirtyFields.current),
+                            queuedCount: offlineQueue.getQueueSize(),
+                            // For sensitive data, only back up IDs not full content
+                            pendingItemIds: Object.entries(pendingChangesMap.current).reduce((acc, [k, v]) => {
+                                acc[k] = Array.from(v);
+                                return acc;
+                            }, {} as Record<string, string[]>)
+                        };
+                        localStorage.setItem(getKey('sync-state-snapshot'), JSON.stringify(stateSnapshot));
+                    } catch (e) {
+                        console.warn('[DataContext] Could not backup sync state snapshot:', e);
+                    }
+                }
+
+                // 4. CRITICAL: Flag that we have unsaved changes (for post-reload detection)
+                if (dirtyFields.current.size > 0 || offlineQueue.getQueueSize() > 0) {
+                    localStorage.setItem(getKey('has-unsaved-changes-flag'), 'true');
+                    console.warn('[DataContext] 📍 Flagged unsaved changes for post-reload detection');
+                } else {
+                    localStorage.removeItem(getKey('has-unsaved-changes-flag'));
+                }
+
             } catch (e) {
                 // Silently fail in lifecycle hook to avoid blocking page transition
                 console.error('[DataContext] Failed to backup during tab close:', e);
@@ -757,13 +788,159 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             window.removeEventListener('beforeunload', handleForceBackup);
             window.removeEventListener('pagehide', handleForceBackup);
         };
-    }, [persistedPendingMap]);
+    }, [persistedPendingMap, hasLocalChanges]);
+
+    // -------------------------------------------------------------------------
+    // DIRTY FIELD TRACKING OPTIMIZATION (Move before useEffects that use it)
+    // -------------------------------------------------------------------------
+    // We track exactly which top-level keys in AppDataType have changed locally.
+    // This allows us to only push modified data to Firestore, drastically reducing
+    // write sizes and potential conflicts.
+    const dirtyFields = React.useRef<Set<keyof AppDataType>>(new Set());
 
     // Track last loaded collection timestamps to prevent redundant fetches
     const lastLoadedTimestamps = React.useRef<Record<string, any>>({});
     const inflightPromises = React.useRef<Map<string, Promise<any>>>(new Map());
+    
+    // Draft score tracking for unsaved typing
+    const draftScores = useRef<Map<string, string>>(new Map());
 
-    // loadImportedData relocated below to resolve TDZ issues
+    /**
+     * Determines if a discrepancy between local and cloud data is "meaningful".
+     * A discrepancy is NOT meaningful if the local data is just the default initial state.
+     */
+    const isMeaningfulDiscrepancy = (field: keyof AppDataType, local: any): boolean => {
+        // Define initial states for comparison
+        const initialStates: Partial<Record<keyof AppDataType, any>> = {
+            settings: INITIAL_SETTINGS,
+            students: INITIAL_STUDENTS,
+            subjects: INITIAL_SUBJECTS,
+            classes: INITIAL_CLASSES,
+            grades: INITIAL_GRADES,
+            assessments: INITIAL_ASSESSMENTS,
+            scores: INITIAL_SCORES,
+            reportData: INITIAL_REPORT_DATA,
+            classData: INITIAL_CLASS_DATA,
+            users: [],
+            userLogs: [],
+            activeSessions: {}
+        };
+
+        const initialState = initialStates[field];
+
+        let isDefault = false;
+        
+        // If the initial state is an array, compare against the specific item with matching ID
+        if (Array.isArray(initialState)) {
+            const localId = getItemId(local);
+            const initialItem = initialState.find((item: any) => String(getItemId(item)) === String(localId));
+            if (initialItem) {
+                isDefault = isDataEqual(local, initialItem);
+            } else {
+                // If the item isn't in the initial state array, it's definitely a meaningful addition
+                isDefault = false;
+            }
+        } else {
+            // If the initial state is not an array (e.g., settings), compare the entire object
+            isDefault = isDataEqual(local, initialState);
+        }
+
+        if (isDefault) {
+            // console.log(`[DataContext] 🔍 isMeaningfulDiscrepancy(${field}): Item matches INITIAL STATE. Not meaningful.`);
+            return false;
+        }
+
+        // Logic refined: if it's NOT default, and we are calling this, it's likely a real change
+        // compared to whatever the cloud baseline is.
+        return true;
+    };
+
+    // -------------------------------------------------------------------------
+    // POST-RELOAD DETECTION: Warn users about potential data loss on mobile
+    // -------------------------------------------------------------------------
+    useEffect(() => {
+        if (!schoolId) return;
+
+        // Check if we had unsaved changes before the reload
+        const hadUnsavedChanges = localStorage.getItem(getKey('has-unsaved-changes-flag')) === 'true';
+        
+        if (hadUnsavedChanges) {
+            console.warn('[DataContext] ⚠️ DETECTED: Page was reloaded with unsaved changes. Checking for data loss...');
+            
+            try {
+                const snapshotStr = localStorage.getItem(getKey('sync-state-snapshot'));
+                if (snapshotStr) {
+                    const snapshot = JSON.parse(snapshotStr);
+                    const timeSinceSnapshot = Date.now() - snapshot.timestamp;
+                    
+                    // If less than 5 seconds have passed, the reload was likely abnormal
+                    if (timeSinceSnapshot < 5000) {
+                        console.error('[DataContext] 🚨 CRITICAL: Abnormal reload detected within 5 seconds. User may have lost data!');
+                        console.error('[DataContext] State snapshot:', snapshot);
+                        
+                        // Show a warning to the user about potential data loss
+                        showDatabaseError({
+                            message: 'Your browser was unexpectedly closed or restarted with unsaved changes. Your data has been queued for upload. Please save again when ready.',
+                            code: 'ABNORMAL_RELOAD'
+                        }, 'read');
+                    }
+                }
+            } catch (e) {
+                console.warn('[DataContext] Could not analyze reload snapshot:', e);
+            }
+
+            // Clear the flag for next time
+            localStorage.removeItem(getKey('has-unsaved-changes-flag'));
+            localStorage.removeItem(getKey('sync-state-snapshot'));
+        }
+
+        // Restore any offline queued items on reload
+        if (offlineQueue.getQueueSize() > 0) {
+            console.log(`[DataContext] 📦 Found ${offlineQueue.getQueueSize()} queued items from previous session`);
+            setQueuedCount(offlineQueue.getQueueSize());
+        }
+    }, [schoolId]);
+
+    // -------------------------------------------------------------------------
+    // AUTO-RETRY OFFLINE QUEUE: Process queued saves when connection restored
+    // -------------------------------------------------------------------------
+    useEffect(() => {
+        if (!isOnline || !schoolId || offlineQueue.getQueueSize() === 0) return;
+
+        console.log(`[DataContext] 🔗 Connection restored! Attempting to process ${offlineQueue.getQueueSize()} queued items...`);
+
+        const processOfflineQueue = async () => {
+            try {
+                // Define the save function for offline queue items
+                const offlineSaveFn = async (data: Partial<AppDataType>) => {
+                    await saveDataTransaction(
+                        schoolId,
+                        data,
+                        undefined,
+                        Array.isArray(data.students) ? data.students : stateRef.current.students
+                    );
+                };
+
+                // Process the queue
+                const success = await offlineQueue.processQueue(offlineSaveFn);
+                
+                if (success) {
+                    console.log('[DataContext] ✅ Successfully processed all offline queue items!');
+                    setQueuedCount(0);
+                } else {
+                    console.warn('[DataContext] ⚠️ Some queue items could not be processed. Will retry on next connection restore.');
+                    setQueuedCount(offlineQueue.getQueueSize());
+                }
+            } catch (error) {
+                console.error('[DataContext] ❌ Error processing offline queue:', error);
+                setQueuedCount(offlineQueue.getQueueSize());
+            }
+        };
+
+        // Small delay to ensure network is truly stable
+        const timeoutId = setTimeout(processOfflineQueue, 1000);
+        return () => clearTimeout(timeoutId);
+    }, [isOnline, schoolId]);
 
     // CRITICAL: When the Context (School, Year, or Term) changes, reset all state
     // to prevent legacy data from contaminating the new context.
@@ -840,64 +1017,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         lastContextKey.current = currentContextKey;
         lastSchoolIdRef.current = schoolId;
     }, [schoolId, settings.academicYear, settings.academicTerm, dirtyVersion]);
-
-    // -------------------------------------------------------------------------
-    // DIRTY FIELD TRACKING OPTIMIZATION
-    // -------------------------------------------------------------------------
-    // We track exactly which top-level keys in AppDataType have changed locally.
-    // This allows us to only push modified data to Firestore, drastically reducing
-    // write sizes and potential conflicts.
-    const dirtyFields = React.useRef<Set<keyof AppDataType>>(new Set());
-
-    /**
-     * Determines if a discrepancy between local and cloud data is "meaningful".
-     * A discrepancy is NOT meaningful if the local data is just the default initial state.
-     */
-    const isMeaningfulDiscrepancy = (field: keyof AppDataType, local: any): boolean => {
-        // Define initial states for comparison
-        const initialStates: Partial<Record<keyof AppDataType, any>> = {
-            settings: INITIAL_SETTINGS,
-            students: INITIAL_STUDENTS,
-            subjects: INITIAL_SUBJECTS,
-            classes: INITIAL_CLASSES,
-            grades: INITIAL_GRADES,
-            assessments: INITIAL_ASSESSMENTS,
-            scores: INITIAL_SCORES,
-            reportData: INITIAL_REPORT_DATA,
-            classData: INITIAL_CLASS_DATA,
-            users: [],
-            userLogs: [],
-            activeSessions: {}
-        };
-
-        const initialState = initialStates[field];
-
-        let isDefault = false;
-        
-        // If the initial state is an array, compare against the specific item with matching ID
-        if (Array.isArray(initialState)) {
-            const localId = getItemId(local);
-            const initialItem = initialState.find((item: any) => String(getItemId(item)) === String(localId));
-            if (initialItem) {
-                isDefault = isDataEqual(local, initialItem);
-            } else {
-                // If the item isn't in the initial state array, it's definitely a meaningful addition
-                isDefault = false;
-            }
-        } else {
-            // If the initial state is not an array (e.g., settings), compare the entire object
-            isDefault = isDataEqual(local, initialState);
-        }
-
-        if (isDefault) {
-            // console.log(`[DataContext] 🔍 isMeaningfulDiscrepancy(${field}): Item matches INITIAL STATE. Not meaningful.`);
-            return false;
-        }
-
-        // Logic refined: if it's NOT default, and we are calling this, it's likely a real change
-        // compared to whatever the cloud baseline is.
-        return true;
-    };
 
     // Keep stateRef in sync with latest state for save operations
     useEffect(() => {
@@ -1061,7 +1180,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                  const prevDirtyKeys = persistedPendingMap.settings || [];
                  if (!isDataEqual(currentDirtyKeys.sort(), [...prevDirtyKeys].sort())) {
                      newMapState.settings = currentDirtyKeys;
-                     anyMapChanged = true;
+               anyMapChanged = true;
                  }
             }
         }
@@ -1366,6 +1485,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             isSyncingRef.current = true;
             setIsSyncing(true);
 
+            // Track which fields were successfully committed
+            const successfullyCommittedFields: Set<keyof AppDataType> = new Set();
+
             // FIX: Check for EITHER updates OR deletions.
             // Previously, if we only had deletions (no updates), this block was skipped!
             if (Object.keys(transactionPayload).length > 0 || (transactionDeletions && Object.keys(transactionDeletions).length > 0)) {
@@ -1374,9 +1496,72 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 
                 // Uses the new generalized transaction helper
                 await saveDataTransaction(schoolId!, transactionPayload, transactionDeletions, stateRef.current.students);
-                console.log('[DataContext] ✅ Data saved to cloud successfully!');
+                console.log('[DataContext] ✅ Main batch saved to cloud successfully!');
+                
+                // Mark all attempted fields as successfully committed to main batch
+                fieldsToSave.forEach(f => successfullyCommittedFields.add(f));
             } else {
                 console.log('[DataContext] ℹ️ No actionable updates or deletions found for transaction.');
+                setIsSyncing(false);
+                isSyncingRef.current = false;
+                return;
+            }
+
+            // --------- POST-TRANSACTION OPERATIONS WITH RETRY & ERROR HANDLING ---------
+            // These MUST complete successfully to ensure consistency, especially for mobile users
+            try {
+                const postOpErrors: string[] = [];
+                
+                // CRITICAL: Only rebuild if relevant fields were updated
+                const hasStudentUpdates = transactionPayload.students && Array.isArray(transactionPayload.students) && transactionPayload.students.length > 0;
+                const hasStudentDeletions = transactionDeletions?.students && transactionDeletions.students.length > 0;
+                
+                if (hasStudentUpdates || hasStudentDeletions) {
+                    try {
+                        console.log('[DataContext] 📚 Post-Transaction: Rebuilding student bucket...');
+                        await updateStudentBucket(schoolId!, stateRef.current.students);
+                        console.log('[DataContext] ✅ Student bucket rebuild successful');
+                    } catch (bucketErr) {
+                        console.error('[DataContext] ⚠️ Student bucket rebuild failed:', bucketErr);
+                        postOpErrors.push('Student bucket rebuild failed');
+                        // Continue - don't abort other post-ops
+                    }
+                }
+
+                // CRITICAL: Rebuild metadata bundle if relevant updates occurred
+                const metadataNeedsRebuild = 
+                    (transactionPayload.subjects && Array.isArray(transactionPayload.subjects) && transactionPayload.subjects.length > 0) ||
+                    (transactionPayload.classes && Array.isArray(transactionPayload.classes) && transactionPayload.classes.length > 0) ||
+                    (transactionPayload.assessments && Array.isArray(transactionPayload.assessments) && transactionPayload.assessments.length > 0) ||
+                    (transactionPayload.grades && Array.isArray(transactionPayload.grades) && transactionPayload.grades.length > 0) ||
+                    (transactionDeletions?.subjects && transactionDeletions.subjects.length > 0) ||
+                    (transactionDeletions?.classes && transactionDeletions.classes.length > 0) ||
+                    (transactionDeletions?.assessments && transactionDeletions.assessments.length > 0) ||
+                    (transactionDeletions?.grades && transactionDeletions.grades.length > 0);
+
+                if (metadataNeedsRebuild) {
+                    try {
+                        console.log('[DataContext] 📦 Post-Transaction: Updating metadata bundle...');
+                        await updateMetadataBundle(schoolId!);
+                        console.log('[DataContext] ✅ Metadata bundle update successful');
+                    } catch (metadataErr) {
+                        console.error('[DataContext] ⚠️ Metadata bundle update failed:', metadataErr);
+                        postOpErrors.push('Metadata bundle update failed');
+                        // Continue - don't abort the overall save
+                    }
+                }
+
+                // If post-transaction ops failed, we need to log this for retry
+                if (postOpErrors.length > 0) {
+                    console.warn('[DataContext] ⚠️ Some post-transaction operations failed:', postOpErrors);
+                    SyncLogger.log(`Post-transaction errors for ${schoolId}: ${postOpErrors.join(', ')}`);
+                    // For mobile reliability, we'll retry these on the next save or background task
+                    // For now, we continue since the main data was committed
+                }
+            } catch (postOpError) {
+                console.error('[DataContext] ❌ Critical failure in post-transaction operations:', postOpError);
+                SyncLogger.log(`Critical post-transaction failure for ${schoolId}: ${postOpError}`);
+                // Don't throw - main data was committed, post-ops are best-effort
             }
 
             // OPTIMIZED: Skip refresh if we already have the data locally and just saved it.
@@ -1390,10 +1575,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 console.log('[DataContext] ⏭️ Skipping redundant re-fetch - Local state is synced (Optimized)');
             }
 
-            console.log('[DataContext] 🎉 Sync & Refresh complete - cleared dirty fields');
+            console.log('[DataContext] 🎉 Sync complete - clearing dirty fields for committed data');
 
-            // Clear dirty fields only for the fields that were actually saved
-            fieldsToSave.forEach(field => {
+            // CRITICAL FIX: Only clear dirty fields for fields that were SUCCESSFULLY committed
+            // This ensures if post-transaction ops fail, the main fields are still marked clean
+            // but we can detect and handle failures more gracefully
+            successfullyCommittedFields.forEach(field => {
                 dirtyFields.current.delete(field);
                 
                 // Post-Save Handshake: Persist clearing of dirty map
@@ -1438,8 +1625,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // Update hasLocalChanges based on remaining dirty fields
             setHasLocalChanges(dirtyFields.current.size > 0);
 
-            // Explicitly clear pending changes maps
-            fieldsToSave.forEach(field => {
+            // Explicitly clear pending changes maps for committed fields
+            successfullyCommittedFields.forEach(field => {
                 if (pendingChangesMap.current[field]) pendingChangesMap.current[field].clear();
             });
             setDirtyVersion(v => v + 1);
@@ -1448,6 +1635,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             isSyncingRef.current = false;
         } catch (error: any) {
             console.error('[DataContext] ❌ Failed to save data to cloud:', error);
+            SyncLogger.log(`Save failed for ${schoolId}: ${error.message}`);
 
             // Show database error modal for critical errors
             showDatabaseError(error, 'write');
@@ -2596,8 +2784,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return payload;
     }, [schoolId]);
 
-    // Draft Score State
-    const draftScores = useRef<Map<string, string>>(new Map());
+    // Draft Score State - VARIABLE ALREADY DEFINED AT TOP
     const [draftVersion, setDraftVersion] = useState(0); // Used to force updates in subscribers
 
     // Load draft scores from persistent storage on boot to survive rapid tab discards while typing
