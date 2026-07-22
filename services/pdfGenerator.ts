@@ -13,6 +13,48 @@ const MARGIN_X = (PAGE_WIDTH - CARD_WIDTH) / 2;
 const MARGIN_Y = (PAGE_HEIGHT - CARD_HEIGHT) / 2;
 const CONTENT_MARGIN = 6; // Padding inside the card
 
+const getImageType = (src: string): 'PNG' | 'JPEG' => {
+    if (!src) return 'PNG';
+    const normalized = src.trim().toLowerCase();
+    if (normalized.startsWith('data:image/png') || normalized.endsWith('.png')) return 'PNG';
+    if (normalized.startsWith('data:image/webp') || normalized.endsWith('.webp')) return 'JPEG';
+    return 'JPEG';
+};
+
+const fetchImageAsDataUrl = async (src: string): Promise<string | null> => {
+    if (!src) return null;
+    if (src.startsWith('data:image')) return src;
+
+    try {
+        const response = await fetch(src);
+        if (!response.ok) {
+            console.warn(`[pdfGenerator] Failed to fetch image URL: ${src} (status ${response.status})`);
+            return null;
+        }
+        const blob = await response.blob();
+        return await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    } catch (error) {
+        console.warn('[pdfGenerator] Error fetching image for PDF:', error, src);
+        return null;
+    }
+};
+
+const addImageToDoc = async (doc: jsPDF, src: string | undefined, format: 'PNG' | 'JPEG', x: number, y: number, width: number, height: number) => {
+    if (!src) return;
+    const dataUrl = await fetchImageAsDataUrl(src);
+    if (!dataUrl) return;
+    try {
+        doc.addImage(dataUrl, format, x, y, width, height, undefined, 'FAST');
+    } catch (error) {
+        console.warn('[pdfGenerator] addImage failed:', error, src);
+    }
+};
+
 export const generateReportsPDF = async (students: Student[], data: DataContextType) => {
     const doc = new jsPDF({
         orientation: 'portrait',
@@ -94,7 +136,7 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
             try {
                 // Align logo to same Y position as school name starts
                 // Increased height from 22 to 26 to stretch it slightly
-                doc.addImage(settings.logo, 'PNG', MARGIN_X + 6, currentY + 1, 28, 26, undefined, 'FAST');
+                await addImageToDoc(doc, settings.logo, getImageType(settings.logo), MARGIN_X + 6, currentY + 1, 28, 26);
             } catch (e) {
                 console.warn("Failed to add logo", e);
             }
@@ -254,7 +296,7 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
                 // Name row was 4 rows back (4 * 8mm = 32mm)
                 const photoY = currentY - 32;
                 doc.rect(rightColX - photoWidth, photoY, photoWidth, 36); // Photo border
-                doc.addImage(student.picture, 'PNG', rightColX - photoWidth, photoY, photoWidth, 36, undefined, 'FAST');
+                await addImageToDoc(doc, student.picture, getImageType(student.picture), rightColX - photoWidth, photoY, photoWidth, 36);
             } catch (e) {
                 console.warn("Failed to add student picture", e);
             }
@@ -513,7 +555,7 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
 
         if (classInfo?.teacherSignature) {
             try {
-                doc.addImage(classInfo.teacherSignature, 'PNG', tSigX + 10, currentY, 30, 15, undefined, 'FAST');
+                await addImageToDoc(doc, classInfo.teacherSignature, getImageType(classInfo.teacherSignature), tSigX + 10, currentY, 30, 15);
             } catch { }
         }
         doc.setLineDashPattern([1, 1], 0);
@@ -530,7 +572,7 @@ export const generateReportsPDF = async (students: Student[], data: DataContextT
         const hSigX = MARGIN_X + (CARD_WIDTH / 2) - (sigWidth / 2);
         if (settings.headmasterSignature) {
             try {
-                doc.addImage(settings.headmasterSignature, 'PNG', hSigX + 10, currentY, 30, 15, undefined, 'FAST');
+                await addImageToDoc(doc, settings.headmasterSignature, getImageType(settings.headmasterSignature), hSigX + 10, currentY, 30, 15);
             } catch { }
         }
         doc.line(hSigX, sigY, hSigX + sigWidth, sigY);

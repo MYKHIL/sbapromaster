@@ -449,7 +449,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.367"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.368"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -878,11 +878,21 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         console.error('[DataContext] 🚨 CRITICAL: Abnormal reload detected within 5 seconds. User may have lost data!');
                         console.error('[DataContext] State snapshot:', snapshot);
                         
-                        // Show a warning to the user about potential data loss
-                        showDatabaseError({
-                            message: 'Your browser was unexpectedly closed or restarted with unsaved changes. Your data has been queued for upload. Please save again when ready.',
-                            code: 'ABNORMAL_RELOAD'
-                        }, 'read');
+                        // Show a lightweight toast (not a blocking system modal) about potential data loss
+                        try {
+                            window.dispatchEvent(new CustomEvent('sba-toast', {
+                                detail: {
+                                    message: 'Your browser was unexpectedly closed or restarted with unsaved changes. Your data has been queued for upload. Please save again when ready.',
+                                    type: 'warning'
+                                }
+                            }));
+                        } catch (e) {
+                            // Fallback to modal only if toast mechanism fails
+                            showDatabaseError({
+                                message: 'Your browser was unexpectedly closed or restarted with unsaved changes. Your data has been queued for upload. Please save again when ready.',
+                                code: 'ABNORMAL_RELOAD'
+                            }, 'read');
+                        }
                     }
                 }
             } catch (e) {
