@@ -724,7 +724,7 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
                                         >
                                             <option value={missingClass}>Create new class "{missingClass}"</option>
                                             {currentClassNames.map(name => (
-                                                <option key={name} value={name}>Map to existing class "{name}"</option>
+                                                <option key={name} value={name}>Link to class: "{name}"</option>
                                             ))}
                                         </select>
 
