@@ -351,6 +351,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // We need to use a distinct key for schoolId in emulator mode to prevent cross-contamination
     const schoolIdKey = isEmulator ? 'emulator-sba-school-id' : 'sba-school-id';
     const [schoolId, setSchoolId] = useLocalStorage<string | null>(schoolIdKey, null);
+    const schoolIdRef = React.useRef<string | null>(schoolId);
+    const setSchoolIdSafe = React.useCallback((id: string | null) => {
+        schoolIdRef.current = id;
+        setSchoolId(id);
+    }, [setSchoolId]);
+
+    React.useEffect(() => {
+        schoolIdRef.current = schoolId;
+    }, [schoolId]);
 
     // All data uses schoolId-namespaced keys
     const [settings, setSettings] = useLocalStorage<SchoolSettings>(getKey('settings'), INITIAL_SETTINGS, true, { preserveCurrentStateOnKeyChange: false });
@@ -449,7 +458,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Listen for deployment pings from the build script. If the version in the 
     // database differs from our current runtime version, trigger a reload.
     useEffect(() => {
-        const LATEST_VERSION = "1.0.368"; // Updated automatically by build script
+        const LATEST_VERSION = "1.0.369"; // Updated automatically by build script
         
         const deployDocRef = doc(db, 'system', 'deployment');
         
@@ -1023,6 +1032,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 };
             }
             lastLoadedTimestamps.current = {};
+            
+            // CRITICAL FIX: Clear all data loading caches when context changes
+            // This ensures fresh data is fetched from cloud for the new term
+            loadedSubjects.current.clear();
+            inflightPromises.current.clear();
         }
         lastContextKey.current = currentContextKey;
         lastSchoolIdRef.current = schoolId;
@@ -2982,7 +2996,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // -------------------------------------------------------------------------
 
     const loadStudents = React.useCallback(async (limit: number = 0, force: boolean = false, ignorePreservation: boolean = false) => {
-        if (!schoolId) return;
+        const currentSchoolId = schoolIdRef.current || schoolId;
+        if (!currentSchoolId) return;
 
         // Metadata Check: Only fetch if server has newer data than what we last loaded
         const serverTimestamp = lastLoadedTimestamps.current['students'];
@@ -3039,7 +3054,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 console.log(`[DataContext] 📥 Loading Students (Optimized via Bucket)...`);
                 // OPTIMIZATION: Use fetchStudents which prefers the BUCKET (1 read) over subcollection (N reads)
                 // Signature: (docId: string, pageSize: number, lastVisible: DocumentSnapshot | null)
-                const result = await fetchStudents(schoolId, limit > 0 ? limit : 1000, null);
+                const result = await fetchStudents(currentSchoolId, limit > 0 ? limit : 1000, null);
                 const newStudents = result.students;
 
                 if (newStudents) {
@@ -3114,7 +3129,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
                         // If it's complete, pass it to avoid re-fetching. 
                         // If not complete, pass undefined, and ensureStudentBucketExists will fetch ALL from subcollection.
-                        ensureStudentBucketExists(schoolId, isLikelyComplete ? newStudents : undefined).catch(e => {
+                        ensureStudentBucketExists(currentSchoolId, isLikelyComplete ? newStudents : undefined).catch(e => {
                             console.error('[DataContext] Non-critical: Failed to ensure student bucket after loading', e);
                         });
                     }
@@ -3135,7 +3150,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // loadUsers removed - users now in main document
 
     const loadScores = React.useCallback(async (classId: number | undefined, subjectId: number, force: boolean = false, ignorePreservation: boolean = false) => {
-        if (!schoolId) return;
+        const currentSchoolId = schoolIdRef.current || schoolId;
+        if (!currentSchoolId) return;
 
         // Cache Check - We track loaded subjects, not class-subjects
         if (!force && !ignorePreservation && loadedSubjects.current.has(subjectId)) {
@@ -3159,7 +3175,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 // but we might need it for legacy fallback or logging. 
                 // Since our new fetchScoresForClass (which really fetches by Subject Bucket) handles it,
                 // we just pass it through. 
-                const newScores = await fetchScoresForClass(schoolId, classId, subjectId);
+                const newScores = await fetchScoresForClass(currentSchoolId, classId, subjectId);
 
                 if (newScores) {
                     loadedSubjects.current.add(subjectId);
@@ -3218,7 +3234,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Load Critical Metadata (Classes, Subjects, Assessments)
     const loadMetadata = React.useCallback(async (force: boolean = false, ignorePreservation: boolean = false) => {
-        if (!schoolId) return;
+        const currentSchoolId = schoolIdRef.current || schoolId;
+        if (!currentSchoolId) return;
 
         // Metadata Check
         const sTS = lastLoadedTimestamps.current['subjects'];
@@ -3275,7 +3292,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 console.log(`[DataContext] 📥 Loading Metadata (Classes, Subjects, Assessments)...`);
 
                 // Use composite bundle strategy: 1 read for all metadata vs 3 separate reads (now 4: includes grades)
-                const { classes: fetchedClasses, subjects: fetchedSubjects, assessments: fetchedAssessments, grades: fetchedGrades } = await fetchMetadataBundle(schoolId);
+                const { classes: fetchedClasses, subjects: fetchedSubjects, assessments: fetchedAssessments, grades: fetchedGrades } = await fetchMetadataBundle(currentSchoolId);
 
                 // GRANULAR PRESERVATION: 
                 // For schools in 'Partial Migration' state, some fields might be in subcollections 
@@ -3486,9 +3503,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const newCtx = `${importedSettings?.academicYear || ''}-${importedSettings?.academicTerm || ''}`;
 
         // CRITICAL: If context (Year/Term) changed, we skip preservation
-        const isContextShift = currentCtx !== newCtx && settings.academicYear !== '';
+        // ALSO: If isInitialSyncing (which happens on new term switch with full refresh),
+        // we should discard old data to prevent contamination from previous context
+        const isContextShift = (currentCtx !== newCtx && settings.academicYear !== '') || isInitialSyncing.current;
         if (isContextShift) {
-            console.log(`[DataContext] 🔄 Context shift detected (${currentCtx} -> ${newCtx}). Skipping preservation.`);
+            console.log(`[DataContext] 🔄 Context shift detected (${currentCtx} -> ${newCtx}) or Initial Sync in progress. Skipping preservation.`);
         }
 
         // SMART MERGING: Only update state if imported data is ACTUALLY provided and not empty
@@ -3758,7 +3777,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // END_LOAD_IMPORTED_DATA
 
 const refreshFromCloud = React.useCallback(async (ignoreSyncLock: boolean = false, keysToRefresh?: (keyof AppDataType)[]): Promise<'throttled' | 'success' | 'error'> => {
-        if (!schoolId) return 'error';
+        const currentSchoolId = schoolIdRef.current || schoolId;
+        if (!currentSchoolId) return 'error';
 
         // THROTTLING: Prevent spamming refresh (10s cooldown) unless specific keys are requested (programmatic refresh)
         const now = Date.now();
@@ -3787,7 +3807,7 @@ const refreshFromCloud = React.useCallback(async (ignoreSyncLock: boolean = fals
             revertAllPendingChanges();
 
             // 1. Fetch Main Document (settings, users, access codes)
-            const data = await getSchoolData(schoolId, keysToRefresh);
+            const data = await getSchoolData(currentSchoolId, keysToRefresh);
 
             if (data) {
                 console.log('[DataContext] ✅ Main document fetched, applying updates...');
@@ -3797,10 +3817,19 @@ const refreshFromCloud = React.useCallback(async (ignoreSyncLock: boolean = fals
                     Object.keys(pendingChangesMap.current).forEach(k => {
                         pendingChangesMap.current[k].clear();
                     });
+                    setPersistedPendingMap({
+                        students: [], subjects: [], classes: [], grades: [],
+                        assessments: [], scores: [], reportData: [], classData: [],
+                        users: [], settings: [],
+                    });
                     loadedSubjects.current.clear();
                     console.log('[DataContext] 🧹 Cleared all pending changes and score cache for manual refresh');
                 } else if (keysToRefresh.includes('scores')) {
                     pendingChangesMap.current.scores.clear();
+                    setPersistedPendingMap(prev => ({
+                        ...prev,
+                        scores: []
+                    }));
                     // CRITICAL FIX: Clear the score cache so fresh scores are fetched when user navigates back
                     loadedSubjects.current.clear();
                     console.log('[DataContext] 🧹 Cleared score subject cache to force fresh fetch on next load');
@@ -4216,7 +4245,7 @@ const refreshFromCloud = React.useCallback(async (ignoreSyncLock: boolean = fals
         loadMetadata, // Exposed Metadata Loader
         refreshFromCloud,
         schoolId,
-        setSchoolId,
+        setSchoolId: setSchoolIdSafe,
         // Network status
         isOnline,
         isSyncing,

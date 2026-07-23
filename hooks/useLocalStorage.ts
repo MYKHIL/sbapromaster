@@ -78,8 +78,21 @@ function useLocalStorage<T,>(
     try {
       if (typeof window === 'undefined') return;
       const item = window.localStorage.getItem(key);
+
+      // Allow programmatic flows to force a full reset on key change.
+      // DataManagement sets `sba_force_skip_preservation` before switching schoolId
+      // so that hooks do NOT preserve the previous in-memory state for the new key.
+      const forceSkipPreserve = window.localStorage.getItem('sba_force_skip_preservation') === '1';
+      if (forceSkipPreserve) {
+        try {
+          window.localStorage.removeItem('sba_force_skip_preservation');
+        } catch (_) {
+          // ignore
+        }
+      }
+
       if (!item) {
-        if (options.preserveCurrentStateOnKeyChange) {
+        if (options.preserveCurrentStateOnKeyChange && !forceSkipPreserve) {
           // Preserve current state if no persisted data exists for the new key.
           // This prevents schoolId-driven key transitions from overwriting
           // freshly-loaded remote data during login/session restore.

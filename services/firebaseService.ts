@@ -211,10 +211,77 @@ export const sanitizeAcademicYear = (year: string): string =>
 export const sanitizeAcademicTerm = (term: string): string =>
     (term || '').trim().replace(/\s+/g, '-');
 
+const getLevenshteinDistance = (a: string, b: string): number => {
+    const matrix: number[][] = Array.from({ length: b.length + 1 }, (_, j) => Array(a.length + 1).fill(0));
+    for (let i = 0; i <= a.length; i += 1) matrix[0][i] = i;
+    for (let j = 0; j <= b.length; j += 1) matrix[j][0] = j;
+
+    for (let j = 1; j <= b.length; j += 1) {
+        for (let i = 1; i <= a.length; i += 1) {
+            const substitutionCost = a[i - 1] === b[j - 1] ? 0 : 1;
+            matrix[j][i] = Math.min(
+                matrix[j][i - 1] + 1,
+                matrix[j - 1][i] + 1,
+                matrix[j - 1][i - 1] + substitutionCost
+            );
+        }
+    }
+
+    return matrix[b.length][a.length];
+};
+
+const findClosestTerm = (value: string, candidates: string[]): string | null => {
+    let bestMatch: string | null = null;
+    let bestScore = Number.MAX_SAFE_INTEGER;
+
+    for (const candidate of candidates) {
+        const score = getLevenshteinDistance(value, candidate);
+        if (score < bestScore) {
+            bestScore = score;
+            bestMatch = candidate;
+        }
+    }
+
+    return bestMatch && bestScore <= 2 ? bestMatch : null;
+};
+
+export const normalizeAcademicTerm = (term: string): string => {
+    const raw = (term || '').trim().toLowerCase();
+    if (!raw) return '';
+
+    const normalized = raw
+        .replace(/(term|semester|sem|session)/g, ' ')
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim();
+
+    const tokens = normalized.split(/\s+/).filter(Boolean);
+    const firstTermCandidates = ['1', 'one', 'first', '1st', 'fst', 'fist', 'firt', 'fir'];
+    const secondTermCandidates = ['2', 'two', 'second', '2nd', 'sec', 'snd', 'secnd', 'secd', 'secon', 'secn'];
+    const thirdTermCandidates = ['3', 'three', 'third', '3rd', 'thr', 'trd', 'thrid', 'thrd'];
+
+    for (const token of tokens) {
+        if (firstTermCandidates.includes(token)) return 'First Term';
+        if (secondTermCandidates.includes(token)) return 'Second Term';
+        if (thirdTermCandidates.includes(token)) return 'Third Term';
+    }
+
+    const joined = tokens.join(' ');
+    const firstMatch = findClosestTerm(joined, firstTermCandidates);
+    if (firstMatch) return 'First Term';
+
+    const secondMatch = findClosestTerm(joined, secondTermCandidates);
+    if (secondMatch) return 'Second Term';
+
+    const thirdMatch = findClosestTerm(joined, thirdTermCandidates);
+    if (thirdMatch) return 'Third Term';
+
+    return term.trim();
+};
+
 export const createDocumentId = (schoolName: string, academicYear: string, academicTerm: string): string => {
     const sanitizedSchool = sanitizeSchoolName(schoolName);
     const sanitizedYear = sanitizeAcademicYear(academicYear);
-    const sanitizedTerm = sanitizeAcademicTerm(academicTerm);
+    const sanitizedTerm = sanitizeAcademicTerm(normalizeAcademicTerm(academicTerm));
     return `${sanitizedSchool}_${sanitizedYear}_${sanitizedTerm}`;
 };
 

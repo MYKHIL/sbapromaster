@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
-import { updateUsers, createDocumentId, initializeNewTermDatabase, getSchoolData, getSchoolList, getSchoolYearsAndTerms, fetchSubcollection, saveDataTransaction, type AppDataType } from '../../services/firebaseService';
+import { updateUsers, createDocumentId, initializeNewTermDatabase, getSchoolData, getSchoolList, getSchoolYearsAndTerms, fetchSubcollection, saveDataTransaction, normalizeAcademicTerm, type AppDataType } from '../../services/firebaseService';
 import { exportDatabase, importDatabase } from '../../services/databaseService';
 import { generateWpfProject } from '../../services/wpfProjectGenerator';
 import ConfirmationModal from '../ConfirmationModal';
@@ -41,16 +41,24 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
     const [createdTermId, setCreatedTermId] = useState<string | null>(null);
     const [vacationDate, setVacationDate] = useState('');
     const [reopeningDate, setReopeningDate] = useState('');
+    const [missingPromotedClasses, setMissingPromotedClasses] = useState<string[]>([]);
+    const [promotedClassRemap, setPromotedClassRemap] = useState<Record<string, string>>({});
+    const [promotionDetailVisibility, setPromotionDetailVisibility] = useState<Record<string, boolean>>({});
+    const [resolutionAreaRevealed, setResolutionAreaRevealed] = useState(false);
+    const missingClassesRef = useRef<HTMLDivElement | null>(null);
+    const previousMissingPromotedClassesLength = useRef(0);
 
     useEffect(() => {
         if (isOpen) {
+            previousMissingPromotedClassesLength.current = 0;
+            setResolutionAreaRevealed(false);
 
             let term = '';
-            const current = (settings.academicTerm || '').toLowerCase().trim();
+            const current = normalizeAcademicTerm(settings.academicTerm || '');
 
-            if (current === 'first term') term = 'Second Term';
-            else if (current === 'second term') term = 'Third Term';
-            else if (current === 'third term') term = 'First Term';
+            if (current === 'First Term') term = 'Second Term';
+            else if (current === 'Second Term') term = 'Third Term';
+            else if (current === 'Third Term') term = 'First Term';
             else term = 'First Term';
             setNewTerm(term);
 
@@ -68,8 +76,18 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
             setCreatedTermId(null);
             setVacationDate('');
             setReopeningDate('');
+            setMissingPromotedClasses([]);
+            setPromotedClassRemap({});
+            setPromotionDetailVisibility({});
         }
     }, [isOpen, settings]);
+
+    useEffect(() => {
+        if (missingPromotedClasses.length > 0 && previousMissingPromotedClassesLength.current === 0) {
+            missingClassesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        previousMissingPromotedClassesLength.current = missingPromotedClasses.length;
+    }, [missingPromotedClasses]);
 
     useEffect(() => {
         const fetchPwd = async () => {
@@ -91,24 +109,269 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
 
     if (!isOpen) return null;
 
+    const currentClassNames = dataContext.classes.map(c => c.name?.trim()).filter(Boolean);
+
+    const getLevenshteinDistance = (a: string, b: string): number => {
+        const matrix: number[][] = Array.from({ length: b.length + 1 }, (_, j) => Array(a.length + 1).fill(0));
+        for (let i = 0; i <= a.length; i += 1) matrix[0][i] = i;
+        for (let j = 0; j <= b.length; j += 1) matrix[j][0] = j;
+
+        for (let j = 1; j <= b.length; j += 1) {
+            for (let i = 1; i <= a.length; i += 1) {
+                const substitutionCost = a[i - 1] === b[j - 1] ? 0 : 1;
+                matrix[j][i] = Math.min(
+                    matrix[j][i - 1] + 1,
+                    matrix[j - 1][i] + 1,
+                    matrix[j - 1][i - 1] + substitutionCost
+                );
+            }
+        }
+
+        return matrix[b.length][a.length];
+    };
+
+    // Normalize class text for matching.
+    // Treat JHS/JSS and junior high variants as junior high school,
+    // and basic/primary/class/grade variants as basic school prefixes.
+    const normalizeClassName = (name: string): string =>
+        name
+            .trim()
+            .toLowerCase()
+            .replace(/\b(kg|kindergarten|nursery)\b/g, ' kg')
+            .replace(/\b(jhs|jss|junior high school|junior secondary school|junior secondary|junior|secondary school|secondary|sec|jr|j)\b/g, ' jhs')
+            .replace(/\b(class|grade|grd|gr|basic|primary|prim|pry|p)\b/g, ' basic')
+            .replace(/[^a-z0-9]+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+    const extractClassNumber = (name: string): number | null => {
+        const match = name.match(/\d+/);
+        return match ? parseInt(match[0], 10) : null;
+    };
+
+    const getClassType = (name: string): 'basic' | 'jhs' | 'kg' | 'unknown' => {
+        const normalized = normalizeClassName(name);
+        if (normalized.includes('jhs')) return 'jhs';
+        if (normalized.includes('basic')) return 'basic';
+        if (normalized.includes('kg')) return 'kg';
+        return 'unknown';
+    };
+
+    const getCanonicalClassDescriptor = (name: string): string => {
+        const normalized = normalizeClassName(name);
+        const num = extractClassNumber(name);
+        const type = getClassType(name);
+        if (num !== null && type !== 'unknown') {
+            return `${type}-${num}`;
+        }
+        if (num !== null) {
+            return `number-${num}`;
+        }
+        return normalized;
+    };
+
+    const getEquivalentBasicNumber = (name: string): number | null => {
+        const type = getClassType(name);
+        const num = extractClassNumber(name);
+        if (num === null) return null;
+        if (type === 'jhs') return num + 6;
+        if (type === 'basic') return num;
+        return null;
+    };
+
+    const getEquivalentJhsNumber = (name: string): number | null => {
+        const type = getClassType(name);
+        const num = extractClassNumber(name);
+        if (num === null) return null;
+        if (type === 'basic') return num - 6;
+        if (type === 'jhs') return num;
+        return null;
+    };
+
+    const scoreClassNameMatch = (missingClass: string, existingClass: string): number => {
+        const missingNormalized = normalizeClassName(missingClass);
+        const existingNormalized = normalizeClassName(existingClass);
+        const missingCanonical = getCanonicalClassDescriptor(missingClass);
+        const existingCanonical = getCanonicalClassDescriptor(existingClass);
+
+        if (missingCanonical === existingCanonical) return 0;
+
+        const missingBasicNumber = getEquivalentBasicNumber(missingClass);
+        const existingBasicNumber = getEquivalentBasicNumber(existingClass);
+        if (missingBasicNumber !== null && existingBasicNumber !== null && missingBasicNumber === existingBasicNumber) {
+            return 0;
+        }
+
+        let score = getLevenshteinDistance(missingNormalized, existingNormalized);
+
+        const missingNumber = extractClassNumber(missingClass);
+        const existingNumber = extractClassNumber(existingClass);
+        const missingType = getClassType(missingClass);
+        const existingType = getClassType(existingClass);
+
+        if (missingNumber !== null && existingNumber !== null) {
+            if (missingNumber === existingNumber) {
+                if (missingType === existingType) {
+                    score -= 5;
+                } else if (missingType === 'unknown' && existingType !== 'unknown') {
+                    score -= 5;
+                } else if (existingType === 'unknown') {
+                    score -= 2;
+                }
+            }
+            if (missingBasicNumber !== null && existingBasicNumber !== null && missingBasicNumber === existingBasicNumber) {
+                score -= 8;
+            }
+        }
+
+        if (missingType === existingType && missingType !== 'unknown' && missingNumber !== null && existingNumber !== null && missingNumber === existingNumber) {
+            score -= 5;
+        }
+
+        if (missingType === 'unknown' && existingType === 'unknown' && missingNumber !== null && existingNumber !== null && missingNumber === existingNumber) {
+            score -= 3;
+        }
+
+        if (missingNormalized === `${missingNumber}` && existingNumber !== null && missingNumber === existingNumber && existingType === 'basic') {
+            score -= 4;
+        }
+
+        if (missingNormalized.includes(existingNormalized) || existingNormalized.includes(missingNormalized)) score -= 2;
+        return Math.max(score, 0);
+    };
+
+    const getClosestClassMatch = (missingClass: string, existingClasses: string[]): string | null => {
+        let bestMatch: string | null = null;
+        let bestScore = Number.MAX_SAFE_INTEGER;
+
+        existingClasses.forEach(existingName => {
+            const score = scoreClassNameMatch(missingClass, existingName);
+            if (score < bestScore) {
+                bestScore = score;
+                bestMatch = existingName;
+            }
+        });
+
+        return bestMatch && bestScore <= 5 ? bestMatch : null;
+    };
+
+    const findExistingClassByNormalizedName = (name: string, existingClasses: string[]): string | null => {
+        const normalized = normalizeClassName(name);
+        return existingClasses.find(existing => normalizeClassName(existing) === normalized) ?? null;
+    };
+
+    const doesClassAlreadyExist = (className: string, existingClasses: string[]): boolean => {
+        return existingClasses.some(existing => normalizeClassName(existing) === normalizeClassName(className));
+    };
+
+    const getStudentsPromotedTo = (missingClass: string) => {
+        const promotedStudentIds = dataContext.reportData
+            .filter(r => r.promotedTo?.trim() === missingClass)
+            .map(r => r.studentId);
+
+        return dataContext.students
+            .filter(s => promotedStudentIds.includes(s.id))
+            .map(s => ({ id: s.id, name: s.name, currentClass: s.class }));
+    };
+
+    const isRetainPromotionValue = (value?: string): boolean => {
+        const raw = (value || '').trim().toLowerCase();
+        if (!raw) return true;
+
+        const normalized = raw.replace(/[^a-z0-9]+/g, ' ').trim();
+        if (!normalized) return true;
+
+        const retainCandidates = [
+            'repeat', 'repeated', 'stay', 'remain', 'same', 'current', 'hold', 'unchanged', 'no change', 'no class', 'retain', 'stay in same class', 'remain in class'
+        ];
+
+        for (const candidate of retainCandidates) {
+            const candidateNormalized = candidate.replace(/[^a-z0-9]+/g, ' ').trim();
+            if (candidateNormalized === normalized) return true;
+            if (normalized.includes(candidateNormalized) || candidateNormalized.includes(normalized)) return true;
+            if (getLevenshteinDistance(normalized, candidateNormalized) <= 2) return true;
+        }
+
+        return false;
+    };
+
+    const getMissingPromotedClasses = (): string[] => {
+        if (!settings.isPromotionTerm) return [];
+
+        const missing = new Set<string>();
+        dataContext.students.forEach(s => {
+            const report = dataContext.reportData.find(r => r.studentId === s.id);
+            const promotedTo = report?.promotedTo?.trim();
+            if (promotedTo && !isRetainPromotionValue(promotedTo) && !currentClassNames.includes(promotedTo)) {
+                missing.add(promotedTo);
+            }
+        });
+        return Array.from(missing);
+    };
+
     const handleCreate = async () => {
         if (!newYear || !newTerm || !password) {
             setFeedback({ message: 'Please fill in all fields.', type: 'error' });
             return;
         }
 
+        const currentTermLabel = `${settings.academicYear} - ${settings.academicTerm}`;
+        const newTermLabel = `${newYear} - ${newTerm}`;
+        console.log(`[CreateTermModal] Starting create new term. Current term: ${currentTermLabel}. New term: ${newTermLabel}. Promotion enabled: ${settings.isPromotionTerm}`);
+        if (settings.isPromotionTerm) {
+            console.log('[CreateTermModal] Promotion term active: will apply promotedTo values when available.');
+        } else {
+            console.log('[CreateTermModal] Non-promotion term: all students will remain in their current classes.');
+        }
+
+        const missing = getMissingPromotedClasses();
+        const hasMissingClasses = missing.length > 0;
+
+        if (hasMissingClasses && missingPromotedClasses.length === 0) {
+            setMissingPromotedClasses(missing);
+            setPromotedClassRemap(prev => ({
+                ...prev,
+                ...Object.fromEntries(missing.map(m => {
+                    const existingMatch = findExistingClassByNormalizedName(m, currentClassNames);
+                    const mappedValue = prev[m] || existingMatch || getClosestClassMatch(m, currentClassNames) || m;
+                    return [m, mappedValue];
+                }))
+            }));
+            setResolutionAreaRevealed(true);
+            return;
+        }
+
+        if (missingPromotedClasses.length > 0) {
+            const unresolvedMappings = missingPromotedClasses.filter(m => !promotedClassRemap[m]?.trim());
+            if (unresolvedMappings.length > 0) {
+                setFeedback({ message: 'Please map each missing promoted class before continuing.', type: 'error' });
+                return;
+            }
+        }
+
         setIsCreating(true);
         try {
             // 1. Prepare Data for New Term
             const newStudents = dataContext.students.map(s => {
-                // Promotion Logic
-                if (settings.isPromotionTerm) {
-                    const report = dataContext.reportData.find(r => r.studentId === s.id);
-                    if (report?.promotedTo) {
-                        return { ...s, class: report.promotedTo }; // Update class to promoted class
-                    }
+                const report = dataContext.reportData.find(r => r.studentId === s.id);
+                const promotedTo = report?.promotedTo?.trim();
+
+                if (!settings.isPromotionTerm) {
+                    return s;
                 }
-                // If not promoted, stay in current class (repeat)
+
+                if (isRetainPromotionValue(promotedTo)) {
+                    console.log(`[CreateTermModal] Student ${s.name} (${s.id}) retain current class ${s.class} due to promotedTo value: ${promotedTo}`);
+                    return s;
+                }
+
+                if (promotedTo) {
+                    const remapped = promotedClassRemap[promotedTo]?.trim() || promotedTo;
+                    console.log(`[CreateTermModal] Student ${s.name} (${s.id}) promoted from ${s.class} to ${remapped}`);
+                    return { ...s, class: remapped };
+                }
+
+                console.log(`[CreateTermModal] Student ${s.name} (${s.id}) has no promotedTo value; retaining current class ${s.class}.`);
                 return s;
             });
 
@@ -116,7 +379,7 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
                 ...settings,
                 academicYear: newYear,
                 academicTerm: newTerm,
-                isPromotionTerm: newTerm === 'Third Term', // Promotion Mode is automatically set to true for Third Term, otherwise false
+                isPromotionTerm: normalizeAcademicTerm(newTerm) === 'Third Term', // Promotion Mode is automatically set to true for Third Term, otherwise false
                 vacationDate: vacationDate || settings.vacationDate,
                 reopeningDate: reopeningDate || settings.reopeningDate
             };
@@ -152,12 +415,25 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
             newSettings.schoolName = finalSchoolName;
 
             // Full data payload
+            const extraClassNames = Array.from(new Set(
+                missingPromotedClasses
+                    .map(m => promotedClassRemap[m]?.trim() || m)
+                    .filter(name => name && !currentClassNames.includes(name))
+            ));
+
+            let nextClassId = Math.max(0, ...dataContext.classes.map(c => c.id)) + 1;
+            const extraClasses = extraClassNames.map(name => ({
+                id: nextClassId++,
+                name,
+                _isLocallyCreated: true
+            }));
+
             const newData: any = {
                 schoolName: finalSchoolName, // Add at root for fallback grouping
                 settings: newSettings,
                 students: newStudents,
                 subjects: dataContext.subjects,
-                classes: dataContext.classes,
+                classes: [...dataContext.classes, ...extraClasses],
                 grades: dataContext.grades,
                 assessments: dataContext.assessments,
                 scores: [], // Clear scores
@@ -195,21 +471,37 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
             setFeedback({ message: `Switching to ${newYear} - ${newTerm}...`, type: 'info' });
 
             // 1. Update Persistent Storage (Critical for preventing fallback on refresh)
-            localStorage.setItem('sba_school_id', createdTermId);
+            // Use the canonical key name used by DataContext ('sba-school-id')
+            localStorage.setItem('sba-school-id', createdTermId);
+
+            // 1b. Force next key-change to NOT preserve in-memory state for hooks
+            // This ensures hooks like `useLocalStorage` reset to initial state
+            // rather than preserving the previous term's in-memory arrays.
+            localStorage.setItem('sba_force_skip_preservation', '1');
             // We use the password state variable which holds the password used to create the term
             if (password) {
                 localStorage.setItem('sba_school_password', password);
             }
 
-            // 2. Switch Context State
+            // 2. CRITICAL: Force clear all cached data BEFORE switching schoolId
+            // This ensures no stale data from the old term contaminates the new term
+            // We need to clear these before setSchoolId triggers the context change effect
+            dataContext.revertAllPendingChanges();
+
+            // 3. Switch Context State
             // This will trigger reactivity in the app (clearing caches, etc.)
             dataContext.setSchoolId(createdTermId);
 
-            // 3. Force Data Load for the new term
-            // We need to ensure the app loads the new data immediately
-            await dataContext.refreshFromCloud();
+            // 4. Force Data Load for the new term
+            // We need to ensure the app loads the new data immediately by performing a full refresh
+            // This will load fresh cloud data, bypassing any cached data from the previous term
+            const refreshResult = await dataContext.refreshFromCloud();
+            
+            if (refreshResult === 'error') {
+                throw new Error('Failed to refresh data from cloud');
+            }
 
-            // 4. Update Device Credential (for auto-login helper)
+            // 5. Update Device Credential (for auto-login helper)
             const currentUserId = Number(localStorage.getItem('sba_user_id'));
             if (currentUserId) {
                 const { saveDeviceCredential } = await import('../../services/authService');
@@ -268,7 +560,7 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
 
     return (
         <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 animate-fade-in-scale">
-            <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md m-4">
+            <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md m-4 max-h-[90vh] overflow-y-auto">
                 <h3 className="text-xl font-bold text-gray-900 mb-4">Create New Term</h3>
                 <p className="text-sm text-gray-600 mb-4">
                     This will create a new database for the next term. Students, Classes, and Subjects will be copied.
@@ -391,6 +683,98 @@ const CreateTermModal: React.FC<CreateTermModalProps> = ({ isOpen, onClose, setF
                             </div>
                         </div>
                     </div>
+
+                    {missingPromotedClasses.length > 0 && (
+                        <div ref={missingClassesRef} className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-4">
+                            <div className="flex items-start gap-3">
+                                <div className="mt-1 h-6 w-6 text-amber-700">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.681-1.36 3.446 0l5.58 9.92c.75 1.334-.213 2.98-1.723 2.98H4.4c-1.51 0-2.472-1.646-1.723-2.98l5.58-9.92zM10 12a1 1 0 100 2 1 1 0 000-2zm-.75-6a.75.75 0 011.5 0v4a.75.75 0 01-1.5 0V6z" clipRule="evenodd" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h4 id="missing-classes-title" className="text-sm font-semibold text-amber-900">Resolve {missingPromotedClasses.length} missing promoted class{missingPromotedClasses.length === 1 ? '' : 'es'}</h4>
+                                    <p className="text-sm text-amber-700">These promotion destinations are not defined as existing classes. For each item below, either map it to an existing class or type a new class name to create.</p>
+                                    <p className="mt-2 text-xs text-amber-800">Required before creating the new term.</p>
+                                </div>
+                            </div>
+
+                            <div className="rounded-xl border border-amber-100 bg-white p-3 space-y-4">
+                                <datalist id="existing-classes-list">
+                                    {currentClassNames.map(name => (
+                                        <option key={name} value={name} />
+                                    ))}
+                                </datalist>
+
+                                {missingPromotedClasses.map(missingClass => (
+                                    <div key={missingClass} className="rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm">
+                                        <div className="flex items-center justify-between gap-3 mb-3">
+                                            <div>
+                                                <p className="text-sm font-semibold text-amber-900">Missing promoted class</p>
+                                                <p className="text-base font-bold text-slate-900">"{missingClass}"</p>
+                                            </div>
+                                            <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">Action required</span>
+                                        </div>
+
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Map or create class</label>
+                                        <select
+                                            value={promotedClassRemap[missingClass] ?? missingClass}
+                                            onChange={(e) => setPromotedClassRemap(prev => ({ ...prev, [missingClass]: e.target.value }))}
+                                            className="mb-3 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                                        >
+                                            <option value={missingClass}>Create new class "{missingClass}"</option>
+                                            {currentClassNames.map(name => (
+                                                <option key={name} value={name}>Map to existing class "{name}"</option>
+                                            ))}
+                                        </select>
+
+                                        <input
+                                            type="text"
+                                            value={promotedClassRemap[missingClass] ?? missingClass}
+                                            onChange={(e) => setPromotedClassRemap(prev => ({ ...prev, [missingClass]: e.target.value }))}
+                                            className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                                            placeholder="Enter class name to create a new class"
+                                            list="existing-classes-list"
+                                        />
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setPromotionDetailVisibility(prev => ({
+                                                ...prev,
+                                                [missingClass]: !prev[missingClass]
+                                            }))}
+                                            className="mt-3 text-sm font-semibold text-blue-600 hover:text-blue-800"
+                                        >
+                                            {promotionDetailVisibility[missingClass] ? 'Hide' : 'Show'} students promoted to "{missingClass}"
+                                        </button>
+
+                                        {promotionDetailVisibility[missingClass] && (
+                                            <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                                                {getStudentsPromotedTo(missingClass).length > 0 ? (
+                                                    <>
+                                                        <p className="font-medium text-slate-800 mb-2">Students promoted to this class</p>
+                                                        <ul className="space-y-2">
+                                                            {getStudentsPromotedTo(missingClass).map(student => (
+                                                                <li key={student.id} className="flex justify-between gap-4">
+                                                                    <span>{student.name}</span>
+                                                                    <span className="text-slate-500">from {student.currentClass || 'current class'}</span>
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </>
+                                                ) : (
+                                                    <p className="text-slate-500">No students currently promoted to this class.</p>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        <p className="mt-2 text-xs text-slate-500">If you choose an existing class, that class will be reused. Otherwise, a new class will be created with the name above.</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                 </div>
 
                 <div className="mt-6 flex flex-row-reverse gap-3">

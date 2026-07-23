@@ -1,110 +1,358 @@
-client:789 [vite] connecting...
-react-dom-client.development.js:28004 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
-client:912 [vite] connected.
-index.tsx:140 [Bootstrap] Subscription prices set dynamically
-index.tsx:148 [Bootstrap] Configuration loaded.
-firebaseService.ts:75 [2026-06-25T02:05:56.164Z]  @firebase/analytics: Analytics: Firebase Analytics is not supported in this environment. Wrap initialization of analytics in analytics.isSupported() to prevent initialization in unsupported environments. Details: (1) This is a browser extension environment. (analytics/invalid-analytics-context).
-(anonymous) @ logger.ts:115
-warn @ logger.ts:206
-warnOnBrowserContextMismatch @ factory.ts:169
-factory @ factory.ts:182
-(anonymous) @ index.ts:58
-getOrInitializeService @ provider.ts:318
-initialize @ provider.ts:242
-initializeAnalytics @ api.ts:112
-getAnalytics @ api.ts:85
-(anonymous) @ firebaseService.ts:75
-DataContext.tsx:2197 [DataContext] Sync PAUSED
-AuthOverlay.tsx:154 [AuthOverlay] 🔍 restoreSession triggered!
-AuthOverlay.tsx:155 [AuthOverlay] localStorage keys - sba_school_id: odumasemethodistd.abasic_20252026_Third-Term sba_force_term_select: null
-AuthOverlay.tsx:154 [AuthOverlay] 🔍 restoreSession triggered!
-AuthOverlay.tsx:155 [AuthOverlay] localStorage keys - sba_school_id: odumasemethodistd.abasic_20252026_Third-Term sba_force_term_select: null
-DataContext.tsx:716 [DataContext] 📱 Mobile Lifecycle event detected. Forcing immediate data backup...
-DataContext.tsx:716 [DataContext] 📱 Mobile Lifecycle event detected. Forcing immediate data backup...
-AuthOverlay.tsx:200 [AuthOverlay] Restored remote settings object: {headmasterName: 'Mr. Stephen Kwakye Ahenkorah', logo: '', academicYear: '2025/2026', aggregateScoreClasses: Array(0), headmasterSignature: 'https://i.ibb.co/xSjY6pnP/4fbc8f1cdbbc.jpg', …}
+DataManagement.tsx:320 [CreateTermModal] Starting create new term. Current term: 2025-2026 - Third Term. New term: 2026-2027 - First Term. Promotion enabled: true
+DataManagement.tsx:322 [CreateTermModal] Promotion term active: will apply promotedTo values when available.
+ [CreateTermModal] Student Aglago Kwesi (1) promoted from KG 2 to Basic 1
+ [CreateTermModal] Student Oboye Daniel (100) promoted from Basic 7 to Basic 8
+ [CreateTermModal] Student Ofori Anna Otenwah (101) promoted from Basic 7 to Basic 8
+ [CreateTermModal] Student Owusu Godfred (102) promoted from Basic 7 to Basic 8
+ [CreateTermModal] Student Owusuwaa Bernice (103) promoted from Basic 7 to Basic 8
+ [CreateTermModal] Student Paintsil Vida (104) promoted from Basic 7 to Basic 8
+ [CreateTermModal] Student Sarfowaa Blessing (105) promoted from Basic 7 to Basic 8
+ [CreateTermModal] Student Sarpong Emmanuel (106) promoted from Basic 7 to Basic 8
+ [CreateTermModal] Student Tetteh Janet (107) promoted from Basic 7 to Basic 8
+ [CreateTermModal] Student Yeboah Eliah (108) promoted from Basic 7 to Basic 8
+ [CreateTermModal] Student Adu Esther (109) promoted from Basic 6 to Basic 7
+ [CreateTermModal] Student Agyekum Ernest (110) promoted from Basic 6 to Basic 7
+ [CreateTermModal] Student Amponsah Kofi Emmanuel (111) promoted from Basic 6 to Basic 7
+ [CreateTermModal] Student Amofah Sarpomah Francisca (112) promoted from Basic 6 to Basic 7
+ [CreateTermModal] Student Arthur Meshack (113) promoted from Basic 6 to Basic 7
+ [CreateTermModal] Student Arthur Shadrack (114) promoted from Basic 6 to Basic 7
+ [CreateTermModal] Student Asantewaa Sharon (115) promoted from Basic 6 to Basic 7
+ [CreateTermModal] Student Boatemaa Mary (116) promoted from Basic 6 to Basic 7
+ [CreateTermModal] Student Nyarko Juliana (117) promoted from Basic 6 to Basic 7
+ [CreateTermModal] Student Odurowaa Ampem Lemuella (118) promoted from Basic 6 to Basic 7
+ [CreateTermModal] Student Ofosu Francis (119) promoted from Basic 6 to Basic 7
+ [CreateTermModal] Student Agodowor Prince (120) promoted from Basic 5 to Basic 6
+ [CreateTermModal] Student Agodowor Princess (121) promoted from Basic 5 to Basic 6
+ [CreateTermModal] Student Antwi Wisdom (122) promoted from Basic 5 to Basic 6
+ [CreateTermModal] Student Appiah Emmanuel (123) promoted from Basic 5 to Basic 6
+ [CreateTermModal] Student Asimeng Gideon (124) promoted from Basic 5 to Basic 6
+ [CreateTermModal] Student Boakyewaa Eudia (125) promoted from Basic 5 to Basic 6
+ [CreateTermModal] Student Durowaa Clementia (126) promoted from Basic 5 to Basic 6
+ [CreateTermModal] Student Kukai Famous (127) promoted from Basic 5 to Basic 6
+ [CreateTermModal] Student Kwarteng Arhin Chris (128) promoted from Basic 5 to Basic 6
+ [CreateTermModal] Student Nyarko Jennifer (129) promoted from Basic 5 to Basic 6
+ [CreateTermModal] Student Obeng Rebecca (130) promoted from Basic 5 to Basic 6
+ [CreateTermModal] Student Owusu Ransford (132) promoted from Basic 5 to Basic 6
+ [CreateTermModal] Student Twum Emmanuel (133) promoted from Basic 5 to Basic 6
+ [CreateTermModal] Student Appiah Comfort (135) promoted from Basic 4 to Basic 5
+ [CreateTermModal] Student Arthur Jennifer (136) promoted from Basic 4 to Basic 5
+ [CreateTermModal] Student Asante George (137) promoted from Basic 4 to Basic 5
+ [CreateTermModal] Student Effah Kwaku (139) promoted from Basic 4 to Basic 5
+ [CreateTermModal] Student Fosua Bernice (140) promoted from Basic 4 to Basic 5
+ [CreateTermModal] Student Jamilatu Abdul Samuella (141) promoted from Basic 4 to Basic 5
+ [CreateTermModal] Student Kofigah Stephen (142) promoted from Basic 4 to Basic 5
+ [CreateTermModal] Student Kukai Amanda (143) promoted from Basic 4 to Basic 5
+ [CreateTermModal] Student Marfo Melchizedek (145) promoted from Basic 4 to Basic 5
+ [CreateTermModal] Student Oduro Sakyi (146) promoted from Basic 4 to Basic 5
+ [CreateTermModal] Student Prince Botchwey (147) promoted from Basic 4 to Basic 5
+ [CreateTermModal] Student Tenkorang Emmanuel (148) promoted from Basic 4 to Basic 5
+ [CreateTermModal] Student Amankwa George (151) promoted from Basic 3 to Basic 4
+ [CreateTermModal] Student Anarfi Daniella (152) promoted from Basic 3 to Basic 4
+ [CreateTermModal] Student Mensah Samuel (153) promoted from Basic 3 to Basic 4
+ [CreateTermModal] Student Tenkorang Gabriel (155) promoted from Basic 3 to Basic 4
+ [CreateTermModal] Student Agodowor Richmond (156) promoted from Basic 2 to Basic 3
+ [CreateTermModal] Student Antwi Darko Kwabena Jerome (158) promoted from Basic 2 to Basic 3
+ [CreateTermModal] Student Asabea Brightlen (159) promoted from Basic 2 to Basic 3
+ [CreateTermModal] Student Asabea Elizabeth (161) promoted from Basic 2 to Basic 3
+ [CreateTermModal] Student Atsu Foster (162) promoted from Basic 2 to Basic 3
+ [CreateTermModal] Student Christian Kwabena Boateng Sarpong (163) promoted from Basic 2 to Basic 3
+ [CreateTermModal] Student Mensah Edmond (164) promoted from Basic 2 to Basic 3
+ [CreateTermModal] Student Ntiriwaa Emmanuella (165) promoted from Basic 2 to Basic 3
+ [CreateTermModal] Student Okyere Emmanuel (166) promoted from Basic 2 to Basic 3
+ [CreateTermModal] Student Batsa Desmond (167) promoted from Basic 1 to Basic 2
+ [CreateTermModal] Student Oduro Marfo Thomas (169) promoted from Basic 1 to Basic 2
+ [CreateTermModal] Student Opoku Samuel (171) promoted from Basic 1 to Basic 2
+ [CreateTermModal] Student Tenkorang Stephen (172) promoted from Basic 1 to Basic 2
+ [CreateTermModal] Student Tetteh Gladys (173) promoted from Basic 1 to Basic 2
+ [CreateTermModal] Student Tetteh Sylvester (174) promoted from Basic 1 to Basic 2
+ [CreateTermModal] Student Agyeiwaa Emmanuella (175) promoted from Basic 8 to Basic 9
+ [CreateTermModal] Student Effaah Abena Juliet (176) promoted from Basic 6 to Basic 7
+ [CreateTermModal] Student Ampem Asarela Asantewaa (1765803725465) promoted from Basic 1 to Basic 2
+ [CreateTermModal] Student Owusua Esther (1765807406589) promoted from KG 1 to KG 1
+ [CreateTermModal] Student Mensah Ernestina  (182) promoted from Basic 5 to Basic 6
+ [CreateTermModal] Student Danquah Clement  (184) promoted from Basic 7 to Basic 8
+ [CreateTermModal] Student Ahenkorah Felicia (186) promoted from Basic 7 to Basic 8
+ [CreateTermModal] Student Laryea Patience  (187) promoted from Basic 7 to Basic 8
+ [CreateTermModal] Student Aboagye Tetteh Lawrence  (188) promoted from Basic 8 to Basic 8
+ [CreateTermModal] Student Asantewaa Augustina (189) promoted from Basic 4 to Basic 5
+ [CreateTermModal] Student Ernest Oduro (190) promoted from KG 1 to KG 1
+ [CreateTermModal] Student Desmond Kyei (191) promoted from KG 1 to KG 2
+ [CreateTermModal] Student Michael Ehwiren (192) promoted from KG 1 to KG 1
+ [CreateTermModal] Student Grace Amankwah (193) promoted from KG 1 to KG 1
+ [CreateTermModal] Student Akomeah George Frang (194) retain current class KG 1 due to promotedTo value: undefined
+ [CreateTermModal] Student Takyiwaa Charllote (195) retain current class KG 1 due to promotedTo value: undefined
+ [CreateTermModal] Student Ferguson Sylvester (196) promoted from KG 2 to KG 2
+ [CreateTermModal] Student Opoku Mensah (198) promoted from Basic 1 to Basic 2
+ [CreateTermModal] Student ENOCH SASU (199) promoted from Basic 3 to Basic 4
+ [CreateTermModal] Student Appiah Diana (2) promoted from KG 2 to Basic 1
+ [CreateTermModal] Student Aboagyewaa Gladys (200) promoted from Basic 8 to Basic 9
+ [CreateTermModal] Student Tetteh Stephanie (201) promoted from Basic 8 to Basic 9
+ [CreateTermModal] Student Sasu Emmanuel (202) promoted from Basic 5 to Basic 6
+ [CreateTermModal] Student Mabel Yeboah (203) promoted from Basic 2 to Basic 3
+ [CreateTermModal] Student Kwarteng Philemon (3) promoted from KG 2 to Basic 1
+ [CreateTermModal] Student Osae Hayford (4) promoted from KG 2 to Basic 1
+ [CreateTermModal] Student Aburam Joseph (43) promoted from Basic 8 to Basic 9
+ [CreateTermModal] Student Acheampong Augustine (44) promoted from Basic 8 to Basic 9
+ [CreateTermModal] Student Adu Bright (45) promoted from Basic 8 to Basic 9
+ [CreateTermModal] Student Agyapong Clementina (46) promoted from Basic 8 to Basic 9
+ [CreateTermModal] Student Agyapong Kelvin (47) promoted from Basic 8 to Basic 9
+ [CreateTermModal] Student Aidoo Harrison (48) promoted from Basic 8 to Basic 9
+ [CreateTermModal] Student Amaho Clinton (49) promoted from Basic 8 to Basic 9
+ [CreateTermModal] Student Amoah Gifty (50) promoted from Basic 8 to Basic 9
+ [CreateTermModal] Student Anokye Mary (51) promoted from Basic 8 to Basic 9
+ [CreateTermModal] Student Anokye Selina (52) promoted from Basic 8 to Basic 9
+ [CreateTermModal] Student Arthur Mary (54) promoted from Basic 8 to Basic 9
+ [CreateTermModal] Student Atsu Portia (56) promoted from Basic 8 to Basic 9
+ [CreateTermModal] Student Bempong Jeffery (57) promoted from Basic 8 to Basic 9
+ [CreateTermModal] Student Danquah Emmanuel (58) promoted from Basic 8 to Basic 9
+ [CreateTermModal] Student Larbi Emmanuel (59) promoted from Basic 8 to Basic 8
+ [CreateTermModal] Student Akua Nyarko (6) promoted from KG 1 to KG 1
+ [CreateTermModal] Student Marfo Elizabeth (60) promoted from Basic 8 to Basic 9
+ [CreateTermModal] Student Nyarko Richmond (61) promoted from Basic 8 to Basic 9
+ [CreateTermModal] Student Paintsil Daniel (64) promoted from Basic 8 to Basic 9
+ [CreateTermModal] Student Sakyi Alice (65) promoted from Basic 8 to Basic 9
+ [CreateTermModal] Student Serwaa Mary (66) promoted from Basic 8 to Basic 9
+ [CreateTermModal] Student Siffah Helina (67) promoted from Basic 8 to Basic 9
+ [CreateTermModal] Student Siffah Henrietta (68) promoted from Basic 8 to Basic 9
+ [CreateTermModal] Student Tettey Emmanuel (69) promoted from Basic 8 to Basic 9
+ [CreateTermModal] Student Mensah Harriet (7) promoted from KG 1 to KG 2
+ [CreateTermModal] Student Yeboah Eric (70) promoted from Basic 8 to Basic 9
+ [CreateTermModal] Student Yeboah Godwin (71) promoted from Basic 8 to Basic 8
+ [CreateTermModal] Student Aboagye Domena Peter (72) promoted from Basic 7 to Basic 8
+ [CreateTermModal] Student Adjei Desmond (74) promoted from Basic 7 to Basic 8
+ [CreateTermModal] Student Afrakomah Benedicta (75) promoted from Basic 7 to Basic 8
+ [CreateTermModal] Student Agyekumwaa Kate (76) promoted from Basic 7 to Basic 8
+ [CreateTermModal] Student Amoah Prince (77) promoted from Basic 7 to Basic 8
+ [CreateTermModal] Student Amponsah Abigail (78) promoted from Basic 7 to Basic 8
+ [CreateTermModal] Student Amponsah Daniel (79) promoted from Basic 7 to Basic 8
+ [CreateTermModal] Student Nyarko Raymond (8) retain current class KG 1 due to promotedTo value: undefined
+ [CreateTermModal] Student Amponsah James (80) promoted from Basic 7 to Basic 8
+ [CreateTermModal] Student Ankomah Emmanuel (81) promoted from Basic 7 to Basic 8
+ [CreateTermModal] Student Arthur Daniel (82) promoted from Basic 7 to Basic 8
+DataManagement.tsx:370 [CreateTermModal] Student Asare Daniel (83) promoted from Basic 7 to Basic 8
+DataManagement.tsx:370 [CreateTermModal] Student Asare Pamela (84) promoted from Basic 7 to Basic 8
+DataManagement.tsx:370 [CreateTermModal] Student Awuku Brilliant (85) promoted from Basic 7 to Basic 8
+DataManagement.tsx:370 [CreateTermModal] Student Benyin Sampson (86) promoted from Basic 7 to Basic 8
+DataManagement.tsx:370 [CreateTermModal] Student Boatemaa Vanessa (87) promoted from Basic 7 to Basic 8
+DataManagement.tsx:370 [CreateTermModal] Student Boateng Godfred (88) promoted from Basic 7 to Basic 8
+DataManagement.tsx:370 [CreateTermModal] Student Samuel Sarpong (9) promoted from KG 1 to KG 2
+DataManagement.tsx:370 [CreateTermModal] Student Eshun Rita (90) promoted from Basic 7 to Basic 8
+DataManagement.tsx:370 [CreateTermModal] Student Frimpomaa Emmanuella (91) promoted from Basic 7 to Basic 8
+DataManagement.tsx:370 [CreateTermModal] Student Gyimah Okyere Emmanuel (93) promoted from Basic 7 to Basic 8
+DataManagement.tsx:370 [CreateTermModal] Student Gyimah Okyere Epaphras (94) promoted from Basic 7 to Basic 8
+DataManagement.tsx:370 [CreateTermModal] Student Joe Robert (95) promoted from Basic 7 to Basic 8
+DataManagement.tsx:370 [CreateTermModal] Student Kumiwaa Grace (96) promoted from Basic 7 to Basic 8
+DataManagement.tsx:370 [CreateTermModal] Student Nyarko Faustina (97) promoted from Basic 7 to Basic 8
+DataManagement.tsx:370 [CreateTermModal] Student Nyarko Foster (98) promoted from Basic 7 to Basic 8
+DataManagement.tsx:370 [CreateTermModal] Student Obenewaa Samuella (99) promoted from Basic 7 to Basic 8
+firebaseService.ts:2170 [Firebase] 📤 Saving Multi-Update to schools/ayirebida_2026-2027_First-Term: {settings.vacationDate: '2026-07-23', settings.showAggregateScore: true, settings.isPromotionTerm: false, settings.schoolName: "AYIREBI D/A BASIC SCHOOL 'B'", settings.allowPersistence: true, …}
+firebaseService.ts:2186 [Firebase] 🚀 Executing batch with 186 operations...
+firebaseService.ts:2189 [Firebase] ✅ Batch save successful!
+DataContext.tsx:2487 [DataContext] 🔄 Reverting ALL pending changes...
+DataContext.tsx:3788 [DataContext] 📥 Manual refresh initiated - fetching data from cloud [FULL]...
+DataContext.tsx:2487 [DataContext] 🔄 Reverting ALL pending changes...
+DataContext.tsx:1405 [DataContext] 🛑 Cleaning up listeners for ayirebida_2025-2026_Third-Term
+DataContext.tsx:868 [DataContext] ⚠️ DETECTED: Page was reloaded with unsaved changes. Checking for data loss...
+anonymousCallbackTo: useEffect @ DataContext.tsx:868
+react_stack_bottom_frame @ react-dom-client.development.js:25989
+runWithFiberInDEV @ react-dom-client.development.js:871
+commitHookEffectListMount @ react-dom-client.development.js:13249
+commitHookPassiveMountEffects @ react-dom-client.development.js:13336
+commitPassiveMountOnFiber @ react-dom-client.development.js:15484
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15476
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15718
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:15439
+commitPassiveMountOnFiber @ react-dom-client.development.js:15519
+flushPassiveEffects @ react-dom-client.development.js:18432
+flushPendingEffects @ react-dom-client.development.js:18358
+flushSpawnedWork @ react-dom-client.development.js:18323
+commitRoot @ react-dom-client.development.js:17955
+commitRootWhenReady @ react-dom-client.development.js:16824
+performWorkOnRoot @ react-dom-client.development.js:16722
+performSyncWorkOnRoot @ react-dom-client.development.js:18972
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:18814
+processRootScheduleInMicrotask @ react-dom-client.development.js:18853
+(anonymous) @ react-dom-client.development.js:18991
+DataContext.tsx:980 [DataContext] 🔄 SCHOOL SWITCH Change Detected: ayirebida_2025-2026_Third-Term-2025-2026-Third Term -> ayirebida_2026-2027_First-Term-2025-2026-Third Term. Resetting records.
+DataContext.tsx:997 [DataContext] 🧹 School switch detected. Resetting shared settings...
+DataContext.tsx:1305 [DataContext] 🛰️ Setting up True Listeners for ayirebida_2026-2027_First-Term...
+DataContext.tsx:2375 [DataContext] 📦 Checking student bucket existence for ayirebida_2026-2027_First-Term...
+ [DataContext] ✅ Main document fetched, applying updates...
+ [DataContext] 🧹 Cleared all pending changes and score cache for manual refresh
  [DataContext] 🛡️ Initial Cloud Sync Guard: Verifying intentionality from disk...
- [DataContext] Debug incoming settings: {headmasterName: 'Mr. Stephen Kwakye Ahenkorah', logo: '', academicYear: '2025/2026', aggregateScoreClasses: Array(0), headmasterSignature: 'https://i.ibb.co/xSjY6pnP/4fbc8f1cdbbc.jpg', …}
- [DataContext] Current in-memory settings: {schoolName: '', district: '', circuit: '', address: '', academicYear: '', …}
- [DataContext] pendingChangesMap.settings: Set(1) {'academicYear'}
- [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 9, …}
- [DataContext] 🧠 Pre-empting context reset for: odumasemethodistd.abasic_20252026_Third-Term-2025/2026-Third Term
- [DataContext] ✅ Updating settings
- [DataContext] ✅ Merged collection: reportData
- [DataContext] ✅ Merged collection: classData
- [DataContext] ✅ Updating userLogs
- [DataContext] ✅ Updating activeSessions
- [DataContext] ✅ Merged collection: users
- [DataContext] ✅ Updating users: 11
- [DataContext] 🧹 Selectively cleared dirty fields after remote data load
- [DataContext] 💾 Updated originalData baseline with merge strategy
- [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
- [AuthOverlay] Checking for sba_force_term_select in localStorage...
- [AuthOverlay] sba_force_term_select value is: false
- [AuthOverlay] Restored remote settings object: {headmasterName: 'Mr. Stephen Kwakye Ahenkorah', logo: '', academicYear: '2025/2026', aggregateScoreClasses: Array(0), headmasterSignature: 'https://i.ibb.co/xSjY6pnP/4fbc8f1cdbbc.jpg', …}
- [DataContext] 🛡️ Initial Cloud Sync Guard: Verifying intentionality from disk...
- [DataContext] Debug incoming settings: {headmasterName: 'Mr. Stephen Kwakye Ahenkorah', logo: '', academicYear: '2025/2026', aggregateScoreClasses: Array(0), headmasterSignature: 'https://i.ibb.co/xSjY6pnP/4fbc8f1cdbbc.jpg', …}
-DataContext.tsx:3229 [DataContext] Current in-memory settings: {schoolName: '', district: '', circuit: '', address: '', academicYear: '', …}
-DataContext.tsx:3230 [DataContext] pendingChangesMap.settings: Set(1) {'academicYear'}
-DataContext.tsx:3262 [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 9, …}
-DataContext.tsx:3282 [DataContext] 🧠 Pre-empting context reset for: odumasemethodistd.abasic_20252026_Third-Term-2025/2026-Third Term
-DataContext.tsx:3337 [DataContext] ✅ Updating settings
-DataContext.tsx:3317 [DataContext] ✅ Merged collection: reportData
-DataContext.tsx:3317 [DataContext] ✅ Merged collection: classData
-DataContext.tsx:3337 [DataContext] ✅ Updating userLogs
-DataContext.tsx:3337 [DataContext] ✅ Updating activeSessions
-DataContext.tsx:3317 [DataContext] ✅ Merged collection: users
-DataContext.tsx:3420 [DataContext] ✅ Updating users: 11
-DataContext.tsx:3451 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
-DataContext.tsx:3485 [DataContext] 💾 Updated originalData baseline with merge strategy
-DataContext.tsx:1068 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
-AuthOverlay.tsx:206 [AuthOverlay] Checking for sba_force_term_select in localStorage...
-AuthOverlay.tsx:208 [AuthOverlay] sba_force_term_select value is: false
-DataContext.tsx:1068 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
-DataContext.tsx:1068 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
-DataContext.tsx:2552 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1782353167167 for userLogs
-DataContext.tsx:2552 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1782353167167 for userLogs
-DataContext.tsx:2205 [DataContext] Sync RESUMED
-DataContext.tsx:2552 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1782353167167 for userLogs
-DataContext.tsx:2552 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1782353167167 for userLogs
-DataContext.tsx:2552 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1782353167167 for userLogs
-DataContext.tsx:2552 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1782353167167 for userLogs
-DataContext.tsx:1154 [DataContext] 🛰️ Setting up True Listeners for odumasemethodistd.abasic_20252026_Third-Term...
-DataContext.tsx:2121 [DataContext] 📦 Checking student bucket existence for odumasemethodistd.abasic_20252026_Third-Term...
-DataContext.tsx:2552 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1782353167167 for userLogs
-DataContext.tsx:2552 [DataContext] 🧟 ZOMBIE PREVENTED: Discarding stale record 1782353167167 for userLogs
-DataContext.tsx:1200 [DataContext] 📥 Real-time update for School Main Doc
-DataContext.tsx:3194 [DataContext] 🛡️ Initial Cloud Sync Guard: Verifying intentionality from disk...
-DataContext.tsx:3228 [DataContext] Debug incoming settings: {headmasterName: 'Mr. Stephen Kwakye Ahenkorah', logo: '', academicYear: '2025/2026', aggregateScoreClasses: Array(0), headmasterSignature: 'https://i.ibb.co/xSjY6pnP/4fbc8f1cdbbc.jpg', …}
-DataContext.tsx:3229 [DataContext] Current in-memory settings: {headmasterName: 'Mr. Stephen Kwakye Ahenkorah', logo: '', academicYear: '2025/2026', aggregateScoreClasses: Array(0), headmasterSignature: 'https://i.ibb.co/xSjY6pnP/4fbc8f1cdbbc.jpg', …}
-DataContext.tsx:3230 [DataContext] pendingChangesMap.settings: Set(0) {size: 0}
-DataContext.tsx:3262 [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 0, …}
-DataContext.tsx:3282 [DataContext] 🧠 Pre-empting context reset for: odumasemethodistd.abasic_20252026_Third-Term-2025/2026-Third Term
-DataContext.tsx:3337 [DataContext] ✅ Updating userLogs
-DataContext.tsx:3337 [DataContext] ✅ Updating activeSessions
-DataContext.tsx:3451 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
-DataContext.tsx:3485 [DataContext] 💾 Updated originalData baseline with merge strategy
-DataContext.tsx:1068 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
-DataContext.tsx:1166 [DataContext] 📥 Real-time update for students
-DataContext.tsx:1166 [DataContext] 📥 Real-time update for classes
-DataContext.tsx:1166 [DataContext] 📥 Real-time update for subjects
-DataContext.tsx:1068 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
-DataContext.tsx:1166 [DataContext] 📥 Real-time update for assessments
-DataContext.tsx:1166 [DataContext] 📥 Real-time update for grades
-DataContext.tsx:2465 [DataContext] ⚙️ settings granular payload: {academicYear: '2025/2026d'}
-DataContext.tsx:2465 [DataContext] ⚙️ settings granular payload: {academicYear: '2025/2026d'}
-DataContext.tsx:2465 [DataContext] ⚙️ settings granular payload: {academicYear: '2025/2026'}
-DataContext.tsx:2465 [DataContext] ⚙️ settings granular payload: {academicYear: '2025/2026'}
-DataContext.tsx:777 [DataContext] 🔄 SCHOOL SWITCH Change Detected: odumasemethodistd.abasic_20252026_Third-Term-2025/2026-Third Term -> odumasemethodistd.abasic_20252026_Third-Term-2025/2026d-Third Term. Resetting records.
-DataContext.tsx:794 [DataContext] 🧹 School switch detected. Resetting shared settings...
-DataContext.tsx:2465 [DataContext] ⚙️ settings granular payload: {academicYear: ''}
-DataContext.tsx:2465 [DataContext] ⚙️ settings granular payload: {academicYear: ''}
-DataContext.tsx:2465 [DataContext] ⚙️ settings granular payload: {academicYear: '2025/2026d'}
-DataContext.tsx:2465 [DataContext] ⚙️ settings granular payload: {academicYear: '2025/2026d'}
-DataContext.tsx:777 [DataContext] 🔄 SCHOOL SWITCH Change Detected: odumasemethodistd.abasic_20252026_Third-Term-2025/2026d-Third Term -> odumasemethodistd.abasic_20252026_Third-Term--. Resetting records.
-DataContext.tsx:794 [DataContext] 🧹 School switch detected. Resetting shared settings...
-DataContext.tsx:2465 [DataContext] ⚙️ settings granular payload: {academicYear: ''}
-DataContext.tsx:2465 [DataContext] ⚙️ settings granular payload: {academicYear: ''}
-DataContext.tsx:2465 [DataContext] ⚙️ settings granular payload: {academicYear: ''}
-DataContext.tsx:2465 [DataContext] ⚙️ settings granular payload: {academicYear: ''}
-DataContext.tsx:2465 [DataContext] ⚙️ settings granular payload: {academicYear: ''}
-DataContext.tsx:2465 [DataContext] ⚙️ settings granular payload: {academicYear: ''}
+ [DataContext] Debug incoming settings: {vacationDate: '2026-07-23', showAggregateScore: true, isPromotionTerm: true, schoolName: "AYIREBI D/A BASIC SCHOOL 'B'", allowPersistence: true, …}
+DataContext.tsx:3482 [DataContext] Current in-memory settings: {vacationDate: '2026-07-23', showAggregateScore: true, isPromotionTerm: true, schoolName: "AYIREBI D/A BASIC SCHOOL 'B'", allowPersistence: true, …}
+DataContext.tsx:3483 [DataContext] pendingChangesMap.settings: Set(0) {size: 0}
+DataContext.tsx:3498 [DataContext] 🔄 Context shift detected (2025-2026-Third Term -> 2025-2026-Third Term) or Initial Sync in progress. Skipping preservation.
+DataContext.tsx:3517 [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 0, …}
+DataContext.tsx:3537 [DataContext] 🧠 Pre-empting context reset for: ayirebida_2025-2026_Third-Term-2025-2026-Third Term
+DataContext.tsx:3706 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
+DataContext.tsx:3740 [DataContext] 💾 Updated originalData baseline with merge strategy
+DataContext.tsx:1219 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:3826 [DataContext] 🔄 Force refreshing Metadata (Classes, Subjects, Assessments)...
+DataContext.tsx:3249 [DataContext] 🔍 loadMetadata Check: {hasData: true, previouslyLoaded: false, isUpToDate: false, inflight: false}
+DataContext.tsx:3280 [DataContext] 📥 Loading Metadata (Classes, Subjects, Assessments)...
+DataContext.tsx:3832 [DataContext] 🔄 Force refreshing Students subcollection...
+DataContext.tsx:3009 [DataContext] 🔍 loadStudents Check: {studentsCount: 154, serverTS: undefined, loadedTS: undefined, isUpToDate: false, hasBaseline: false, …}
+DataContext.tsx:3044 [DataContext] 📥 Loading Students (Optimized via Bucket)...
+DataContext.tsx:3838 [DataContext] 🔄 Force refreshing Score Buckets for loaded subjects...
+DataContext.tsx:974 [DataContext] Context shift detected but marked as local edit. Skipping reset during typing.
+DataContext.tsx:1351 [DataContext] 📥 Real-time update for School Main Doc
+DataContext.tsx:3447 [DataContext] 🛡️ Initial Cloud Sync Guard: Verifying intentionality from disk...
+DataContext.tsx:3481 [DataContext] Debug incoming settings: {isDataEntryLocked: false, district: 'AKYEMANSA DISTRICT', address: 'P.O. BOX 24\nAKIM AYIREBI', logo: 'https://i.ibb.co/nsVQvHq5/7179de221947.jpg', vacationDate: '2026-07-23', …}
+DataContext.tsx:3482 [DataContext] Current in-memory settings: {vacationDate: '2026-07-23', showAggregateScore: true, isPromotionTerm: true, schoolName: "AYIREBI D/A BASIC SCHOOL 'B'", allowPersistence: true, …}
+DataContext.tsx:3483 [DataContext] pendingChangesMap.settings: Set(16) {'academicTerm', 'academicYear', 'address', 'aggregateScoreClasses', 'circuit', …}
+DataContext.tsx:3498 [DataContext] 🔄 Context shift detected (2025-2026-Third Term -> 2026-2027-First Term) or Initial Sync in progress. Skipping preservation.
+DataContext.tsx:3517 [DataContext] 📦 loadImportedData called (isRemote=true) with: {hasSettings: true, studentsCount: 0, subjectsCount: 0, classesCount: 0, gradesCount: 0, …}
+DataContext.tsx:3537 [DataContext] 🧠 Pre-empting context reset for: ayirebida_2026-2027_First-Term-2026-2027-First Term
+DataContext.tsx:3592 [DataContext] ✅ Updating settings
+DataContext.tsx:3592 [DataContext] ✅ Updating activeSessions
+DataContext.tsx:3706 [DataContext] 🧹 Selectively cleared dirty fields after remote data load
+DataContext.tsx:3740 [DataContext] 💾 Updated originalData baseline with merge strategy
+DataContext.tsx:1219 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:1317 [DataContext] 📥 Real-time update for students
+DataContext.tsx:1219 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:1317 [DataContext] 📥 Real-time update for classes
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:1219 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:1317 [DataContext] 📥 Real-time update for subjects
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:1317 [DataContext] 📥 Real-time update for assessments
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:1317 [DataContext] 📥 Real-time update for grades
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:1219 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:3418 [DataContext] ✅ Metadata Merge triggered for School: ayirebida_2025-2026_Third-Term
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:1219 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:3051 [DataContext] ✅ Loaded 154 students.
+DataContext.tsx:1219 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:3854 [DataContext] 🎉 Manual refresh complete
+DataContext.tsx:3873 [DataContext] ⭐ Initial Sync Phase COMPLETE. Transitioning to mid-session diff mode.
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:3249 [DataContext] 🔍 loadMetadata Check: {hasData: true, previouslyLoaded: true, isUpToDate: true, inflight: false}
+DataContext.tsx:3265 [DataContext] 🧠 Metadata up-to-date (Metadata Match). Skipping read.
+DataContext.tsx:3249 [DataContext] 🔍 loadMetadata Check: {hasData: true, previouslyLoaded: true, isUpToDate: true, inflight: false}
+DataContext.tsx:3265 [DataContext] 🧠 Metadata up-to-date (Metadata Match). Skipping read.
+DataContext.tsx:1219 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:1219 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+DataContext.tsx:2769 [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+DataContext.tsx:3009 [DataContext] 🔍 loadStudents Check: {studentsCount: 154, serverTS: undefined, loadedTS: 'loaded_once', isUpToDate: true, hasBaseline: true, …}
+DataContext.tsx:3029 [DataContext] 🧠 Students up-to-date. Skipping read.
+DataContext.tsx:3009 [DataContext] 🔍 loadStudents Check: {studentsCount: 154, serverTS: undefined, loadedTS: 'loaded_once', isUpToDate: true, hasBaseline: true, …}
+DataContext.tsx:3029 [DataContext] 🧠 Students up-to-date. Skipping read.
+DataContext.tsx:1219 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:1219 [DataContext] 🔍 Performing full dirty recheck against cloud baseline...
+DataContext.tsx:729 [DataContext] 📱 Mobile Lifecycle event detected. Forcing immediate data backup...
+DataContext.tsx:770 [DataContext] 📍 Flagged unsaved changes for post-reload detection
+handleForceBackup @ DataContext.tsx:770
+anonymousCallbackTo: window.addEventListener @ DataContext.tsx:784
+DataContext.tsx:729 [DataContext] 📱 Mobile Lifecycle event detected. Forcing immediate data backup...
+DataContext.tsx:770 [DataContext] 📍 Flagged unsaved changes for post-reload detection
+handleForceBackup @ DataContext.tsx:770
+anonymousCallbackTo: window.addEventListener @ DataContext.tsx:784
+DataContext.tsx:729 [DataContext] 📱 Mobile Lifecycle event detected. Forcing immediate data backup...
+DataContext.tsx:770 [DataContext] 📍 Flagged unsaved changes for post-reload detection
+handleForceBackup @ DataContext.tsx:770
+anonymousCallbackTo: window.addEventListener @ DataContext.tsx:784
+DataContext.tsx:729 [DataContext] 📱 Mobile Lifecycle event detected. Forcing immediate data backup...
+DataContext.tsx:770 [DataContext] 📍 Flagged unsaved changes for post-reload detection
+handleForceBackup @ DataContext.tsx:770
+anonymousCallbackTo: window.addEventListener @ DataContext.tsx:784
+DataContext.tsx:729 [DataContext] 📱 Mobile Lifecycle event detected. Forcing immediate data backup...
+DataContext.tsx:770 [DataContext] 📍 Flagged unsaved changes for post-reload detection
+handleForceBackup @ DataContext.tsx:770
+anonymousCallbackTo: window.addEventListener @ DataContext.tsx:784
+DataContext.tsx:729 [DataContext] 📱 Mobile Lifecycle event detected. Forcing immediate data backup...
+ [DataContext] 📍 Flagged unsaved changes for post-reload detection
+ [DataContext] 📱 Mobile Lifecycle event detected. Forcing immediate data backup...
+ [DataContext] 📍 Flagged unsaved changes for post-reload detection
+ [DataContext] 📱 Mobile Lifecycle event detected. Forcing immediate data backup...
+ [DataContext] 📍 Flagged unsaved changes for post-reload detection
+ [DataContext] 📱 Mobile Lifecycle event detected. Forcing immediate data backup...
+ [DataContext] 📍 Flagged unsaved changes for post-reload detection
+ [DataContext] 📱 Mobile Lifecycle event detected. Forcing immediate data backup...
+ [DataContext] 📍 Flagged unsaved changes for post-reload detection
+ [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+ [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+ [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+ [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+ [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+ [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+ [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+ [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+ [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+ [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
+ [DataContext] 🗑️ Detected Deletions for reportData: (142) ['188', '43', '44', '45', '47', '48', '49', '57', '58', '59', '61', '64', '69', '70', '71', '200', '46', '175', '50', '51', '52', '54', '56', '60', '65', '66', '67', '68', '151', '199', '153', '155', '152', '113', '118', '117', '119', '109', '112', '115', '116', '176', '110', '111', '114', '201', '167', '169', '171', '172', '174', '1765803725465', '173', '198', '120', '122', '123', '124', '127', '128', '132', '202', '133', '121', '125', '126', '182', '129', '130', '156', '158', '162', '163', '164', '166', '159', '161', '203', '165', '137', '139', '1', '3', '4', '2', '196', '191', '190', '193', '192', '9', '6', '7', '1765807406589', '142', '145', '146', '147', '148', '135', …]
+ [DataContext] 🗑️ Detected Deletions for classData: (10) ['9', '1', '6', '2', '5', '4', '3', '7', '11', '8']
