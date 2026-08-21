@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import type { Page } from '../types';
+import { pagePaths } from '../utils/navigation';
 import { useUser } from '../context/UserContext';
 import { useData } from '../context/DataContext';
 import { APP_VERSION } from '../constants';
@@ -12,10 +14,10 @@ interface SidebarProps {
 const NavItem: React.FC<{
   pageName: Page;
   currentPage: Page;
-  setCurrentPage: (page: Page) => void;
   icon: React.ReactElement;
   isExpanded: boolean;
-}> = ({ pageName, currentPage, setCurrentPage, icon, isExpanded }) => {
+  onSelect: () => void;
+}> = ({ pageName, currentPage, icon, isExpanded, onSelect }) => {
   const isActive = currentPage === pageName;
   return (
     <li
@@ -23,10 +25,11 @@ const NavItem: React.FC<{
         ? 'bg-blue-600 text-white shadow-lg'
         : 'text-gray-600 hover:bg-blue-100 hover:text-blue-700'
         }`}
-      onClick={() => setCurrentPage(pageName)}
     >
-      {icon}
-      <span className={`ml-3 font-medium transition-opacity duration-300 whitespace-nowrap ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>{pageName}</span>
+      <Link to={pagePaths[pageName]} onClick={onSelect} className="flex items-center w-full">
+        {icon}
+        <span className={`ml-3 font-medium transition-opacity duration-300 whitespace-nowrap ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>{pageName}</span>
+      </Link>
     </li>
   );
 };
@@ -40,8 +43,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage }) => {
 
   const isExpanded = isHoverExpanded || isMobileMenuOpen;
 
-  const handlePageChange = (page: Page) => {
-    setCurrentPage(page);
+  const handlePageChange = () => {
     setIsMobileMenuOpen(false); // Close mobile menu on navigation
   };
 
@@ -158,9 +160,9 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage }) => {
                 key={name}
                 pageName={name}
                 currentPage={currentPage}
-                setCurrentPage={handlePageChange}
                 icon={icon}
                 isExpanded={isExpanded}
+                onSelect={handlePageChange}
               />
             ))}
           </ul>

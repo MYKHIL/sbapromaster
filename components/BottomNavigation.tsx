@@ -1,6 +1,8 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import type { Page } from '../types';
 import { useUser } from '../context/UserContext';
+import { pagePaths } from '../utils/navigation';
 
 interface BottomNavigationProps {
     currentPage: Page;
@@ -50,9 +52,9 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ currentPage, onNavi
                 {navItems.map((item) => {
                     const isActive = currentPage === item.name;
                     return (
-                        <button
+                        <Link
                             key={item.name}
-                            onClick={() => onNavigate(item.name)}
+                            to={pagePaths[item.name]}
                             className={`flex flex-col items-center justify-center flex-1 py-1.5 px-1 rounded-xl transition-all duration-300 relative group
                                 ${isActive ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
                         >
@@ -72,7 +74,7 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ currentPage, onNavi
                             {isActive && (
                                 <div className="absolute -bottom-0.5 w-1 h-1 bg-blue-600 rounded-full" />
                             )}
-                        </button>
+                        </Link>
                     );
                 })}
             </nav>

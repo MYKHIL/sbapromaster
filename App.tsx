@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { BrowserRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import BottomNavigation from './components/BottomNavigation';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/pages/Dashboard';
@@ -36,6 +37,7 @@ import AuthOverlay from './components/AuthOverlay';
 import FreshLoginModal from './components/FreshLoginModal';
 import TutorialOverlay from './components/TutorialOverlay';
 import { HelpCircle } from 'lucide-react';
+import { pageFromPath, pagePaths } from './utils/navigation';
 
 const PageWrapper: React.FC<{ name: Page; currentPage: Page; children: React.ReactNode }> = ({ name, currentPage, children }) => {
   return (
@@ -104,20 +106,13 @@ import ConfirmationModal from './components/ConfirmationModal';
 import LockNoticeBanner from './components/LockNoticeBanner';
 
 const AppContent: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState<Page>(() => {
-    try {
-      let savedPage = localStorage.getItem('lastVisitedPage');
-      if (savedPage) {
-        if (savedPage === 'Teachers') savedPage = 'Classes & Teachers';
-        return savedPage as Page;
-      }
-    } catch (e) {}
-    return 'Dashboard';
-  });
+  const location = useLocation();
+  const navigate = useNavigate();
+  const currentPage = pageFromPath(location.pathname);
+  const navigationMeta = (location.state as { meta?: NavigationMeta } | null)?.meta || null;
 
   const { hasLocalChanges } = useData();
   const { isAuthenticated } = useUser();
-  const [navigationMeta, setNavigationMeta] = useState<NavigationMeta | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const { recordAction } = useUserAction();
@@ -128,19 +123,18 @@ const AppContent: React.FC = () => {
 
   const handleNavigate = React.useCallback((page: Page, meta?: NavigationMeta) => {
     if (page === currentPage && !meta) return;
-    setNavigationMeta(meta || null);
-    setCurrentPage(page);
+    navigate(pagePaths[page], { state: meta ? { meta } : null });
     recordAction(`Navigated to ${page}${meta ? ` (${JSON.stringify(meta)})` : ''}`);
-  }, [currentPage, recordAction]);
+  }, [currentPage, navigate, recordAction]);
 
   // Listen for global navigation events from components that don't receive onNavigate
   React.useEffect(() => {
-    const handler = (e: any) => {
-      const detail = e.detail as { page: Page; meta?: NavigationMeta };
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ page: Page; meta?: NavigationMeta }>).detail;
       if (detail?.page) handleNavigate(detail.page, detail.meta);
     };
-    window.addEventListener('app-navigate' as any, handler as any);
-    return () => window.removeEventListener('app-navigate' as any, handler as any);
+    window.addEventListener('app-navigate', handler);
+    return () => window.removeEventListener('app-navigate', handler);
   }, [handleNavigate]);
 
   React.useEffect(() => {
@@ -156,8 +150,25 @@ const AppContent: React.FC = () => {
   }, [hasLocalChanges]);
 
   React.useEffect(() => {
-    localStorage.setItem('lastVisitedPage', currentPage);
-  }, [currentPage]);
+    if (location.pathname !== '/') {
+      localStorage.setItem('lastVisitedPage', currentPage);
+    }
+  }, [currentPage, location.pathname]);
+
+  React.useEffect(() => {
+    if (location.pathname === '/') {
+      let savedPage: Page = 'Dashboard';
+      try {
+        const storedPage = localStorage.getItem('lastVisitedPage');
+        if (storedPage === 'Teachers') {
+          savedPage = 'Classes & Teachers';
+        } else if (storedPage && storedPage in pagePaths) {
+          savedPage = storedPage as Page;
+        }
+      } catch (e) {}
+      navigate(pagePaths[savedPage], { replace: true });
+    }
+  }, [location.pathname, navigate]);
 
   if (!SITE_ACTIVE) {
     return <MaintenancePage />;
@@ -236,17 +247,23 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <UserActionProvider>
-      <DatabaseErrorProvider>
-        <DataProvider>
-          <UserProvider>
-            <FirebaseAnalyticsProvider>
-              <AppContent />
-            </FirebaseAnalyticsProvider>
-          </UserProvider>
-        </DataProvider>
-      </DatabaseErrorProvider>
-    </UserActionProvider>
+    <BrowserRouter>
+      <Routes>
+        <Route path="*" element={
+          <UserActionProvider>
+            <DatabaseErrorProvider>
+              <DataProvider>
+                <UserProvider>
+                  <FirebaseAnalyticsProvider>
+                    <AppContent />
+                  </FirebaseAnalyticsProvider>
+                </UserProvider>
+              </DataProvider>
+            </DatabaseErrorProvider>
+          </UserActionProvider>
+        } />
+      </Routes>
+    </BrowserRouter>
   );
 };
 
